@@ -1,12 +1,54 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\maxat\\OneDrive - ADvTECH Ltd\\Varsity College\\2025\\Semester 2\\INSY7315\\ICMMS-INSY7314-WIL-\\Web\\ICCMS-Web\\",
-  "Documents": [],
+  "WorkspaceRootPath": "C:\\Users\\maxat\\OneDrive - ADvTECH Ltd\\Varsity College\\2025\\Semester 2\\INSY7315\\ICMMS-INSY7314-WIL-\\Web\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{31A0FEDE-EE85-4D2A-B56C-946AB7EC0322}|ICCMS-Web\\ICCMS-Web.csproj|c:\\users\\maxat\\onedrive - advtech ltd\\varsity college\\2025\\semester 2\\insy7315\\icmms-insy7314-wil-\\web\\iccms-web\\models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{31A0FEDE-EE85-4D2A-B56C-946AB7EC0322}|ICCMS-Web\\ICCMS-Web.csproj|solutionrelative:iccms-web\\models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{31A0FEDE-EE85-4D2A-B56C-946AB7EC0322}|ICCMS-Web\\ICCMS-Web.csproj|c:\\users\\maxat\\onedrive - advtech ltd\\varsity college\\2025\\semester 2\\insy7315\\icmms-insy7314-wil-\\web\\iccms-web\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{31A0FEDE-EE85-4D2A-B56C-946AB7EC0322}|ICCMS-Web\\ICCMS-Web.csproj|solutionrelative:iccms-web\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
       "VerticalTabListWidth": 256,
-      "DocumentGroups": []
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "User.cs",
+              "DocumentMoniker": "C:\\Users\\maxat\\OneDrive - ADvTECH Ltd\\Varsity College\\2025\\Semester 2\\INSY7315\\ICMMS-INSY7314-WIL-\\Web\\ICCMS-Web\\Models\\User.cs",
+              "RelativeDocumentMoniker": "ICCMS-Web\\Models\\User.cs",
+              "ToolTip": "C:\\Users\\maxat\\OneDrive - ADvTECH Ltd\\Varsity College\\2025\\Semester 2\\INSY7315\\ICMMS-INSY7314-WIL-\\Web\\ICCMS-Web\\Models\\User.cs",
+              "RelativeToolTip": "ICCMS-Web\\Models\\User.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-19T21:46:29.566Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\maxat\\OneDrive - ADvTECH Ltd\\Varsity College\\2025\\Semester 2\\INSY7315\\ICMMS-INSY7314-WIL-\\Web\\ICCMS-Web\\Program.cs",
+              "RelativeDocumentMoniker": "ICCMS-Web\\Program.cs",
+              "ToolTip": "C:\\Users\\maxat\\OneDrive - ADvTECH Ltd\\Varsity College\\2025\\Semester 2\\INSY7315\\ICMMS-INSY7314-WIL-\\Web\\ICCMS-Web\\Program.cs",
+              "RelativeToolTip": "ICCMS-Web\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-19T21:03:10.409Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
     }
   ]
 }

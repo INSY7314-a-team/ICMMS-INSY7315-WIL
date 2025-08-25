@@ -1,0 +1,183 @@
+@model ICCMS_Web.Models.User
+
+@{
+    ViewData["Title"] = "Edit User";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="card-title mb-0">
+                            <i class="fas fa-user-edit me-2"></i>Edit User
+                        </h3>
+                        <a href="@Url.Action("Index", "Users")" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Users
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form asp-action="EditConfirmed" asp-route-id="@Model.UserId" method="post">
+                        <input type="hidden" asp-for="UserId" />
+                        <input type="hidden" asp-for="CreatedAt" />
+                        <input type="hidden" asp-for="IsActive" />
+                        
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="FullName" class="form-label">
+                                        <i class="fas fa-user me-1"></i>Full Name *
+                                    </label>
+                                    <input asp-for="FullName" class="form-control" placeholder="Enter full name" required />
+                                    <span asp-validation-for="FullName" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Email" class="form-label">
+                                        <i class="fas fa-envelope me-1"></i>Email Address *
+                                    </label>
+                                    <input asp-for="Email" type="email" class="form-control" placeholder="Enter email address" required />
+                                    <span asp-validation-for="Email" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Phone" class="form-label">
+                                        <i class="fas fa-phone me-1"></i>Phone Number
+                                    </label>
+                                    <input asp-for="Phone" type="tel" class="form-control" placeholder="Enter phone number" required />
+                                    <span asp-validation-for="Phone" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Role" class="form-label">
+                                        <i class="fas fa-user-tag me-1"></i>Role *
+                                    </label>
+                                    <select asp-for="Role" class="form-select" required>
+                                        <option value="">Select a role</option>
+                                        <option value="Admin">Admin</option>
+                                        <option value="Project Manager">Project Manager</option>
+                                        <option value="Contractor">Contractor</option>
+                                        <option value="Client">Client</option>
+                                    </select>
+                                    <span asp-validation-for="Role" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="NewPassword" class="form-label">
+                                        <i class="fas fa-lock me-1"></i>New Password (leave blank to keep current)
+                                    </label>
+                                    <input type="password" id="NewPassword" name="NewPassword" class="form-control" placeholder="Enter new password" />
+                                    <div class="form-text">Leave blank to keep the current password.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="ConfirmNewPassword" class="form-label">
+                                        <i class="fas fa-lock me-1"></i>Confirm New Password
+                                    </label>
+                                    <input type="password" id="ConfirmNewPassword" name="ConfirmNewPassword" class="form-control" placeholder="Confirm new password" />
+                                    <span id="passwordMatchError" class="text-danger" style="display: none;">Passwords do not match.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a href="@Url.Action("Index", "Users")" class="btn btn-secondary">
+                                        <i class="fas fa-times me-1"></i>Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-warning">
+                                        <i class="fas fa-save me-1"></i>Update User
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Password confirmation validation
+        document.getElementById('ConfirmNewPassword').addEventListener('input', function() {
+            const newPassword = document.getElementById('NewPassword').value;
+            const confirmPassword = this.value;
+            const errorSpan = document.getElementById('passwordMatchError');
+            
+            if (confirmPassword && newPassword !== confirmPassword) {
+                errorSpan.style.display = 'block';
+            } else {
+                errorSpan.style.display = 'none';
+            }
+        });
+
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const newPassword = document.getElementById('NewPassword').value;
+            const confirmPassword = document.getElementById('ConfirmNewPassword').value;
+            
+            if (newPassword && confirmPassword && newPassword !== confirmPassword) {
+                e.preventDefault();
+                alert('New passwords do not match!');
+                return false;
+            }
+            
+            if (newPassword && newPassword.length < 6) {
+                e.preventDefault();
+                alert('New password must be at least 6 characters long!');
+                return false;
+            }
+        });
+    </script>
+}
+
+<style>
+    .card-header {
+        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+        color: white;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #ffc107;
+        box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+    }
+
+    .btn-warning {
+        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+        border: none;
+        color: #212529;
+    }
+
+    .btn-warning:hover {
+        background: linear-gradient(135deg, #e0a800 0%, #d39e00 100%);
+        color: #212529;
+    }
+
+    .alert {
+        border-radius: 0.375rem;
+    }
+</style>

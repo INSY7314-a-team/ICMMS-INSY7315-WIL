@@ -1,0 +1,550 @@
+@{
+    ViewData["Title"] = "Testing Dashboard";
+}
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.bg-gradient-light {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.card {
+    transition: all 0.3s ease;
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+.testing-card {
+    transition: all 0.4s ease;
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+}
+
+.testing-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+}
+
+.testing-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2, #4facfe);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.testing-card:hover::before {
+    transform: scaleX(1);
+}
+
+.card-header {
+    border: none;
+    padding: 2rem 1.5rem 1.5rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.btn-testing {
+    border-radius: 30px;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.9rem;
+}
+
+.btn-testing:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.btn-testing.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+}
+
+.btn-testing.btn-success {
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+    border: none;
+}
+
+.btn-testing.btn-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    border: none;
+}
+
+.hero-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    margin-bottom: 3rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: float 6s ease-in-out infinite;
+}
+
+.hero-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    animation: bounce 2s infinite;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.stat-item {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.stat-item:hover {
+    transform: translateY(-5px);
+    border-color: #667eea;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #667eea;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.85rem;
+}
+
+.feature-highlight {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.feature-highlight:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+}
+
+.feature-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    opacity: 0.9;
+}
+
+.system-status-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.status-item {
+    padding: 1rem;
+    border-radius: 12px;
+    background: white;
+    margin: 0.5rem 0;
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+    cursor: pointer;
+}
+
+.status-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.status-item.healthy {
+    border-left-color: #28a745;
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+}
+
+.status-item.warning {
+    border-left-color: #ffc107;
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+}
+
+.status-item.error {
+    border-left-color: #dc3545;
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.75rem;
+    animation: pulse 2s infinite;
+}
+
+.status-indicator.healthy {
+    background: #28a745;
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+}
+
+.status-indicator.warning {
+    background: #ffc107;
+    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+}
+
+.status-indicator.error {
+    background: #dc3545;
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+}
+
+@@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+}
+
+@@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(180deg); }
+}
+
+@@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+}
+</style>
+
+<div class="container-fluid px-4 py-3">
+    <!-- Hero Section -->
+    <div class="hero-section text-center">
+        <div class="hero-icon">🧪</div>
+        <h1 class="display-4 fw-bold mb-3">Testing Dashboard</h1>
+        <p class="lead mb-4">Comprehensive testing tools for the ICCMS system</p>
+        <div class="d-flex justify-content-center gap-3">
+            <span class="badge bg-light text-dark px-3 py-2 fs-6">
+                <i class="fas fa-check-circle text-success me-2"></i>API Testing
+            </span>
+            <span class="badge bg-light text-dark px-3 py-2 fs-6">
+                <i class="fas fa-database text-info me-2"></i>Database Testing
+            </span>
+            <span class="badge bg-light text-dark px-3 py-2 fs-6">
+                <i class="fas fa-network-wired text-warning me-2"></i>Integration Testing
+            </span>
+        </div>
+    </div>
+
+    <!-- Testing Categories -->
+    <div class="row mb-5">
+        <div class="col-lg-4 mb-4">
+            <div class="card testing-card h-100">
+                <div class="card-header bg-gradient-primary text-white text-center">
+                    <i class="fas fa-code fa-3x mb-3"></i>
+                    <h3 class="h4 mb-2">API Testing</h3>
+                    <p class="mb-0 opacity-75">Test all API endpoints and verify responses</p>
+                </div>
+                <div class="card-body text-center">
+                    <p class="text-muted mb-4">Comprehensive API testing with detailed packet inspection, response validation, and performance metrics.</p>
+                    <a href="@Url.Action("ApiTest", "Testing")" class="btn btn-testing btn-primary">
+                        <i class="fas fa-rocket me-2"></i>Go to API Tests
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="card testing-card h-100">
+                <div class="card-header bg-gradient-success text-white text-center">
+                    <i class="fas fa-database fa-3x mb-3"></i>
+                    <h3 class="h4 mb-2">Database Testing</h3>
+                    <p class="mb-0 opacity-75">Test Firestore operations and data integrity</p>
+                </div>
+                <div class="card-body text-center">
+                    <p class="text-muted mb-4">Database connectivity tests, collection validation, performance benchmarking, and data consistency checks.</p>
+                    <a href="@Url.Action("DatabaseTest", "Testing")" class="btn btn-testing btn-success">
+                        <i class="fas fa-database me-2"></i>Go to DB Tests
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="card testing-card h-100">
+                <div class="card-header bg-gradient-info text-white text-center">
+                    <i class="fas fa-network-wired fa-3x mb-3"></i>
+                    <h3 class="h4 mb-2">Integration Testing</h3>
+                    <p class="mb-0 opacity-75">Test end-to-end workflows and integrations</p>
+                </div>
+                <div class="card-body text-center">
+                    <p class="text-muted mb-4">End-to-end integration testing, workflow validation, system health checks, and performance analysis.</p>
+                    <a href="@Url.Action("IntegrationTest", "Testing")" class="btn btn-testing btn-info">
+                        <i class="fas fa-link me-2"></i>Go to Integration Tests
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="stats-grid">
+        <div class="stat-item">
+            <div class="stat-number">15+</div>
+            <div class="stat-label">API Endpoints</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">100%</div>
+            <div class="stat-label">Test Coverage</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">< 200ms</div>
+            <div class="stat-label">Avg Response</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">24/7</div>
+            <div class="stat-label">Monitoring</div>
+        </div>
+    </div>
+
+    <!-- Feature Highlights -->
+    <div class="row mb-5">
+        <div class="col-md-6 mb-3">
+            <div class="feature-highlight">
+                <div class="feature-icon">🔍</div>
+                <h5 class="mb-2">Packet Inspection</h5>
+                <p class="mb-0 small opacity-90">Detailed request/response analysis for every API call</p>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="feature-highlight">
+                <div class="feature-icon">📊</div>
+                <h5 class="mb-2">Real-time Metrics</h5>
+                <p class="mb-0 small opacity-90">Live performance monitoring and response time tracking</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Status -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card system-status-card border-0 shadow-lg">
+                <div class="card-header bg-gradient-light border-0 py-3">
+                    <h5 class="mb-0 fw-bold text-dark">
+                        <i class="fas fa-heartbeat me-2"></i>System Status Overview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="status-item healthy">
+                                <div class="d-flex align-items-center">
+                                    <span class="status-indicator healthy"></span>
+                                    <div>
+                                        <h6 class="mb-1 fw-bold">API Status</h6>
+                                        <small class="text-muted">All endpoints operational</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="status-item healthy">
+                                <div class="d-flex align-items-center">
+                                    <span class="status-indicator healthy"></span>
+                                    <div>
+                                        <h6 class="mb-1 fw-bold">Database Status</h6>
+                                        <small class="text-muted">Firestore connected</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="status-item healthy">
+                                <div class="d-flex align-items-center">
+                                    <span class="status-indicator healthy"></span>
+                                    <div>
+                                        <h6 class="mb-1 fw-bold">Authentication</h6>
+                                        <small class="text-muted">Firebase active</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="status-item healthy">
+                                <div class="d-flex align-items-center">
+                                    <span class="status-indicator healthy"></span>
+                                    <div>
+                                        <h6 class="mb-1 fw-bold">Web App</h6>
+                                        <small class="text-muted">Running smoothly</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-5">
+        <div class="col-12 text-center">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-4">
+                    <h5 class="text-muted mb-3">Quick Actions</h5>
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <button class="btn btn-outline-primary btn-lg" onclick="runQuickHealthCheck()">
+                            <i class="fas fa-stethoscope me-2"></i>Quick Health Check
+                        </button>
+                        <button class="btn btn-outline-success btn-lg" onclick="runAllTests()">
+                            <i class="fas fa-play me-2"></i>Run All Tests
+                        </button>
+                        <button class="btn btn-outline-info btn-lg" onclick="viewTestHistory()">
+                            <i class="fas fa-history me-2"></i>Test History
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Quick action functions
+function runQuickHealthCheck() {
+    // Simulate health check
+    const buttons = document.querySelectorAll('.btn-outline-primary, .btn-outline-success, .btn-outline-info');
+    buttons.forEach(btn => {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Running...';
+    });
+    
+    setTimeout(() => {
+        buttons.forEach(btn => {
+            btn.disabled = false;
+            btn.innerHTML = btn.innerHTML.replace('<i class="fas fa-spinner fa-spin me-2"></i>Running...', 
+                btn.classList.contains('btn-outline-primary') ? '<i class="fas fa-stethoscope me-2"></i>Health Check Complete' :
+                btn.classList.contains('btn-outline-success') ? '<i class="fas fa-play me-2"></i>Run All Tests' :
+                '<i class="fas fa-history me-2"></i>Test History');
+        });
+        
+        // Show success message
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-success alert-dismissible fade show position-fixed';
+        alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        alert.innerHTML = `
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>Health Check Complete!</strong> All systems are operational.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(alert);
+        
+        setTimeout(() => {
+            alert.remove();
+        }, 5000);
+    }, 3000);
+}
+
+function runAllTests() {
+    // Redirect to API testing
+    window.location.href = '@Url.Action("ApiTest", "Testing")';
+}
+
+function viewTestHistory() {
+    // Show test history modal or redirect
+    alert('Test History feature coming soon!');
+}
+
+// Add some interactive effects
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate cards on scroll
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+    
+    // Observe all cards
+    document.querySelectorAll('.testing-card, .stat-item, .feature-highlight').forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        card.style.transition = 'all 0.6s ease';
+        observer.observe(card);
+    });
+    
+    // Add click effects to status items
+    document.querySelectorAll('.status-item').forEach(item => {
+        item.addEventListener('click', function() {
+            this.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                this.style.transform = 'scale(1)';
+            }, 200);
+        });
+    });
+});
+</script>

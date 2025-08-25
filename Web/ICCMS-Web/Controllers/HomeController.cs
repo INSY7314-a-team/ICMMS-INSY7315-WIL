@@ -1,24 +1,31 @@
 using System.Diagnostics;
 using ICCMS_Web.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ICCMS_Web.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
-
-        public HomeController(ILogger<HomeController> logger)
+        public IActionResult Index()
         {
-            _logger = logger;
+            if (User.Identity.IsAuthenticated)
+            {
+                ViewBag.UserEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+                ViewBag.UserRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            }
+
+            return View();
         }
 
-        public IActionResult Index()
+        [Authorize]
+        public IActionResult Privacy()
         {
             return View();
         }
 
-        public IActionResult Privacy()
+        [Authorize(Roles = "Admin")]
+        public IActionResult AdminOnly()
         {
             return View();
         }
@@ -26,7 +33,12 @@ namespace ICCMS_Web.Controllers
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            return View(
+                new ErrorViewModel
+                {
+                    RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier,
+                }
+            );
         }
     }
 }
