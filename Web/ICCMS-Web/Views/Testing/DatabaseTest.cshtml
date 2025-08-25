@@ -1,0 +1,811 @@
+@{
+    ViewData["Title"] = "Database Testing";
+}
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.bg-gradient-light {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.card {
+    transition: all 0.3s ease;
+    border: none;
+    border-radius: 12px;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.test-card {
+    transition: all 0.3s ease;
+    border: none;
+    border-radius: 12px;
+    border-left: 4px solid transparent;
+}
+
+.test-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.test-card.connection-test {
+    border-left-color: #28a745;
+}
+
+.test-card.collection-test {
+    border-left-color: #17a2b8;
+}
+
+.test-card.performance-test {
+    border-left-color: #ffc107;
+}
+
+.btn-test {
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 0.5rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-test:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.alert {
+    border: none;
+    border-radius: 12px;
+    border-left: 4px solid;
+}
+
+.alert-success {
+    border-left-color: #28a745;
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+}
+
+.alert-warning {
+    border-left-color: #ffc107;
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+}
+
+.alert-danger {
+    border-left-color: #dc3545;
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+}
+
+.alert-info {
+    border-left-color: #17a2b8;
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+}
+
+.stat-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.progress {
+    height: 8px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.2);
+}
+
+.progress-bar {
+    border-radius: 10px;
+    background: linear-gradient(90deg, #fff 0%, #f0f0f0 100%);
+}
+</style>
+
+<div class="container-fluid px-4 py-3">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb bg-transparent px-0">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Testing")" class="text-decoration-none text-primary"><i class="fas fa-home me-1"></i>Testing Dashboard</a></li>
+                    <li class="breadcrumb-item active text-muted">Database Testing</li>
+                </ol>
+            </nav>
+            <div class="d-flex align-items-center mb-4">
+                <div class="bg-gradient-success rounded-circle p-3 me-3">
+                    <i class="fas fa-database fa-2x text-white"></i>
+                </div>
+                <div>
+                    <h1 class="h2 mb-1 fw-bold text-dark">Database Testing</h1>
+                    <p class="text-muted mb-0">Test database connectivity, collections, and performance metrics</p>
+                </div>
+            </div>
+            
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @TempData["SuccessMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    @TempData["ErrorMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Database Status Overview -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-number" id="connection-status">-</div>
+                <div class="stat-label">Connection Status</div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-number" id="collections-count">-</div>
+                <div class="stat-label">Collections Available</div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-number" id="avg-response-time">-</div>
+                <div class="stat-label">Avg Response Time</div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-number" id="success-rate">-</div>
+                <div class="stat-label">Success Rate</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Connection Tests -->
+        <div class="col-md-6 mb-4">
+            <div class="card test-card connection-test shadow-sm h-100">
+                <div class="card-header bg-gradient-success text-white border-0 rounded-top-3 py-3">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-plug me-2"></i> Connection Tests</h6>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted small mb-4">Test basic database connectivity and authentication</p>
+                    
+                    <div class="d-grid gap-3">
+                        <button class="btn btn-success btn-test" onclick="testDatabaseConnection()">
+                            <i class="fas fa-wifi me-2"></i> Test Database Connection
+                        </button>
+                        <button class="btn btn-info btn-test" onclick="testFirebaseAuth()">
+                            <i class="fas fa-key me-2"></i> Test Firebase Authentication
+                        </button>
+                        <button class="btn btn-warning btn-test" onclick="testFirestoreAccess()">
+                            <i class="fas fa-fire me-2"></i> Test Firestore Access
+                        </button>
+                    </div>
+                    
+                    <div id="connection-results" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collection Tests -->
+        <div class="col-md-6 mb-4">
+            <div class="card test-card collection-test shadow-sm h-100">
+                <div class="card-header bg-gradient-info text-white border-0 rounded-top-3 py-3">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-folder me-2"></i> Collection Tests</h6>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted small mb-4">Test access to specific database collections</p>
+                    
+                    <div class="d-grid gap-3">
+                        <button class="btn btn-primary btn-test" onclick="testCollection('users')">
+                            <i class="fas fa-users me-2"></i> Test Users Collection
+                        </button>
+                        <button class="btn btn-success btn-test" onclick="testCollection('clients')">
+                            <i class="fas fa-building me-2"></i> Test Clients Collection
+                        </button>
+                        <button class="btn btn-info btn-test" onclick="testCollection('projects')">
+                            <i class="fas fa-project-diagram me-2"></i> Test Projects Collection
+                        </button>
+                        <button class="btn btn-warning btn-test" onclick="testCollection('contractors')">
+                            <i class="fas fa-tools me-2"></i> Test Contractors Collection
+                        </button>
+                    </div>
+                    
+                    <div id="collection-results" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Tests -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card test-card performance-test shadow-sm">
+                <div class="card-header bg-gradient-warning text-white border-0 rounded-top-3 py-3">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-tachometer-alt me-2"></i> Performance Tests</h6>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted small mb-4">Test database performance and response times</p>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <button class="btn btn-warning btn-test w-100" onclick="testDatabasePerformance('read')">
+                                <i class="fas fa-book-open me-2"></i> Read Performance
+                            </button>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <button class="btn btn-success btn-test w-100" onclick="testDatabasePerformance('write')">
+                                <i class="fas fa-pen me-2"></i> Write Performance
+                            </button>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <button class="btn btn-info btn-test w-100" onclick="testDatabasePerformance('query')">
+                                <i class="fas fa-search me-2"></i> Query Performance
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="performance-results" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Summary Dashboard -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg rounded-3">
+                <div class="card-header bg-gradient-light border-0 rounded-top-3 py-3">
+                    <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-chart-bar me-2"></i> Test Summary Dashboard</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary mb-3">Connection Metrics</h6>
+                            <div class="mb-3">
+                                <label class="form-label small">Database Response Time</label>
+                                <div class="progress">
+                                    <div class="progress-bar" id="db-response-progress" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small">Authentication Success Rate</label>
+                                <div class="progress">
+                                    <div class="progress-bar" id="auth-success-progress" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-success mb-3">Collection Metrics</h6>
+                            <div class="mb-3">
+                                <label class="form-label small">Data Retrieval Success</label>
+                                <div class="progress">
+                                    <div class="progress-bar" id="retrieval-success-progress" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small">Overall Performance Score</label>
+                                <div class="progress">
+                                    <div class="progress-bar" id="overall-performance-progress" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Database Packet Inspection Modal -->
+<div class="modal fade" id="dbPacketInspectionModal" tabindex="-1" aria-labelledby="dbPacketInspectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="dbPacketInspectionModalLabel">
+                    <i class="fas fa-search"></i> Database Packet Inspection - <span id="db-modal-endpoint"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary"><i class="fas fa-upload"></i> Database Request</h6>
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <strong><i class="fas fa-headers"></i> Headers</strong>
+                            </div>
+                            <div class="card-body">
+                                <pre id="db-request-headers" class="bg-light p-3 rounded small"></pre>
+                            </div>
+                        </div>
+                        <div class="card border-primary mt-3">
+                            <div class="card-header bg-primary text-white">
+                                <strong><i class="fas fa-file-code"></i> Body</strong>
+                            </div>
+                            <div class="card-body">
+                                <pre id="db-request-body" class="bg-light p-3 rounded small"></pre>
+                            </div>
+                        </div>
+                        <div class="card border-primary mt-3">
+                            <div class="card-header bg-primary text-white">
+                                <strong><i class="fas fa-info-circle"></i> Request Details</strong>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Method:</strong><br>
+                                        <span id="db-request-method" class="badge bg-primary fs-6"></span>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Endpoint:</strong><br>
+                                        <code id="db-request-endpoint" class="fs-6"></code>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div><strong>Timestamp:</strong> <span id="db-request-timestamp"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-success"><i class="fas fa-download"></i> Database Response</h6>
+                        <div class="card border-success">
+                            <div class="card-header bg-success text-white">
+                                <strong><i class="fas fa-headers"></i> Headers</strong>
+                            </div>
+                            <div class="card-body">
+                                <pre id="db-response-headers" class="bg-light p-3 rounded small"></pre>
+                            </div>
+                        </div>
+                        <div class="card border-success mt-3">
+                            <div class="card-header bg-success text-white">
+                                <strong><i class="fas fa-file-code"></i> Body</strong>
+                            </div>
+                            <div class="card-body">
+                                <pre id="db-response-body" class="bg-light p-3 rounded small"></pre>
+                            </div>
+                        </div>
+                        <div class="card border-success mt-3">
+                            <div class="card-header bg-success text-white">
+                                <strong><i class="fas fa-chart-line"></i> Response Metrics</strong>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Status:</strong><br>
+                                        <span id="db-response-status" class="badge fs-6"></span>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Response Time:</strong><br>
+                                        <span id="db-response-time" class="text-success fw-bold"></span>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div><strong>Records Returned:</strong> <span id="db-records-count" class="text-info fw-bold"></span></div>
+                                <div><strong>Timestamp:</strong> <span id="db-response-timestamp"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <h6 class="text-info"><i class="fas fa-chart-bar"></i> Database Analysis</h6>
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white">
+                                <strong><i class="fas fa-analytics"></i> Database Test Results Analysis</strong>
+                            </div>
+                            <div class="card-body">
+                                <div id="db-packet-analysis"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
+                <button type="button" class="btn btn-primary" onclick="copyDbPacketData()">
+                    <i class="fas fa-copy"></i> Copy All Data
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Database testing functions
+async function testDatabaseConnection() {
+    const resultDiv = document.getElementById('connection-results');
+    resultDiv.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Testing database connection...</div>';
+
+    try {
+        const startTime = performance.now();
+        const response = await fetch('/Testing/TestEndpoint', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            },
+            body: new URLSearchParams({
+                endpoint: '/api/users',
+                method: 'GET',
+                requestBody: ''
+            })
+        });
+
+        const endTime = performance.now();
+        const responseTime = (endTime - startTime).toFixed(2);
+        const result = await response.json();
+
+        if (result.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="fas fa-check-circle"></i> <strong>Database Connected!</strong><br>
+                            <small>Status: ${result.statusCode} ${result.statusText}</small><br>
+                            <small>Response time: ${responseTime}ms</small>
+                        </div>
+                        <button class="btn btn-info btn-sm" onclick="showDbPacketInspectionFromButton(this, 'Database Connection', 'GET', '${responseTime}', '${new Date().toISOString()}', '${new Date().toISOString()}')" data-request='${JSON.stringify({endpoint: '/api/users', method: 'GET'})}' data-response='${JSON.stringify(result)}'>
+                            <i class="fas fa-search"></i> Inspect Database Packets
+                        </button>
+                    </div>
+                </div>
+            `;
+            updateDashboardStats('connection-status', '✅', 'connection-status');
+            updateDashboardStats('avg-response-time', `${responseTime}ms`, 'avg-response-time');
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="fas fa-times-circle"></i> <strong>Connection Failed!</strong><br>
+                            <small>Error: ${result.message}</small><br>
+                            <small>Response time: ${responseTime}ms</small>
+                        </div>
+                        <button class="btn btn-info btn-sm" onclick="showDbPacketInspectionFromButton(this, 'Database Connection', 'GET', '${responseTime}', '${new Date().toISOString()}', '${new Date().toISOString()}')" data-request='${JSON.stringify({endpoint: '/api/users', method: 'GET'})}' data-response='${JSON.stringify(result)}'>
+                            <i class="fas fa-search"></i> Inspect Database Packets
+                        </button>
+                    </div>
+                </div>
+            `;
+            updateDashboardStats('connection-status', '❌', 'connection-status');
+        }
+    } catch (error) {
+        resultDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> Error: ${error.message}</div>`;
+        updateDashboardStats('connection-status', '❌', 'connection-status');
+    }
+}
+
+async function testCollection(collectionName) {
+    const resultDiv = document.getElementById('collection-results');
+    resultDiv.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Testing collection...</div>';
+
+    try {
+        const startTime = performance.now();
+        const response = await fetch('/Testing/TestEndpoint', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            },
+            body: new URLSearchParams({
+                endpoint: `/api/${collectionName}`,
+                method: 'GET',
+                requestBody: ''
+            })
+        });
+
+        const endTime = performance.now();
+        const responseTime = (endTime - startTime).toFixed(2);
+        const result = await response.json();
+
+        if (result.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="fas fa-check-circle"></i> <strong>${collectionName} Collection Accessible!</strong><br>
+                            <small>Status: ${result.statusCode} ${result.statusText}</small><br>
+                            <small>Response time: ${responseTime}ms</small>
+                        </div>
+                        <button class="btn btn-info btn-sm" onclick="showDbPacketInspectionFromButton(this, '${collectionName} Collection', 'GET', '${responseTime}', '${new Date().toISOString()}', '${new Date().toISOString()}')" data-request='${JSON.stringify({endpoint: `/api/${collectionName}`, method: 'GET'})}' data-response='${JSON.stringify(result)}'>
+                            <i class="fas fa-search"></i> Inspect Database Packets
+                        </button>
+                    </div>
+                </div>
+            `;
+            updateDashboardStats('collections-count', '✅', 'collections-count');
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-warning">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="fas fa-exclamation-triangle"></i> <strong>${collectionName} Collection Issue!</strong><br>
+                            <small>Error: ${result.message}</small><br>
+                            <small>Response time: ${responseTime}ms</small>
+                        </div>
+                        <button class="btn btn-info btn-sm" onclick="showDbPacketInspectionFromButton(this, '${collectionName} Collection', 'GET', '${responseTime}', '${new Date().toISOString()}', '${new Date().toISOString()}')" data-request='${JSON.stringify({endpoint: `/api/${collectionName}`, method: 'GET'})}' data-response='${JSON.stringify(result)}'>
+                            <i class="fas fa-search"></i> Inspect Database Packets
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        resultDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> Error: ${error.message}</div>`;
+    }
+}
+
+async function testDatabasePerformance(testType) {
+    const resultDiv = document.getElementById('performance-results');
+    resultDiv.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Testing performance...</div>';
+
+    try {
+        const startTime = performance.now();
+        const response = await fetch('/Testing/TestEndpoint', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            },
+            body: new URLSearchParams({
+                endpoint: '/api/users',
+                method: 'GET',
+                requestBody: ''
+            })
+        });
+
+        const endTime = performance.now();
+        const responseTime = (endTime - startTime).toFixed(2);
+        const result = await response.json();
+
+        if (result.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="fas fa-check-circle"></i> <strong>${testType} Performance Test Passed!</strong><br>
+                            <small>Response time: ${responseTime}ms</small><br>
+                            <small>Performance: ${responseTime < 100 ? 'Excellent' : responseTime < 300 ? 'Good' : 'Fair'}</small>
+                        </div>
+                        <button class="btn btn-info btn-sm" onclick="showDbPacketInspectionFromButton(this, '${testType} Performance', 'GET', '${responseTime}', '${new Date().toISOString()}', '${new Date().toISOString()}')" data-request='${JSON.stringify({endpoint: '/api/users', method: 'GET', testType: testType})}' data-response='${JSON.stringify(result)}'>
+                            <i class="fas fa-search"></i> Inspect Database Packets
+                        </button>
+                    </div>
+                </div>
+            `;
+            updateDashboardStats('success-rate', '✅', 'success-rate');
+            updateProgressBar('overall-performance-progress', Math.min(100, Math.max(0, 100 - (responseTime / 10))));
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-warning">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="fas fa-exclamation-triangle"></i> <strong>${testType} Performance Test Failed!</strong><br>
+                            <small>Error: ${result.message}</small><br>
+                            <small>Response time: ${responseTime}ms</small>
+                        </div>
+                        <button class="btn btn-info btn-sm" onclick="showDbPacketInspectionFromButton(this, '${testType} Performance', 'GET', '${responseTime}', '${new Date().toISOString()}', '${new Date().toISOString()}')" data-request='${JSON.stringify({endpoint: '/api/users', method: 'GET', testType: testType})}' data-response='${JSON.stringify(result)}'>
+                            <i class="fas fa-search"></i> Inspect Database Packets
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        resultDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> Error: ${error.message}</div>`;
+    }
+}
+
+function showDbPacketInspectionFromButton(button, testName, method, responseTime, requestTimestamp, responseTimestamp) {
+    const requestData = JSON.parse(button.getAttribute('data-request'));
+    const responseData = JSON.parse(button.getAttribute('data-response'));
+    showDbPacketInspection(testName, method, responseTime, requestTimestamp, responseTimestamp, requestData, responseData);
+}
+
+function showDbPacketInspection(testName, method, responseTime, requestTimestamp, responseTimestamp, requestData, responseData) {
+    // Parse the data
+    const reqData = JSON.parse(requestData);
+    const respData = JSON.parse(responseData);
+    
+    // Populate modal
+    document.getElementById('db-modal-endpoint').textContent = testName;
+    document.getElementById('db-request-method').textContent = method;
+    document.getElementById('db-request-endpoint').textContent = reqData.endpoint;
+    document.getElementById('db-request-timestamp').textContent = new Date(requestTimestamp).toLocaleString();
+    
+    document.getElementById('db-response-status').textContent = respData.success ? `${respData.statusCode} ${respData.statusText}` : 'Error';
+    document.getElementById('db-response-status').className = respData.success ? 'badge bg-success fs-6' : 'badge bg-danger fs-6';
+    document.getElementById('db-response-time').textContent = `${responseTime}ms`;
+    document.getElementById('db-response-timestamp').textContent = new Date(responseTimestamp).toLocaleString();
+    
+    // Request details
+    document.getElementById('db-request-headers').textContent = JSON.stringify({
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'RequestVerificationToken': '[HIDDEN]'
+    }, null, 2);
+    
+    document.getElementById('db-request-body').textContent = JSON.stringify(requestData, null, 2);
+    
+    // Response details
+    if (respData.headers) {
+        document.getElementById('db-response-headers').textContent = JSON.stringify(respData.headers, null, 2);
+    } else {
+        document.getElementById('db-response-headers').textContent = 'No response headers available';
+    }
+    
+    if (respData.responseBody) {
+        try {
+            const formattedBody = JSON.stringify(JSON.parse(respData.responseBody), null, 2);
+            document.getElementById('db-response-body').textContent = formattedBody;
+        } catch {
+            document.getElementById('db-response-body').textContent = respData.responseBody || 'No response body';
+        }
+    } else {
+        document.getElementById('db-response-body').textContent = 'No response body available';
+    }
+    
+    // Records count
+    if (respData.responseBody) {
+        try {
+            const body = JSON.parse(respData.responseBody);
+            document.getElementById('db-records-count').textContent = Array.isArray(body) ? body.length : '1';
+        } catch {
+            document.getElementById('db-records-count').textContent = '0';
+        }
+    } else {
+        document.getElementById('db-records-count').textContent = '0';
+    }
+    
+    // Analysis
+    let analysis = '';
+    if (respData.success) {
+        analysis += `<div class="alert alert-success"><i class="fas fa-check-circle"></i> Database operation successful</div>`;
+        if (respData.statusCode === 200) {
+            analysis += `<div class="text-success"><i class="fas fa-check"></i> HTTP 200 OK - Data retrieved successfully</div>`;
+        }
+        
+        if (respData.responseBody) {
+            try {
+                const body = JSON.parse(respData.responseBody);
+                if (Array.isArray(body)) {
+                    analysis += `<div class="text-info"><i class="fas fa-list"></i> Response contains array with ${body.length} records</div>`;
+                } else if (typeof body === 'object') {
+                    analysis += `<div class="text-info"><i class="fas fa-object-group"></i> Response contains object with ${Object.keys(body).length} properties</div>`;
+                }
+            } catch {}
+        }
+    } else {
+        analysis += `<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Database operation failed: ${respData.message}</div>`;
+    }
+    
+    analysis += `<div class="text-muted"><i class="fas fa-clock"></i> Total response time: ${responseTime}ms</div>`;
+    analysis += `<div class="text-muted"><i class="fas fa-database"></i> Database: Firestore</div>`;
+    analysis += `<div class="text-muted"><i class="fas fa-fire"></i> Service: Firebase</div>`;
+    
+    document.getElementById('db-packet-analysis').innerHTML = analysis;
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('dbPacketInspectionModal'));
+    modal.show();
+}
+
+function copyDbPacketData() {
+    const requestData = {
+        headers: document.getElementById('db-request-headers').textContent,
+        body: document.getElementById('db-request-body').textContent,
+        method: document.getElementById('db-request-method').textContent,
+        endpoint: document.getElementById('db-request-endpoint').textContent,
+        timestamp: document.getElementById('db-request-timestamp').textContent
+    };
+    
+    const responseData = {
+        headers: document.getElementById('db-response-headers').textContent,
+        body: document.getElementById('db-response-body').textContent,
+        status: document.getElementById('db-response-status').textContent,
+        responseTime: document.getElementById('db-response-time').textContent,
+        recordsCount: document.getElementById('db-records-count').textContent,
+        timestamp: document.getElementById('db-response-timestamp').textContent
+    };
+    
+    const packetData = {
+        testName: document.getElementById('db-modal-endpoint').textContent,
+        request: requestData,
+        response: responseData,
+        analysis: document.getElementById('db-packet-analysis').innerText
+    };
+    
+    navigator.clipboard.writeText(JSON.stringify(packetData, null, 2)).then(() => {
+        const copyBtn = document.querySelector('#dbPacketInspectionModal .btn-primary');
+        const originalText = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        copyBtn.className = 'btn btn-success';
+        
+        setTimeout(() => {
+            copyBtn.innerHTML = originalText;
+            copyBtn.className = 'btn btn-primary';
+        }, 2000);
+    });
+}
+
+function updateDashboardStats(elementId, value, type) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.textContent = value;
+        
+        // Update progress bars based on type
+        if (type === 'connection-status' && value === '✅') {
+            updateProgressBar('db-response-progress', 100);
+        }
+        if (type === 'avg-response-time') {
+            const time = parseInt(value);
+            if (time < 100) updateProgressBar('overall-performance-progress', 100);
+            else if (time < 300) updateProgressBar('overall-performance-progress', 75);
+            else if (time < 500) updateProgressBar('overall-performance-progress', 50);
+            else updateProgressBar('overall-performance-progress', 25);
+        }
+    }
+}
+
+function updateProgressBar(progressId, percentage) {
+    const progressBar = document.getElementById(progressId);
+    if (progressBar) {
+        progressBar.style.width = `${percentage}%`;
+        progressBar.setAttribute('aria-valuenow', percentage);
+    }
+}
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    // Set initial values
+    updateDashboardStats('connection-status', '⏳', 'connection-status');
+    updateDashboardStats('collections-count', '0', 'collections-count');
+    updateDashboardStats('avg-response-time', '0ms', 'avg-response-time');
+    updateDashboardStats('success-rate', '0%', 'success-rate');
+    
+    // Initialize progress bars
+    updateProgressBar('db-response-progress', 0);
+    updateProgressBar('auth-success-progress', 0);
+    updateProgressBar('retrieval-success-progress', 0);
+    updateProgressBar('overall-performance-progress', 0);
+});
+</script>

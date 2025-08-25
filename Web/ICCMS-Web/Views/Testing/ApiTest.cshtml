@@ -1,0 +1,860 @@
+@{
+    ViewData["Title"] = "API Testing";
+}
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.bg-gradient-light {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.list-group-item {
+    border: none;
+    border-radius: 0;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+    border-left-color: #667eea;
+    transform: translateX(5px);
+}
+
+.list-group-item.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-left-color: #667eea;
+    border: none;
+}
+
+.list-group-item.active:hover {
+    transform: none;
+}
+
+.endpoint-card {
+    transition: all 0.3s ease;
+    border: none;
+    border-radius: 12px;
+}
+
+.endpoint-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.method-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+}
+
+.btn-test {
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 0.5rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-test:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.alert {
+    border: none;
+    border-radius: 12px;
+    border-left: 4px solid;
+}
+
+.alert-success {
+    border-left-color: #28a745;
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+}
+
+.alert-warning {
+    border-left-color: #ffc107;
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+}
+
+.alert-danger {
+    border-left-color: #dc3545;
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+}
+
+.alert-info {
+    border-left-color: #17a2b8;
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+}
+</style>
+
+<div class="container-fluid px-4 py-3">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb bg-transparent px-0">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Testing")" class="text-decoration-none text-primary"><i class="fas fa-home me-1"></i>Testing Dashboard</a></li>
+                    <li class="breadcrumb-item active text-muted">API Testing</li>
+                </ol>
+            </nav>
+            <div class="d-flex align-items-center mb-4">
+                <div class="bg-gradient-primary rounded-circle p-3 me-3">
+                    <i class="fas fa-plug fa-2x text-white"></i>
+                </div>
+                <div>
+                    <h1 class="h2 mb-1 fw-bold text-dark">API Testing</h1>
+                    <p class="text-muted mb-0">Test all ICCMS API endpoints and verify responses with detailed packet inspection</p>
+                </div>
+            </div>
+            
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @TempData["SuccessMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    @TempData["ErrorMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Navigation Panel -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-lg rounded-3">
+                <div class="card-header bg-gradient-primary text-white border-0 rounded-top-3 py-3">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-layer-group me-2"></i> API Categories</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" id="api-categories">
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="users">
+                            <i class="fas fa-users me-2 text-primary"></i>
+                            <span>Users</span>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="clients">
+                            <i class="fas fa-building me-2 text-success"></i>
+                            <span>Clients</span>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="contractors">
+                            <i class="fas fa-tools me-2 text-warning"></i>
+                            <span>Contractors</span>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="projects">
+                            <i class="fas fa-project-diagram me-2 text-info"></i>
+                            <span>Projects</span>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="phases">
+                            <i class="fas fa-layer-group me-2 text-secondary"></i>
+                            <span>Phases</span>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="tasks">
+                            <i class="fas fa-tasks me-2 text-danger"></i>
+                            <span>Tasks</span>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="maintenance">
+                            <i class="fas fa-wrench me-2 text-dark"></i>
+                            <span>Maintenance</span>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="quotations">
+                            <i class="fas fa-file-invoice-dollar me-2 text-success"></i>
+                            <span>Quotations</span>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="estimates">
+                            <i class="fas fa-chart-line me-2 text-info"></i>
+                            <span>Estimates</span>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="invoices">
+                            <i class="fas fa-receipt me-2 text-warning"></i>
+                            <span>Invoices</span>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="payments">
+                            <i class="fas fa-credit-card me-2 text-success"></i>
+                            <span>Payments</span>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="documents">
+                            <i class="fas fa-file-alt me-2 text-secondary"></i>
+                            <span>Documents</span>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="messages">
+                            <i class="fas fa-comments me-2 text-primary"></i>
+                            <span>Messages</span>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="notifications">
+                            <i class="fas fa-bell me-2 text-danger"></i>
+                            <span>Notifications</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Content Panel -->
+        <div class="col-md-9">
+            <div class="card border-0 shadow-lg rounded-3 h-100">
+                <div class="card-header bg-gradient-light border-0 rounded-top-3 py-3">
+                    <h6 class="mb-0 fw-bold text-dark" id="selected-category-title">
+                        <i class="fas fa-arrow-left me-2 text-muted"></i>Select a category from the left to test endpoints
+                    </h6>
+                </div>
+                <div class="card-body" id="endpoints-content">
+                    <div class="text-center text-muted py-5">
+                        <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                            <i class="fas fa-arrow-left fa-2x text-muted"></i>
+                        </div>
+                        <h5 class="text-muted mb-2">No Category Selected</h5>
+                        <p class="text-muted mb-0">Choose an API category from the left panel to see available endpoints</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Packet Inspection Modal -->
+<div class="modal fade" id="packetInspectionModal" tabindex="-1" aria-labelledby="packetInspectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="packetInspectionModalLabel">
+                    <i class="fas fa-search"></i> Packet Inspection - <span id="modal-endpoint"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary"><i class="fas fa-upload"></i> Request Packet</h6>
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <strong><i class="fas fa-headers"></i> Headers</strong>
+                            </div>
+                            <div class="card-body">
+                                <pre id="request-headers" class="bg-light p-3 rounded small"></pre>
+                            </div>
+                        </div>
+                        <div class="card border-primary mt-3">
+                            <div class="card-header bg-primary text-white">
+                                <strong><i class="fas fa-file-code"></i> Body</strong>
+                            </div>
+                            <div class="card-body">
+                                <pre id="request-body" class="bg-light p-3 rounded small"></pre>
+                            </div>
+                        </div>
+                        <div class="card border-primary mt-3">
+                            <div class="card-header bg-primary text-white">
+                                <strong><i class="fas fa-info-circle"></i> Request Details</strong>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Method:</strong><br>
+                                        <span id="request-method" class="badge bg-primary fs-6"></span>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Endpoint:</strong><br>
+                                        <code id="request-endpoint" class="fs-6"></code>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div><strong>Timestamp:</strong> <span id="request-timestamp"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-success"><i class="fas fa-download"></i> Response Packet</h6>
+                        <div class="card border-success">
+                            <div class="card-header bg-success text-white">
+                                <strong><i class="fas fa-headers"></i> Headers</strong>
+                            </div>
+                            <div class="card-body">
+                                <pre id="response-headers" class="bg-light p-3 rounded small"></pre>
+                            </div>
+                        </div>
+                        <div class="card border-success mt-3">
+                            <div class="card-header bg-success text-white">
+                                <strong><i class="fas fa-file-code"></i> Body</strong>
+                            </div>
+                            <div class="card-body">
+                                <pre id="response-body" class="bg-light p-3 rounded small"></pre>
+                            </div>
+                        </div>
+                        <div class="card border-success mt-3">
+                            <div class="card-header bg-success text-white">
+                                <strong><i class="fas fa-chart-line"></i> Response Metrics</strong>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Status:</strong><br>
+                                        <span id="response-status" class="badge fs-6"></span>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Response Time:</strong><br>
+                                        <span id="response-time" class="text-success fw-bold"></span>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div><strong>Timestamp:</strong> <span id="response-timestamp"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <h6 class="text-info"><i class="fas fa-chart-bar"></i> Analysis</h6>
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white">
+                                <strong><i class="fas fa-analytics"></i> Test Results Analysis</strong>
+                            </div>
+                            <div class="card-body">
+                                <div id="packet-analysis"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
+                <button type="button" class="btn btn-primary" onclick="copyPacketData()">
+                    <i class="fas fa-copy"></i> Copy All Data
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// API endpoints configuration
+const apiEndpoints = {
+    users: {
+        name: 'Users',
+        icon: 'fas fa-users',
+        color: 'primary',
+        endpoints: [
+            { method: 'GET', path: '/api/admin/users', description: 'Get all users', requiresBody: false },
+            { method: 'GET', path: '/api/admin/user/{id}', description: 'Get user by ID', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/admin/create/user', description: 'Create new user', requiresBody: true },
+            { method: 'PUT', path: '/api/admin/update/user/{id}', description: 'Update user', requiresBody: true, hasId: true },
+            { method: 'DELETE', path: '/api/admin/delete/user/{id}', description: 'Delete user', requiresBody: false, hasId: true }
+        ]
+    },
+    clients: {
+        name: 'Clients',
+        icon: 'fas fa-building',
+        color: 'success',
+        endpoints: [
+            { method: 'GET', path: '/api/Clients', description: 'Get all clients', requiresBody: false },
+            { method: 'GET', path: '/api/Clients/{id}', description: 'Get client by ID', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/Clients', description: 'Create new client', requiresBody: true },
+            { method: 'PUT', path: '/api/Clients/{id}', description: 'Update client', requiresBody: true, hasId: true },
+            { method: 'DELETE', path: '/api/Clients/{id}', description: 'Delete client', requiresBody: false, hasId: true }
+        ]
+    },
+    contractors: {
+        name: 'Contractors',
+        icon: 'fas fa-tools',
+        color: 'warning',
+        endpoints: [
+            { method: 'GET', path: '/api/Contractors', description: 'Get all contractors', requiresBody: false },
+            { method: 'GET', path: '/api/Contractors/{id}', description: 'Get contractor by ID', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/Contractors', description: 'Create new contractor', requiresBody: true },
+            { method: 'PUT', path: '/api/Contractors/{id}', description: 'Update contractor', requiresBody: true, hasId: true },
+            { method: 'DELETE', path: '/api/Contractors/{id}', description: 'Delete contractor', requiresBody: false, hasId: true }
+        ]
+    },
+    projects: {
+        name: 'Projects',
+        icon: 'fas fa-project-diagram',
+        color: 'info',
+        endpoints: [
+            { method: 'GET', path: '/api/Projects', description: 'Get all projects', requiresBody: false },
+            { method: 'GET', path: '/api/Projects/{id}', description: 'Get project by ID', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/Projects', description: 'Create new project', requiresBody: true },
+            { method: 'PUT', path: '/api/Projects/{id}', description: 'Update project', requiresBody: true, hasId: true },
+            { method: 'DELETE', path: '/api/Projects/{id}', description: 'Delete project', requiresBody: false, hasId: true }
+        ]
+    },
+    phases: {
+        name: 'Phases',
+        icon: 'fas fa-layer-group',
+        color: 'secondary',
+        endpoints: [
+            { method: 'GET', path: '/api/Phases', description: 'Get all phases', requiresBody: false },
+            { method: 'GET', path: '/api/Phases/{id}', description: 'Get phase by ID', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/Phases', description: 'Create new phase', requiresBody: true },
+            { method: 'PUT', path: '/api/Phases/{id}', description: 'Update phase', requiresBody: true, hasId: true },
+            { method: 'DELETE', path: '/api/Phases/{id}', description: 'Delete phase', requiresBody: false, hasId: true }
+        ]
+    },
+    tasks: {
+        name: 'Tasks',
+        icon: 'fas fa-tasks',
+        color: 'danger',
+        endpoints: [
+            { method: 'GET', path: '/api/Tasks', description: 'Get all tasks', requiresBody: false },
+            { method: 'GET', path: '/api/Tasks/{id}', description: 'Get task by ID', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/Tasks', description: 'Create new task', requiresBody: true },
+            { method: 'PUT', path: '/api/Tasks/{id}', description: 'Update task', requiresBody: true, hasId: true },
+            { method: 'DELETE', path: '/api/Tasks/{id}', description: 'Delete task', requiresBody: false, hasId: true }
+        ]
+    },
+    maintenance: {
+        name: 'Maintenance Requests',
+        icon: 'fas fa-wrench',
+        color: 'dark',
+        endpoints: [
+            { method: 'GET', path: '/api/MaintenanceRequests', description: 'Get all maintenance requests', requiresBody: false },
+            { method: 'GET', path: '/api/MaintenanceRequests/{id}', description: 'Get maintenance request by ID', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/MaintenanceRequests', description: 'Create new maintenance request', requiresBody: true },
+            { method: 'PUT', path: '/api/MaintenanceRequests/{id}', description: 'Update maintenance request', requiresBody: true, hasId: true },
+            { method: 'DELETE', path: '/api/MaintenanceRequests/{id}', description: 'Delete maintenance request', requiresBody: false, hasId: true }
+        ]
+    },
+    quotations: {
+        name: 'Quotations',
+        icon: 'fas fa-file-invoice-dollar',
+        color: 'success',
+        endpoints: [
+            { method: 'GET', path: '/api/Quotations', description: 'Get all quotations', requiresBody: false },
+            { method: 'GET', path: '/api/Quotations/{id}', description: 'Get quotation by ID', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/Quotations', description: 'Create new quotation', requiresBody: true },
+            { method: 'PUT', path: '/api/Quotations/{id}', description: 'Update quotation', requiresBody: true, hasId: true },
+            { method: 'DELETE', path: '/api/Quotations/{id}', description: 'Delete quotation', requiresBody: false, hasId: true }
+        ]
+    },
+    estimates: {
+        name: 'Estimates',
+        icon: 'fas fa-chart-line',
+        color: 'info',
+        endpoints: [
+            { method: 'GET', path: '/api/Estimates', description: 'Get all estimates', requiresBody: false },
+            { method: 'GET', path: '/api/Estimates/{id}', description: 'Get estimate by ID', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/Estimates', description: 'Create new estimate', requiresBody: true },
+            { method: 'PUT', path: '/api/Estimates/{id}', description: 'Update estimate', requiresBody: true, hasId: true },
+            { method: 'DELETE', path: '/api/Estimates/{id}', description: 'Delete estimate', requiresBody: false, hasId: true }
+        ]
+    },
+    invoices: {
+        name: 'Invoices',
+        icon: 'fas fa-receipt',
+        color: 'warning',
+        endpoints: [
+            { method: 'GET', path: '/api/Invoices', description: 'Get all invoices', requiresBody: false },
+            { method: 'GET', path: '/api/Invoices/{id}', description: 'Get invoice by ID', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/Invoices', description: 'Create new invoice', requiresBody: true },
+            { method: 'PUT', path: '/api/Invoices/{id}', description: 'Update invoice', requiresBody: true, hasId: true },
+            { method: 'DELETE', path: '/api/Invoices/{id}', description: 'Delete invoice', requiresBody: false, hasId: true }
+        ]
+    },
+    payments: {
+        name: 'Payments',
+        icon: 'fas fa-credit-card',
+        color: 'success',
+        endpoints: [
+            { method: 'GET', path: '/api/Payments', description: 'Get all payments', requiresBody: false },
+            { method: 'GET', path: '/api/Payments/{id}', description: 'Get payment by ID', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/Payments', description: 'Create new payment', requiresBody: true },
+            { method: 'PUT', path: '/api/Payments/{id}', description: 'Update payment', requiresBody: true, hasId: true },
+            { method: 'DELETE', path: '/api/Payments/{id}', description: 'Delete payment', requiresBody: false, hasId: true }
+        ]
+    },
+    documents: {
+        name: 'Documents',
+        icon: 'fas fa-file-alt',
+        color: 'secondary',
+        endpoints: [
+            { method: 'GET', path: '/api/Documents', description: 'Get all documents', requiresBody: false },
+            { method: 'GET', path: '/api/Documents/{id}', description: 'Get document by ID', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/Documents', description: 'Create new document', requiresBody: true },
+            { method: 'PUT', path: '/api/Documents/{id}', description: 'Update document', requiresBody: true, hasId: true },
+            { method: 'DELETE', path: '/api/Documents/{id}', description: 'Delete document', requiresBody: false, hasId: true }
+        ]
+    },
+    messages: {
+        name: 'Messages',
+        icon: 'fas fa-comments',
+        color: 'primary',
+        endpoints: [
+            { method: 'GET', path: '/api/Messages', description: 'Get all messages', requiresBody: false },
+            { method: 'GET', path: '/api/Messages/{id}', description: 'Get message by ID', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/Messages', description: 'Create new message', requiresBody: true },
+            { method: 'PUT', path: '/api/Messages/{id}', description: 'Update message', requiresBody: true, hasId: true },
+            { method: 'DELETE', path: '/api/Messages/{id}', description: 'Delete message', requiresBody: false, hasId: true }
+        ]
+    },
+    notifications: {
+        name: 'Notifications',
+        icon: 'fas fa-bell',
+        color: 'danger',
+        endpoints: [
+            { method: 'GET', path: '/api/Notifications', description: 'Get all notifications', requiresBody: false },
+            { method: 'GET', path: '/api/Notifications/{id}', description: 'Get notification by ID', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/Notifications', description: 'Create new notification', requiresBody: true },
+            { method: 'PUT', path: '/api/Notifications/{id}', description: 'Update notification', requiresBody: true, hasId: true },
+            { method: 'DELETE', path: '/api/Notifications/{id}', description: 'Delete notification', requiresBody: false, hasId: true }
+        ]
+    }
+};
+
+// Initialize the interface
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click handlers to category items
+    document.querySelectorAll('#api-categories a').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Remove active class from all items
+            document.querySelectorAll('#api-categories a').forEach(a => a.classList.remove('active'));
+            
+            // Add active class to clicked item
+            this.classList.add('active');
+            
+            // Get category and display endpoints
+            const category = this.getAttribute('data-category');
+            displayEndpoints(category);
+        });
+    });
+});
+
+function displayEndpoints(category) {
+    const categoryData = apiEndpoints[category];
+    if (!categoryData) return;
+
+    const contentDiv = document.getElementById('endpoints-content');
+    const titleDiv = document.getElementById('selected-category-title');
+    
+    titleDiv.innerHTML = `<i class="${categoryData.icon} text-${categoryData.color}"></i> ${categoryData.name} API Endpoints`;
+    
+    let html = '<div class="row">';
+    
+    categoryData.endpoints.forEach((endpoint, index) => {
+        const methodColor = getMethodColor(endpoint.method);
+        const methodIcon = getMethodIcon(endpoint.method);
+        
+        html += `
+            <div class="col-md-6 mb-4">
+                <div class="card endpoint-card shadow-sm h-100">
+                    <div class="card-header bg-${methodColor} text-white border-0 rounded-top-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold">
+                                <i class="${methodIcon} me-2"></i> ${endpoint.method} ${endpoint.path}
+                            </h6>
+                            <span class="badge bg-light text-dark method-badge">${endpoint.description}</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <p class="text-muted small mb-4 fst-italic">${endpoint.description}</p>
+                        
+                        ${endpoint.hasId ? `
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-dark">ID Parameter:</label>
+                                <input type="text" class="form-control form-control-sm border-0 bg-light" id="id-${category}-${index}" placeholder="Enter ID" value="1">
+                            </div>
+                        ` : ''}
+                        
+                        ${endpoint.requiresBody ? `
+                            <div class="mb-4">
+                                <label class="form-label small fw-bold text-dark">Request Body (JSON):</label>
+                                <textarea class="form-control form-control-sm border-0 bg-light" id="body-${category}-${index}" rows="4" placeholder="Enter JSON request body">${getSampleBody(category)}</textarea>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="d-grid">
+                            <button class="btn btn-${methodColor} btn-sm btn-test" onclick="testEndpoint('${endpoint.method}', '${endpoint.path}', '${category}', ${index})">
+                                <i class="fas fa-play me-2"></i> Test Endpoint
+                            </button>
+                        </div>
+                        
+                        <div id="result-${category}-${index}" class="mt-4"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    contentDiv.innerHTML = html;
+}
+
+function getMethodColor(method) {
+    switch (method) {
+        case 'GET': return 'primary';
+        case 'POST': return 'success';
+        case 'PUT': return 'warning';
+        case 'DELETE': return 'danger';
+        default: return 'secondary';
+    }
+}
+
+function getMethodIcon(method) {
+    switch (method) {
+        case 'GET': return 'fas fa-download';
+        case 'POST': return 'fas fa-plus';
+        case 'PUT': return 'fas fa-edit';
+        case 'DELETE': return 'fas fa-trash';
+        default: return 'fas fa-question';
+    }
+}
+
+function getSampleBody(category) {
+    const samples = {
+        users: '{\n  "email": "test@example.com",\n  "password": "TestPass123!",\n  "fullName": "Test User",\n  "phone": "+1234567890",\n  "role": "Client"\n}',
+        clients: '{\n  "userId": "user123",\n  "organisation": "Test Company Ltd"\n}',
+        projects: '{\n  "projectManagerId": "pm123",\n  "name": "Office Renovation Project",\n  "description": "Complete renovation of office building",\n  "budgetPlanned": 50000.00,\n  "budgetActual": 0.00,\n  "status": "Planning",\n  "startDate": "2024-01-15T00:00:00Z",\n  "endDatePlanned": "2024-06-15T00:00:00Z"\n}',
+        phases: '{\n  "projectId": "project123",\n  "name": "Foundation Phase",\n  "description": "Building foundation and structural work",\n  "startDate": "2024-01-15T00:00:00Z",\n  "endDate": "2024-03-15T00:00:00Z",\n  "status": "Not Started",\n  "progress": 0,\n  "budget": 15000.00,\n  "assignedTo": "contractor456",\n  "isActive": true\n}',
+        tasks: '{\n  "projectId": "project123",\n  "phaseId": "phase789",\n  "name": "Install Electrical Wiring",\n  "description": "Install electrical wiring for the main floor",\n  "assignedTo": "contractor456",\n  "priority": "High",\n  "status": "Not Started",\n  "startDate": "2024-02-01T00:00:00Z",\n  "dueDate": "2024-02-15T00:00:00Z",\n  "progress": 0,\n  "estimatedHours": 40.0,\n  "actualHours": 0.0,\n  "isActive": true\n}',
+        maintenance: '{\n  "clientId": "client123",\n  "projectId": "project456",\n  "description": "Air conditioning unit not working properly",\n  "priority": "High",\n  "status": "Open",\n  "mediaUrl": "",\n  "requestedBy": "client123",\n  "assignedTo": "",\n  "isActive": true\n}',
+        quotations: '{\n  "projectId": "project123",\n  "maintenanceRequestId": "maint456",\n  "clientId": "client123",\n  "contractorId": "contractor789",\n  "adminApproverUserId": "admin123",\n  "description": "Quotation for electrical repair work",\n  "total": 2500.00,\n  "status": "Draft",\n  "validUntil": "2024-02-15T00:00:00Z",\n  "isActive": true\n}',
+        estimates: '{\n  "projectId": "project123",\n  "contractorId": "contractor456",\n  "description": "Cost estimate for plumbing installation",\n  "totalAmount": 8500.00,\n  "status": "Pending",\n  "validUntil": "2024-03-01T00:00:00Z",\n  "isActive": true\n}',
+        invoices: '{\n  "projectId": "project123",\n  "clientId": "client456",\n  "contractorId": "contractor789",\n  "invoiceNumber": "INV-2024-001",\n  "description": "Invoice for completed electrical work",\n  "amount": 2000.00,\n  "taxAmount": 200.00,\n  "totalAmount": 2200.00,\n  "status": "Sent",\n  "dueDate": "2024-02-28T00:00:00Z",\n  "issuedDate": "2024-01-28T00:00:00Z",\n  "isActive": true\n}',
+        payments: '{\n  "invoiceId": "invoice123",\n  "projectId": "project456",\n  "clientId": "client789",\n  "amount": 2200.00,\n  "method": "Bank Transfer",\n  "status": "Pending",\n  "transactionId": "TXN-2024-001",\n  "paymentDate": "2024-01-30T00:00:00Z",\n  "processedAt": "2024-01-30T10:30:00Z",\n  "notes": "Payment for electrical work completion",\n  "isActive": true\n}',
+        documents: '{\n  "projectId": "project123",\n  "fileName": "blueprint_v1.pdf",\n  "fileType": "application/pdf",\n  "fileSize": 2048576,\n  "fileUrl": "https://storage.example.com/documents/blueprint_v1.pdf",\n  "uploadedBy": "user456",\n  "description": "Main building blueprint version 1",\n  "isActive": true\n}',
+        messages: '{\n  "senderId": "user123",\n  "receiverId": "user456",\n  "projectId": "project789",\n  "subject": "Project Update Required",\n  "content": "Please provide an update on the current project status.",\n  "isRead": false,\n  "sentAt": "2024-01-30T14:30:00Z",\n  "isActive": true\n}',
+        notifications: '{\n  "userId": "user123",\n  "title": "Project Milestone Reached",\n  "message": "The foundation phase has been completed successfully.",\n  "type": "Project Update",\n  "isRead": false,\n  "isActive": true\n}',
+        default: '{\n  "name": "Test Item",\n  "description": "A test description"\n}'
+    };
+    
+    return samples[category] || samples.default;
+}
+
+async function testEndpoint(method, path, category, index) {
+    const resultDiv = document.getElementById(`result-${category}-${index}`);
+    resultDiv.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Testing...</div>';
+
+    // Get input values
+    let actualPath = path;
+    let requestBody = '';
+    
+    if (path.includes('{id}')) {
+        const idInput = document.getElementById(`id-${category}-${index}`);
+        if (idInput && idInput.value) {
+            actualPath = path.replace('{id}', idInput.value);
+        } else {
+            resultDiv.innerHTML = '<div class="alert alert-warning">⚠️ Please enter an ID</div>';
+            return;
+        }
+    }
+    
+    if (method === 'POST' || method === 'PUT') {
+        const bodyInput = document.getElementById(`body-${category}-${index}`);
+        if (bodyInput && bodyInput.value) {
+            requestBody = bodyInput.value;
+        }
+    }
+
+    // Capture request details
+    const requestStartTime = new Date();
+    const requestHeaders = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+    };
+    
+    const requestData = {
+        endpoint: actualPath,
+        method: method,
+        requestBody: requestBody
+    };
+
+    try {
+        const startTime = performance.now();
+        
+        const response = await fetch('/Testing/TestEndpoint', {
+            method: 'POST',
+            headers: requestHeaders,
+            body: new URLSearchParams(requestData)
+        });
+
+        const endTime = performance.now();
+        const responseTime = (endTime - startTime).toFixed(2);
+        const responseEndTime = new Date();
+
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <i class="fas fa-check-circle"></i> <strong>Success!</strong><br>
+                                <small>Status: ${result.statusCode} ${result.statusText}</small><br>
+                                <small>Response time: ${responseTime}ms</small>
+                            </div>
+                            <button class="btn btn-info btn-sm" onclick="showPacketInspectionFromButton(this, '${actualPath}', '${method}', '${responseTime}', '${requestStartTime.toISOString()}', '${responseEndTime.toISOString()}')" data-request='${JSON.stringify(requestData)}' data-response='${JSON.stringify(result)}'>
+                                <i class="fas fa-search"></i> Inspect Packets
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-warning">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong><br>
+                                <small>${result.message}</small><br>
+                                <small>Response time: ${responseTime}ms</small>
+                            </div>
+                            <button class="btn btn-info btn-sm" onclick="showPacketInspectionFromButton(this, '${actualPath}', '${method}', '${responseTime}', '${requestStartTime.toISOString()}', '${responseEndTime.toISOString()}')" data-request='${JSON.stringify(requestData)}' data-response='${JSON.stringify(result)}'>
+                                <i class="fas fa-search"></i> Inspect Packets
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="fas fa-times-circle"></i> <strong>Error:</strong><br>
+                            <small>HTTP ${response.status} ${response.statusText}</small><br>
+                            <small>Response time: ${responseTime}ms</small>
+                        </div>
+                                                    <button class="btn btn-info btn-sm" onclick="showPacketInspectionFromButton(this, '${actualPath}', '${method}', '${responseTime}', '${requestStartTime.toISOString()}', '${responseEndTime.toISOString()}')" data-request='${JSON.stringify(requestData)}' data-response='{"success": false, "message": "HTTP Error"}'>
+                                <i class="fas fa-search"></i> Inspect Packets
+                            </button>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        resultDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> Error: ${error.message}</div>`;
+    }
+}
+
+function showPacketInspectionFromButton(button, endpoint, method, responseTime, requestTimestamp, responseTimestamp) {
+    const requestData = JSON.parse(button.getAttribute('data-request'));
+    const responseData = JSON.parse(button.getAttribute('data-response'));
+    showPacketInspection(endpoint, method, requestData, responseData, responseTime, requestTimestamp, responseTimestamp);
+}
+
+function showPacketInspection(endpoint, method, requestData, responseData, responseTime, requestTimestamp, responseTimestamp) {
+    // Populate modal with packet data
+    document.getElementById('modal-endpoint').textContent = `${method} ${endpoint}`;
+    document.getElementById('request-method').textContent = method;
+    document.getElementById('request-endpoint').textContent = endpoint;
+    document.getElementById('request-timestamp').textContent = new Date(requestTimestamp).toLocaleString();
+    
+    document.getElementById('response-status').textContent = responseData.success ? `${responseData.statusCode} ${responseData.statusText}` : 'Error';
+    document.getElementById('response-status').className = responseData.success ? 'badge bg-success fs-6' : 'badge bg-danger fs-6';
+    document.getElementById('response-time').textContent = `${responseTime}ms`;
+    document.getElementById('response-timestamp').textContent = new Date(responseTimestamp).toLocaleString();
+
+    // Request details
+    document.getElementById('request-headers').textContent = JSON.stringify({
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'RequestVerificationToken': '[HIDDEN]'
+    }, null, 2);
+    
+    document.getElementById('request-body').textContent = JSON.stringify(requestData, null, 2);
+
+    // Response details
+    if (responseData.headers) {
+        document.getElementById('response-headers').textContent = JSON.stringify(responseData.headers, null, 2);
+    } else {
+        document.getElementById('response-headers').textContent = 'No response headers available';
+    }
+    
+    if (responseData.responseBody) {
+        try {
+            const formattedBody = JSON.stringify(JSON.parse(responseData.responseBody), null, 2);
+            document.getElementById('response-body').textContent = formattedBody;
+        } catch {
+            document.getElementById('response-body').textContent = responseData.responseBody || 'No response body';
+        }
+    } else {
+        document.getElementById('response-body').textContent = 'No response body available';
+    }
+
+    // Analysis
+    let analysis = '';
+    if (responseData.success) {
+        analysis += `<div class="alert alert-success"><i class="fas fa-check-circle"></i> API call successful</div>`;
+        if (responseData.statusCode === 200) {
+            analysis += `<div class="text-success"><i class="fas fa-check"></i> HTTP 200 OK - Standard success response</div>`;
+        } else if (responseData.statusCode === 201) {
+            analysis += `<div class="text-success"><i class="fas fa-check"></i> HTTP 201 Created - Resource successfully created</div>`;
+        }
+        
+        if (responseData.responseBody) {
+            try {
+                const body = JSON.parse(responseData.responseBody);
+                if (Array.isArray(body)) {
+                    analysis += `<div class="text-info"><i class="fas fa-list"></i> Response contains array with ${body.length} items</div>`;
+                } else if (typeof body === 'object') {
+                    analysis += `<div class="text-info"><i class="fas fa-object-group"></i> Response contains object with ${Object.keys(body).length} properties</div>`;
+                }
+            } catch {}
+        }
+    } else {
+        analysis += `<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> API call failed: ${responseData.message}</div>`;
+    }
+    
+    analysis += `<div class="text-muted"><i class="fas fa-clock"></i> Total response time: ${responseTime}ms</div>`;
+    analysis += `<div class="text-muted"><i class="fas fa-paper-plane"></i> Request sent: ${new Date(requestTimestamp).toLocaleTimeString()}</div>`;
+    analysis += `<div class="text-muted"><i class="fas fa-inbox"></i> Response received: ${new Date(responseTimestamp).toLocaleTimeString()}</div>`;
+    
+    document.getElementById('packet-analysis').innerHTML = analysis;
+
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('packetInspectionModal'));
+    modal.show();
+}
+
+function copyPacketData() {
+    const requestData = {
+        headers: document.getElementById('request-headers').textContent,
+        body: document.getElementById('request-body').textContent,
+        method: document.getElementById('request-method').textContent,
+        endpoint: document.getElementById('request-endpoint').textContent,
+        timestamp: document.getElementById('request-timestamp').textContent
+    };
+    
+    const responseData = {
+        headers: document.getElementById('response-headers').textContent,
+        body: document.getElementById('response-body').textContent,
+        status: document.getElementById('response-status').textContent,
+        responseTime: document.getElementById('response-time').textContent,
+        timestamp: document.getElementById('response-timestamp').textContent
+    };
+    
+    const packetData = {
+        endpoint: document.getElementById('modal-endpoint').textContent,
+        request: requestData,
+        response: responseData,
+        analysis: document.getElementById('packet-analysis').innerText
+    };
+    
+    navigator.clipboard.writeText(JSON.stringify(packetData, null, 2)).then(() => {
+        // Show success message
+        const copyBtn = document.querySelector('#packetInspectionModal .btn-primary');
+        const originalText = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        copyBtn.className = 'btn btn-success';
+        
+        setTimeout(() => {
+            copyBtn.innerHTML = originalText;
+            copyBtn.className = 'btn btn-primary';
+        }, 2000);
+    });
+}
+</script>
