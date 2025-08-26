@@ -1,10 +1,12 @@
 using System.Security.Claims;
 using System.Text.Json;
 using ICCMS_Web.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ICCMS_Web.Controllers
 {
+    [Authorize(Roles = "Tester")]
     public class TestingController : Controller
     {
         private readonly HttpClient _httpClient;

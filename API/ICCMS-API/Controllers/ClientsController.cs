@@ -8,7 +8,7 @@ namespace ICCMS_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Client")] // Only clients can access this controller
+    [Authorize(Roles = "Client,Tester")] // Only clients and testers can access this controller
     public class ClientsController : ControllerBase
     {
         private readonly IFirebaseService _firebaseService;

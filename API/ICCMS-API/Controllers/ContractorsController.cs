@@ -9,7 +9,7 @@ namespace ICCMS_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Contractor")]
+    [Authorize(Roles = "Contractor,Tester")]
     public class ContractorsController : ControllerBase
     {
         private readonly IAuthService _authService;

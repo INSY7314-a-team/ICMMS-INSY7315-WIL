@@ -7,7 +7,7 @@ namespace ICCMS_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")] // Only admins can access this controller
+    [Authorize(Roles = "Admin,Tester")] // Only admins and testers can access this controller
     public class AdminController : ControllerBase
     {
         private readonly IAuthService _authService;
@@ -163,13 +163,20 @@ namespace ICCMS_API.Controllers
             try
             {
                 // Validate role
-                var validRoles = new[] { "Admin", "Project Manager", "Contractor", "Client" };
+                var validRoles = new[]
+                {
+                    "Admin",
+                    "Project Manager",
+                    "Contractor",
+                    "Client",
+                    "Tester",
+                };
                 if (!validRoles.Contains(request.Role))
                 {
                     return BadRequest(
                         new
                         {
-                            error = "Invalid role specified \n Valid roles are: Admin, Project Manager, Contractor, Client \n You chose: "
+                            error = "Invalid role specified \n Valid roles are: Admin, Project Manager, Contractor, Client, Tester \n You chose: "
                                 + request.Role,
                         }
                     );
@@ -306,7 +313,14 @@ namespace ICCMS_API.Controllers
         {
             try
             {
-                var validRoles = new[] { "Admin", "ProjectManager", "Contractor", "Client" };
+                var validRoles = new[]
+                {
+                    "Admin",
+                    "Project Manager",
+                    "Contractor",
+                    "Client",
+                    "Tester",
+                };
                 if (!validRoles.Contains(request.Role))
                 {
                     return BadRequest(new { error = "Invalid role specified" });

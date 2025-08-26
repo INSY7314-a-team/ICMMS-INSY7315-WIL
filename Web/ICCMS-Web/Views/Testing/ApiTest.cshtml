@@ -97,6 +97,46 @@
     border-left-color: #17a2b8;
     background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
 }
+
+/* Console Output Styling */
+.console-output {
+    background-color: #1e1e1e;
+    border-radius: 0 0 0.375rem 0.375rem;
+}
+
+.console-entry {
+    margin-bottom: 2px;
+    border-left: 3px solid transparent;
+    padding-left: 8px;
+}
+
+.console-entry.log { border-left-color: #007bff; }
+.console-entry.error { border-left-color: #dc3545; }
+.console-entry.warn { border-left-color: #ffc107; }
+.console-entry.info { border-left-color: #17a2b8; }
+
+.console-timestamp {
+    color: #888;
+    font-size: 10px;
+    margin-right: 8px;
+}
+
+.console-level {
+    font-weight: bold;
+    margin-right: 8px;
+    text-transform: uppercase;
+    font-size: 10px;
+}
+
+.console-level.log { color: #007bff; }
+.console-level.error { color: #dc3545; }
+.console-level.warn { color: #ffc107; }
+.console-level.info { color: #17a2b8; }
+
+.console-minimized {
+    height: 40px !important;
+    overflow: hidden;
+}
 </style>
 
 <div class="container-fluid px-4 py-3">
@@ -114,7 +154,47 @@
                 </div>
                 <div>
                     <h1 class="h2 mb-1 fw-bold text-dark">API Testing</h1>
-                    <p class="text-muted mb-0">Test all ICCMS API endpoints and verify responses with detailed packet inspection</p>
+                    <p class="text-muted mb-0">Test all ICCMS API endpoints by controller and verify responses with detailed packet inspection</p>
+                </div>
+            </div>
+
+            <!-- Tester Status -->
+            <div class="alert alert-success border-0 rounded-3 mb-4">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-user-shield fa-lg me-3"></i>
+                        <div>
+                                            <h6 class="mb-1 fw-bold">Tester Access Granted</h6>
+                    <small class="text-muted">You have full access to all API endpoints for testing purposes</small>
+                    <br>
+                    <small class="text-muted mt-1 d-block">
+                        <strong>Endpoints Available:</strong> Admin (18), Project Manager (16), Contractor (7), Client (15) - Total: 56 endpoints
+                    </small>
+                    <small class="text-muted mt-1 d-block">
+                        <strong>How to use:</strong> Navigate by category or click "Test All Endpoints" for comprehensive testing
+                    </small>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="testAllEndpoints()">
+                            <i class="fas fa-play-circle me-2"></i>Test All Endpoints
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm" onclick="debugSetup()">
+                            <i class="fas fa-bug me-2"></i>Debug Setup
+                        </button>
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="testConsoleCapture()">
+                            <i class="fas fa-terminal me-2"></i>Test Console
+                        </button>
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="directConsoleTest()">
+                            <i class="fas fa-bolt me-2"></i>Direct Test
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="simpleConsoleTest()">
+                            <i class="fas fa-check me-2"></i>Simple Test
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="forceInitializeConsole()">
+                            <i class="fas fa-sync me-2"></i>Force Init
+                        </button>
+                    </div>
                 </div>
             </div>
             
@@ -135,6 +215,41 @@
         </div>
     </div>
 
+    <!-- Console Output Panel -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-dark text-light border-0 rounded-top-3 py-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-terminal fa-lg me-3 text-success"></i>
+                            <div>
+                                <h6 class="mb-1 fw-bold">Console Output</h6>
+                                <small class="text-light opacity-75">Real-time debugging and status tracking</small>
+                            </div>
+                        </div>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-light btn-sm" onclick="clearConsoleOutput()">
+                                <i class="fas fa-trash me-1"></i>Clear
+                            </button>
+                            <button type="button" class="btn btn-outline-light btn-sm" onclick="copyConsoleOutput()">
+                                <i class="fas fa-copy me-1"></i>Copy
+                            </button>
+                            <button type="button" class="btn btn-outline-light btn-sm" onclick="toggleConsole()" id="toggleConsoleBtn">
+                                <i class="fas fa-minus me-1"></i>Minimize
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body bg-dark p-0" id="console-output-container">
+                    <div id="console-output" class="console-output p-3 text-light" style="height: 300px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.4;">
+                        <div class="text-muted opacity-75">Console output will appear here...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <!-- Left Navigation Panel -->
         <div class="col-md-3">
@@ -144,61 +259,25 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush" id="api-categories">
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="users">
-                            <i class="fas fa-users me-2 text-primary"></i>
-                            <span>Users</span>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="admin">
+                            <i class="fas fa-crown me-2 text-primary"></i>
+                            <span>Admin Endpoints</span>
+                            <small class="text-muted ms-auto">18 endpoints</small>
                         </a>
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="clients">
-                            <i class="fas fa-building me-2 text-success"></i>
-                            <span>Clients</span>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="projectManager">
+                            <i class="fas fa-project-diagram me-2 text-success"></i>
+                            <span>Project Manager</span>
+                            <small class="text-muted ms-auto">16 endpoints</small>
                         </a>
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="contractors">
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="contractor">
                             <i class="fas fa-tools me-2 text-warning"></i>
-                            <span>Contractors</span>
+                            <span>Contractor Endpoints</span>
+                            <small class="text-muted ms-auto">7 endpoints</small>
                         </a>
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="projects">
-                            <i class="fas fa-project-diagram me-2 text-info"></i>
-                            <span>Projects</span>
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="phases">
-                            <i class="fas fa-layer-group me-2 text-secondary"></i>
-                            <span>Phases</span>
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="tasks">
-                            <i class="fas fa-tasks me-2 text-danger"></i>
-                            <span>Tasks</span>
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="maintenance">
-                            <i class="fas fa-wrench me-2 text-dark"></i>
-                            <span>Maintenance</span>
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="quotations">
-                            <i class="fas fa-file-invoice-dollar me-2 text-success"></i>
-                            <span>Quotations</span>
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="estimates">
-                            <i class="fas fa-chart-line me-2 text-info"></i>
-                            <span>Estimates</span>
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="invoices">
-                            <i class="fas fa-receipt me-2 text-warning"></i>
-                            <span>Invoices</span>
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="payments">
-                            <i class="fas fa-credit-card me-2 text-success"></i>
-                            <span>Payments</span>
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="documents">
-                            <i class="fas fa-file-alt me-2 text-secondary"></i>
-                            <span>Documents</span>
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="messages">
-                            <i class="fas fa-comments me-2 text-primary"></i>
-                            <span>Messages</span>
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="notifications">
-                            <i class="fas fa-bell me-2 text-danger"></i>
-                            <span>Notifications</span>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="client">
+                            <i class="fas fa-building me-2 text-info"></i>
+                            <span>Client Endpoints</span>
+                            <small class="text-muted ms-auto">15 endpoints</small>
                         </a>
                     </div>
                 </div>
@@ -214,7 +293,46 @@
                     </h6>
                 </div>
                 <div class="card-body" id="endpoints-content">
-                    <div class="text-center text-muted py-5">
+                    <!-- Test Progress Section -->
+                    <div id="test-progress-section" class="d-none mb-4">
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0"><i class="fas fa-spinner fa-spin me-2"></i>Testing All Endpoints</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span id="current-test-info" class="fw-bold">Preparing tests...</span>
+                                        <span id="test-counter" class="badge bg-light text-dark">0 / 0</span>
+                                    </div>
+                                    <div class="progress">
+                                        <div id="test-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <div class="small text-muted" id="current-endpoint-details">Initializing...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Test Results Section -->
+                    <div id="test-results-section" class="d-none mb-4">
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Test Results Summary</h6>
+                                <div id="test-summary-badges">
+                                    <!-- Summary badges will be inserted here -->
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="test-results-content">
+                                    <!-- Test results will be inserted here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Default Content -->
+                    <div id="default-content" class="text-center text-muted py-5">
                         <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
                             <i class="fas fa-arrow-left fa-2x text-muted"></i>
                         </div>
@@ -343,208 +461,1070 @@
 </div>
 
 <script>
-// API endpoints configuration
+// API endpoints configuration by controller
 const apiEndpoints = {
-    users: {
-        name: 'Users',
-        icon: 'fas fa-users',
+    admin: {
+        name: 'Admin Endpoints',
+        icon: 'fas fa-crown',
         color: 'primary',
+        description: 'System administration and user management endpoints',
         endpoints: [
+            { method: 'GET', path: '/api/admin/dashboard', description: 'Get admin dashboard data', requiresBody: false },
             { method: 'GET', path: '/api/admin/users', description: 'Get all users', requiresBody: false },
+            { method: 'GET', path: '/api/admin/deactivated', description: 'Get deactivated users', requiresBody: false },
             { method: 'GET', path: '/api/admin/user/{id}', description: 'Get user by ID', requiresBody: false, hasId: true },
+            { method: 'GET', path: '/api/admin/messages', description: 'Get all messages', requiresBody: false },
+            { method: 'GET', path: '/api/admin/message/{id}', description: 'Get message by ID', requiresBody: false, hasId: true },
+            { method: 'GET', path: '/api/admin/projects/{id}/status', description: 'Get project status', requiresBody: false, hasId: true },
+            { method: 'GET', path: '/api/admin/documents', description: 'Get all documents', requiresBody: false },
             { method: 'POST', path: '/api/admin/create/user', description: 'Create new user', requiresBody: true },
+            { method: 'POST', path: '/api/admin/create/document', description: 'Create new document', requiresBody: true },
+            { method: 'POST', path: '/api/admin/users/{id}/activate', description: 'Activate user', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/admin/users/{id}/deactivate', description: 'Deactivate user', requiresBody: false, hasId: true },
             { method: 'PUT', path: '/api/admin/update/user/{id}', description: 'Update user', requiresBody: true, hasId: true },
-            { method: 'DELETE', path: '/api/admin/delete/user/{id}', description: 'Delete user', requiresBody: false, hasId: true }
+            { method: 'PUT', path: '/api/admin/users/{id}/role', description: 'Update user role', requiresBody: true, hasId: true },
+            { method: 'PUT', path: '/api/admin/notifications/{id}', description: 'Update notification', requiresBody: true, hasId: true },
+            { method: 'PUT', path: '/api/admin/update/document/{id}', description: 'Update document', requiresBody: true, hasId: true },
+            { method: 'DELETE', path: '/api/admin/delete/user/{id}', description: 'Delete user', requiresBody: false, hasId: true },
+            { method: 'DELETE', path: '/api/admin/delete/documents/{id}', description: 'Delete document', requiresBody: false, hasId: true }
         ]
     },
-    clients: {
-        name: 'Clients',
-        icon: 'fas fa-building',
+    projectManager: {
+        name: 'Project Manager Endpoints',
+        icon: 'fas fa-project-diagram',
         color: 'success',
+        description: 'Project management and oversight endpoints',
         endpoints: [
-            { method: 'GET', path: '/api/Clients', description: 'Get all clients', requiresBody: false },
-            { method: 'GET', path: '/api/Clients/{id}', description: 'Get client by ID', requiresBody: false, hasId: true },
-            { method: 'POST', path: '/api/Clients', description: 'Create new client', requiresBody: true },
-            { method: 'PUT', path: '/api/Clients/{id}', description: 'Update client', requiresBody: true, hasId: true },
-            { method: 'DELETE', path: '/api/Clients/{id}', description: 'Delete client', requiresBody: false, hasId: true }
+            { method: 'GET', path: '/api/ProjectManager/projects', description: 'Get my projects', requiresBody: false },
+            { method: 'GET', path: '/api/ProjectManager/project/{id}', description: 'Get project by ID', requiresBody: false, hasId: true },
+            { method: 'GET', path: '/api/ProjectManager/project/{id}/phases', description: 'Get project phases', requiresBody: false, hasId: true },
+            { method: 'GET', path: '/api/ProjectManager/project/{id}/tasks', description: 'Get project tasks', requiresBody: false, hasId: true },
+            { method: 'GET', path: '/api/ProjectManager/project/{id}/documents', description: 'Get project documents', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/ProjectManager/create/project', description: 'Create new project', requiresBody: true },
+            { method: 'POST', path: '/api/ProjectManager/create/project/{projectId}/phase', description: 'Create project phase', requiresBody: true, hasId: true },
+            { method: 'POST', path: '/api/ProjectManager/create/project/{projectId}/task', description: 'Create project task', requiresBody: true, hasId: true },
+            { method: 'POST', path: '/api/ProjectManager/create/project/{projectId}/document', description: 'Create project document', requiresBody: true, hasId: true },
+            { method: 'PUT', path: '/api/ProjectManager/update/project/{id}', description: 'Update project', requiresBody: true, hasId: true },
+            { method: 'PUT', path: '/api/ProjectManager/update/phase/{id}', description: 'Update phase', requiresBody: true, hasId: true },
+            { method: 'PUT', path: '/api/ProjectManager/update/task/{id}', description: 'Update task', requiresBody: true, hasId: true },
+            { method: 'PUT', path: '/api/ProjectManager/update/document/{id}', description: 'Update document', requiresBody: true, hasId: true },
+            { method: 'PUT', path: '/api/ProjectManager/approve/document/{id}', description: 'Approve document', requiresBody: false, hasId: true },
+            { method: 'DELETE', path: '/api/ProjectManager/delete/project/{id}', description: 'Delete project', requiresBody: false, hasId: true },
+            { method: 'DELETE', path: '/api/ProjectManager/delete/phase/{id}', description: 'Delete phase', requiresBody: false, hasId: true },
+            { method: 'DELETE', path: '/api/ProjectManager/delete/task/{id}', description: 'Delete task', requiresBody: false, hasId: true },
+            { method: 'DELETE', path: '/api/ProjectManager/delete/document/{id}', description: 'Delete document', requiresBody: false, hasId: true }
         ]
     },
-    contractors: {
-        name: 'Contractors',
+    contractor: {
+        name: 'Contractor Endpoints',
         icon: 'fas fa-tools',
         color: 'warning',
+        description: 'Contractor-specific project execution endpoints',
         endpoints: [
-            { method: 'GET', path: '/api/Contractors', description: 'Get all contractors', requiresBody: false },
-            { method: 'GET', path: '/api/Contractors/{id}', description: 'Get contractor by ID', requiresBody: false, hasId: true },
-            { method: 'POST', path: '/api/Contractors', description: 'Create new contractor', requiresBody: true },
-            { method: 'PUT', path: '/api/Contractors/{id}', description: 'Update contractor', requiresBody: true, hasId: true },
-            { method: 'DELETE', path: '/api/Contractors/{id}', description: 'Delete contractor', requiresBody: false, hasId: true }
+            { method: 'GET', path: '/api/Contractors/project/tasks', description: 'Get my assigned tasks', requiresBody: false },
+            { method: 'GET', path: '/api/Contractors/project/phases', description: 'Get my assigned phases', requiresBody: false },
+            { method: 'GET', path: '/api/Contractors/project/documents', description: 'Get my uploaded documents', requiresBody: false },
+            { method: 'POST', path: '/api/Contractors/upload/project/{projectId}/document', description: 'Upload project document', requiresBody: true, hasId: true },
+            { method: 'PUT', path: '/api/Contractors/update/project/task/{id}', description: 'Update assigned task', requiresBody: true, hasId: true },
+            { method: 'PUT', path: '/api/Contractors/update/document/{id}', description: 'Update uploaded document', requiresBody: true, hasId: true },
+            { method: 'DELETE', path: '/api/Contractors/delete/document/{id}', description: 'Delete uploaded document', requiresBody: false, hasId: true }
         ]
     },
-    projects: {
-        name: 'Projects',
-        icon: 'fas fa-project-diagram',
+    client: {
+        name: 'Client Endpoints',
+        icon: 'fas fa-building',
         color: 'info',
+        description: 'Client project management and financial endpoints',
         endpoints: [
-            { method: 'GET', path: '/api/Projects', description: 'Get all projects', requiresBody: false },
-            { method: 'GET', path: '/api/Projects/{id}', description: 'Get project by ID', requiresBody: false, hasId: true },
-            { method: 'POST', path: '/api/Projects', description: 'Create new project', requiresBody: true },
-            { method: 'PUT', path: '/api/Projects/{id}', description: 'Update project', requiresBody: true, hasId: true },
-            { method: 'DELETE', path: '/api/Projects/{id}', description: 'Delete project', requiresBody: false, hasId: true }
-        ]
-    },
-    phases: {
-        name: 'Phases',
-        icon: 'fas fa-layer-group',
-        color: 'secondary',
-        endpoints: [
-            { method: 'GET', path: '/api/Phases', description: 'Get all phases', requiresBody: false },
-            { method: 'GET', path: '/api/Phases/{id}', description: 'Get phase by ID', requiresBody: false, hasId: true },
-            { method: 'POST', path: '/api/Phases', description: 'Create new phase', requiresBody: true },
-            { method: 'PUT', path: '/api/Phases/{id}', description: 'Update phase', requiresBody: true, hasId: true },
-            { method: 'DELETE', path: '/api/Phases/{id}', description: 'Delete phase', requiresBody: false, hasId: true }
-        ]
-    },
-    tasks: {
-        name: 'Tasks',
-        icon: 'fas fa-tasks',
-        color: 'danger',
-        endpoints: [
-            { method: 'GET', path: '/api/Tasks', description: 'Get all tasks', requiresBody: false },
-            { method: 'GET', path: '/api/Tasks/{id}', description: 'Get task by ID', requiresBody: false, hasId: true },
-            { method: 'POST', path: '/api/Tasks', description: 'Create new task', requiresBody: true },
-            { method: 'PUT', path: '/api/Tasks/{id}', description: 'Update task', requiresBody: true, hasId: true },
-            { method: 'DELETE', path: '/api/Tasks/{id}', description: 'Delete task', requiresBody: false, hasId: true }
-        ]
-    },
-    maintenance: {
-        name: 'Maintenance Requests',
-        icon: 'fas fa-wrench',
-        color: 'dark',
-        endpoints: [
-            { method: 'GET', path: '/api/MaintenanceRequests', description: 'Get all maintenance requests', requiresBody: false },
-            { method: 'GET', path: '/api/MaintenanceRequests/{id}', description: 'Get maintenance request by ID', requiresBody: false, hasId: true },
-            { method: 'POST', path: '/api/MaintenanceRequests', description: 'Create new maintenance request', requiresBody: true },
-            { method: 'PUT', path: '/api/MaintenanceRequests/{id}', description: 'Update maintenance request', requiresBody: true, hasId: true },
-            { method: 'DELETE', path: '/api/MaintenanceRequests/{id}', description: 'Delete maintenance request', requiresBody: false, hasId: true }
-        ]
-    },
-    quotations: {
-        name: 'Quotations',
-        icon: 'fas fa-file-invoice-dollar',
-        color: 'success',
-        endpoints: [
-            { method: 'GET', path: '/api/Quotations', description: 'Get all quotations', requiresBody: false },
-            { method: 'GET', path: '/api/Quotations/{id}', description: 'Get quotation by ID', requiresBody: false, hasId: true },
-            { method: 'POST', path: '/api/Quotations', description: 'Create new quotation', requiresBody: true },
-            { method: 'PUT', path: '/api/Quotations/{id}', description: 'Update quotation', requiresBody: true, hasId: true },
-            { method: 'DELETE', path: '/api/Quotations/{id}', description: 'Delete quotation', requiresBody: false, hasId: true }
-        ]
-    },
-    estimates: {
-        name: 'Estimates',
-        icon: 'fas fa-chart-line',
-        color: 'info',
-        endpoints: [
-            { method: 'GET', path: '/api/Estimates', description: 'Get all estimates', requiresBody: false },
-            { method: 'GET', path: '/api/Estimates/{id}', description: 'Get estimate by ID', requiresBody: false, hasId: true },
-            { method: 'POST', path: '/api/Estimates', description: 'Create new estimate', requiresBody: true },
-            { method: 'PUT', path: '/api/Estimates/{id}', description: 'Update estimate', requiresBody: true, hasId: true },
-            { method: 'DELETE', path: '/api/Estimates/{id}', description: 'Delete estimate', requiresBody: false, hasId: true }
-        ]
-    },
-    invoices: {
-        name: 'Invoices',
-        icon: 'fas fa-receipt',
-        color: 'warning',
-        endpoints: [
-            { method: 'GET', path: '/api/Invoices', description: 'Get all invoices', requiresBody: false },
-            { method: 'GET', path: '/api/Invoices/{id}', description: 'Get invoice by ID', requiresBody: false, hasId: true },
-            { method: 'POST', path: '/api/Invoices', description: 'Create new invoice', requiresBody: true },
-            { method: 'PUT', path: '/api/Invoices/{id}', description: 'Update invoice', requiresBody: true, hasId: true },
-            { method: 'DELETE', path: '/api/Invoices/{id}', description: 'Delete invoice', requiresBody: false, hasId: true }
-        ]
-    },
-    payments: {
-        name: 'Payments',
-        icon: 'fas fa-credit-card',
-        color: 'success',
-        endpoints: [
-            { method: 'GET', path: '/api/Payments', description: 'Get all payments', requiresBody: false },
-            { method: 'GET', path: '/api/Payments/{id}', description: 'Get payment by ID', requiresBody: false, hasId: true },
-            { method: 'POST', path: '/api/Payments', description: 'Create new payment', requiresBody: true },
-            { method: 'PUT', path: '/api/Payments/{id}', description: 'Update payment', requiresBody: true, hasId: true },
-            { method: 'DELETE', path: '/api/Payments/{id}', description: 'Delete payment', requiresBody: false, hasId: true }
-        ]
-    },
-    documents: {
-        name: 'Documents',
-        icon: 'fas fa-file-alt',
-        color: 'secondary',
-        endpoints: [
-            { method: 'GET', path: '/api/Documents', description: 'Get all documents', requiresBody: false },
-            { method: 'GET', path: '/api/Documents/{id}', description: 'Get document by ID', requiresBody: false, hasId: true },
-            { method: 'POST', path: '/api/Documents', description: 'Create new document', requiresBody: true },
-            { method: 'PUT', path: '/api/Documents/{id}', description: 'Update document', requiresBody: true, hasId: true },
-            { method: 'DELETE', path: '/api/Documents/{id}', description: 'Delete document', requiresBody: false, hasId: true }
-        ]
-    },
-    messages: {
-        name: 'Messages',
-        icon: 'fas fa-comments',
-        color: 'primary',
-        endpoints: [
-            { method: 'GET', path: '/api/Messages', description: 'Get all messages', requiresBody: false },
-            { method: 'GET', path: '/api/Messages/{id}', description: 'Get message by ID', requiresBody: false, hasId: true },
-            { method: 'POST', path: '/api/Messages', description: 'Create new message', requiresBody: true },
-            { method: 'PUT', path: '/api/Messages/{id}', description: 'Update message', requiresBody: true, hasId: true },
-            { method: 'DELETE', path: '/api/Messages/{id}', description: 'Delete message', requiresBody: false, hasId: true }
-        ]
-    },
-    notifications: {
-        name: 'Notifications',
-        icon: 'fas fa-bell',
-        color: 'danger',
-        endpoints: [
-            { method: 'GET', path: '/api/Notifications', description: 'Get all notifications', requiresBody: false },
-            { method: 'GET', path: '/api/Notifications/{id}', description: 'Get notification by ID', requiresBody: false, hasId: true },
-            { method: 'POST', path: '/api/Notifications', description: 'Create new notification', requiresBody: true },
-            { method: 'PUT', path: '/api/Notifications/{id}', description: 'Update notification', requiresBody: true, hasId: true },
-            { method: 'DELETE', path: '/api/Notifications/{id}', description: 'Delete notification', requiresBody: false, hasId: true }
+            { method: 'GET', path: '/api/Clients/projects', description: 'Get my projects', requiresBody: false },
+            { method: 'GET', path: '/api/Clients/project/{id}', description: 'Get project by ID', requiresBody: false, hasId: true },
+            { method: 'GET', path: '/api/Clients/quotations', description: 'Get my quotations', requiresBody: false },
+            { method: 'GET', path: '/api/Clients/quotation/{id}', description: 'Get quotation by ID', requiresBody: false, hasId: true },
+            { method: 'GET', path: '/api/Clients/invoices', description: 'Get my invoices', requiresBody: false },
+            { method: 'GET', path: '/api/Clients/invoice/{id}', description: 'Get invoice by ID', requiresBody: false, hasId: true },
+            { method: 'GET', path: '/api/Clients/maintenanceRequests', description: 'Get my maintenance requests', requiresBody: false },
+            { method: 'GET', path: '/api/Clients/maintenanceRequest/{id}', description: 'Get maintenance request by ID', requiresBody: false, hasId: true },
+            { method: 'POST', path: '/api/Clients/create/maintenanceRequest', description: 'Create maintenance request', requiresBody: true },
+            { method: 'POST', path: '/api/Clients/pay/invoice/{id}', description: 'Pay invoice', requiresBody: true, hasId: true },
+            { method: 'PUT', path: '/api/Clients/update/maintenanceRequest/{id}', description: 'Update maintenance request', requiresBody: true, hasId: true },
+            { method: 'PUT', path: '/api/Clients/approve/quotation/{id}', description: 'Approve quotation', requiresBody: false, hasId: true },
+            { method: 'PUT', path: '/api/Clients/reject/quotation/{id}', description: 'Reject quotation', requiresBody: false, hasId: true },
+            { method: 'DELETE', path: '/api/Clients/delete/maintenanceRequest/{id}', description: 'Delete maintenance request', requiresBody: false, hasId: true }
         ]
     }
 };
 
+// Simple test to verify JavaScript is working
+console.log('🚀 API Testing page JavaScript loaded successfully!');
+
 // Initialize the interface
-document.addEventListener('DOMContentLoaded', function() {
+function initializeInterface() {
+    console.log('🔧 API Testing interface initializing...');
+    console.log('📄 Current document readyState:', document.readyState);
+    console.log('🔍 Console output element exists:', !!document.getElementById('console-output'));
+
+    // Check if DOM is ready
+    if (document.readyState === 'loading') {
+        console.log('⏳ DOM still loading, waiting...');
+        document.addEventListener('DOMContentLoaded', initializeInterface);
+        return;
+    }
+
+    originalConsoleLog('✅ DOM ready, proceeding with initialization...');
+
+    // Initialize console capture first
+    originalConsoleLog('🎯 Initializing console capture...');
+    const captureSuccess = initializeConsoleCapture();
+    if (captureSuccess) {
+        originalConsoleLog('✅ Console capture initialized successfully');
+    } else {
+        originalConsoleWarn('⚠️ Console capture initialization failed, retrying in 500ms...');
+        // Retry after a short delay
+        setTimeout(() => {
+            const retrySuccess = initializeConsoleCapture();
+            if (retrySuccess) {
+                originalConsoleLog('✅ Console capture initialized on retry');
+            } else {
+                originalConsoleWarn('⚠️ Console capture initialization failed on retry, continuing without capture...');
+            }
+        }, 500);
+    }
+
+    // Test the console immediately
+    originalConsoleLog('🚀 Interface initialization complete - console capture should now be active!');
+
     // Add click handlers to category items
-    document.querySelectorAll('#api-categories a').forEach(item => {
+    const categoryLinks = document.querySelectorAll('#api-categories a');
+    originalConsoleLog('Found category links:', categoryLinks.length);
+
+    categoryLinks.forEach((item, index) => {
+        originalConsoleLog(`Setting up handler for link ${index}:`, item.getAttribute('data-category'));
         item.addEventListener('click', function(e) {
             e.preventDefault();
-            
+
             // Remove active class from all items
             document.querySelectorAll('#api-categories a').forEach(a => a.classList.remove('active'));
-            
+
             // Add active class to clicked item
             this.classList.add('active');
-            
+
             // Get category and display endpoints
             const category = this.getAttribute('data-category');
+            originalConsoleLog('Displaying endpoints for category:', category);
             displayEndpoints(category);
         });
     });
-});
+
+    // Load admin endpoints by default and set it as active
+    const adminLink = document.querySelector('[data-category="admin"]');
+    if (adminLink) {
+        adminLink.classList.add('active');
+        originalConsoleLog('Set admin link as active');
+    } else {
+        originalConsoleError('Admin link not found!');
+    }
+
+    originalConsoleLog('Loading admin endpoints by default');
+    displayEndpoints('admin');
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeInterface);
+} else {
+    // DOM is already ready, initialize immediately
+    setTimeout(initializeInterface, 100); // Small delay to ensure all elements are rendered
+}
+
+// Global variables for test tracking
+let testResults = [];
+let currentTestIndex = 0;
+let totalTests = 0;
+
+// Console output tracking
+let consoleOutput = [];
+let originalConsoleLog = console.log;
+let originalConsoleError = console.error;
+let originalConsoleWarn = console.warn;
+let originalConsoleInfo = console.info;
+let consoleMinimized = false;
+let consoleCaptureInitialized = false;
+
+// Initialize console capture
+function initializeConsoleCapture() {
+    originalConsoleLog('🎯 Initializing console capture...');
+
+    // Check if console output element exists
+    const consoleDiv = document.getElementById('console-output');
+    if (!consoleDiv) {
+        originalConsoleError('❌ Console output element not found! Console capture cannot be initialized.');
+        return false;
+    }
+
+    // Prevent multiple initializations
+    if (consoleCaptureInitialized) {
+        originalConsoleLog('⚠️ Console capture already initialized, skipping...');
+        return true;
+    }
+
+    try {
+        // Override console methods to capture output
+        console.log = function(...args) {
+            captureConsoleMessage('log', args);
+            originalConsoleLog.apply(console, args);
+        };
+
+        console.error = function(...args) {
+            captureConsoleMessage('error', args);
+            originalConsoleError.apply(console, args);
+        };
+
+        console.warn = function(...args) {
+            captureConsoleMessage('warn', args);
+            originalConsoleWarn.apply(console, args);
+        };
+
+        console.info = function(...args) {
+            captureConsoleMessage('info', args);
+            originalConsoleInfo.apply(console, args);
+        };
+
+        consoleCaptureInitialized = true;
+        originalConsoleLog('✅ Console capture initialized successfully');
+
+        // Test the capture system
+        setTimeout(() => {
+            console.log('🧪 Console capture test message - if you see this in both console and panel, capture is working!');
+            console.error('🧪 Console capture test error - if you see this in both console and panel, capture is working!');
+        }, 1000);
+
+        return true;
+    } catch (error) {
+        originalConsoleError('❌ Failed to initialize console capture:', error);
+        return false;
+    }
+}
+
+function captureConsoleMessage(level, args) {
+    try {
+        const timestamp = new Date().toLocaleTimeString();
+        const message = args.map(arg => {
+            if (typeof arg === 'object') {
+                try {
+                    return JSON.stringify(arg, null, 2);
+                } catch (e) {
+                    return '[Object]';
+                }
+            }
+            return String(arg);
+        }).join(' ');
+
+        consoleOutput.push({
+            timestamp,
+            level,
+            message
+        });
+
+        // Limit console output to prevent memory issues
+        if (consoleOutput.length > 1000) {
+            consoleOutput = consoleOutput.slice(-500);
+        }
+
+        // Update display immediately
+        updateConsoleDisplay();
+    } catch (error) {
+        // Fallback to original console if capture fails
+        originalConsoleError('Console capture error:', error);
+    }
+}
+
+function updateConsoleDisplay() {
+    try {
+        const consoleDiv = document.getElementById('console-output');
+        if (!consoleDiv) {
+            // Use original console if capture div not found
+            originalConsoleError('❌ Console output div not found!');
+            return;
+        }
+
+        if (consoleOutput.length === 0) {
+            consoleDiv.innerHTML = '<div class="text-muted opacity-75">Console output will appear here...</div>';
+            return;
+        }
+
+        // Create HTML content for console entries
+        const htmlContent = consoleOutput.map(entry => {
+            const levelClass = entry.level === 'error' ? 'error' : 
+                              entry.level === 'warn' ? 'warn' : 
+                              entry.level === 'info' ? 'info' : 'log';
+            
+            return `
+                <div class="console-entry ${levelClass}">
+                    <span class="console-timestamp">[${entry.timestamp}]</span>
+                    <span class="console-level ${levelClass}">${entry.level.toUpperCase()}</span>
+                    <span class="console-message">${entry.message}</span>
+                </div>
+            `;
+        }).join('');
+
+        consoleDiv.innerHTML = htmlContent;
+
+        // Auto-scroll to bottom
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    } catch (error) {
+        // Fallback to original console if display update fails
+        originalConsoleError('Console display update error:', error);
+    }
+}
+
+function clearConsoleOutput() {
+    consoleOutput = [];
+    updateConsoleDisplay();
+    originalConsoleLog('Console output cleared');
+}
+
+function copyConsoleOutput() {
+    try {
+        const consoleDiv = document.getElementById('console-output');
+        if (!consoleDiv) {
+            originalConsoleError('Console output div not found');
+            return;
+        }
+
+        const textToCopy = consoleOutput.map(entry =>
+            `[${entry.timestamp}] ${entry.level.toUpperCase()}: ${entry.message}`
+        ).join('\n');
+
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            // Show success feedback
+            const copyBtn = event.target.closest('button');
+            if (copyBtn) {
+                const originalHtml = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+                copyBtn.classList.remove('btn-outline-light');
+                copyBtn.classList.add('btn-success');
+
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalHtml;
+                    copyBtn.classList.remove('btn-success');
+                    copyBtn.classList.add('btn-outline-light');
+                }, 2000);
+            }
+        }).catch(err => {
+            originalConsoleError('Failed to copy console output:', err);
+            alert('Failed to copy to clipboard');
+        });
+    } catch (error) {
+        originalConsoleError('Copy console output error:', error);
+    }
+}
+
+function toggleConsole() {
+    try {
+        const consoleContainer = document.getElementById('console-output-container');
+        const toggleBtn = document.getElementById('toggleConsoleBtn');
+        const consoleOutputDiv = document.getElementById('console-output');
+
+        if (!consoleContainer || !toggleBtn || !consoleOutputDiv) {
+            originalConsoleError('Console toggle elements not found');
+            return;
+        }
+
+        consoleMinimized = !consoleMinimized;
+
+        if (consoleMinimized) {
+            consoleOutputDiv.classList.add('console-minimized');
+            toggleBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Expand';
+        } else {
+            consoleOutputDiv.classList.remove('console-minimized');
+            toggleBtn.innerHTML = '<i class="fas fa-minus me-1"></i>Minimize';
+            // Scroll to bottom when expanding
+            setTimeout(() => {
+                consoleOutputDiv.scrollTop = consoleOutputDiv.scrollHeight;
+            }, 100);
+        }
+    } catch (error) {
+        originalConsoleError('Toggle console error:', error);
+    }
+}
+
+// Debug function for troubleshooting
+function debugSetup() {
+    originalConsoleLog('🐛 === DEBUG SETUP START ===');
+    originalConsoleLog('📄 Document readyState:', document.readyState);
+    originalConsoleLog('🔗 apiEndpoints object exists:', typeof apiEndpoints !== 'undefined');
+    originalConsoleLog('🔗 apiEndpoints keys:', apiEndpoints ? Object.keys(apiEndpoints) : 'N/A');
+    originalConsoleLog('🔗 testAllEndpoints function exists:', typeof testAllEndpoints === 'function');
+    originalConsoleLog('🔗 Button element:', document.querySelector('[onclick*="testAllEndpoints"]'));
+    originalConsoleLog('🔗 Console output element:', document.getElementById('console-output'));
+    originalConsoleLog('🔗 Test progress section:', document.getElementById('test-progress-section'));
+    originalConsoleLog('🔗 Test results section:', document.getElementById('test-results-section'));
+    originalConsoleLog('🔗 Console capture initialized:', consoleCaptureInitialized);
+    originalConsoleLog('🐛 === DEBUG SETUP END ===');
+}
+
+// Test console capture manually
+function testConsoleCapture() {
+    originalConsoleLog('🧪 === MANUAL CONSOLE TEST START ===');
+    console.log('🧪 This is a test log message');
+    console.error('🧪 This is a test error message');
+    console.warn('🧪 This is a test warning message');
+    console.info('🧪 This is a test info message');
+
+    // Test with object
+    console.log('🧪 Test object:', { test: 'value', number: 42 });
+
+    originalConsoleLog('🧪 === MANUAL CONSOLE TEST END ===');
+    originalConsoleLog('📝 If you see these messages in both the browser console AND the console output panel above, the capture system is working correctly!');
+
+    // Direct test - force update console display
+    setTimeout(() => {
+        originalConsoleLog('🔄 Forcing console display update...');
+        if (typeof updateConsoleDisplay === 'function') {
+            updateConsoleDisplay();
+        }
+        originalConsoleLog('🔄 Console display update forced');
+    }, 1000);
+}
+
+// Force initialize console capture (call this from browser console if needed)
+function forceInitializeConsole() {
+    originalConsoleLog('🔧 Force initializing console capture...');
+
+    if (typeof originalConsoleLog === 'undefined') {
+        originalConsoleLog('❌ Original console methods not stored, reinitializing...');
+        // Re-store original methods
+        originalConsoleLog = console.log;
+        originalConsoleError = console.error;
+        originalConsoleWarn = console.warn;
+        originalConsoleInfo = console.info;
+    }
+
+    const success = initializeConsoleCapture();
+    if (success) {
+        originalConsoleLog('✅ Force initialization complete');
+    } else {
+        originalConsoleLog('❌ Force initialization failed');
+    }
+}
+
+// Direct test - bypass all console capture and write directly to panel
+function directConsoleTest() {
+    originalConsoleLog('🎯 DIRECT TEST: Testing direct panel write...');
+
+    const consoleDiv = document.getElementById('console-output');
+    if (consoleDiv) {
+        originalConsoleLog('✅ Found console output div');
+
+        // Show current content
+        originalConsoleLog('📄 Current panel content:', consoleDiv.innerHTML.substring(0, 100) + '...');
+
+        // Add test content directly
+        const testContent = `
+            <div class="console-entry log" style="border-left: 3px solid #007bff; padding-left: 8px; margin-bottom: 4px;">
+                <span class="console-timestamp">[${new Date().toLocaleTimeString()}]</span>
+                <span class="console-level log" style="color: #007bff; margin-left: 8px;">LOG</span>
+                <span class="console-message" style="margin-left: 8px;">🎯 DIRECT TEST: This message was added directly to the panel!</span>
+            </div>
+            <div class="console-entry error" style="border-left: 3px solid #dc3545; padding-left: 8px; margin-bottom: 4px;">
+                <span class="console-timestamp">[${new Date().toLocaleTimeString()}]</span>
+                <span class="console-level error" style="color: #dc3545; margin-left: 8px;">ERROR</span>
+                <span class="console-message" style="margin-left: 8px;">🎯 DIRECT TEST: Error message added directly!</span>
+            </div>
+        `;
+
+        consoleDiv.innerHTML = testContent;
+        originalConsoleLog('✅ Direct content added to console panel');
+
+        // Verify the content was added
+        setTimeout(() => {
+            originalConsoleLog('🔍 Verification: Panel content after direct test:', consoleDiv.innerHTML.substring(0, 200) + '...');
+        }, 100);
+
+    } else {
+        originalConsoleError('❌ Console output div not found!');
+        originalConsoleError('🔍 Available elements with "console" in ID:', Array.from(document.querySelectorAll('*')).filter(el => el.id && el.id.includes('console')).map(el => el.id));
+    }
+}
+
+// Simple console test function
+function simpleConsoleTest() {
+    // First, check if DOM elements exist
+    originalConsoleLog('🔍 Checking DOM elements...');
+    const consoleDiv = document.getElementById('console-output');
+    const consoleContainer = document.getElementById('console-output-container');
+    
+    originalConsoleLog('Console div exists:', !!consoleDiv);
+    originalConsoleLog('Console container exists:', !!consoleContainer);
+    
+    if (consoleDiv) {
+        originalConsoleLog('✅ Found console output div, testing direct write...');
+        originalConsoleLog('Console div content length:', consoleDiv.innerHTML.length);
+        
+        // Add a test message directly to the panel
+        const testMessage = `
+            <div class="console-entry log" style="border-left: 3px solid #007bff; padding-left: 8px; margin-bottom: 4px;">
+                <span class="console-timestamp">[${new Date().toLocaleTimeString()}]</span>
+                <span class="console-level log" style="color: #007bff; margin-left: 8px;">LOG</span>
+                <span class="console-message" style="margin-left: 8px;">🧪 DIRECT TEST: This message was added directly to the panel!</span>
+            </div>
+        `;
+        
+        consoleDiv.innerHTML = testMessage;
+        originalConsoleLog('✅ Direct test message added to panel');
+    } else {
+        originalConsoleError('❌ Console output div not found!');
+        // Try to find any elements with 'console' in the ID
+        const allElements = document.querySelectorAll('*');
+        const consoleElements = Array.from(allElements).filter(el => el.id && el.id.includes('console'));
+        originalConsoleLog('Elements with "console" in ID:', consoleElements.map(el => el.id));
+    }
+    
+    // Now test console capture
+    console.log('🧪 Simple console test - this should appear in both browser console and panel');
+    console.error('🧪 Simple error test - this should appear in both browser console and panel');
+    console.warn('🧪 Simple warning test - this should appear in both browser console and panel');
+    console.info('🧪 Simple info test - this should appear in both browser console and panel');
+    
+    // Test with different data types
+    console.log('🧪 String test:', 'Hello World');
+    console.log('🧪 Number test:', 42);
+    console.log('🧪 Object test:', { name: 'Test', value: 123 });
+    console.log('🧪 Array test:', [1, 2, 3, 'test']);
+    
+    // Test with special characters
+    console.log('🧪 Special chars: 🚀 ✅ ❌ ⚠️ 🔧');
+    
+    originalConsoleLog('✅ Simple console test completed - check both browser console and panel above');
+}
+
+// Make functions available globally
+window.debugSetup = debugSetup;
+window.testConsoleCapture = testConsoleCapture;
+window.forceInitializeConsole = forceInitializeConsole;
+window.directConsoleTest = directConsoleTest;
+window.simpleConsoleTest = simpleConsoleTest;
+window.testAllEndpoints = testAllEndpoints;
+
+// Test all endpoints sequentially
+async function testAllEndpoints() {
+    console.log('🚀 testAllEndpoints function called');
+
+    try {
+        // Check if apiEndpoints exists
+        if (typeof apiEndpoints === 'undefined') {
+            console.error('❌ apiEndpoints object is not defined!');
+            alert('❌ Error: API endpoints configuration not found. Please refresh the page.');
+            return;
+        }
+
+        console.log('📋 apiEndpoints object:', apiEndpoints);
+        console.log('🔢 apiEndpoints keys:', Object.keys(apiEndpoints));
+
+        // Get test button for use in finally block
+        const testButton = document.querySelector('[onclick*="testAllEndpoints"]');
+        console.log('🔘 Test button found:', testButton);
+
+        // Reset test results
+        testResults = [];
+        currentTestIndex = 0;
+
+        // Collect all endpoints from all categories
+        const allEndpoints = [];
+        console.log('📚 Collecting endpoints...');
+
+        Object.entries(apiEndpoints).forEach(([categoryName, categoryData]) => {
+            console.log(`📂 Processing category: ${categoryName}`, categoryData);
+            categoryData.endpoints.forEach((endpoint, endpointIndex) => {
+                allEndpoints.push({
+                    ...endpoint,
+                    category: categoryName,
+                    categoryName: categoryData.name,
+                    endpointIndex: endpointIndex
+                });
+            });
+        });
+
+        totalTests = allEndpoints.length;
+        console.log(`🎯 Found ${totalTests} endpoints to test:`, allEndpoints);
+
+        if (totalTests === 0) {
+            console.log('❌ No endpoints found to test!');
+            alert('❌ No endpoints found to test!');
+            return;
+        }
+
+        // Show progress section and hide default content
+        console.log('📊 Showing progress section...');
+        const progressSection = document.getElementById('test-progress-section');
+        const defaultContent = document.getElementById('default-content');
+        const resultsSection = document.getElementById('test-results-section');
+
+        console.log('🔍 DOM elements found:', { progressSection, defaultContent, resultsSection });
+
+        // Check if elements exist before manipulating them
+        if (progressSection) {
+            progressSection.classList.remove('d-none');
+            console.log('✅ Progress section shown');
+        } else {
+            console.error('❌ Progress section not found!');
+        }
+
+        if (defaultContent) {
+            defaultContent.classList.add('d-none');
+            console.log('✅ Default content hidden');
+        } else {
+            console.error('❌ Default content not found!');
+        }
+
+        if (resultsSection) {
+            resultsSection.classList.add('d-none');
+            console.log('✅ Results section hidden');
+        } else {
+            console.error('❌ Results section not found!');
+        }
+
+        // Disable the test button
+        console.log('🔘 Test button found:', testButton);
+
+        if (testButton) {
+            testButton.disabled = true;
+            testButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Testing...';
+            console.log('✅ Button disabled and text updated');
+        }
+
+        // Continue with the rest of the function (the try block will wrap this)
+        console.log('🎯 Starting sequential endpoint testing...');
+
+        for (let i = 0; i < allEndpoints.length; i++) {
+            const endpoint = allEndpoints[i];
+            currentTestIndex = i + 1;
+
+            // Update progress UI
+            updateTestProgress(endpoint, currentTestIndex, totalTests);
+
+            // Test the endpoint
+            console.log(`🧪 Starting test ${currentTestIndex}/${totalTests}: ${endpoint.method} ${endpoint.path}`);
+            const result = await testEndpointSequential(endpoint);
+
+            // Store result
+            testResults.push(result);
+            console.log(`✅ Completed test ${currentTestIndex}/${totalTests}: ${result.success ? 'PASS' : 'FAIL'}`);
+
+            // Small delay between requests to avoid overwhelming the server
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        // Show results
+        console.log('🎉 All tests completed, displaying results...');
+        displayTestResults();
+
+        console.log('🏆 === TESTING COMPLETED ===');
+        const successfulTests = testResults.filter(r => r.success);
+        const failedTests = testResults.filter(r => !r.success);
+        console.log(`📊 Final Results: ${successfulTests.length} passed, ${failedTests.length} failed out of ${totalTests} total tests`);
+
+    } catch (error) {
+        console.error('❌ Error during sequential testing:', error);
+        alert('❌ Error during testing: ' + error.message);
+    } finally {
+        // Re-enable the test button
+        if (testButton) {
+            testButton.disabled = false;
+            testButton.innerHTML = '<i class="fas fa-play-circle me-2"></i>Test All Endpoints';
+            console.log('✅ Button re-enabled');
+        }
+
+        // Hide progress section
+        const progressSection = document.getElementById('test-progress-section');
+        if (progressSection) {
+            progressSection.classList.add('d-none');
+            console.log('✅ Progress section hidden');
+        }
+
+        console.log('🏁 Test execution completed');
+    }
+}
+
+function updateTestProgress(endpoint, current, total) {
+    const progressPercent = (current / total) * 100;
+
+    const currentTestInfo = document.getElementById('current-test-info');
+    const testCounter = document.getElementById('test-counter');
+    const testProgressBar = document.getElementById('test-progress-bar');
+    const currentEndpointDetails = document.getElementById('current-endpoint-details');
+
+    console.log('Updating progress for:', endpoint.path, { currentTestInfo, testCounter, testProgressBar, currentEndpointDetails });
+
+    if (currentTestInfo) {
+        currentTestInfo.innerHTML = `
+            <span class="badge bg-${getMethodColor(endpoint.method)} me-2">${endpoint.method}</span>
+            ${endpoint.path}
+        `;
+    }
+
+    if (testCounter) {
+        testCounter.textContent = `${current} / ${total}`;
+    }
+
+    if (testProgressBar) {
+        testProgressBar.style.width = `${progressPercent}%`;
+    }
+
+    if (currentEndpointDetails) {
+        currentEndpointDetails.textContent = `${endpoint.categoryName} - ${endpoint.description}`;
+    }
+}
+
+async function testEndpointSequential(endpoint) {
+    const requestStartTime = new Date();
+    console.log(`Testing endpoint: ${endpoint.method} ${endpoint.path}`);
+
+    // Prepare request data
+    let actualPath = endpoint.path;
+    let requestBody = '';
+
+    // Handle path parameters
+    if (endpoint.hasId) {
+        // For testing, use a sample ID
+        actualPath = actualPath.replace('{id}', '1');
+        console.log(`   Replaced path parameter: ${endpoint.path} → ${actualPath}`);
+    }
+
+    // Prepare request body if needed
+    if ((endpoint.method === 'POST' || endpoint.method === 'PUT') && endpoint.requiresBody) {
+        requestBody = getSampleBody(endpoint.category, endpoint.path);
+        console.log(`   Request body prepared (${requestBody.length} characters)`);
+    }
+
+    const requestHeaders = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+    };
+
+    const requestData = {
+        endpoint: actualPath,
+        method: endpoint.method,
+        requestBody: requestBody
+    };
+
+    const startTime = performance.now();
+
+    try {
+        const response = await fetch('/Testing/TestEndpoint', {
+            method: 'POST',
+            headers: requestHeaders,
+            body: new URLSearchParams(requestData)
+        });
+
+        const endTime = performance.now();
+        const responseTime = (endTime - startTime).toFixed(2);
+        const responseEndTime = new Date();
+
+        const responseBody = await response.text();
+
+        let parsedResponse = null;
+        try {
+            parsedResponse = JSON.parse(responseBody);
+        } catch (e) {
+            // Response is not JSON
+        }
+
+        console.log(`   ✅ ${endpoint.method} ${endpoint.path} - ${response.status} ${response.statusText} (${responseTime}ms)`);
+
+        return {
+            endpoint: endpoint,
+            success: response.ok,
+            statusCode: response.status,
+            statusText: response.statusText,
+            responseTime: responseTime,
+            requestData: requestData,
+            responseBody: responseBody,
+            parsedResponse: parsedResponse,
+            requestTime: requestStartTime.toISOString(),
+            responseTime: responseEndTime.toISOString(),
+            error: null
+        };
+
+    } catch (error) {
+        console.error(`   ❌ ${endpoint.method} ${endpoint.path} - Network Error: ${error.message}`);
+
+        return {
+            endpoint: endpoint,
+            success: false,
+            statusCode: 0,
+            statusText: 'Network Error',
+            responseTime: '0.00',
+            requestData: requestData,
+            responseBody: '',
+            parsedResponse: null,
+            requestTime: requestStartTime.toISOString(),
+            responseTime: new Date().toISOString(),
+            error: error.message
+        };
+    }
+}
+
+function displayTestResults() {
+    console.log('Displaying test results...');
+    console.log('Total test results:', testResults.length);
+
+    // Check if we have the required DOM elements
+    const testResultsSection = document.getElementById('test-results-section');
+    if (!testResultsSection) {
+        console.error('Test results section not found in DOM!');
+        return;
+    }
+
+    const successfulTests = testResults.filter(r => r.success);
+    const failedTests = testResults.filter(r => !r.success);
+
+    console.log(`Test Summary: ${successfulTests.length} passed, ${failedTests.length} failed, ${totalTests} total`);
+
+    // Log detailed results to console
+    console.log('=== TEST RESULTS SUMMARY ===');
+    console.log(`✅ Passed: ${successfulTests.length}`);
+    console.log(`❌ Failed: ${failedTests.length}`);
+    console.log(`📊 Total: ${totalTests}`);
+
+    if (failedTests.length > 0) {
+        console.log('Failed endpoints:');
+        failedTests.forEach(failure => {
+            console.error(`❌ ${failure.endpoint.method} ${failure.endpoint.path}`);
+            console.error(`   Status: ${failure.statusCode} ${failure.statusText}`);
+            if (failure.error) {
+                console.error(`   Error: ${failure.error}`);
+            }
+        });
+    }
+
+    // Update summary badges
+    const summaryBadges = document.getElementById('test-summary-badges');
+    if (summaryBadges) {
+        summaryBadges.innerHTML = `
+            <span class="badge bg-success me-2">${successfulTests.length} Passed</span>
+            <span class="badge bg-danger me-2">${failedTests.length} Failed</span>
+            <span class="badge bg-secondary">${totalTests} Total</span>
+        `;
+        console.log('Updated summary badges');
+    } else {
+        console.warn('test-summary-badges element not found');
+    }
+
+    // Create detailed results
+    let resultsHtml = '<div class="accordion" id="testResultsAccordion">';
+
+    // Group results by category
+    const resultsByCategory = {};
+    testResults.forEach(result => {
+        const category = result.endpoint.categoryName;
+        if (!resultsByCategory[category]) {
+            resultsByCategory[category] = [];
+        }
+        resultsByCategory[category].push(result);
+    });
+
+    let resultIndex = 0;
+    Object.entries(resultsByCategory).forEach(([categoryName, categoryResults]) => {
+        const categorySuccess = categoryResults.filter(r => r.success).length;
+        const categoryTotal = categoryResults.length;
+
+        resultsHtml += `
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="heading${resultIndex}">
+                    <button class="accordion-button ${resultIndex === 0 ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${resultIndex}">
+                        <div class="d-flex align-items-center w-100">
+                            <span class="me-3">${categoryName}</span>
+                            <span class="badge bg-success me-2">${categorySuccess}/${categoryTotal} Passed</span>
+                            <small class="text-muted ms-auto">${categoryResults.length} endpoints</small>
+                        </div>
+                    </button>
+                </h2>
+                <div id="collapse${resultIndex}" class="accordion-collapse collapse ${resultIndex === 0 ? 'show' : ''}" data-bs-parent="#testResultsAccordion">
+                    <div class="accordion-body p-0">
+                        <div class="list-group list-group-flush">
+        `;
+
+        categoryResults.forEach(result => {
+            const statusBadge = result.success
+                ? '<span class="badge bg-success">PASS</span>'
+                : '<span class="badge bg-danger">FAIL</span>';
+
+            const methodBadge = `<span class="badge bg-${getMethodColor(result.endpoint.method)}">${result.endpoint.method}</span>`;
+
+            resultsHtml += `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            ${methodBadge}
+                            <code class="ms-2">${result.endpoint.path}</code>
+                        </div>
+                        <div>
+                            ${statusBadge}
+                            <small class="text-muted ms-2">${result.responseTime}ms</small>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mb-2">${result.endpoint.description}</small>
+                    ${!result.success ? `
+                        <div class="alert alert-danger py-2 mb-2">
+                            <strong>HTTP ${result.statusCode} ${result.statusText}</strong>
+                            ${result.error ? `<br><small>Error: ${result.error}</small>` : ''}
+                        </div>
+                    ` : ''}
+                    <div class="small text-muted">
+                        <strong>Request:</strong> ${result.requestData.endpoint} (${result.requestData.method})<br>
+                        <strong>Response:</strong> ${result.statusCode} ${result.statusText} (${result.responseTime}ms)
+                    </div>
+                </div>
+            `;
+        });
+
+        resultsHtml += `
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        resultIndex++;
+    });
+
+    resultsHtml += '</div>';
+
+    const testResultsContent = document.getElementById('test-results-content');
+    if (testResultsContent) {
+        testResultsContent.innerHTML = resultsHtml;
+        console.log('Updated test results content');
+    } else {
+        console.warn('test-results-content element not found');
+    }
+
+    // Show results section
+    if (testResultsSection) {
+        testResultsSection.classList.remove('d-none');
+        console.log('Showed test results section');
+
+        // Scroll to results
+        setTimeout(() => {
+            testResultsSection.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+    } else {
+        console.warn('test-results-section element not found');
+    }
+}
+
+function clearTestResults() {
+    const testResultsSection = document.getElementById('test-results-section');
+    const defaultContent = document.getElementById('default-content');
+    const testProgressSection = document.getElementById('test-progress-section');
+
+    if (testResultsSection) testResultsSection.classList.add('d-none');
+    if (defaultContent) defaultContent.classList.remove('d-none');
+    if (testProgressSection) testProgressSection.classList.add('d-none');
+
+    testResults = [];
+    currentTestIndex = 0;
+    totalTests = 0;
+    console.log('Cleared test results');
+}
+
+function debugTest() {
+    console.log('=== DEBUG TEST STARTED ===');
+    console.log('1. Checking apiEndpoints object:', apiEndpoints);
+
+    if (!apiEndpoints) {
+        console.error('❌ apiEndpoints object is undefined!');
+        alert('apiEndpoints object is undefined!');
+        return;
+    }
+
+    console.log('2. Checking apiEndpoints structure:');
+    Object.entries(apiEndpoints).forEach(([key, value]) => {
+        console.log(`   ${key}:`, {
+            name: value.name,
+            endpointsCount: value.endpoints ? value.endpoints.length : 0,
+            hasEndpoints: !!value.endpoints
+        });
+    });
+
+    console.log('3. Checking DOM elements:');
+    const elements = [
+        'test-progress-section',
+        'default-content',
+        'test-results-section',
+        'test-summary-badges',
+        'test-results-content'
+    ];
+
+    elements.forEach(id => {
+        const element = document.getElementById(id);
+        console.log(`   ${id}:`, element ? '✅ Found' : '❌ Not found');
+    });
+
+    console.log('4. Checking buttons:');
+    const buttons = [
+        '[onclick*="testAllEndpoints"]',
+        '[onclick="clearTestResults()"]',
+        '[onclick="debugTest()"]'
+    ];
+
+    buttons.forEach(selector => {
+        const button = document.querySelector(selector);
+        console.log(`   ${selector}:`, button ? '✅ Found' : '❌ Not found');
+    });
+
+    console.log('5. Testing simple function call...');
+    try {
+        // Test if we can call displayEndpoints
+        console.log('   Calling displayEndpoints with admin...');
+        displayEndpoints('admin');
+        console.log('   ✅ displayEndpoints call successful');
+    } catch (error) {
+        console.error('   ❌ displayEndpoints call failed:', error);
+    }
+
+    console.log('=== DEBUG TEST COMPLETED ===');
+    alert('Debug test completed! Check the browser console (F12) for detailed results.');
+}
+
+// Test user management functions removed - tester role has direct access to all endpoints
 
 function displayEndpoints(category) {
+    console.log('displayEndpoints called with category:', category);
     const categoryData = apiEndpoints[category];
-    if (!categoryData) return;
+    console.log('categoryData found:', categoryData);
+
+    if (!categoryData) {
+        console.error('No category data found for:', category);
+        return;
+    }
 
     const contentDiv = document.getElementById('endpoints-content');
     const titleDiv = document.getElementById('selected-category-title');
-    
-    titleDiv.innerHTML = `<i class="${categoryData.icon} text-${categoryData.color}"></i> ${categoryData.name} API Endpoints`;
-    
-    let html = '<div class="row">';
+
+    console.log('Updating title and content for category:', category);
+    titleDiv.innerHTML = `<i class="${categoryData.icon} text-${categoryData.color}"></i> ${categoryData.name}`;
+
+    // Hide test sections when showing regular endpoints
+    const testProgressSection = document.getElementById('test-progress-section');
+    const testResultsSection = document.getElementById('test-results-section');
+    const defaultContent = document.getElementById('default-content');
+
+    if (testProgressSection) testProgressSection.classList.add('d-none');
+    if (testResultsSection) testResultsSection.classList.add('d-none');
+    if (defaultContent) defaultContent.classList.add('d-none');
+
+    let html = `
+        <div class="alert alert-${categoryData.color} border-0 rounded-3 mb-4">
+            <div class="d-flex align-items-center">
+                <i class="${categoryData.icon} fa-lg me-3"></i>
+                <div>
+                    <h6 class="mb-1 fw-bold">${categoryData.name}</h6>
+                    <small class="text-muted">${categoryData.description}</small>
+                </div>
+            </div>
+        </div>
+        <div class="row">`;
     
     categoryData.endpoints.forEach((endpoint, index) => {
         const methodColor = getMethodColor(endpoint.method);
@@ -574,7 +1554,7 @@ function displayEndpoints(category) {
                         ${endpoint.requiresBody ? `
                             <div class="mb-4">
                                 <label class="form-label small fw-bold text-dark">Request Body (JSON):</label>
-                                <textarea class="form-control form-control-sm border-0 bg-light" id="body-${category}-${index}" rows="4" placeholder="Enter JSON request body">${getSampleBody(category)}</textarea>
+                                <textarea class="form-control form-control-sm border-0 bg-light" id="body-${category}-${index}" rows="4" placeholder="Enter JSON request body">${getSampleBody(category, endpoint.path)}</textarea>
                             </div>
                         ` : ''}
                         
@@ -615,25 +1595,59 @@ function getMethodIcon(method) {
     }
 }
 
-function getSampleBody(category) {
+// No role switching needed - tester has access to all endpoints
+
+function getSampleBody(category, endpointPath) {
     const samples = {
-        users: '{\n  "email": "test@example.com",\n  "password": "TestPass123!",\n  "fullName": "Test User",\n  "phone": "+1234567890",\n  "role": "Client"\n}',
-        clients: '{\n  "userId": "user123",\n  "organisation": "Test Company Ltd"\n}',
-        projects: '{\n  "projectManagerId": "pm123",\n  "name": "Office Renovation Project",\n  "description": "Complete renovation of office building",\n  "budgetPlanned": 50000.00,\n  "budgetActual": 0.00,\n  "status": "Planning",\n  "startDate": "2024-01-15T00:00:00Z",\n  "endDatePlanned": "2024-06-15T00:00:00Z"\n}',
-        phases: '{\n  "projectId": "project123",\n  "name": "Foundation Phase",\n  "description": "Building foundation and structural work",\n  "startDate": "2024-01-15T00:00:00Z",\n  "endDate": "2024-03-15T00:00:00Z",\n  "status": "Not Started",\n  "progress": 0,\n  "budget": 15000.00,\n  "assignedTo": "contractor456",\n  "isActive": true\n}',
-        tasks: '{\n  "projectId": "project123",\n  "phaseId": "phase789",\n  "name": "Install Electrical Wiring",\n  "description": "Install electrical wiring for the main floor",\n  "assignedTo": "contractor456",\n  "priority": "High",\n  "status": "Not Started",\n  "startDate": "2024-02-01T00:00:00Z",\n  "dueDate": "2024-02-15T00:00:00Z",\n  "progress": 0,\n  "estimatedHours": 40.0,\n  "actualHours": 0.0,\n  "isActive": true\n}',
-        maintenance: '{\n  "clientId": "client123",\n  "projectId": "project456",\n  "description": "Air conditioning unit not working properly",\n  "priority": "High",\n  "status": "Open",\n  "mediaUrl": "",\n  "requestedBy": "client123",\n  "assignedTo": "",\n  "isActive": true\n}',
-        quotations: '{\n  "projectId": "project123",\n  "maintenanceRequestId": "maint456",\n  "clientId": "client123",\n  "contractorId": "contractor789",\n  "adminApproverUserId": "admin123",\n  "description": "Quotation for electrical repair work",\n  "total": 2500.00,\n  "status": "Draft",\n  "validUntil": "2024-02-15T00:00:00Z",\n  "isActive": true\n}',
-        estimates: '{\n  "projectId": "project123",\n  "contractorId": "contractor456",\n  "description": "Cost estimate for plumbing installation",\n  "totalAmount": 8500.00,\n  "status": "Pending",\n  "validUntil": "2024-03-01T00:00:00Z",\n  "isActive": true\n}',
-        invoices: '{\n  "projectId": "project123",\n  "clientId": "client456",\n  "contractorId": "contractor789",\n  "invoiceNumber": "INV-2024-001",\n  "description": "Invoice for completed electrical work",\n  "amount": 2000.00,\n  "taxAmount": 200.00,\n  "totalAmount": 2200.00,\n  "status": "Sent",\n  "dueDate": "2024-02-28T00:00:00Z",\n  "issuedDate": "2024-01-28T00:00:00Z",\n  "isActive": true\n}',
-        payments: '{\n  "invoiceId": "invoice123",\n  "projectId": "project456",\n  "clientId": "client789",\n  "amount": 2200.00,\n  "method": "Bank Transfer",\n  "status": "Pending",\n  "transactionId": "TXN-2024-001",\n  "paymentDate": "2024-01-30T00:00:00Z",\n  "processedAt": "2024-01-30T10:30:00Z",\n  "notes": "Payment for electrical work completion",\n  "isActive": true\n}',
-        documents: '{\n  "projectId": "project123",\n  "fileName": "blueprint_v1.pdf",\n  "fileType": "application/pdf",\n  "fileSize": 2048576,\n  "fileUrl": "https://storage.example.com/documents/blueprint_v1.pdf",\n  "uploadedBy": "user456",\n  "description": "Main building blueprint version 1",\n  "isActive": true\n}',
-        messages: '{\n  "senderId": "user123",\n  "receiverId": "user456",\n  "projectId": "project789",\n  "subject": "Project Update Required",\n  "content": "Please provide an update on the current project status.",\n  "isRead": false,\n  "sentAt": "2024-01-30T14:30:00Z",\n  "isActive": true\n}',
-        notifications: '{\n  "userId": "user123",\n  "title": "Project Milestone Reached",\n  "message": "The foundation phase has been completed successfully.",\n  "type": "Project Update",\n  "isRead": false,\n  "isActive": true\n}',
-        default: '{\n  "name": "Test Item",\n  "description": "A test description"\n}'
+        // Admin samples
+        'admin': {
+            'user': '{\n  "email": "test@example.com",\n  "password": "TestPass123!",\n  "fullName": "Test User",\n  "phone": "+1234567890",\n  "role": "Client"\n}',
+            'role': '{\n  "role": "Project Manager"\n}',
+            'document': '{\n  "projectId": "project123",\n  "fileName": "blueprint_v1.pdf",\n  "fileType": "application/pdf",\n  "fileSize": 2048576,\n  "fileUrl": "https://storage.example.com/documents/blueprint_v1.pdf",\n  "uploadedBy": "user456",\n  "description": "Main building blueprint version 1"\n}',
+            'notification': '{\n  "userId": "user123",\n  "title": "System Maintenance",\n  "message": "Scheduled maintenance on Sunday 2 AM - 4 AM",\n  "type": "System",\n  "isRead": false\n}'
+        },
+        // Project Manager samples
+        'projectManager': {
+            'project': '{\n  "projectManagerId": "pm123",\n  "clientId": "client456",\n  "name": "Office Renovation Project",\n  "description": "Complete renovation of office building",\n  "budgetPlanned": 50000.00,\n  "budgetActual": 0.00,\n  "status": "Planning",\n  "startDate": "2024-01-15T00:00:00Z",\n  "endDatePlanned": "2024-06-15T00:00:00Z"\n}',
+            'phase': '{\n  "projectId": "project123",\n  "name": "Foundation Phase",\n  "description": "Building foundation and structural work",\n  "startDate": "2024-01-15T00:00:00Z",\n  "endDate": "2024-03-15T00:00:00Z",\n  "status": "Not Started",\n  "progress": 0,\n  "budget": 15000.00,\n  "assignedTo": "contractor456",\n  "isActive": true\n}',
+            'task': '{\n  "projectId": "project123",\n  "phaseId": "phase789",\n  "name": "Install Electrical Wiring",\n  "description": "Install electrical wiring for the main floor",\n  "assignedTo": "contractor456",\n  "priority": "High",\n  "status": "Not Started",\n  "startDate": "2024-02-01T00:00:00Z",\n  "dueDate": "2024-02-15T00:00:00Z",\n  "progress": 0,\n  "estimatedHours": 40.0,\n  "actualHours": 0.0,\n  "isActive": true\n}',
+            'document': '{\n  "projectId": "project123",\n  "fileName": "blueprint_v1.pdf",\n  "fileType": "application/pdf",\n  "fileSize": 2048576,\n  "fileUrl": "https://storage.example.com/documents/blueprint_v1.pdf",\n  "uploadedBy": "user456",\n  "description": "Main building blueprint version 1",\n  "isActive": true\n}'
+        },
+        // Contractor samples
+        'contractor': {
+            'document': '{\n  "projectId": "project123",\n  "fileName": "progress_report.pdf",\n  "fileType": "application/pdf",\n  "fileSize": 1024000,\n  "fileUrl": "https://storage.example.com/documents/progress_report.pdf",\n  "description": "Weekly progress report",\n  "isActive": true\n}',
+            'task': '{\n  "projectId": "project123",\n  "phaseId": "phase789",\n  "name": "Install Electrical Wiring",\n  "description": "Install electrical wiring for the main floor",\n  "priority": "High",\n  "status": "In Progress",\n  "progress": 65,\n  "estimatedHours": 40.0,\n  "actualHours": 26.0,\n  "isActive": true\n}'
+        },
+        // Client samples
+        'client': {
+            'maintenanceRequest': '{\n  "projectId": "project456",\n  "description": "Air conditioning unit not working properly",\n  "priority": "High",\n  "mediaUrl": "",\n  "isActive": true\n}',
+            'payment': '{\n  "amount": 2200.00,\n  "method": "Bank Transfer",\n  "status": "Pending",\n  "transactionId": "TXN-2024-001",\n  "notes": "Payment for electrical work completion"\n}'
+        }
     };
-    
-    return samples[category] || samples.default;
+
+    // Determine the appropriate sample based on endpoint path
+    let sampleKey = 'default';
+
+    if (endpointPath.includes('user') || endpointPath.includes('role')) {
+        sampleKey = 'user';
+    } else if (endpointPath.includes('project') && !endpointPath.includes('task') && !endpointPath.includes('phase') && !endpointPath.includes('document')) {
+        sampleKey = 'project';
+    } else if (endpointPath.includes('phase')) {
+        sampleKey = 'phase';
+    } else if (endpointPath.includes('task')) {
+        sampleKey = 'task';
+    } else if (endpointPath.includes('document')) {
+        sampleKey = 'document';
+    } else if (endpointPath.includes('maintenanceRequest') || endpointPath.includes('maintenance')) {
+        sampleKey = 'maintenanceRequest';
+    } else if (endpointPath.includes('payment') || endpointPath.includes('pay')) {
+        sampleKey = 'payment';
+    } else if (endpointPath.includes('notification')) {
+        sampleKey = 'notification';
+    }
+
+    const categorySamples = samples[category] || {};
+    return categorySamples[sampleKey] || '{\n  "name": "Test Item",\n  "description": "A test description"\n}';
 }
 
 async function testEndpoint(method, path, category, index) {
