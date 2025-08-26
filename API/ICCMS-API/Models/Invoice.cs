@@ -44,7 +44,7 @@ namespace ICCMS_API.Models
         [FirestoreProperty("paidDate")]
         public DateTime? PaidDate { get; set; }
 
-        [FirestoreProperty("isActive")]
-        public bool IsActive { get; set; } = true;
+        [FirestoreProperty("paidBy")]
+        public string PaidBy { get; set; } = string.Empty;
     }
 }

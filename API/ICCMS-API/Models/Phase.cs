@@ -34,8 +34,5 @@ namespace ICCMS_API.Models
 
         [FirestoreProperty("assignedTo")]
         public string AssignedTo { get; set; } = string.Empty;
-
-        [FirestoreProperty("isActive")]
-        public bool IsActive { get; set; } = true;
     }
 }

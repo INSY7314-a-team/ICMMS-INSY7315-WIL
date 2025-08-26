@@ -7,16 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ICCMS_API.Controllers
 {
-    /*
-    Key CRUD Tasks:
-        • Create: New construction projects with budgets, phases, deadlines.
-        • Read: Project status, budget vs actual reports, contractor updates.
-        • Update: Resource allocations, task assignments, document approvals, progress reports.
-        • Delete: Cancel projects or remove incorrect data.
-    */
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Project Manager")] // Only project managers can access this controller
+    [Authorize(Roles = "Project Manager,Tester")] // Only project managers and testers can access this controller
     public class ProjectManagerController : ControllerBase
     {
         private readonly IAuthService _authService;
@@ -137,12 +130,12 @@ namespace ICCMS_API.Controllers
             }
         }
 
-        [HttpPost("create/phase")]
-        public async Task<ActionResult<Phase>> CreatePhase([FromBody] Phase phase)
+        [HttpPost("create/project/{projectId}/phase")]
+        public async Task<ActionResult<Phase>> CreatePhase(string projectId, [FromBody] Phase phase)
         {
             try
             {
-                phase.ProjectId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                phase.ProjectId = projectId;
                 await _firebaseService.AddDocumentWithIdAsync("phases", phase.PhaseId, phase);
                 return Ok(phase);
             }
@@ -152,12 +145,15 @@ namespace ICCMS_API.Controllers
             }
         }
 
-        [HttpPost("create/task")]
-        public async Task<ActionResult<ProjectTask>> CreateTask([FromBody] ProjectTask task)
+        [HttpPost("create/project/{projectId}/task")]
+        public async Task<ActionResult<ProjectTask>> CreateTask(
+            string projectId,
+            [FromBody] ProjectTask task
+        )
         {
             try
             {
-                task.ProjectId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                task.ProjectId = projectId;
                 await _firebaseService.AddDocumentWithIdAsync("tasks", task.TaskId, task);
                 return Ok(task);
             }
@@ -167,12 +163,15 @@ namespace ICCMS_API.Controllers
             }
         }
 
-        [HttpPost("create/document")]
-        public async Task<ActionResult<Document>> CreateDocument([FromBody] Document document)
+        [HttpPost("create/project/{projectId}/document")]
+        public async Task<ActionResult<Document>> CreateDocument(
+            string projectId,
+            [FromBody] Document document
+        )
         {
             try
             {
-                document.ProjectId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                document.ProjectId = projectId;
                 await _firebaseService.AddDocumentWithIdAsync(
                     "documents",
                     document.DocumentId,
@@ -194,6 +193,23 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                var existingProject = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    id
+                );
+                if (existingProject == null)
+                {
+                    return NotFound(new { error = "Project not found" });
+                }
+                if (
+                    existingProject.ProjectManagerId
+                    != User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                )
+                {
+                    return Unauthorized(
+                        new { error = "You are not authorized to update this project" }
+                    );
+                }
                 await _firebaseService.UpdateDocumentAsync("projects", id, project);
                 return Ok(project);
             }
@@ -208,6 +224,17 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                var existingPhase = await _firebaseService.GetDocumentAsync<Phase>("phases", id);
+                if (existingPhase == null)
+                {
+                    return NotFound(new { error = "Phase not found" });
+                }
+                if (existingPhase.ProjectId != phase.ProjectId)
+                {
+                    return Unauthorized(
+                        new { error = "You are not authorized to update this phase" }
+                    );
+                }
                 await _firebaseService.UpdateDocumentAsync("phases", id, phase);
                 return Ok(phase);
             }
@@ -225,6 +252,20 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                var existingTask = await _firebaseService.GetDocumentAsync<ProjectTask>(
+                    "tasks",
+                    id
+                );
+                if (existingTask == null)
+                {
+                    return NotFound(new { error = "Task not found" });
+                }
+                if (existingTask.ProjectId != task.ProjectId)
+                {
+                    return Unauthorized(
+                        new { error = "You are not authorized to update this task" }
+                    );
+                }
                 await _firebaseService.UpdateDocumentAsync("tasks", id, task);
                 return Ok(task);
             }
@@ -242,8 +283,51 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                var documentFromDb = await _firebaseService.GetDocumentAsync<Document>(
+                    "documents",
+                    id
+                );
+                if (documentFromDb == null)
+                {
+                    return NotFound(new { error = "Document not found" });
+                }
+                if (documentFromDb.ProjectId != document.ProjectId)
+                {
+                    return Unauthorized(
+                        new { error = "You are not authorized to update this document" }
+                    );
+                }
                 await _firebaseService.UpdateDocumentAsync("documents", id, document);
                 return Ok(document);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("approve/document/{id}")]
+        public async Task<ActionResult<Document>> ApproveDocument(string id)
+        {
+            try
+            {
+                var existingDocument = await _firebaseService.GetDocumentAsync<Document>(
+                    "documents",
+                    id
+                );
+                if (existingDocument == null)
+                {
+                    return NotFound(new { error = "Document not found" });
+                }
+                if (existingDocument.ProjectId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+                {
+                    return Unauthorized(
+                        new { error = "You are not authorized to approve this document" }
+                    );
+                }
+                existingDocument.Status = "Approved";
+                await _firebaseService.UpdateDocumentAsync("documents", id, existingDocument);
+                return Ok(existingDocument);
             }
             catch (Exception ex)
             {
@@ -256,6 +340,23 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                var existingProject = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    id
+                );
+                if (existingProject == null)
+                {
+                    return NotFound(new { error = "Project not found" });
+                }
+                if (
+                    existingProject.ProjectManagerId
+                    != User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                )
+                {
+                    return Unauthorized(
+                        new { error = "You are not authorized to delete this project" }
+                    );
+                }
                 await _firebaseService.DeleteDocumentAsync("projects", id);
                 return Ok(new { message = "Project deleted successfully" });
             }
@@ -270,6 +371,17 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                var existingPhase = await _firebaseService.GetDocumentAsync<Phase>("phases", id);
+                if (existingPhase == null)
+                {
+                    return NotFound(new { error = "Phase not found" });
+                }
+                if (existingPhase.ProjectId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+                {
+                    return Unauthorized(
+                        new { error = "You are not authorized to delete this phase" }
+                    );
+                }
                 await _firebaseService.DeleteDocumentAsync("phases", id);
                 return Ok(new { message = "Phase deleted successfully" });
             }
@@ -284,6 +396,20 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                var existingTask = await _firebaseService.GetDocumentAsync<ProjectTask>(
+                    "tasks",
+                    id
+                );
+                if (existingTask == null)
+                {
+                    return NotFound(new { error = "Task not found" });
+                }
+                if (existingTask.ProjectId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+                {
+                    return Unauthorized(
+                        new { error = "You are not authorized to delete this task" }
+                    );
+                }
                 await _firebaseService.DeleteDocumentAsync("tasks", id);
                 return Ok(new { message = "Task deleted successfully" });
             }
@@ -298,6 +424,20 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                var existingDocument = await _firebaseService.GetDocumentAsync<Document>(
+                    "documents",
+                    id
+                );
+                if (existingDocument == null)
+                {
+                    return NotFound(new { error = "Document not found" });
+                }
+                if (existingDocument.ProjectId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+                {
+                    return Unauthorized(
+                        new { error = "You are not authorized to delete this document" }
+                    );
+                }
                 await _firebaseService.DeleteDocumentAsync("documents", id);
                 return Ok(new { message = "Document deleted successfully" });
             }

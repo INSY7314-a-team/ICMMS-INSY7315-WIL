@@ -37,8 +37,5 @@ namespace ICCMS_API.Models
 
         [FirestoreProperty("resolvedAt")]
         public DateTime? ResolvedAt { get; set; }
-
-        [FirestoreProperty("isActive")]
-        public bool IsActive { get; set; } = true;
     }
 }
