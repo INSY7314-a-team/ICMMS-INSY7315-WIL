@@ -104,7 +104,37 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="card-title text-white-50 mb-1">Managers</h6>
-                            <h2 class="mb-0">@(Model?.Count(u => u.Role?.ToLower() == "manager") ?? 0)</h2>
+                            <h2 class="mb-0">@(Model?.Count(u => u.Role?.ToLower() == "project manager") ?? 0)</h2>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-user-tie fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card stat-card bg-info text-white h-100 shadow-sm">
+                <div class="card-body" style="background-color:rgb(6, 92, 27); border-radius: 10px;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-white-50 mb-1">Contractors</h6>
+                            <h2 class="mb-0">@(Model?.Count(u => u.Role?.ToLower() == "contractor") ?? 0)</h2>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-hammer fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card stat-card bg-info text-white h-100 shadow-sm">
+                <div class="card-body" style="background-color:rgb(177, 130, 1); border-radius: 10px;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-white-50 mb-1">Clients</h6>
+                            <h2 class="mb-0">@(Model?.Count(u => u.Role?.ToLower() == "client") ?? 0)</h2>
                         </div>
                         <div class="stat-icon">
                             <i class="fas fa-user-tie fa-2x opacity-75"></i>
@@ -131,7 +161,7 @@
                                 <i class="fas fa-search text-muted"></i>
                             </span>
                             <input type="text" class="form-control border-start-0" id="userSearch" 
-                                   placeholder="Search users..." autocomplete="off">
+                                   placeholder="Search users..." autocomplete="on" style="border-radius: 10px;">
                         </div>
                         <div class="dropdown">
                             <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" 
@@ -144,8 +174,9 @@
                                 <li><a class="dropdown-item" href="#" data-filter="inactive">Inactive Only</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="#" data-filter="admin">Admins</a></li>
-                                <li><a class="dropdown-item" href="#" data-filter="manager">Managers</a></li>
-                                <li><a class="dropdown-item" href="#" data-filter="user">Regular Users</a></li>
+                                <li><a class="dropdown-item" href="#" data-filter="project manager">Project Managers</a></li>
+                                <li><a class="dropdown-item" href="#" data-filter="contractor">Contractors</a></li>
+                                <li><a class="dropdown-item" href="#" data-filter="client">Clients</a></li>
                             </ul>
                         </div>
                     </div>
@@ -223,7 +254,9 @@
                                             var roleConfig = user.Role?.ToLower() switch
                                             {
                                                 "admin" => new { badgeClass = "bg-danger", icon = "fas fa-shield-alt" },
-                                                "manager" => new { badgeClass = "bg-warning", icon = "fas fa-user-tie" },
+                                                "project manager" => new { badgeClass = "bg-warning", icon = "fas fa-user-tie" },
+                                                "contractor" => new { badgeClass = "bg-success", icon = "fas fa-hammer" },
+                                                "client" => new { badgeClass = "bg-primary", icon = "fas fa-user-tie" },
                                                 "user" => new { badgeClass = "bg-info", icon = "fas fa-user" },
                                                 _ => new { badgeClass = "bg-secondary", icon = "fas fa-user" }
                                             };
@@ -496,11 +529,14 @@
                         case 'admin':
                             show = role === 'admin';
                             break;
-                        case 'manager':
-                            show = role === 'manager';
+                        case 'project manager':
+                            show = role === 'project manager';
                             break;
-                        case 'user':
-                            show = role === 'user';
+                        case 'contractor':
+                            show = role === 'contractor';
+                            break;
+                        case 'client':
+                            show = role === 'client';
                             break;
                     }
                     
