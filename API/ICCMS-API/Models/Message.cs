@@ -31,8 +31,5 @@ namespace ICCMS_API.Models
 
         [FirestoreProperty("readAt")]
         public DateTime? ReadAt { get; set; }
-
-        [FirestoreProperty("isActive")]
-        public bool IsActive { get; set; } = true;
     }
 }

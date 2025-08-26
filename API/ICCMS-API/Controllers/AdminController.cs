@@ -5,13 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ICCMS_API.Controllers
 {
-    /*
-    Key CRUD Tasks:
-        Create: User accounts [Done], role permissions [Done], system configurations.
-        Read: All communication logs [Done], documents [Done], project statuses [Done].
-        Update: User permissions [Done], notifications [Done], system settings.
-        Delete: Remove outdated records [Done], deactivated users [Done], or invalid documents [Done].
-    */
     [ApiController]
     [Route("api/[controller]")]
     [Authorize(Roles = "Admin")] // Only admins can access this controller
@@ -211,6 +204,34 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpPost("create/document")]
+        public async Task<ActionResult<Document>> CreateDocument([FromBody] Document document)
+        {
+            try
+            {
+                var newDocument = new Document
+                {
+                    DocumentId = Guid.NewGuid().ToString(),
+                    ProjectId = document.ProjectId,
+                    FileName = document.FileName,
+                    Status = document.Status,
+                    FileType = document.FileType,
+                    FileSize = document.FileSize,
+                    FileUrl = document.FileUrl,
+                    UploadedBy = document.UploadedBy,
+                    UploadedAt = DateTime.UtcNow,
+                    Description = document.Description,
+                };
+
+                await _firebaseService.AddDocumentAsync("documents", newDocument);
+                return Ok(newDocument);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
         [HttpPost("users/{id}/activate")]
         public async Task<IActionResult> ActivateUser(string id)
         {
@@ -318,6 +339,23 @@ namespace ICCMS_API.Controllers
             {
                 await _firebaseService.UpdateDocumentAsync("notifications", id, notification);
                 return Ok(new { message = "Notification updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("update/document/{id}")]
+        public async Task<ActionResult<Document>> UpdateDocument(
+            string id,
+            [FromBody] Document document
+        )
+        {
+            try
+            {
+                await _firebaseService.UpdateDocumentAsync("documents", id, document);
+                return Ok(new { message = "Document updated successfully" });
             }
             catch (Exception ex)
             {

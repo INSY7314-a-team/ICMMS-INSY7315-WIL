@@ -28,8 +28,5 @@ namespace ICCMS_API.Models
 
         [FirestoreProperty("createdAt")]
         public DateTime CreatedAt { get; set; }
-
-        [FirestoreProperty("isActive")]
-        public bool IsActive { get; set; } = true;
     }
 }
