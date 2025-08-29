@@ -1,0 +1,39 @@
+name: SonarQube API Analysis
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  sonarcloud:
+    name: SonarCloud API
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for SonarCloud
+
+      - name: Set up JDK 17 (if Java project, change if not)
+        uses: actions/setup-java@v3
+        with:
+          java-version: 17
+          distribution: 'temurin'
+
+      # Replace this with your actual build command
+      - name: Build API
+        run: |
+          cd api
+          ./gradlew build  # or mvn install / npm install etc depending on your stack
+
+      - name: SonarCloud Scan API
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          projectBaseDir: api
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_API }}
