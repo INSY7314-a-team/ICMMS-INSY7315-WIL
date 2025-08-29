@@ -3,37 +3,39 @@ name: SonarQube API Analysis
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
     branches:
-      - main
+      - master
 
 jobs:
   sonarcloud:
-    name: SonarCloud API
+    name: SonarQube Scan - API
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Required for SonarCloud
+          fetch-depth: 0  # Shallow clones should be disabled for analysis
 
-      - name: Set up JDK 17 (if Java project, change if not)
+      - name: Set up JDK 17 (if API is Java, adjust if not)
         uses: actions/setup-java@v3
         with:
           java-version: 17
-          distribution: 'temurin'
+          distribution: temurin
 
-      # Replace this with your actual build command
-      - name: Build API
-        run: |
-          cd api
-          ./gradlew build  # or mvn install / npm install etc depending on your stack
-
-      - name: SonarCloud Scan API
-        uses: SonarSource/sonarcloud-github-action@v2
+      - name: Cache SonarQube packages
+        uses: actions/cache@v3
         with:
-          projectBaseDir: api
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Build and analyze API
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_API }}
+        run: |
+          ./gradlew sonarqube \
+            -Dsonar.projectKey=your-org_api \
+            -Dsonar.organization=your-org \
+            -Dsonar.host.url=https://sonarcloud.io
