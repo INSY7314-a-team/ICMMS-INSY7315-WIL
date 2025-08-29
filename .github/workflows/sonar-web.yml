@@ -1,0 +1,39 @@
+name: SonarQube Web Analysis
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  sonarcloud:
+    name: SonarCloud Web
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # If it’s Node.js (likely for a web frontend)
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install & Build Web
+        run: |
+          cd web
+          npm install
+          npm run build
+
+      - name: SonarCloud Scan Web
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          projectBaseDir: web
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_WEB }}
