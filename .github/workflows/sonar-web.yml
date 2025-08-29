@@ -29,11 +29,12 @@ jobs:
       - name: Build and Analyze Web
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_WEB }}
+        shell: powershell
         run: |
           cd Web/ICCMS-Web
           # Begin analysis
-          ..\..\ .sonar\scanner\dotnet-sonarscanner begin /k:"ST10383606_INSY7315-A-Team_Web" /o:"insy7315" /d:sonar.login="${{ env.SONAR_TOKEN }}" /d:sonar.scanner.skipJreProvisioning=true
+          & ..\..\ .sonar\scanner\dotnet-sonarscanner begin /k:"ST10383606_INSY7315-A-Team_Web" /o:"insy7315" /d:sonar.login="${{ env.SONAR_TOKEN }}" /d:sonar.scanner.skipJreProvisioning=true
           # Build solution
           dotnet build ICCMS-Web.sln
           # End analysis
-          ..\..\ .sonar\scanner\dotnet-sonarscanner end /d:sonar.login="${{ env.SONAR_TOKEN }}"
+          & ..\..\ .sonar\scanner\dotnet-sonarscanner end /d:sonar.login="${{ env.SONAR_TOKEN }}"
