@@ -13,28 +13,32 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      # Checkout the code
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # Setup .NET
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 6.0.x  # adjust to your project version
+          dotnet-version: 6.0.x  # Adjust to your project version
 
+      # Install SonarScanner
       - name: Install SonarScanner
-        run: dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
+        run: dotnet tool install dotnet-sonarscanner --tool-path ./.sonar/scanner
 
+      # Build and analyze
       - name: Build and Analyze Web
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_WEB }}
         shell: powershell
         run: |
           cd Web/ICCMS-Web
-          # Begin analysis
-          & ..\..\.sonar\scanner\dotnet-sonarscanner begin /k:"ST10383606_INSY7315-A-Team_Web" /o:"insy7315" /d:sonar.login="${{ env.SONAR_TOKEN }}" /d:sonar.scanner.skipJreProvisioning=true
-          # Build solution
+          # Begin SonarQube analysis
+          & $PWD/../../.sonar/scanner/dotnet-sonarscanner begin /k:"ST10383606_INSY7315-A-Team_Web" /o:"insy7315" /d:sonar.login="${{ env.SONAR_TOKEN }}" /d:sonar.scanner.skipJreProvisioning=true
+          # Build the solution
           dotnet build ICCMS-Web.sln
-          # End analysis
-          & ..\..\.sonar\scanner\dotnet-sonarscanner end /d:sonar.login="${{ env.SONAR_TOKEN }}"
+          # End SonarQube analysis
+          & $PWD/../../.sonar/scanner/dotnet-sonarscanner end /d:sonar.login="${{ env.SONAR_TOKEN }}"
