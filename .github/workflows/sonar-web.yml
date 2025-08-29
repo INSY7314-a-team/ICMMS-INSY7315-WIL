@@ -28,7 +28,7 @@ jobs:
 
       - name: Build and Analyze Web
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_WEB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_WEB }}
         run: |
           cd Web
           ..\.sonar\scanner\dotnet-sonarscanner begin /k:"ST10383606_INSY7315-A-Team_Web" /o:"insy7315" /d:sonar.token="${{ secrets.SONAR_WEB_TOKEN }}"
