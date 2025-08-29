@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Build and analyze Web
+    name: Build and Analyze Web
     runs-on: windows-latest
 
     steps:
@@ -21,7 +21,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 6.0.x # or 8.0.x depending on your Web project
+          dotnet-version: 6.0.x # Adjust if your Web project uses a different version
 
       - name: Install SonarScanner
         run: dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
@@ -30,7 +30,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_WEB }}
         run: |
-          cd Web
-          ..\.sonar\scanner\dotnet-sonarscanner begin /k:"ST10383606_INSY7315-A-Team_Web" /o:"insy7315" /d:sonar.token="${{ secrets.SONAR_WEB_TOKEN }}"
+          cd Web/ICCMS-Web
+          ..\..\ .sonar\scanner\dotnet-sonarscanner begin /k:"ST10383606_INSY7315-A-Team_Web" /o:"insy7315" /d:sonar.token="${{ env.SONAR_TOKEN }}"
           dotnet build ICCMS-Web.sln
-          ..\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_WEB_TOKEN }}"
+          ..\..\ .sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ env.SONAR_TOKEN }}"
