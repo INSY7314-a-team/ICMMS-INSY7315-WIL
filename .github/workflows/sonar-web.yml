@@ -1,44 +1,35 @@
-name: SonarQube Web Analysis
-
+name: SonarQube - Web
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
-    branches:
-      - master
+    types: [opened, synchronize, reopened]
 
 jobs:
-  sonarcloud:
-    name: SonarQube Scan - Web
-    runs-on: ubuntu-latest
+  build:
+    name: Build and analyze Web
+    runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Node
-        uses: actions/setup-node@v3
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
         with:
-          node-version: 18
+          dotnet-version: 6.0.x # adjust to your Web project version
 
-      - name: Cache SonarQube packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
+      - name: Install SonarScanner
+        run: dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
 
-      - name: Install dependencies
-        run: npm install
-        working-directory: ./web   # adjust if your web project folder is named differently
-
-      - name: Build and analyze Web
+      - name: Build and Analyze Web
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_WEB }}
+          SONAR_TOKEN: ${{ secrets.SONAR_WEB_TOKEN }}
         run: |
-          npx sonar-scanner \
-            -Dsonar.projectKey=your-org_web \
-            -Dsonar.organization=your-org \
-            -Dsonar.host.url=https://sonarcloud.io
+          cd Web
+          ..\.sonar\scanner\dotnet-sonarscanner begin /k:"ST10383606_INSY7315-A-Team_Web" /o:"insy7315" /d:sonar.token="${{ secrets.SONAR_WEB_TOKEN }}"
+          dotnet build Web.sln
+          ..\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_WEB_TOKEN }}"
