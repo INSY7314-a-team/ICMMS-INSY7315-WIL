@@ -1,4 +1,5 @@
 name: SonarQube - Web
+
 on:
   push:
     branches:
@@ -20,7 +21,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 6.0.x # adjust to your Web project version
+          dotnet-version: 6.0.x # or 8.0.x depending on your Web project
 
       - name: Install SonarScanner
         run: dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
@@ -31,5 +32,5 @@ jobs:
         run: |
           cd Web
           ..\.sonar\scanner\dotnet-sonarscanner begin /k:"ST10383606_INSY7315-A-Team_Web" /o:"insy7315" /d:sonar.token="${{ secrets.SONAR_WEB_TOKEN }}"
-          dotnet build Web.sln
+          dotnet build ICCMS-Web.sln
           ..\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_WEB_TOKEN }}"
