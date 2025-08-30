@@ -1,31 +1,341 @@
- <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Project Manager Dashboard</h1>
-        <div className="text-sm text-gray-600">
-          Last updated: {new Date().toLocaleDateString()}
-        </div>
-      </div>
-      
-      <MetricsGrid />
-      
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Active Projects</h2>
-              <p className="text-gray-600 mt-1">Projects currently in progress</p>
+@using ICCMS_Web.Models
+@{
+    ViewData["Title"] = "Dashboard";
+    Layout = "_Layout";
+}
+
+@model DashboardViewModel
+
+<!-- Header Banner -->
+<div class="header-banner mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-6">
+            <div class="d-flex align-items-center mb-3">
+                <i class="fas fa-clipboard-list text-white me-3" style="font-size: 2.5rem;"></i>
+                <div>
+                    <h1 class="text-white mb-1">Dr Majoko Projects</h1>
+                    <h5 class="text-white-50 mb-0">Construction Management Dashboard</h5>
+                </div>
             </div>
-            <div className="p-6 space-y-4">
-              {activeProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
+        </div>
+        <div class="col-md-6">
+            <div class="d-flex gap-2 justify-content-end flex-wrap">
+                <span class="badge bg-light text-dark px-3 py-2 rounded-pill">@Model.Metrics.TotalProjects Active Projects</span>
+                <span class="badge bg-light text-dark px-3 py-2 rounded-pill">R @((Model.Metrics.ActiveBudget / 1000000).ToString("F1"))M Total Budget</span>
+                <span class="badge bg-light text-dark px-3 py-2 rounded-pill">@Model.Metrics.ActiveContractors Contractors</span>
             </div>
-          </div>
         </div>
-        
-        <div className="space-y-6">
-          <BudgetOverview />
-          <RecentActivity />
-        </div>
-      </div>
     </div>
+</div>
+
+<!-- Search and Filter Bar -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="input-group">
+            <span class="input-group-text bg-white border-end-0">
+                <i class="fas fa-search text-muted"></i>
+            </span>
+            <input type="text" class="form-control border-start-0 ps-0" placeholder="Search projects, contractors, or tasks...">
+        </div>
+    </div>
+    <div class="col-md-2">
+        <button class="btn btn-outline-secondary w-100">
+            <i class="fas fa-filter me-2"></i>Filter
+        </button>
+    </div>
+    <div class="col-md-2">
+        <button class="btn btn-outline-primary w-100">
+            <i class="fas fa-calendar me-2"></i>Timeline View
+        </button>
+    </div>
+</div>
+
+<!-- Navigation Tabs -->
+<div class="mb-4">
+    <ul class="nav nav-pills">
+        <li class="nav-item">
+            <a class="nav-link active d-flex align-items-center" asp-controller="ProjectManager" asp-action="Dashboard">
+                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" asp-controller="ProjectManager" asp-action="Timeline">
+                <i class="fas fa-calendar-alt me-2"></i>Timeline View
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" asp-controller="ProjectManager" asp-action="Contractors">
+                <i class="fas fa-users me-2"></i>Contractor Tracker
+                <span class="badge bg-warning ms-2">@Model.Metrics.ActiveContractors</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" asp-controller="ProjectManager" asp-action="Files">
+                <i class="fas fa-file-alt me-2"></i>File Review
+                <span class="badge bg-danger ms-2">@Model.Metrics.PendingReviews</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" href="#">
+                <i class="fas fa-tasks me-2"></i>Tasks
+                <span class="badge bg-primary ms-2">12</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" href="#">
+                <i class="fas fa-chart-bar me-2"></i>Reports
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" href="#">
+                <i class="fas fa-cog me-2"></i>Settings
+            </a>
+        </li>
+        <li class="nav-item ms-auto">
+            <div class="d-flex align-items-center gap-3">
+                <div class="position-relative">
+                    <i class="fas fa-bell text-muted fs-5 cursor-pointer"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">1</span>
+                </div>
+                <button class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>New Project
+                </button>
+            </div>
+        </li>
+    </ul>
+</div>
+
+<!-- Metrics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="bg-primary bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="fas fa-clipboard-list text-primary fs-4"></i>
+                </div>
+                <h3 class="mb-1">@Model.Metrics.TotalProjects</h3>
+                <p class="text-muted mb-2">Active Projects</p>
+                <small class="text-success"><i class="fas fa-arrow-up me-1"></i>+2 this month</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="bg-success bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="fas fa-dollar-sign text-success fs-4"></i>
+                </div>
+                <h3 class="mb-1">R @((Model.Metrics.ActiveBudget / 1000000).ToString("F1"))M</h3>
+                <p class="text-muted mb-2">Total Budget</p>
+                <small class="text-success">R 890K remaining</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="bg-warning bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="fas fa-users text-warning fs-4"></i>
+                </div>
+                <h3 class="mb-1">@Model.Metrics.ActiveContractors</h3>
+                <p class="text-muted mb-2">Contractors</p>
+                <small class="text-info">8 on-site today</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="bg-danger bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="fas fa-exclamation-triangle text-danger fs-4"></i>
+                </div>
+                <h3 class="mb-1">3</h3>
+                <p class="text-muted mb-2">Overdue Tasks</p>
+                <small class="text-danger">2 critical</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Area -->
+<div class="row">
+    <!-- Active Projects Section -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">Active Projects</h5>
+                        <p class="text-muted mb-0 small">@Model.Metrics.TotalProjects total projects • @Model.Projects.Count(p => p.Status != ProjectStatus.Completed) in progress</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    @{
+                        var projectsToShow = new[] {
+                            new { Name = "Residential Complex...", Location = "Sandton, Johannesburg", Date = "15 Dec 2024", Status = "In Progress", Priority = "High", Progress = 65, BudgetUsed = 65.0, Budget = "R 1 625 000", BudgetTotal = "R 2 500 000", Contractor = "Mthembu Construction" },
+                            new { Name = "Commercial Plaza...", Location = "Cape Town CBD", Date = "30 Mar 2025", Status = "Planning", Priority = "Critical", Progress = 25, BudgetUsed = 20.0, Budget = "R 840 000", BudgetTotal = "R 4 200 000", Contractor = "Elite Builders" },
+                            new { Name = "Industrial Warehouse...", Location = "Durban, KZN", Date = "20 Feb 2025", Status = "In Progress", Priority = "Medium", Progress = 45, BudgetUsed = 45.0, Budget = "R 810 000", BudgetTotal = "R 1 800 000", Contractor = "ProBuild SA" },
+                            new { Name = "School Renovation...", Location = "Pretoria East", Date = "10 Jan 2025", Status = "On Hold", Priority = "Low", Progress = 15, BudgetUsed = 15.0, Budget = "R 142 500", BudgetTotal = "R 950 000", Contractor = "Heritage Contractors" },
+                            new { Name = "Shopping Center...", Location = "Bloemfontein", Date = "Completed", Status = "Completed", Priority = "Medium", Progress = 100, BudgetUsed = 90.0, Budget = "R 2 880 000", BudgetTotal = "R 3 200 000", Contractor = "Metro Construction" },
+                            new { Name = "Housing...", Location = "Port Elizabeth", Date = "05 Feb 2025", Status = "In Progress", Priority = "High", Progress = 80, BudgetUsed = 80.0, Budget = "R 4 160 000", BudgetTotal = "R 5 200 000", Contractor = "Coastal Builders" }
+                        };
+                    }
+
+                    @foreach (var project in projectsToShow)
+                    {
+                        <div class="col-md-6 mb-4">
+                            <div class="project-card p-3 h-100">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <h6 class="mb-0">@project.Name</h6>
+                                    <div class="d-flex gap-1">
+                                        <span class="badge status-@project.Status.ToLower().Replace(" ", "-") small">@project.Status</span>
+                                        <span class="badge status-@project.Priority.ToLower() small">@project.Priority</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center text-muted small mb-1">
+                                        <i class="fas fa-map-marker-alt me-2"></i>@project.Location
+                                        <span class="ms-auto"><i class="fas fa-calendar me-1"></i>@project.Date</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <small class="text-muted">Progress</small>
+                                        <small class="fw-bold">@project.Progress%</small>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar @(project.Status == "Completed" ? "bg-success" : project.Priority == "Critical" ? "bg-danger" : "bg-primary")" style="width: @project.Progress%"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <small class="text-muted">Budget Used</small>
+                                        <small class="fw-bold">@project.BudgetUsed.ToString("F1")%</small>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <small class="text-muted">@project.Budget</small>
+                                        <small class="text-muted">@project.BudgetTotal</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="fas fa-user me-1"></i>@project.Contractor
+                                    </small>
+                                    <button class="btn btn-sm btn-outline-primary">View Timeline</button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Sidebar -->
+    <div class="col-lg-4">
+        <!-- Active Contractors -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-wrench me-2"></i>
+                    <h6 class="mb-0">Active Contractors</h6>
+                </div>
+            </div>
+            <div class="card-body">
+                @{
+                    var contractors = new[] {
+                        new { Name = "Mthembu Construction", Abbr = "MC", Status = "On Site", Projects = 3, Rating = 4.8, Specialty = "Foundation & Structural", Location = "Johannesburg", Performance = 92 },
+                        new { Name = "Elite Builders", Abbr = "EB", Status = "Planning", Projects = 2, Rating = 4.6, Specialty = "Commercial Development", Location = "Cape Town", Performance = 88 },
+                        new { Name = "ProBuild SA", Abbr = "PS", Status = "On Site", Projects = 2, Rating = 4.6, Specialty = "Industrial & Warehousing", Location = "Durban", Performance = 88 },
+                        new { Name = "Heritage Contractors", Abbr = "HC", Status = "Break", Projects = 1, Rating = 4.4, Specialty = "Renovation & Restoration", Location = "Pretoria", Performance = 85 }
+                    };
+                }
+
+                @foreach (var contractor in contractors)
+                {
+                    <div class="d-flex align-items-center mb-3 @(contractor != contractors.Last() ? "border-bottom pb-3" : "")">
+                        <div class="bg-secondary rounded-circle text-white d-flex align-items-center justify-content-center me-2" style="width: 45px; height: 45px; font-size: 10px;">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">@contractor.Name</h6>
+                                    <small class="text-muted d-block">@contractor.Specialty</small>
+                                    <small class="text-muted d-block"><i class="fas fa-map-marker-alt me-1"></i>@contractor.Location</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge @(contractor.Status == "On Site" ? "bg-success" : contractor.Status == "Planning" ? "bg-warning" : "bg-secondary") mb-1">@contractor.Status</span>
+                                    <div class="small text-muted">@contractor.Projects Active Projects</div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between mt-2">
+                                <div class="d-flex align-items-center">
+                                    <div class="text-warning me-1">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <i class="fas fa-star @(i <= Math.Floor(contractor.Rating) ? "" : "text-muted")"></i>
+                                        }
+                                    </div>
+                                    <small class="text-muted">@contractor.Rating</small>
+                                </div>
+                                <small class="text-success">@contractor.Performance% on-time</small>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card">
+            <div class="card-header bg-white">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-clock me-2"></i>
+                    <h6 class="mb-0">Recent Activity</h6>
+                </div>
+            </div>
+            <div class="card-body">
+                @{
+                    var activities = new[] {
+                        new { Type = "document", Icon = "fas fa-file-check", Title = "Building plans approved", Description = "Residential Complex Phase 2 - Foundation blueprints", User = "John Smith", UserInitials = "JS", Time = "2 hours ago" },
+                        new { Type = "contractor", Icon = "fas fa-user-plus", Title = "Contractor assigned", Description = "Mthembu Construction assigned to...", User = "Sarah Wilson", UserInitials = "SW", Time = "4 hours ago" },
+                        new { Type = "delay", Icon = "fas fa-exclamation-triangle", Title = "Delay reported", Description = "Weather conditions affecting roofing...", User = "Mike Jones", UserInitials = "MJ", Time = "6 hours ago" },
+                        new { Type = "completion", Icon = "fas fa-check-circle", Title = "Foundation completed", Description = "Commercial Plaza - Foundation work...", User = "Lisa Brown", UserInitials = "LB", Time = "8 hours ago" }
+                    };
+                }
+
+                @foreach (var activity in activities)
+                {
+                    <div class="d-flex mb-3 @(activity != activities.Last() ? "border-bottom pb-3" : "")">
+                        <div class="activity-icon @activity.Type me-3">
+                            <i class="@activity.Icon"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1 small">@activity.Title</h6>
+                            <p class="text-muted small mb-2">@activity.Description</p>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-secondary rounded-circle text-white d-flex align-items-center justify-content-center me-2" style="width: 20px; height: 20px; font-size: 10px;">
+                                        @activity.UserInitials
+                                    </div>
+                                    <small class="text-muted">@activity.User</small>
+                                </div>
+                                <small class="text-muted">@activity.Time</small>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
