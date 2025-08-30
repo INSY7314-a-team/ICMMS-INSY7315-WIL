@@ -30,7 +30,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'   # match your API SDK version
+          dotnet-version: '9.0.x'
 
       - name: Install SonarScanner for .NET
         run: dotnet tool install dotnet-sonarscanner --tool-path .\.sonar\scanner
@@ -43,6 +43,7 @@ jobs:
           ..\.sonar\scanner\dotnet-sonarscanner begin `
             /k:"insy7315_INSY7315-A-Team" `
             /o:"insy7315" `
+            /d:sonar.projectName="INSY7315-API" `
             /d:sonar.cs.opencover.reportsPaths="**\coverage.opencover.xml" `
             /d:sonar.token="${{ env.SONAR_TOKEN }}"
 
@@ -54,7 +55,6 @@ jobs:
         working-directory: Api
         run: dotnet build --no-restore --configuration Debug
 
-      # Detect whether test projects exist
       - name: Detect test projects
         id: detect_tests
         working-directory: Api
@@ -65,7 +65,6 @@ jobs:
             echo "hasTests=true" >> $env:GITHUB_OUTPUT
           } else {
             echo "hasTests=false" >> $env:GITHUB_OUTPUT
-          }
 
       - name: Run tests with coverage
         if: steps.detect_tests.outputs.hasTests == 'true'
@@ -78,7 +77,6 @@ jobs:
               /p:CollectCoverage=true `
               /p:CoverletOutputFormat=opencover `
               /p:CoverletOutput=./TestResults/coverage.opencover.xml
-          }
 
       - name: Sonar END (API)
         working-directory: Api
