@@ -43,9 +43,10 @@ jobs:
           ..\.sonar\scanner\dotnet-sonarscanner begin `
             /k:"insy7315_INSY7315-A-Team" `
             /o:"insy7315" `
-            /d:sonar.projectName="INSY7315-API" `
+            /n:"INSY7315-API" `
             /d:sonar.cs.opencover.reportsPaths="**\coverage.opencover.xml" `
             /d:sonar.token="${{ env.SONAR_TOKEN }}"
+
       - name: Restore (API)
         working-directory: Api
         run: dotnet restore
@@ -64,6 +65,7 @@ jobs:
             echo "hasTests=true" >> $env:GITHUB_OUTPUT
           } else {
             echo "hasTests=false" >> $env:GITHUB_OUTPUT
+
       - name: Run tests with coverage
         if: steps.detect_tests.outputs.hasTests == 'true'
         working-directory: Api
@@ -75,6 +77,7 @@ jobs:
               /p:CollectCoverage=true `
               /p:CoverletOutputFormat=opencover `
               /p:CoverletOutput=./TestResults/coverage.opencover.xml
+
       - name: Sonar END (API)
         working-directory: Api
         env:
