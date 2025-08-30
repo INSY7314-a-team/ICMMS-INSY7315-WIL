@@ -1,4 +1,4 @@
-name: SonarCloud (API)
+name: SonarQube - API
 
 on:
   push:
@@ -36,33 +36,28 @@ jobs:
         run: dotnet tool install dotnet-sonarscanner --tool-path .\.sonar\scanner
 
       - name: Sonar BEGIN (API)
+        working-directory: Api
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin `
+          ..\.sonar\scanner\dotnet-sonarscanner begin `
             /k:"insy7315_INSY7315-A-Team" `
             /o:"insy7315" `
-            /d:sonar.projectBaseDir="Api" `
             /d:sonar.cs.opencover.reportsPaths="**\coverage.opencover.xml" `
             /d:sonar.token="${{ env.SONAR_TOKEN }}"
 
       - name: Restore (API)
-        shell: pwsh
-        run: |
-          $sln = Get-ChildItem Api -Recurse -Filter *.sln | Select-Object -First 1
-          if (-not $sln) { Write-Error "No .sln found under Api/"; exit 1 }
-          dotnet restore $sln.FullName
+        working-directory: Api
+        run: dotnet restore
 
       - name: Build (API)
-        shell: pwsh
-        run: |
-          $sln = Get-ChildItem Api -Recurse -Filter *.sln | Select-Object -First 1
-          dotnet build $sln.FullName --no-restore --configuration Debug
+        working-directory: Api
+        run: dotnet build --no-restore --configuration Debug
 
       - name: Test with Coverage (API) - optional
-        shell: pwsh
+        working-directory: Api
         run: |
-          $tests = Get-ChildItem Api -Recurse -Filter *.csproj | Where-Object { $_.FullName -match 'Test' -or $_.FullName -match 'Tests' }
+          $tests = Get-ChildItem -Recurse -Filter *.csproj | Where-Object { $_.FullName -match 'Test' -or $_.FullName -match 'Tests' }
           if ($tests) {
             foreach ($proj in $tests) {
               dotnet test $proj.FullName --no-build `
@@ -72,9 +67,9 @@ jobs:
             }
           } else {
             Write-Host "No test projects found under Api/*"
-          }
 
       - name: Sonar END (API)
+        working-directory: Api
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ env.SONAR_TOKEN }}"
+        run: ..\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ env.SONAR_TOKEN }}"
