@@ -1,4 +1,4 @@
-name: SonarQube - Web
+name: SonarQube General
 on:
   push:
     branches:
