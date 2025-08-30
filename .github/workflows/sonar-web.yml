@@ -38,17 +38,16 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_WEB }}
         shell: powershell
         run: |
-          # Begin SonarCloud analysis
+          # Begin SonarCloud analysis with project name set
           & .\.sonar\scanner\dotnet-sonarscanner begin `
               /k:"ST10383606_INSY7315-A-Team" `
               /o:"insy7315" `
+              /n:"INSY7315-Web" `
               /d:sonar.login="${{ env.SONAR_TOKEN }}" `
               /d:sonar.scanner.skipJreProvisioning=true `
               /d:sonar.branch.name=${{ github.ref_name }}
-
           # Restore and build solution
           dotnet restore Web/ICCMS-Web.sln
           dotnet build Web/ICCMS-Web.sln
-
           # End SonarCloud analysis
           & .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.login="${{ env.SONAR_TOKEN }}"
