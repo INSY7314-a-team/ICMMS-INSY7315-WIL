@@ -1,3 +1,5 @@
+using ICCMS_Web.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -14,6 +16,9 @@ builder.Services.AddSession(options =>
 
 // Add HttpClient
 builder.Services.AddHttpClient();
+
+// Add Login Attempt Service
+builder.Services.AddSingleton<ILoginAttemptService, LoginAttemptService>();
 
 // Add Authentication with Cookies
 builder
