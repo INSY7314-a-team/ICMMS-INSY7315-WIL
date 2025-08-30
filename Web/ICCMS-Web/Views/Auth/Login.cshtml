@@ -122,8 +122,19 @@
                     console.log('API response:', result);
                     
                     if (result.success) {
-                        // Redirect to home page
-                        window.location.href = '/';
+                        // Redirect based on user role
+                        if (result.user && result.user.role) {
+                            if (result.user.role.toLowerCase() === 'client') {
+                                window.location.href = '/Clients';
+                            } else if (result.user.role.toLowerCase() === 'admin') {
+                                window.location.href = '/Users';
+                            } else {
+                                window.location.href = '/';
+                            }
+                        } else {
+                            // Fallback to home page
+                            window.location.href = '/';
+                        }
                     } else {
                         if (result.isLocked) {
                             // Show lockout message and start countdown

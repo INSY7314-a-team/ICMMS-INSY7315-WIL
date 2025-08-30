@@ -13,6 +13,12 @@ namespace ICCMS_Web.Controllers
             {
                 ViewBag.UserEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
                 ViewBag.UserRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+                
+                // Redirect clients to their dashboard
+                if (User.IsInRole("Client"))
+                {
+                    return RedirectToAction("Index", "Clients");
+                }
             }
 
             return View();

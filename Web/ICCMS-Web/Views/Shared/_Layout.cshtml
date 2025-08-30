@@ -26,9 +26,6 @@
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
                         @if (User.Identity.IsAuthenticated && User.IsInRole("Tester"))
                         {
                             <li class="nav-item">
@@ -39,6 +36,12 @@
                         {
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-controller="Users" asp-action="Index">Users</a>
+                            </li>
+                        }
+                        @if (User.Identity.IsAuthenticated && User.IsInRole("Client"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Clients" asp-action="Index">Client Dashboard</a>
                             </li>
                         }
                     </ul>
@@ -62,15 +65,7 @@
                 </div>
             </div>
         </nav>
-        @if (User.Identity.IsAuthenticated)
-        {
-    <div class="text-muted small">
-        Debug Info: 
-        User: @User.Identity.Name | 
-        Roles: @string.Join(", ", User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value)) |
-        IsAdmin: @User.IsInRole("Admin")
-    </div>
-        }
+
     </header>
     <div class="container">
         <main role="main" class="pb-3">
