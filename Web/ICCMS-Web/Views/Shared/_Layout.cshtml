@@ -41,6 +41,11 @@
                                 <a class="nav-link text-dark" asp-area="" asp-controller="Users" asp-action="Index">Users</a>
                             </li>
                         }
+                        @if (User.Identity.IsAuthenticated && User.IsInRole("Project Manager") || User.IsInRole("Tester")){
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="ProjectManager" asp-action="Dashboard">Dashboard</a>
+                            </li>
+                        }
                     </ul>
                     <ul class="navbar-nav">
                         @if (User.Identity.IsAuthenticated)
