@@ -54,19 +54,31 @@ jobs:
         working-directory: Api
         run: dotnet build --no-restore --configuration Debug
 
-      - name: Test with Coverage (API) - optional
+      # Detect whether test projects exist
+      - name: Detect test projects
+        id: detect_tests
         working-directory: Api
+        shell: pwsh
         run: |
-          $tests = Get-ChildItem -Recurse -Filter *.csproj | Where-Object { $_.FullName -match 'Test' -or $_.FullName -match 'Tests' }
+          $tests = Get-ChildItem -Recurse -Filter *.csproj | Where-Object { $_.Name -match 'Test' -or $_.Name -match 'Tests' }
           if ($tests) {
-            foreach ($proj in $tests) {
-              dotnet test $proj.FullName --no-build `
-                /p:CollectCoverage=true `
-                /p:CoverletOutputFormat=opencover `
-                /p:CoverletOutput=./TestResults/coverage.opencover.xml
-            }
+            echo "hasTests=true" >> $env:GITHUB_OUTPUT
           } else {
-            Write-Host "No test projects found under Api/*"
+            echo "hasTests=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Run tests with coverage
+        if: steps.detect_tests.outputs.hasTests == 'true'
+        working-directory: Api
+        shell: pwsh
+        run: |
+          $tests = Get-ChildItem -Recurse -Filter *.csproj | Where-Object { $_.Name -match 'Test' -or $_.Name -match 'Tests' }
+          foreach ($proj in $tests) {
+            dotnet test $proj.FullName --no-build `
+              /p:CollectCoverage=true `
+              /p:CoverletOutputFormat=opencover `
+              /p:CoverletOutput=./TestResults/coverage.opencover.xml
+          }
 
       - name: Sonar END (API)
         working-directory: Api
