@@ -42,16 +42,17 @@ This is the mobile application for the Integrated Construction and Maintenance M
 - **Material 3**: Modern Material Design components
 
 ### API Integration
-- **Base URL**: `http://10.0.2.2:5031/` (Android emulator localhost)
+- **Base URL**: `https://10.0.2.2:7136/` (Android emulator localhost with HTTPS)
 - **Authentication Endpoint**: `POST /api/auth/login`
 - **Request/Response Models**: Properly typed data classes
+- **Security**: HTTPS with certificate validation
 
 ## Setup Instructions
 
 1. **API Server**: 
    - Run the API server using `runApi.bat` from the project root
-   - The server will run on `http://localhost:5031` (HTTP) for development
-   - HTTPS redirection is disabled in development mode to avoid SSL certificate issues
+   - The server will run on `https://localhost:7136` (HTTPS) for secure communication
+   - HTTPS redirection is enabled for all environments
 2. **Android Emulator**: Use Android emulator to access localhost (10.0.2.2)
 3. **Build**: Run `./gradlew build` to build the application
 4. **Install**: Install the APK on your device or emulator

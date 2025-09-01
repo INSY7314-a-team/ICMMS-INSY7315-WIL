@@ -86,11 +86,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Only use HTTPS redirection in production
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
+// Enable HTTPS redirection for all environments
+app.UseHttpsRedirection();
 
 app.UseCors("AllowAndroidEmulator"); // Use the Android emulator policy for development
 
