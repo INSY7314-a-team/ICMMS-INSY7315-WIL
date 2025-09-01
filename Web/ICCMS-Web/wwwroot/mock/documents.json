@@ -1,4 +1,14 @@
 [
-  {"fileName":"progress_week34.pdf","fileType":"application/pdf","fileSize":204800,"status":"Pending"},
-  {"fileName":"safety_checklist.docx","fileType":"application/vnd.openxmlformats-officedocument.wordprocessingml.document","fileSize":51200,"status":"Approved"}
+  { "id": "D-2001", "fileName": "Method_Statement_BlockA.pdf", "fileType": "application/pdf", "fileSize": 324812, "status": "Approved", "createdAt": "2025-08-20" },
+  { "id": "D-2002", "fileName": "Risk_Assessment_Level1.pdf", "fileType": "application/pdf", "fileSize": 289331, "status": "Pending",  "createdAt": "2025-08-28" },
+  { "id": "D-2003", "fileName": "AsBuilt_Corridor_L1.dwg",     "fileType": "application/acad", "fileSize": 1048576, "status": "Pending", "createdAt": "2025-08-29" },
+  { "id": "D-2004", "fileName": "Test_Results_DB-A1.xlsx",     "fileType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "fileSize": 84211, "status": "Approved", "createdAt": "2025-08-27" },
+  { "id": "D-2005", "fileName": "Cable_Schedule.csv",          "fileType": "text/csv", "fileSize": 45122, "status": "Approved", "createdAt": "2025-08-25" },
+  { "id": "D-2006", "fileName": "RAMS_Update_Sept.docx",       "fileType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "fileSize": 172003, "status": "Pending", "createdAt": "2025-09-01" },
+  { "id": "D-2007", "fileName": "Permit_to_Work_0901.pdf",     "fileType": "application/pdf", "fileSize": 99322, "status": "Approved", "createdAt": "2025-09-01" },
+  { "id": "D-2008", "fileName": "Inspection_Photos_Zip.zip",   "fileType": "application/zip", "fileSize": 2540012, "status": "Pending", "createdAt": "2025-08-30" },
+  { "id": "D-2009", "fileName": "NonConformance_Report.pdf",   "fileType": "application/pdf", "fileSize": 221090, "status": "Rejected", "createdAt": "2025-08-26" },
+  { "id": "D-2010", "fileName": "OandM_Template.docx",         "fileType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "fileSize": 120884, "status": "Approved", "createdAt": "2025-08-18" },
+  { "id": "D-2011", "fileName": "Handover_Checklist.xlsx",     "fileType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "fileSize": 67890, "status": "Pending", "createdAt": "2025-08-31" },
+  { "id": "D-2012", "fileName": "Supplier_Invoice_7781.pdf",   "fileType": "application/pdf", "fileSize": 190334, "status": "Approved", "createdAt": "2025-08-22" }
 ]

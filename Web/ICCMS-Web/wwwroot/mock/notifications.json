@@ -1,0 +1,47 @@
+[
+  {
+    "id": "n-1001",
+    "type": "task_due",
+    "title": "Task due today",
+    "subtitle": "Block A • Interior painting – Room 204",
+    "ts": "2025-08-30T08:15:00Z",
+    "severity": "warn",
+    "taskId": "T-204"
+  },
+  {
+    "id": "n-1002",
+    "type": "task_assigned",
+    "title": "New task assigned",
+    "subtitle": "Roof waterproofing • Phase 2",
+    "ts": "2025-08-29T16:20:00Z",
+    "severity": "ok",
+    "taskId": "T-771"
+  },
+  {
+    "id": "n-1003",
+    "type": "doc_rejected",
+    "title": "Document requires changes",
+    "subtitle": "Safety Checklist – Week 34",
+    "ts": "2025-08-29T14:05:00Z",
+    "severity": "danger",
+    "docId": "D-882"
+  },
+  {
+    "id": "n-1004",
+    "type": "comment",
+    "title": "Comment on your task",
+    "subtitle": "PM: \"Attach photos of the wall joints\"",
+    "ts": "2025-08-29T11:10:00Z",
+    "severity": "ok",
+    "taskId": "T-204"
+  },
+  {
+    "id": "n-1005",
+    "type": "approval",
+    "title": "Document approved",
+    "subtitle": "Material delivery note • Lot #556",
+    "ts": "2025-08-28T17:50:00Z",
+    "severity": "ok",
+    "docId": "D-556"
+  }
+]

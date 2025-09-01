@@ -1,0 +1,33 @@
+:root{
+  /* TASKIT brand from the logo */
+  --brand-yellow: #FFD200;     /* primary outline yellow */
+  --brand-yellow-700:#E0BC00;  /* hover/pressed */
+  --brand-charcoal:#0F0F10;    /* deep background */
+  --brand-stone:#CFC6B8;       /* warm stone windows */
+  --brand-ink:#111827;         /* headings */
+  --brand-mute:#6B7280;        /* secondary text */
+  --surface:#FFFFFF;
+  --card:#FFFFFF;
+  --border:#E5E7EB;
+}
+
+.text-brand   { color: var(--brand-yellow)!important; }
+.bg-brand     { background: var(--brand-yellow)!important; }
+.btn-brand{
+  --bs-btn-bg: var(--brand-yellow);
+  --bs-btn-color: #111;
+  --bs-btn-border-color: var(--brand-yellow);
+  --bs-btn-hover-bg: var(--brand-yellow-700);
+  --bs-btn-hover-border-color: var(--brand-yellow-700);
+  --bs-btn-active-bg: var(--brand-yellow-700);
+  --bs-btn-active-border-color: var(--brand-yellow-700);
+}
+.navbar-brand img{ height:28px; }
+.card{ border:0; border-radius:14px; box-shadow:0 8px 20px rgba(0,0,0,.06); }
+.kpi{ display:flex; align-items:center; gap:14px; }
+.kpi .icon{ width:40px; height:40px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; background:rgba(255,210,0,.12); color:var(--brand-yellow);}
+.chip{ padding:.2rem .6rem; border-radius:999px; font-size:.75rem; border:1px solid var(--border); background:#fff;}
+.chip.ok{ background:#e8f5e9; color:#2e7d32 }
+.chip.warn{ background:#fff8e1; color:#b26a00 }
+.chip.danger{ background:#ffebee; color:#c62828 }
+.muted{ color:var(--brand-mute) }

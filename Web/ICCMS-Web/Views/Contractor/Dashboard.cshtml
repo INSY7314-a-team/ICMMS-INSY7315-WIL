@@ -2,25 +2,30 @@
 @inject IConfiguration Configuration
 @{
     ViewData["Title"] = "Contractor Dashboard";
-    var apiBase = Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7136";
-    var token = User.FindFirst("FirebaseToken")?.Value ?? string.Empty;
+    var apiBase  = Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7136";
+    var token    = User.FindFirst("FirebaseToken")?.Value ?? string.Empty;
     var fullName = User.FindFirst(ClaimTypes.Name)?.Value ?? "Contractor";
 }
 
 <style>
-  .bg-gradient-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);} 
-  .card { border:0; border-radius:14px; box-shadow:0 8px 20px rgba(0,0,0,.06);} 
-  .kpi { display:flex; align-items:center; gap:14px; }
-  .kpi .icon { width:40px; height:40px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; background:#eef1ff; }
-  .chip { padding:.2rem .6rem; border-radius:999px; font-size:.75rem; }
-  .chip.ok { background:#e8f5e9; color:#2e7d32 } .chip.warn{background:#fff8e1;color:#b26a00} .chip.danger{background:#ffebee;color:#c62828}
-  .table thead th { font-weight:600; color:#6b7280; }
-  .muted { color:#6b7280 }
-  .skeleton { background:linear-gradient(90deg, #f4f4f5 25%, #ededee 37%, #f4f4f5 63%); border-radius:8px; height:14px; animation: shimmer 1.4s infinite; }
-  @@keyframes shimmer { 0%{background-position:-40rem 0}100%{background-position:40rem 0} }
-  @@media (max-width: 768px){
-    .bottom-nav{ position:sticky; bottom:0; left:0; right:0; background:#fff; border-top:1px solid #e5e7eb; display:flex; justify-content:space-around; padding:.5rem .25rem; z-index:50 }
-    .bottom-nav a{ text-decoration:none; color:#6b7280; font-size:.8rem; text-align:center }
+  .feed-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border,#e5e7eb)}
+  .feed-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f5f5f5}
+  .feed-time{white-space:nowrap}
+  .badge-new{background:var(--brand-yellow,#FFD200);color:#111;border-radius:999px;padding:.1rem .5rem;font-size:.7rem}
+
+  /* Page styling (uses site tokens with fallbacks) */
+  .skeleton{background:linear-gradient(90deg,#f4f4f5 25%,#ededee 37%,#f4f4f5 63%);border-radius:8px;height:14px;animation:shimmer 1.4s infinite}
+  .kpi{display:flex;align-items:center;gap:14px}
+  .kpi .icon{width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:#eef1ff}
+  .chip{padding:.2rem .6rem;border-radius:999px;font-size:.75rem}
+  .chip.ok{background:#e8f5e9;color:#2e7d32}.chip.warn{background:#fff8e1;color:#b26a00}.chip.danger{background:#ffebee;color:#c62828}
+  .muted{color:var(--brand-mute,#6b7280)}
+  .btn-brand{background:var(--brand-yellow,#FFD200);border-color:var(--brand-yellow,#FFD200);color:#111}
+  .btn-brand:hover{filter:brightness(.95)}
+  @@keyframes shimmer{0%{background-position:-40rem 0}100%{background-position:40rem 0}}
+  @@media (max-width:768px){
+    .bottom-nav{position:sticky;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border,#e5e7eb);display:flex;justify-content:space-around;padding:.5rem .25rem;z-index:50}
+    .bottom-nav a{text-decoration:none;color:var(--brand-mute,#6b7280);font-size:.8rem;text-align:center}
   }
 </style>
 
@@ -34,7 +39,7 @@
     <div class="muted">Last updated: <span id="last-updated">—</span></div>
   </div>
 
-  @if(string.IsNullOrEmpty(token)){
+  @if (string.IsNullOrEmpty(token)) {
     <div class="alert alert-warning">You are not authenticated. Please sign in again to load data.</div>
   }
 
@@ -46,7 +51,7 @@
         <h5 class="mb-2 fw-semibold">Update your progress for today</h5>
         <div class="muted">Keep your PM in the loop by updating task status and uploading photos.</div>
       </div>
-      <button class="btn btn-primary" id="cta-update">Update Now</button>
+      <button class="btn btn-brand" id="cta-update">Update Now</button>
     </div>
   </div>
 
@@ -81,34 +86,45 @@
   <!-- Main Grid -->
   <div class="row g-3">
     <div class="col-12 col-xl-8">
-      <div class="card mb-3">
-        <div class="card-header bg-white">
-          <strong>Workload Overview</strong>
-        </div>
-        <div class="card-body">
-          <canvas id="workloadChart" height="90"></canvas>
-        </div>
-      </div>
 
+      <!-- My Tasks (with filters/search/actions) -->
       <div class="card mb-3">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center">
-          <strong>My Tasks</strong>
-          <small class="muted" id="tasks-count">—</small>
+        <div class="card-header bg-white d-flex flex-wrap gap-2 align-items-center justify-content-between">
+          <div class="d-flex gap-2 align-items-center">
+            <strong>My Tasks</strong>
+            <div class="btn-group btn-group-sm ms-2" role="group" aria-label="filters">
+              <button class="btn btn-outline-secondary filter-btn active" data-filter="all">All</button>
+              <button class="btn btn-outline-secondary filter-btn" data-filter="today">Today</button>
+              <button class="btn btn-outline-secondary filter-btn" data-filter="overdue">Overdue</button>
+              <button class="btn btn-outline-secondary filter-btn" data-filter="open">Open</button>
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <input id="task-search" class="form-control form-control-sm" placeholder="Search tasks..." style="min-width:180px">
+            <small class="muted" id="tasks-count">—</small>
+          </div>
         </div>
         <div class="card-body p-0">
           <div class="table-responsive">
             <table class="table align-middle mb-0">
-              <thead><tr>
-                <th>Task</th><th class="d-none d-md-table-cell">Project</th><th>Status</th><th>Due</th>
-              </tr></thead>
+              <thead>
+                <tr>
+                  <th>Task</th>
+                  <th class="d-none d-md-table-cell">Project</th>
+                  <th>Status</th>
+                  <th>Due</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
               <tbody id="tasks-body">
-                <tr><td colspan="4" class="p-3"><div class="skeleton" style="height:18px"></div></td></tr>
+                <tr><td colspan="5" class="p-3"><div class="skeleton" style="height:18px"></div></td></tr>
               </tbody>
             </table>
           </div>
         </div>
       </div>
 
+      <!-- My Documents -->
       <div class="card">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
           <strong>My Documents</strong>
@@ -129,6 +145,25 @@
         </div>
       </div>
 
+
+      <div class="card mb-3">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <strong>Notifications & Task Feed</strong>
+    <div class="d-flex align-items-center gap-2">
+      <div class="btn-group btn-group-sm" role="group">
+        <button class="btn btn-outline-secondary feed-filter active" data-filter="all">All</button>
+        <button class="btn btn-outline-secondary feed-filter" data-filter="unread">Unread</button>
+      </div>
+      <button class="btn btn-sm btn-link" id="mark-all-read">Mark all read</button>
+    </div>
+  </div>
+  <div class="card-body" id="feed-list">
+    <div class="skeleton mb-2" style="height:18px"></div>
+    <div class="skeleton" style="width:70%"></div>
+  </div>
+</div>
+
+
       <div class="card">
         <div class="card-header bg-white"><strong>Recent Activity</strong></div>
         <div class="card-body" id="activity-list"><div class="muted">Populated from your actions (updates, uploads).</div></div>
@@ -146,53 +181,22 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   const API_BASE = '@apiBase';
   const TOKEN = '@token';
-
   const authHeaders = TOKEN ? { 'Authorization': `Bearer ${TOKEN}` } : {};
-
-  const fmt = (d) => new Date(d);
   const todayIso = new Date().toISOString().slice(0,10);
 
   function setUpdated(){ document.getElementById('last-updated').textContent = new Date().toLocaleString(); }
-
   async function getJson(url){
-    console.log('FETCH TEST HELOOOOOOOOOO→', url);
-
     const res = await fetch(url,{ headers: authHeaders });
     if(!res.ok) throw new Error(`${res.status} ${res.statusText}`);
     return await res.json();
   }
 
-  async function loadTasks(){
-    const tasks = await getJson('@Url.Content("~/mock/tasks.json")');
-
-
-    document.getElementById('tasks-count').textContent = `${tasks.length} items`;
-
-    // KPIs
-    const open = tasks.filter(t => (t.status||'').toLowerCase() !== 'completed').length;
-    const dueToday = tasks.filter(t => (t.dueDate||'').startsWith(todayIso)).length;
-    const overdue = tasks.filter(t => t.dueDate && (new Date(t.dueDate) < new Date(todayIso)) && (t.status||'').toLowerCase()!=='completed').length;
-    document.getElementById('kpi-open').textContent = open;
-    document.getElementById('kpi-today').textContent = dueToday;
-    document.getElementById('kpi-overdue').textContent = overdue;
-
-    // Fill table
-    const tbody = document.getElementById('tasks-body');
-    tbody.innerHTML = tasks.slice(0,20).map(t => `
-      <tr>
-        <td><strong>${t.name||'Task'}</strong><div class="muted small">${t.description||''}</div></td>
-        <td class="d-none d-md-table-cell">${t.projectId||'-'}</td>
-        <td>${statusChip(t.status)}</td>
-        <td>${t.dueDate? new Date(t.dueDate).toLocaleDateString(): '-'}</td>
-      </tr>`).join('');
-
-    drawChart(tasks);
-    buildUpcoming(tasks);
-  }
+  // ---------- TASKS (filters + search + mark done) ----------
+  let TASKS = [];
+  let CURRENT_FILTER = 'all';
 
   function statusChip(s){
     const v=(s||'').toLowerCase();
@@ -201,18 +205,74 @@
     return '<span class="chip">Open</span>';
   }
 
-  function drawChart(tasks){
-    const byMonth = {};
-    tasks.forEach(t=>{
-      const key = (t.startDate||t.createdAt||new Date()).slice(0,7);
-      byMonth[key] = (byMonth[key]||0) + 1;
-    });
-    const labels = Object.keys(byMonth).sort();
-    const data = labels.map(k=>byMonth[k]);
-    const ctx = document.getElementById('workloadChart');
-    new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Tasks',data, tension:.35, fill:true}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
+  function updateKpis(){
+    const open = TASKS.filter(t => (t.status||'').toLowerCase() !== 'completed').length;
+    const dueToday = TASKS.filter(t => (t.dueDate||'').startsWith(todayIso)).length;
+    const overdue = TASKS.filter(t => t.dueDate && (new Date(t.dueDate) < new Date(todayIso)) && (t.status||'').toLowerCase()!=='completed').length;
+    document.getElementById('kpi-open').textContent = open;
+    document.getElementById('kpi-today').textContent = dueToday;
+    document.getElementById('kpi-overdue').textContent = overdue;
   }
 
+  function renderTasks(){
+    const q = document.getElementById('task-search').value.trim().toLowerCase();
+    let list = TASKS.slice();
+
+    if (CURRENT_FILTER==='today')  list = list.filter(t => (t.dueDate||'').startsWith(todayIso));
+    if (CURRENT_FILTER==='overdue') list = list.filter(t => t.dueDate && new Date(t.dueDate) < new Date(todayIso) && (t.status||'').toLowerCase()!=='completed');
+    if (CURRENT_FILTER==='open')    list = list.filter(t => (t.status||'').toLowerCase()!=='completed');
+
+    if (q) list = list.filter(t =>
+      (t.name||'').toLowerCase().includes(q) || (t.description||'').toLowerCase().includes(q)
+    );
+
+    const tbody = document.getElementById('tasks-body');
+    tbody.innerHTML = list.slice(0,20).map(t => `
+      <tr>
+        <td><strong>${t.name||'Task'}</strong><div class="muted small">${t.description||''}</div></td>
+        <td class="d-none d-md-table-cell">${t.projectId||'-'}</td>
+        <td>${statusChip(t.status)}</td>
+        <td>${t.dueDate? new Date(t.dueDate).toLocaleDateString(): '-'}</td>
+        <td class="text-end">
+          ${(t.status||'').toLowerCase()!=='completed'
+            ? `<button class="btn btn-sm btn-brand complete-btn" data-idx="${t.__idx}">Mark done</button>`
+            : `<span class="muted small">—</span>`}
+        </td>
+      </tr>
+    `).join('');
+
+    document.getElementById('tasks-count').textContent = `${list.length} shown / ${TASKS.length} total`;
+  }
+
+  async function loadTasks(){
+    //conts tasks = await getJson(`${API_BASE}/contractor/tasks`);
+    //
+    const tasks = await getJson('@Url.Content("~/mock/tasks.json")');
+    TASKS = tasks.map((t,i)=> ({...t, __idx:i}));
+    updateKpis();
+    renderTasks();
+    buildUpcoming(TASKS);
+  }
+
+  document.addEventListener('click', (e)=>{
+    if(e.target.matches('.filter-btn')){
+      document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+      e.target.classList.add('active');
+      CURRENT_FILTER = e.target.dataset.filter;
+      renderTasks();
+    }
+    if(e.target.matches('.complete-btn')){
+      const idx = +e.target.dataset.idx;
+      TASKS[idx].status = 'Completed';
+      updateKpis();
+      renderTasks();
+    }
+  });
+  document.addEventListener('input', (e)=>{
+    if(e.target.id==='task-search') renderTasks();
+  });
+
+  // ---------- DOCS ----------
   async function loadDocs(){
     const docs  = await getJson('@Url.Content("~/mock/documents.json")');
     document.getElementById('docs-count').textContent = `${docs.length} items`;
@@ -252,8 +312,117 @@
   }
 
   document.getElementById('cta-update').addEventListener('click', ()=>{
-    window.location.href = '/Contractor/Tasks'; // adjust when Tasks page exists
+    window.location.href = '/Contractor/Tasks';
   });
 
-  if(TOKEN) bootstrap();
+  // ... your existing JS above ...
+
+  // ---------- FEED ----------
+  let FEED = [];
+  let FEED_FILTER = 'all';
+  const READ_KEY = 'contractor.readNotifications';
+
+  function getReadSet(){
+    try { return new Set(JSON.parse(localStorage.getItem(READ_KEY) || '[]')); }
+    catch { return new Set(); }
+  }
+  function saveReadSet(set){ localStorage.setItem(READ_KEY, JSON.stringify([...set])); }
+
+  function severityIcon(type){
+    const map = {
+      task_due: 'fa-bolt',
+      task_assigned: 'fa-list-check',
+      doc_rejected: 'fa-triangle-exclamation',
+      comment: 'fa-comment-dots',
+      approval: 'fa-circle-check'
+    };
+    return map[type] || 'fa-bell';
+  }
+
+  function timeAgo(input){
+    const diff = (Date.now() - new Date(input).getTime())/1000;
+    const t = (v,u)=> `${Math.floor(v)} ${u}${Math.floor(v)!==1?'s':''} ago`;
+    if(diff<60) return t(diff,'sec');
+    if(diff<3600) return t(diff/60,'min');
+    if(diff<86400) return t(diff/3600,'hour');
+    return t(diff/86400,'day');
+  }
+
+  function renderFeed(){
+    const read = getReadSet();
+    let items = FEED.slice().sort((a,b)=> new Date(b.ts) - new Date(a.ts));
+    if(FEED_FILTER==='unread') items = items.filter(n=>!read.has(n.id));
+
+    const box = document.getElementById('feed-list');
+    if(!items.length){ box.innerHTML = '<div class="muted">No notifications.</div>'; return; }
+
+    box.innerHTML = items.slice(0,20).map(n=>{
+      const unread = !read.has(n.id);
+      const sevCls = (n.severity==='danger'?'text-danger':(n.severity==='warn'?'text-warning':'text-success'));
+      return `
+        <div class="feed-item">
+          <div class="feed-icon ${sevCls}"><i class="fas ${severityIcon(n.type)}"></i></div>
+          <div class="flex-grow-1">
+            <div class="d-flex justify-content-between">
+              <div>
+                <strong>${n.title}</strong>
+                ${unread ? '<span class="badge-new ms-2">NEW</span>' : ''}
+              </div>
+              <div class="muted feed-time">${timeAgo(n.ts)}</div>
+            </div>
+            <div class="muted small">${n.subtitle||''}</div>
+            <div class="mt-2">
+              ${unread ? `<button class="btn btn-sm btn-outline-secondary feed-read-btn" data-id="${n.id}">Mark read</button>` : ''}
+              ${n.taskId ? `<a class="btn btn-sm btn-brand ms-2" href="/Contractor/Tasks?focus=${encodeURIComponent(n.taskId)}">Open task</a>`:''}
+              ${n.docId ?  `<a class="btn btn-sm btn-brand ms-2" href="/Contractor/Documents?doc=${encodeURIComponent(n.docId)}">Open doc</a>`:''}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function loadFeed(){
+    const data = await getJson('@Url.Content("~/mock/notifications.json")');
+    // Guarantee ids
+    FEED = data.map((n,i)=> ({ id: n.id || `auto-${i}-${n.ts}`, ...n }));
+    renderFeed();
+  }
+
+  document.addEventListener('click', (e)=>{
+    if(e.target.matches('.feed-filter')){
+      document.querySelectorAll('.feed-filter').forEach(b=>b.classList.remove('active'));
+      e.target.classList.add('active');
+      FEED_FILTER = e.target.dataset.filter;
+      renderFeed();
+    }
+    if(e.target.matches('.feed-read-btn')){
+      const id = e.target.dataset.id;
+      const s = getReadSet(); s.add(id); saveReadSet(s);
+      renderFeed();
+    }
+    if(e.target.id==='mark-all-read'){
+      const s = new Set(getReadSet());
+      FEED.forEach(n=>s.add(n.id)); saveReadSet(s);
+      renderFeed();
+    }
+  });
+
+  // Optionally poll every 30s (safe with mocks; remove when API wired)
+  setInterval(()=>loadFeed().catch(()=>{}), 30000);
+
+  // ---------- Bootstrap ----------
+  async function bootstrap(){
+    try{
+      await Promise.all([loadTasks(), loadDocs(), loadFeed()]);
+      setUpdated();
+    }catch(e){
+      console.error(e);
+      alert('Failed to load dashboard: ' + e.message);
+    }
+  }
+
+
+  // Use mocks during UI work
+  //if{TOKEN}
+  bootstrap();
 </script>
