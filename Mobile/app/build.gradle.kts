@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.icmms"
+    namespace = "com.example.icmms_mobile"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.icmms"
+        applicationId = "com.example.icmms_mobile"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

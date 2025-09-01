@@ -26,9 +26,6 @@
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
                         @if (User.Identity.IsAuthenticated && User.IsInRole("Tester"))
                         {
                             <li class="nav-item">
@@ -46,10 +43,21 @@
                                 <a class="nav-link text-dark" asp-area="" asp-controller="Users" asp-action="Index">Users</a>
                             </li>
                         }
-                    
-                        @if (User.Identity.IsAuthenticated && User.IsInRole("Project Manager") || User.IsInRole("Tester")){
+                        @if (User.Identity.IsAuthenticated && (User.IsInRole("Project Manager") || User.IsInRole("Tester")))
+                        {
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-controller="ProjectManager" asp-action="Dashboard">Dashboard</a>
+                            </li>
+                        }
+                        @if (User.Identity.IsAuthenticated && User.IsInRole("Client"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Clients" asp-action="Index">Client Dashboard</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Clients" asp-action="CreateMaintenanceRequest">
+                                    <i class="fas fa-tools me-1"></i>Maintenance Request
+                                </a>
                             </li>
                         }
                     </ul>

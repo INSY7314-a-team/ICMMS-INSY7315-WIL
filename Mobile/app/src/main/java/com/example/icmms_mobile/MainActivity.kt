@@ -1,4 +1,4 @@
-package com.example.icmms
+package com.example.icmms_mobile
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -8,15 +8,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.example.icmms.navigation.AppNavigation
-import com.example.icmms.ui.theme.ICMMSMobileTheme
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.icmms_mobile.navigation.AppNavigation
+import com.example.icmms_mobile.ui.theme.ICMMS_MobileTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            ICMMSMobileTheme {
+            ICMMS_MobileTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
