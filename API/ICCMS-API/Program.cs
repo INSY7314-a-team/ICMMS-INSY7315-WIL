@@ -63,6 +63,18 @@ builder.Services.AddCors(options =>
                 .AllowCredentials();
         }
     );
+    
+    // Add policy for Android emulator
+    options.AddPolicy(
+        "AllowAndroidEmulator",
+        policy =>
+        {
+            policy
+                .AllowAnyOrigin() // Allow any origin for development
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+        }
+    );
 });
 
 var app = builder.Build();
@@ -75,7 +87,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowSpecificOrigins");
+app.UseCors("AllowAndroidEmulator"); // Use the Android emulator policy for development
 
 // Add authentication and authorization middleware
 app.UseAuthentication();
