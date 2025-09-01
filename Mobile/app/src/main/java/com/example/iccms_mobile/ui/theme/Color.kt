@@ -1,4 +1,4 @@
-package com.example.icmms_mobile.ui.theme
+package com.example.iccms_mobile.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

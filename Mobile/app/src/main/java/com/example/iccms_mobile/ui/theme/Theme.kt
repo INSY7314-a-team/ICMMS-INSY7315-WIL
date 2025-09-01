@@ -1,4 +1,4 @@
-package com.example.icmms_mobile.ui.theme
+package com.example.iccms_mobile.ui.theme
 
 import android.app.Activity
 import android.os.Build
@@ -34,7 +34,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun ICMMS_MobileTheme(
+fun ICCMSMobileTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
