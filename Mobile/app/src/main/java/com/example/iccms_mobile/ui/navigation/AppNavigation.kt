@@ -3,6 +3,7 @@ package com.example.iccms_mobile.ui.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -13,7 +14,7 @@ import com.example.iccms_mobile.ui.screens.AdminDashboardScreen
 import com.example.iccms_mobile.ui.screens.ClientDashboardScreen
 import com.example.iccms_mobile.ui.screens.ContractorDashboardScreen
 import com.example.iccms_mobile.ui.screens.LoginScreen
-import com.example.iccms_mobile.ui.screens.ProjectManagerDashboardScreenNew
+import com.example.iccms_mobile.ui.screens.ProjectManagerDashboardScreen
 import com.example.iccms_mobile.ui.viewmodel.AuthViewModel
 
 @Composable
@@ -34,7 +35,7 @@ fun AppNavigation(
                 authViewModel = authViewModel,
                 onLoginSuccess = {
                     // Navigate based on user role
-                    when (authState.user?.role?.lowercase()) {
+                    when (authState.user?.role?.lowercase()?.replace(" ", "")) {
                         "client" -> navController.navigate("client_dashboard") {
                             popUpTo("login") { inclusive = true }
                         }
@@ -102,9 +103,10 @@ fun AppNavigation(
         composable("pm_dashboard") {
             val authState by authViewModel.uiState.collectAsState()
             
-            authState.user?.let { user ->
-                ProjectManagerDashboardScreenNew(
-                    user = user,
+            // Debug: Show what we're getting
+            if (authState.user != null) {
+                ProjectManagerDashboardScreen(
+                    user = authState.user!!,
                     onLogout = {
                         authViewModel.logout()
                         navController.navigate("login") {
@@ -112,9 +114,12 @@ fun AppNavigation(
                         }
                     }
                 )
-            } ?: run {
-                navController.navigate("login") {
-                    popUpTo("pm_dashboard") { inclusive = true }
+            } else {
+                // If no user, redirect to login
+                LaunchedEffect(Unit) {
+                    navController.navigate("login") {
+                        popUpTo("pm_dashboard") { inclusive = true }
+                    }
                 }
             }
         }
