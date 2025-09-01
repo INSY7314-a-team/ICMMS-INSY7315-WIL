@@ -1,4 +1,4 @@
-package com.example.icmms
+package com.example.icmms_mobile_new
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.example.icmms", appContext.packageName)
+        assertEquals("com.example.icmms_mobile_new", appContext.packageName)
     }
 }

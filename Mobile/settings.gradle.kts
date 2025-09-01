@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ICMMS-Mobile"
+rootProject.name = "ICMMS-Mobile_New"
 include(":app")
  
