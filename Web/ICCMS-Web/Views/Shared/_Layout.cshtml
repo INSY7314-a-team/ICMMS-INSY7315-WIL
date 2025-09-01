@@ -44,6 +44,13 @@
                                 <a class="nav-link text-dark" asp-area="" asp-controller="Clients" asp-action="Index">Client Dashboard</a>
                             </li>
                         }
+                        @* NEW: Contractor Dashboard link *@
+                        @if (User.Identity.IsAuthenticated && (User.IsInRole("Contractor") || User.IsInRole("Tester")))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Contractor" asp-action="Dashboard">Contractor Dashboard</a>
+                            </li>
+                        }
                     </ul>
                     <ul class="navbar-nav">
                         @if (User.Identity.IsAuthenticated)
@@ -92,7 +99,6 @@
     
     <!-- Firebase Configuration -->
     <script>
-        // Your Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyC0JDtGyh7sL_doZobuoQwg7LDrIE4BQN0",
             authDomain: "icmms-ecba6.firebaseapp.com",
@@ -101,20 +107,11 @@
             messagingSenderId: "123456789",
             appId: "1:123456789:web:abcdef123456"
         };
-
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
-        
-        // Global Firebase auth instance
         const auth = firebase.auth();
-        
-        // Listen for auth state changes
         auth.onAuthStateChanged(function(user) {
-            if (user) {
-                console.log('User is signed in:', user.email);
-            } else {
-                console.log('User is signed out');
-            }
+            if (user) { console.log('User is signed in:', user.email); }
+            else { console.log('User is signed out'); }
         });
     </script>
     

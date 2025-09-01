@@ -1,0 +1,259 @@
+@using System.Security.Claims
+@inject IConfiguration Configuration
+@{
+    ViewData["Title"] = "Contractor Dashboard";
+    var apiBase = Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7136";
+    var token = User.FindFirst("FirebaseToken")?.Value ?? string.Empty;
+    var fullName = User.FindFirst(ClaimTypes.Name)?.Value ?? "Contractor";
+}
+
+<style>
+  .bg-gradient-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);} 
+  .card { border:0; border-radius:14px; box-shadow:0 8px 20px rgba(0,0,0,.06);} 
+  .kpi { display:flex; align-items:center; gap:14px; }
+  .kpi .icon { width:40px; height:40px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; background:#eef1ff; }
+  .chip { padding:.2rem .6rem; border-radius:999px; font-size:.75rem; }
+  .chip.ok { background:#e8f5e9; color:#2e7d32 } .chip.warn{background:#fff8e1;color:#b26a00} .chip.danger{background:#ffebee;color:#c62828}
+  .table thead th { font-weight:600; color:#6b7280; }
+  .muted { color:#6b7280 }
+  .skeleton { background:linear-gradient(90deg, #f4f4f5 25%, #ededee 37%, #f4f4f5 63%); border-radius:8px; height:14px; animation: shimmer 1.4s infinite; }
+  @@keyframes shimmer { 0%{background-position:-40rem 0}100%{background-position:40rem 0} }
+  @@media (max-width: 768px){
+    .bottom-nav{ position:sticky; bottom:0; left:0; right:0; background:#fff; border-top:1px solid #e5e7eb; display:flex; justify-content:space-around; padding:.5rem .25rem; z-index:50 }
+    .bottom-nav a{ text-decoration:none; color:#6b7280; font-size:.8rem; text-align:center }
+  }
+</style>
+
+<div class="container-fluid px-3 px-md-4 py-3">
+  <!-- Header -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+    <div>
+      <h1 class="h3 fw-bold mb-1">Hi, @fullName 👋</h1>
+      <div class="muted">Contractor Dashboard</div>
+    </div>
+    <div class="muted">Last updated: <span id="last-updated">—</span></div>
+  </div>
+
+  @if(string.IsNullOrEmpty(token)){
+    <div class="alert alert-warning">You are not authenticated. Please sign in again to load data.</div>
+  }
+
+  <!-- Hero / CTA -->
+  <div class="card mb-4">
+    <div class="card-body d-flex flex-wrap align-items-center justify-content-between">
+      <div class="me-3">
+        <div class="text-uppercase small muted">Quick Action</div>
+        <h5 class="mb-2 fw-semibold">Update your progress for today</h5>
+        <div class="muted">Keep your PM in the loop by updating task status and uploading photos.</div>
+      </div>
+      <button class="btn btn-primary" id="cta-update">Update Now</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card p-3">
+        <div class="kpi"><div class="icon"><i class="fas fa-list-check text-primary"></i></div>
+        <div><div class="muted small">Open Tasks</div><div class="h5 mb-0" id="kpi-open">—</div></div></div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card p-3">
+        <div class="kpi"><div class="icon"><i class="fas fa-bolt text-warning"></i></div>
+        <div><div class="muted small">Due Today</div><div class="h5 mb-0" id="kpi-today">—</div></div></div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card p-3">
+        <div class="kpi"><div class="icon"><i class="fas fa-exclamation-circle text-danger"></i></div>
+        <div><div class="muted small">Overdue</div><div class="h5 mb-0" id="kpi-overdue">—</div></div></div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card p-3">
+        <div class="kpi"><div class="icon"><i class="fas fa-file-circle-check text-success"></i></div>
+        <div><div class="muted small">Docs Pending Approval</div><div class="h5 mb-0" id="kpi-pending-docs">—</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Grid -->
+  <div class="row g-3">
+    <div class="col-12 col-xl-8">
+      <div class="card mb-3">
+        <div class="card-header bg-white">
+          <strong>Workload Overview</strong>
+        </div>
+        <div class="card-body">
+          <canvas id="workloadChart" height="90"></canvas>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <strong>My Tasks</strong>
+          <small class="muted" id="tasks-count">—</small>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead><tr>
+                <th>Task</th><th class="d-none d-md-table-cell">Project</th><th>Status</th><th>Due</th>
+              </tr></thead>
+              <tbody id="tasks-body">
+                <tr><td colspan="4" class="p-3"><div class="skeleton" style="height:18px"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <strong>My Documents</strong>
+          <small class="muted" id="docs-count">—</small>
+        </div>
+        <div class="card-body">
+          <div id="docs-list" class="row g-3"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-xl-4">
+      <div class="card mb-3">
+        <div class="card-header bg-white"><strong>Upcoming (7 days)</strong></div>
+        <div class="card-body" id="upcoming-list">
+          <div class="skeleton mb-2"></div>
+          <div class="skeleton" style="width:70%"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header bg-white"><strong>Recent Activity</strong></div>
+        <div class="card-body" id="activity-list"><div class="muted">Populated from your actions (updates, uploads).</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  <div class="bottom-nav d-md-none mt-3">
+    <a href="#"><i class="fas fa-home"></i><div>Home</div></a>
+    <a href="#tasks"><i class="fas fa-list"></i><div>Tasks</div></a>
+    <a href="#docs"><i class="fas fa-file"></i><div>Docs</div></a>
+    <a href="#inbox"><i class="fas fa-bell"></i><div>Inbox</div></a>
+    <a href="#profile"><i class="fas fa-user"></i><div>Me</div></a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const API_BASE = '@apiBase';
+  const TOKEN = '@token';
+
+  const authHeaders = TOKEN ? { 'Authorization': `Bearer ${TOKEN}` } : {};
+
+  const fmt = (d) => new Date(d);
+  const todayIso = new Date().toISOString().slice(0,10);
+
+  function setUpdated(){ document.getElementById('last-updated').textContent = new Date().toLocaleString(); }
+
+  async function getJson(url){
+    console.log('FETCH TEST HELOOOOOOOOOO→', url);
+
+    const res = await fetch(url,{ headers: authHeaders });
+    if(!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    return await res.json();
+  }
+
+  async function loadTasks(){
+    const tasks = await getJson('@Url.Content("~/mock/tasks.json")');
+
+
+    document.getElementById('tasks-count').textContent = `${tasks.length} items`;
+
+    // KPIs
+    const open = tasks.filter(t => (t.status||'').toLowerCase() !== 'completed').length;
+    const dueToday = tasks.filter(t => (t.dueDate||'').startsWith(todayIso)).length;
+    const overdue = tasks.filter(t => t.dueDate && (new Date(t.dueDate) < new Date(todayIso)) && (t.status||'').toLowerCase()!=='completed').length;
+    document.getElementById('kpi-open').textContent = open;
+    document.getElementById('kpi-today').textContent = dueToday;
+    document.getElementById('kpi-overdue').textContent = overdue;
+
+    // Fill table
+    const tbody = document.getElementById('tasks-body');
+    tbody.innerHTML = tasks.slice(0,20).map(t => `
+      <tr>
+        <td><strong>${t.name||'Task'}</strong><div class="muted small">${t.description||''}</div></td>
+        <td class="d-none d-md-table-cell">${t.projectId||'-'}</td>
+        <td>${statusChip(t.status)}</td>
+        <td>${t.dueDate? new Date(t.dueDate).toLocaleDateString(): '-'}</td>
+      </tr>`).join('');
+
+    drawChart(tasks);
+    buildUpcoming(tasks);
+  }
+
+  function statusChip(s){
+    const v=(s||'').toLowerCase();
+    if(v==='completed') return '<span class="chip ok">Completed</span>';
+    if(v==='in progress') return '<span class="chip warn">In Progress</span>';
+    return '<span class="chip">Open</span>';
+  }
+
+  function drawChart(tasks){
+    const byMonth = {};
+    tasks.forEach(t=>{
+      const key = (t.startDate||t.createdAt||new Date()).slice(0,7);
+      byMonth[key] = (byMonth[key]||0) + 1;
+    });
+    const labels = Object.keys(byMonth).sort();
+    const data = labels.map(k=>byMonth[k]);
+    const ctx = document.getElementById('workloadChart');
+    new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Tasks',data, tension:.35, fill:true}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
+  }
+
+  async function loadDocs(){
+    const docs  = await getJson('@Url.Content("~/mock/documents.json")');
+    document.getElementById('docs-count').textContent = `${docs.length} items`;
+    const pending = docs.filter(d => (d.status||'').toLowerCase()==='pending').length;
+    document.getElementById('kpi-pending-docs').textContent = pending;
+
+    const wrap = document.getElementById('docs-list');
+    wrap.innerHTML = docs.slice(0,8).map(d=>`
+      <div class="col-12 col-md-6">
+        <div class="p-3 border rounded-3 h-100">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <strong>${d.fileName||'Document'}</strong>
+              <div class="muted small">${(d.fileType||'').split('/').pop()} • ${(d.fileSize||0)/1024|0} KB</div>
+            </div>
+            <span class="chip ${((d.status||'').toLowerCase()==='approved')?'ok':((d.status||'').toLowerCase()==='pending')?'warn':'danger'}">${d.status||'—'}</span>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  function buildUpcoming(tasks){
+    const soon = tasks.filter(t => t.dueDate).sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate)).slice(0,5);
+    const box = document.getElementById('upcoming-list');
+    if(!soon.length){ box.innerHTML = '<div class="muted">No upcoming deadlines.</div>'; return; }
+    box.innerHTML = soon.map(t=>`<div class="mb-2"><strong>${t.name||'Task'}</strong><div class="small muted">Due ${new Date(t.dueDate).toLocaleDateString()}</div></div>`).join('');
+  }
+
+  async function bootstrap(){
+    try{
+      await Promise.all([loadTasks(), loadDocs()]);
+      setUpdated();
+    }catch(e){
+      console.error(e);
+      alert('Failed to load dashboard: ' + e.message);
+    }
+  }
+
+  document.getElementById('cta-update').addEventListener('click', ()=>{
+    window.location.href = '/Contractor/Tasks'; // adjust when Tasks page exists
+  });
+
+  if(TOKEN) bootstrap();
+</script>

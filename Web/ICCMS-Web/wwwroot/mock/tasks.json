@@ -1,0 +1,5 @@
+[
+  {"name":"Install wiring","description":"Level 1 main hall","projectId":"P-1001","status":"In Progress","dueDate":"2025-09-05","startDate":"2025-08-20"},
+  {"name":"Mount panels","description":"Server room","projectId":"P-1001","status":"Open","dueDate":"2025-09-07","startDate":"2025-08-22"},
+  {"name":"Site cleanup","description":"Daily","projectId":"P-1002","status":"Completed","dueDate":"2025-09-01","startDate":"2025-08-28"}
+]
