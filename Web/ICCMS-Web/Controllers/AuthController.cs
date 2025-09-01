@@ -95,6 +95,9 @@ namespace ICCMS_Web.Controllers
                             }
                         );
 
+                        // Log successful login
+                        await LogSuccessfulLoginAsync(result.User.Email, result.User.UserId, request.IdToken);
+
                         return Json(new { success = true });
                     }
                     else
@@ -147,6 +150,53 @@ namespace ICCMS_Web.Controllers
             await HttpContext.SignOutAsync("Cookies");
             TempData["SuccessMessage"] = "You have been logged out successfully.";
             return RedirectToAction("Login");
+        }
+
+        private async Task LogSuccessfulLoginAsync(string email, string userId, string firebaseToken)
+        {
+            try
+            {
+                var auditLogRequest = new
+                {
+                    LogType = "Login Attempt",
+                    Title = "Login Successful",
+                    Description = "Login successful",
+                    UserId = userId,
+                    EntityId = email
+                };
+
+                // Clear any existing headers to avoid conflicts
+                _httpClient.DefaultRequestHeaders.Clear();
+                
+                // Add authentication header
+                _httpClient.DefaultRequestHeaders.Authorization = 
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", firebaseToken);
+                
+                var json = JsonSerializer.Serialize(auditLogRequest);
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                // Debug logging
+                Console.WriteLine($"Audit Log Request: {json}");
+                Console.WriteLine($"Audit Log URL: {_apiBaseUrl}/api/auditlogs");
+                Console.WriteLine($"Auth Header: Bearer {firebaseToken.Substring(0, Math.Min(20, firebaseToken.Length))}...");
+
+                // Send to audit logs API
+                var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/auditlogs", content);
+                
+                // Debug logging
+                Console.WriteLine($"Audit Log Response: {response.StatusCode}");
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Audit Log Error: {errorContent}");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging
+                Console.WriteLine($"Audit Log Exception: {ex.Message}");
+                Console.WriteLine($"Audit Log Stack Trace: {ex.StackTrace}");
+            }
         }
     }
 
