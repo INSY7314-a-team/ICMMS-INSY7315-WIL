@@ -56,7 +56,7 @@ fun ContractorDashboardScreen(
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                         Text(
-                            text = "Role: ${user.role}",
+                            text = "Role: ${user.Role}",
                             fontSize = 16.sp,
                             color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
                             modifier = Modifier.padding(top = 4.dp)
@@ -77,13 +77,13 @@ fun ContractorDashboardScreen(
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = "Welcome, ${user.fullName}!",
+                            text = "Welcome, ${user.FullName}!",
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            text = user.email,
+                            text = user.Email,
                             fontSize = 16.sp,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                             modifier = Modifier.padding(top = 4.dp)

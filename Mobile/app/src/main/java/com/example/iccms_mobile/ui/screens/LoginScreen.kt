@@ -26,8 +26,12 @@ fun LoginScreen(
     val uiState by authViewModel.uiState.collectAsState()
     
     // Navigate to appropriate screen when login is successful
-    LaunchedEffect(uiState.isLoggedIn) {
-        if (uiState.isLoggedIn) {
+    LaunchedEffect(uiState.isLoggedIn, uiState.user) {
+        if (uiState.isLoggedIn && uiState.user != null) {
+            println("DEBUG: LoginScreen - isLoggedIn became true AND user data is available")
+            println("DEBUG: LoginScreen - Current user data: ${uiState.user}")
+            println("DEBUG: LoginScreen - User role: ${uiState.user?.Role}")
+            println("DEBUG: LoginScreen - Calling onLoginSuccess callback")
             onLoginSuccess()
         }
     }

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.iccms_mobile.data.models.LoginResponse
 import com.example.iccms_mobile.data.models.UserInfo
 import com.example.iccms_mobile.data.repository.AuthRepository
+import com.example.iccms_mobile.data.services.FirebaseAuthService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,9 +20,42 @@ data class AuthUiState(
 
 class AuthViewModel : ViewModel() {
     private val authRepository = AuthRepository()
+    private val firebaseAuthService = FirebaseAuthService()
     
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+    
+    init {
+        // Check if user is already signed in with Firebase
+        checkCurrentUser()
+    }
+    
+    private fun checkCurrentUser() {
+        if (firebaseAuthService.isUserSignedIn()) {
+            // User is already signed in, try to get user data from API
+            refreshUserData()
+        }
+    }
+    
+    private fun refreshUserData() {
+        viewModelScope.launch {
+            try {
+                val token = authRepository.getCurrentUserToken()
+                if (token.isSuccess) {
+                    // User has valid token, update UI state
+                    _uiState.value = _uiState.value.copy(
+                        isLoggedIn = true,
+                        isLoading = false
+                    )
+                } else {
+                    // Token is invalid, sign out
+                    logout()
+                }
+            } catch (e: Exception) {
+                logout()
+            }
+        }
+    }
     
     fun login(email: String, password: String) {
         viewModelScope.launch {
@@ -29,13 +63,23 @@ class AuthViewModel : ViewModel() {
             
             authRepository.login(email, password)
                 .onSuccess { response ->
+                    println("DEBUG: Login successful, response: $response")
+                    println("DEBUG: User data: ${response.User}")
+                    println("DEBUG: User role: ${response.User.Role}")
+                    println("DEBUG: User role length: ${response.User.Role.length}")
+                    println("DEBUG: User role bytes: ${response.User.Role.toByteArray().contentToString()}")
+                    println("DEBUG: User role trimmed: '${response.User.Role.trim()}'")
+                    
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         isLoggedIn = true,
-                        user = response.user
+                        user = response.User
                     )
+                    
+                    println("DEBUG: UI state updated - isLoggedIn: ${_uiState.value.isLoggedIn}, user: ${_uiState.value.user}")
                 }
                 .onFailure { exception ->
+                    println("DEBUG: Login failed: ${exception.message}")
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         errorMessage = exception.message ?: "Login failed"
@@ -45,7 +89,10 @@ class AuthViewModel : ViewModel() {
     }
     
     fun logout() {
-        _uiState.value = AuthUiState()
+        viewModelScope.launch {
+            authRepository.logout()
+            _uiState.value = AuthUiState()
+        }
     }
     
     fun clearError() {

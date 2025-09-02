@@ -2,21 +2,38 @@ package com.example.iccms_mobile.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.iccms_mobile.data.models.UserInfo
+import androidx.compose.runtime.collectAsState
+import com.example.iccms_mobile.data.models.*
+import com.example.iccms_mobile.ui.viewmodel.ClientDashboardViewModel
+import java.text.NumberFormat
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClientDashboardScreen(
     user: UserInfo,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    viewModel: ClientDashboardViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+    
+    // Load data when screen is first displayed
+    LaunchedEffect(Unit) {
+        viewModel.loadDashboardData()
+    }
+    
     Scaffold(
         topBar = {
             TopAppBar(
@@ -36,12 +53,12 @@ fun ClientDashboardScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Role Verification Card
+            // Welcome Section
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primary
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
                     )
                 ) {
                     Column(
@@ -52,172 +69,549 @@ fun ClientDashboardScreen(
                             text = "👤 CLIENT DASHBOARD",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            text = "Role: ${user.role}",
+                            text = "Role: ${user.Role}",
                             fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
-                            modifier = Modifier.padding(top = 4.dp)
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "Welcome, ${user.FullName}!",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                 }
             }
             
-            // Welcome Card
+            // Statistics Cards
+            item {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    item {
+                        StatCard(
+                            title = "Total Projects",
+                            value = uiState.projects.size.toString(),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    item {
+                        StatCard(
+                            title = "Active Projects",
+                            value = uiState.projects.count { it.status.lowercase() == "active" }.toString(),
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+                    item {
+                        StatCard(
+                            title = "Pending Quotes",
+                            value = uiState.quotations.count { it.status.lowercase() == "pending" }.toString(),
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                    item {
+                        StatCard(
+                            title = "Maintenance",
+                            value = uiState.maintenanceRequests.size.toString(),
+                            color = Color(0xFFFF9800)
+                        )
+                    }
+                }
+            }
+            
+            // Total Budget Card
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Column {
+                            Text(
+                                text = "Total Budget",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "R ${NumberFormat.getNumberInstance().format(uiState.projects.sumOf { it.budgetPlanned })}",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                         Text(
-                            text = "Welcome, ${user.fullName}!",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Text(
-                            text = user.email,
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                            modifier = Modifier.padding(top = 4.dp)
+                            text = "💰",
+                            fontSize = 24.sp
                         )
                     }
                 }
             }
             
-            // Quick Actions
+            // Projects Section
             item {
-                Text(
-                    text = "Quick Actions",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                ProjectsSection(
+                    projects = uiState.projects,
+                    isLoading = uiState.isLoading
                 )
             }
             
+            // Quotations Section
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Create Maintenance Request
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        onClick = { /* TODO: Navigate to create maintenance request */ }
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "New Request",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                    
-                    // View Projects
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        onClick = { /* TODO: Navigate to projects */ }
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "My Projects",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-            }
-            
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // View Quotations
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        onClick = { /* TODO: Navigate to quotations */ }
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Quotations",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                    
-                    // Messages
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        onClick = { /* TODO: Navigate to messages */ }
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Messages",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-            }
-            
-            // Recent Activity Section
-            item {
-                Text(
-                    text = "Recent Activity",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                QuotationsSection(
+                    quotations = uiState.quotations,
+                    isLoading = uiState.isLoading,
+                    onApprove = { viewModel.approveQuotation(it) },
+                    onReject = { viewModel.rejectQuotation(it) }
                 )
             }
             
+            // Maintenance Requests Section
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "No recent activity",
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                            modifier = Modifier.padding(vertical = 16.dp)
-                        )
+                MaintenanceRequestsSection(
+                    requests = uiState.maintenanceRequests,
+                    isLoading = uiState.isLoading,
+                    onCreateRequest = { /* TODO: Navigate to create request */ },
+                    onDeleteRequest = { viewModel.deleteMaintenanceRequest(it) }
+                )
+            }
+            
+            // Invoices Section
+            item {
+                InvoicesSection(
+                    invoices = uiState.invoices,
+                    isLoading = uiState.isLoading,
+                    onPayInvoice = { invoiceId, payment -> viewModel.payInvoice(invoiceId, payment) }
+                )
+            }
+        }
+    }
+    
+    // Show loading indicator
+    if (uiState.isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    }
+    
+    // Show error message
+    uiState.errorMessage?.let { error ->
+        LaunchedEffect(error) {
+            // You could show a snackbar here
+            viewModel.clearMessages()
+        }
+    }
+    
+    // Show success message
+    uiState.successMessage?.let { success ->
+        LaunchedEffect(success) {
+            // You could show a snackbar here
+            viewModel.clearMessages()
+        }
+    }
+}
+
+@Composable
+fun StatCard(
+    title: String,
+    value: String,
+    color: Color
+) {
+    Card(
+        modifier = Modifier.width(120.dp),
+        colors = CardDefaults.cardColors(containerColor = color)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+            Text(
+                text = title,
+                fontSize = 12.sp,
+                color = Color.White,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun ProjectsSection(
+    projects: List<Project>,
+    isLoading: Boolean
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = "My Projects",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            
+            if (projects.isEmpty() && !isLoading) {
+                Text(
+                    text = "No projects found",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp)
+                )
+            } else {
+                projects.forEach { project ->
+                    ProjectItem(project = project)
+                    if (project != projects.last()) {
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ProjectItem(project: Project) {
+    Column {
+        Text(
+            text = project.name,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = project.description,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Status: ${project.status}",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "R ${NumberFormat.getNumberInstance().format(project.budgetPlanned)}",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+fun QuotationsSection(
+    quotations: List<Quotation>,
+    isLoading: Boolean,
+    onApprove: (String) -> Unit,
+    onReject: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = "Quotations",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            
+            if (quotations.isEmpty() && !isLoading) {
+                Text(
+                    text = "No quotations found",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp)
+                )
+            } else {
+                quotations.forEach { quotation ->
+                    QuotationItem(
+                        quotation = quotation,
+                        onApprove = { onApprove(quotation.quotationId) },
+                        onReject = { onReject(quotation.quotationId) }
+                    )
+                    if (quotation != quotations.last()) {
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun QuotationItem(
+    quotation: Quotation,
+    onApprove: () -> Unit,
+    onReject: () -> Unit
+) {
+    Column {
+        Text(
+            text = quotation.description,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = "R ${NumberFormat.getNumberInstance().format(quotation.total)}",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = "Status: ${quotation.status}",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        
+        if (quotation.status.lowercase() == "pending") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = onApprove,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary
+                    )
+                ) {
+                    Text("Approve", fontSize = 12.sp)
+                }
+                Button(
+                    onClick = onReject,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Reject", fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MaintenanceRequestsSection(
+    requests: List<MaintenanceRequest>,
+    isLoading: Boolean,
+    onCreateRequest: () -> Unit,
+    onDeleteRequest: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Maintenance Requests",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Button(
+                    onClick = onCreateRequest,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF9800)
+                    )
+                ) {
+                    Text("New Request", fontSize = 12.sp)
+                }
+            }
+            
+            if (requests.isEmpty() && !isLoading) {
+                Text(
+                    text = "No maintenance requests found",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp)
+                )
+            } else {
+                requests.forEach { request ->
+                    MaintenanceRequestItem(
+                        request = request,
+                        onDelete = { onDeleteRequest(request.maintenanceRequestId) }
+                    )
+                    if (request != requests.last()) {
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MaintenanceRequestItem(
+    request: MaintenanceRequest,
+    onDelete: () -> Unit
+) {
+    Column {
+        Text(
+            text = request.description,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = "Priority: ${request.priority}",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "Status: ${request.status}",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "Created: ${formatDate(request.createdAt)}",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        
+        if (request.status.lowercase() == "pending") {
+            Button(
+                onClick = onDelete,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                ),
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Text("Delete", fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+@Composable
+fun InvoicesSection(
+    invoices: List<Invoice>,
+    isLoading: Boolean,
+    onPayInvoice: (String, Payment) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = "Invoices",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            
+            if (invoices.isEmpty() && !isLoading) {
+                Text(
+                    text = "No invoices found",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp)
+                )
+            } else {
+                invoices.forEach { invoice ->
+                    InvoiceItem(
+                        invoice = invoice,
+                        onPay = { 
+                            val payment = Payment(
+                                paymentId = "",
+                                invoiceId = invoice.invoiceId,
+                                amount = invoice.totalAmount,
+                                paymentDate = "",
+                                method = "Card",
+                                status = "Paid",
+                                transactionId = "",
+                                notes = "",
+                                processedAt = "",
+                                projectId = invoice.projectId,
+                                clientId = invoice.clientId
+                            )
+                            onPayInvoice(invoice.invoiceId, payment)
+                        }
+                    )
+                    if (invoice != invoices.last()) {
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InvoiceItem(
+    invoice: Invoice,
+    onPay: () -> Unit
+) {
+    Column {
+        Text(
+            text = invoice.description,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = "R ${NumberFormat.getNumberInstance().format(invoice.totalAmount)}",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = "Status: ${invoice.status}",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "Due: ${formatDate(invoice.dueDate)}",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        
+        if (invoice.status.lowercase() == "pending") {
+            Button(
+                onClick = onPay,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.tertiary
+                ),
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Text("Pay Now", fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+private fun formatDate(dateString: String): String {
+    return try {
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        val outputFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+        val date = inputFormat.parse(dateString)
+        outputFormat.format(date ?: Date())
+    } catch (e: Exception) {
+        dateString
     }
 }

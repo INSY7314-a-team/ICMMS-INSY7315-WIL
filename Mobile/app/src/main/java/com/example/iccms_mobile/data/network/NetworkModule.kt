@@ -1,6 +1,10 @@
 package com.example.iccms_mobile.data.network
 
 import com.example.iccms_mobile.data.api.AuthApiService
+import com.example.iccms_mobile.data.api.ClientsApiService
+import com.example.iccms_mobile.data.services.FirebaseAuthService
+import kotlinx.coroutines.runBlocking
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -19,6 +23,52 @@ object NetworkModule {
         level = HttpLoggingInterceptor.Level.BODY
     }
     
+    // Content type interceptor to ensure proper headers for JSON requests
+    private val contentTypeInterceptor = Interceptor { chain ->
+        val originalRequest = chain.request()
+        println("DEBUG: Making request to: ${originalRequest.url}")
+        println("DEBUG: Request method: ${originalRequest.method}")
+        println("DEBUG: Request headers: ${originalRequest.headers}")
+        
+        val newRequest = originalRequest.newBuilder()
+            .header("Content-Type", "application/json")
+            .header("Accept", "application/json")
+            .build()
+        
+        println("DEBUG: Modified request headers: ${newRequest.headers}")
+        
+        val response = chain.proceed(newRequest)
+        println("DEBUG: Response received - code: ${response.code}, message: ${response.message}")
+        println("DEBUG: Response headers: ${response.headers}")
+        
+        response
+    }
+    
+    // Authentication interceptor to add Firebase ID token to requests
+    private val authInterceptor = Interceptor { chain ->
+        val originalRequest = chain.request()
+        val firebaseAuthService = FirebaseAuthService()
+        
+        // Check if this is an auth endpoint (don't add token to auth calls to avoid circular dependency)
+        val isAuthEndpoint = originalRequest.url.encodedPath.contains("/auth/")
+        
+        if (!isAuthEndpoint && firebaseAuthService.isUserSignedIn()) {
+            // Add Firebase ID token to the request
+            val token = runCatching { 
+                runBlocking { firebaseAuthService.getIdToken() }
+            }.getOrNull()?.getOrNull()
+            
+            if (!token.isNullOrEmpty()) {
+                val newRequest = originalRequest.newBuilder()
+                    .header("Authorization", "Bearer $token")
+                    .build()
+                return@Interceptor chain.proceed(newRequest)
+            }
+        }
+        
+        chain.proceed(originalRequest)
+    }
+    
     // Create a trust manager that accepts all certificates (for development only)
     private val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
         override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
@@ -33,6 +83,8 @@ object NetworkModule {
 
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
+        .addInterceptor(contentTypeInterceptor) // Add content type interceptor first
+        .addInterceptor(authInterceptor) // Add authentication interceptor
         .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
         .hostnameVerifier { _, _ -> true } // Accept all hostnames (for development only)
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -47,4 +99,5 @@ object NetworkModule {
         .build()
     
     val authApiService: AuthApiService = retrofit.create(AuthApiService::class.java)
+    val clientsApiService: ClientsApiService = retrofit.create(ClientsApiService::class.java)
 }

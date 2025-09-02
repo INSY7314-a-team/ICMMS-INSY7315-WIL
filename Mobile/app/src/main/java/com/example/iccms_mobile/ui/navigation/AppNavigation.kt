@@ -3,18 +3,14 @@ package com.example.iccms_mobile.ui.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.iccms_mobile.ui.screens.AdminDashboardScreen
 import com.example.iccms_mobile.ui.screens.ClientDashboardScreen
 import com.example.iccms_mobile.ui.screens.ContractorDashboardScreen
 import com.example.iccms_mobile.ui.screens.LoginScreen
-import com.example.iccms_mobile.ui.screens.ProjectManagerDashboardScreen
 import com.example.iccms_mobile.ui.viewmodel.AuthViewModel
 
 @Composable
@@ -23,6 +19,20 @@ fun AppNavigation(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController()
 ) {
+    // Helper function to check user role more robustly
+    fun checkUserRole(role: String?): String? {
+        if (role == null) return null
+        
+        val cleanRole = role.trim().lowercase().replace(" ", "")
+        println("DEBUG: Role checking - Original: '$role', Cleaned: '$cleanRole'")
+        
+        return when (cleanRole) {
+            "client" -> "client"
+            "contractor" -> "contractor"
+            else -> null
+        }
+    }
+    
     NavHost(
         navController = navController,
         startDestination = "login",
@@ -34,23 +44,34 @@ fun AppNavigation(
             LoginScreen(
                 authViewModel = authViewModel,
                 onLoginSuccess = {
-                    // Navigate based on user role
-                    when (authState.user?.role?.lowercase()?.replace(" ", "")) {
-                        "client" -> navController.navigate("client_dashboard") {
-                            popUpTo("login") { inclusive = true }
+                    // Navigate based on user role - only client and contractor allowed
+                    // Use the authViewModel's current state directly to avoid timing issues
+                    val currentUser = authViewModel.uiState.value.user
+                    val userRole = checkUserRole(currentUser?.Role)
+                    println("DEBUG: Navigation - User role: ${currentUser?.Role}, processed: $userRole")
+                    println("DEBUG: Navigation - Full user data: $currentUser")
+                    println("DEBUG: Navigation - Role comparison: '$userRole' == 'client' = ${userRole == "client"}")
+                    println("DEBUG: Navigation - Role comparison: '$userRole' == 'contractor' = ${userRole == "contractor"}")
+                    
+                    when (userRole) {
+                        "client" -> {
+                            println("DEBUG: Navigating to client dashboard")
+                            navController.navigate("client_dashboard") {
+                                popUpTo("login") { inclusive = true }
+                            }
                         }
-                        "admin" -> navController.navigate("admin_dashboard") {
-                            popUpTo("login") { inclusive = true }
-                        }
-                        "projectmanager" -> navController.navigate("pm_dashboard") {
-                            popUpTo("login") { inclusive = true }
-                        }
-                        "contractor" -> navController.navigate("contractor_dashboard") {
-                            popUpTo("login") { inclusive = true }
+                        "contractor" -> {
+                            println("DEBUG: Navigating to contractor dashboard")
+                            navController.navigate("contractor_dashboard") {
+                                popUpTo("login") { inclusive = true }
+                            }
                         }
                         else -> {
-                            // Unknown role, stay on login or show error
-                            navController.navigate("login")
+                            // Unknown role or unauthorized role, stay on login
+                            println("DEBUG: Unknown role: '$userRole', staying on login")
+                            println("DEBUG: Available roles: client, contractor")
+                            println("DEBUG: Current user: $currentUser")
+                            // This will prevent admin, project manager, and other roles from accessing the app
                         }
                     }
                 }
@@ -74,52 +95,6 @@ fun AppNavigation(
                 // User is null, redirect to login
                 navController.navigate("login") {
                     popUpTo("client_dashboard") { inclusive = true }
-                }
-            }
-        }
-        
-        // Admin Dashboard
-        composable("admin_dashboard") {
-            val authState by authViewModel.uiState.collectAsState()
-            
-            authState.user?.let { user ->
-                AdminDashboardScreen(
-                    user = user,
-                    onLogout = {
-                        authViewModel.logout()
-                        navController.navigate("login") {
-                            popUpTo("admin_dashboard") { inclusive = true }
-                        }
-                    }
-                )
-            } ?: run {
-                navController.navigate("login") {
-                    popUpTo("admin_dashboard") { inclusive = true }
-                }
-            }
-        }
-        
-        // Project Manager Dashboard
-        composable("pm_dashboard") {
-            val authState by authViewModel.uiState.collectAsState()
-            
-            // Debug: Show what we're getting
-            if (authState.user != null) {
-                ProjectManagerDashboardScreen(
-                    user = authState.user!!,
-                    onLogout = {
-                        authViewModel.logout()
-                        navController.navigate("login") {
-                            popUpTo("pm_dashboard") { inclusive = true }
-                        }
-                    }
-                )
-            } else {
-                // If no user, redirect to login
-                LaunchedEffect(Unit) {
-                    navController.navigate("login") {
-                        popUpTo("pm_dashboard") { inclusive = true }
-                    }
                 }
             }
         }

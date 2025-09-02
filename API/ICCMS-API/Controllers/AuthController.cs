@@ -110,6 +110,9 @@ namespace ICCMS_API.Controllers
                     );
                 }
 
+                Console.WriteLine($"DEBUG: User retrieved from Firestore - Role: '{user.Role}', Length: {user.Role?.Length}");
+                Console.WriteLine($"DEBUG: User data: UserId={user.UserId}, Email={user.Email}, FullName={user.FullName}, Role={user.Role}");
+
                 return Ok(
                     new TokenVerificationResponse
                     {
