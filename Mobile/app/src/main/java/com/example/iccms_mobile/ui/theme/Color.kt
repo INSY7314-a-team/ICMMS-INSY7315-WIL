@@ -8,6 +8,9 @@ val TaskitYellowDark = Color(0xFFFFB300) // Darker yellow for pressed states
 val TaskitGrey = Color(0xFF424242) // Dark grey background
 val TaskitGreyLight = Color(0xFF616161) // Lighter grey for cards
 val TaskitGreyDark = Color(0xFF212121) // Very dark grey for surfaces
+val TaskitGreyLighter = Color(0xFF757575) // Lighter grey for mobile app background
+val TaskitGreyVeryLight = Color(0xFF9E9E9E) // Very light grey for mobile app background
+val TaskitGreyAlmostWhite = Color(0xFFF5F5F5) // Almost white, very light grey for mobile app background
 
 // Legacy colors (keeping for compatibility)
 val Purple80 = Color(0xFFD0BCFF)

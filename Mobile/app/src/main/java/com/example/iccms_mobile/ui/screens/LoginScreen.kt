@@ -61,19 +61,9 @@ fun LoginScreen(
                 painter = painterResource(id = R.drawable.taskit_logo_png),
                 contentDescription = "TASKIT Logo",
                 modifier = Modifier
-                    .size(120.dp)
-                    .padding(bottom = 24.dp),
+                    .size(380.dp)
+                    .padding(bottom = 10.dp),
                 contentScale = ContentScale.Fit
-            )
-            
-            // App Title - Just "TASKIT"
-            Text(
-                text = "TASKIT",
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 48.dp)
             )
             
             // Login Form
@@ -86,7 +76,7 @@ fun LoginScreen(
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(32.dp),
+                    modifier = Modifier.padding(28.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
                     Text(
@@ -94,7 +84,7 @@ fun LoginScreen(
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        modifier = Modifier.padding(bottom = 10.dp)
                     )
                     
                     // Email Field
@@ -179,13 +169,36 @@ fun LoginScreen(
             }
             
             // Footer text
-            Text(
-                text = "Integrated Construction and Maintenance Management System",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 32.dp)
-            )
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 32.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Welcome to our Integrated Construction and Maintenance Management System",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Text(
+                        text = "All rights reserved 2025",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
     }
 }
