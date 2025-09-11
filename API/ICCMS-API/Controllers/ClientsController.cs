@@ -207,18 +207,22 @@ namespace ICCMS_API.Controllers
         {
             try
             {
-                maintenanceRequest.ClientId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                maintenanceRequest.Status = "Pending";
-                maintenanceRequest.CreatedAt = DateTime.UtcNow;
-                var maintenanceRequestId = await _firebaseService.AddDocumentAsync<MaintenanceRequest>("maintenanceRequests", maintenanceRequest);
-                maintenanceRequest.MaintenanceRequestId = maintenanceRequestId; 
-                var newMaintenanceRequest =
-                    await _firebaseService.UpdateDocumentAsync<MaintenanceRequest>(
-                        "maintenanceRequests",
-                        maintenanceRequestId,
-                        maintenanceRequest
-                    );
-                return Ok(newMaintenanceRequest);
+                var MR = new MaintenanceRequest
+                {
+                    ClientId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+                    ProjectId = maintenanceRequest.ProjectId,
+                    Description = maintenanceRequest.Description,
+                    Priority = maintenanceRequest.Priority,
+                    Status = "Pending",
+                    MediaUrl = maintenanceRequest.MediaUrl,
+                    RequestedBy = User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+                    AssignedTo = "",
+                    CreatedAt = DateTime.UtcNow
+                };
+                var maintenanceRequestId = await _firebaseService.AddDocumentAsync("maintenanceRequests", MR);
+                MR.MaintenanceRequestId = maintenanceRequestId;
+                await _firebaseService.UpdateDocumentAsync("maintenanceRequests", maintenanceRequestId, MR);
+                return Ok(maintenanceRequestId);
             }
             catch (Exception ex)
             {
