@@ -46,6 +46,10 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IQuoteWorkflowService, QuoteWorkflowService>();
 builder.Services.AddScoped<IInvoiceWorkflowService, InvoiceWorkflowService>();
 
+// Add AI processing and material database services
+builder.Services.AddScoped<IAiProcessingService, AiProcessingService>();
+builder.Services.AddScoped<IMaterialDatabaseService, MaterialDatabaseService>();
+
 // Add Authentication
 builder
     .Services.AddAuthentication("Bearer")

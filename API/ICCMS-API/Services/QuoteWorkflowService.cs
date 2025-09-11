@@ -70,6 +70,33 @@ namespace ICCMS_API.Services
             return quotation;
         }
 
+        public async Task<Quotation?> PmRejectAsync(string quotationId, string? reason = null)
+        {
+            var quotation = await _firebaseService.GetDocumentAsync<Quotation>("quotations", quotationId);
+            if (quotation == null) return null;
+
+            // Check if already in correct status (idempotent)
+            if (quotation.Status == "PMRejected")
+            {
+                return quotation;
+            }
+
+            // Validate current status
+            if (quotation.Status != "PendingPMApproval")
+            {
+                throw new InvalidOperationException("Quotation must be in PendingPMApproval status to reject");
+            }
+
+            // Update status and timestamps
+            quotation.Status = "PMRejected";
+            quotation.PmRejectedAt = DateTime.UtcNow;
+            quotation.PmRejectReason = reason;
+            quotation.UpdatedAt = DateTime.UtcNow;
+
+            await _firebaseService.UpdateDocumentAsync("quotations", quotationId, quotation);
+            return quotation;
+        }
+
         public async Task<Quotation?> SendToClientAsync(string quotationId)
         {
             var quotation = await _firebaseService.GetDocumentAsync<Quotation>("quotations", quotationId);
@@ -174,8 +201,8 @@ namespace ICCMS_API.Services
                     TaxRate = i.TaxRate
                 }).ToList(),
                 Status = "Draft",
-                IssuedDate = default,
-                DueDate = default,
+                IssuedDate = DateTime.UtcNow,
+                DueDate = DateTime.UtcNow.AddDays(30), // 30 days from now
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };

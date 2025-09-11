@@ -71,5 +71,24 @@ namespace ICCMS_API.Models
 
         [FirestoreProperty("updatedAt")]
         public DateTime UpdatedAt { get; set; }
+
+        // New fields for AI workflow
+        [FirestoreProperty("isAiGenerated")]
+        public bool IsAiGenerated { get; set; } = false;
+
+        [FirestoreProperty("estimateId")]
+        public string? EstimateId { get; set; }
+
+        [FirestoreProperty("pmEditedAt")]
+        public DateTime? PmEditedAt { get; set; }
+
+        [FirestoreProperty("pmEditNotes")]
+        public string? PmEditNotes { get; set; }
+
+        [FirestoreProperty("pmRejectedAt")]
+        public DateTime? PmRejectedAt { get; set; }
+
+        [FirestoreProperty("pmRejectReason")]
+        public string? PmRejectReason { get; set; }
     }
 }

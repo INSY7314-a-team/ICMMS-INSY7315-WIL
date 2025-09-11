@@ -4,6 +4,7 @@ using ICCMS_API.Models;
 using ICCMS_API.Services;
 using ICCMS_API.Helpers;
 using ICCMS_API.Auth;
+using System.Security.Claims;
 
 namespace ICCMS_API.Controllers
 {
@@ -151,6 +152,59 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpPost("from-estimate/{estimateId}")]
+        [Authorize(Roles = "Project Manager,Tester")]
+        public async Task<ActionResult<string>> CreateQuotationFromEstimate(string estimateId, [FromBody] CreateQuotationFromEstimateRequest request)
+        {
+            try
+            {
+                var estimate = await _firebaseService.GetDocumentAsync<Estimate>("estimates", estimateId);
+                if (estimate == null)
+                    return NotFound("Estimate not found");
+
+                // Convert EstimateLineItems to QuotationItems
+                var quotationItems = estimate.LineItems.Select(item => new QuotationItem
+                {
+                    Name = item.Name,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    TaxRate = 0.15, // Default 15% VAT
+                    LineTotal = item.LineTotal
+                }).ToList();
+
+                // For testing purposes, use current user as client if in testing mode
+                var currentUserId = User.UserId();
+                var clientId = !string.IsNullOrEmpty(currentUserId) && currentUserId.Contains("tester") 
+                    ? currentUserId 
+                    : request.ClientId;
+
+                var quotation = new Quotation
+                {
+                    ProjectId = estimate.ProjectId,
+                    ClientId = clientId,
+                    ContractorId = estimate.ContractorId,
+                    Description = estimate.Description,
+                    Items = quotationItems,
+                    Status = "PendingPMApproval", // Set to correct status for PM approval workflow
+                    ValidUntil = estimate.ValidUntil,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    Currency = estimate.Currency,
+                    IsAiGenerated = estimate.IsAiGenerated
+                };
+
+                // Calculate quotation totals
+                Pricing.Recalculate(quotation);
+
+                var quotationId = await _firebaseService.AddDocumentAsync("quotations", quotation);
+                return Ok(quotationId);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
         [HttpPut("{id}")]
         [Authorize(Roles = "Project Manager,Tester")]
         public async Task<IActionResult> UpdateQuotation(string id, [FromBody] Quotation quotation)
@@ -226,6 +280,27 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        // PendingPMApproval -> PMRejected
+        [HttpPost("{id}/pm-reject")]
+        [Authorize(Roles = "Project Manager,Tester")]
+        public async Task<IActionResult> PmReject(string id, [FromBody] PmRejectRequest request)
+        {
+            try
+            {
+                var quotation = await _quoteWorkflow.PmRejectAsync(id, request.Reason);
+                if (quotation == null) return NotFound();
+                return Ok();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
         // Optional: ensure SentToClient (idempotent)
         [HttpPost("{id}/send-to-client")]
         [Authorize(Roles = "Project Manager,Tester")]
@@ -259,10 +334,33 @@ namespace ICCMS_API.Controllers
                 if (quotation == null) return NotFound();
 
                 var myId = User.UserId();
-                if (string.IsNullOrEmpty(myId) || !string.Equals(quotation.ClientId, myId, StringComparison.OrdinalIgnoreCase))
+                
+                // Debug all claims
+                Console.WriteLine($"Client Decision - All Claims:");
+                foreach (var claim in User.Claims)
                 {
+                    Console.WriteLine($"  {claim.Type}: {claim.Value}");
+                }
+                
+                Console.WriteLine($"Client Decision - Current User ID: {myId}");
+                Console.WriteLine($"Client Decision - Quotation Client ID: {quotation.ClientId}");
+                
+                // Bypass ownership check for tester users during testing
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+                Console.WriteLine($"Client Decision - User Email: {userEmail}");
+                var isTester = !string.IsNullOrEmpty(userEmail) && userEmail.Contains("tester");
+                var isOwner = !string.IsNullOrEmpty(myId) && string.Equals(quotation.ClientId, myId, StringComparison.OrdinalIgnoreCase);
+                
+                Console.WriteLine($"Client Decision - Is Tester: {isTester}");
+                Console.WriteLine($"Client Decision - Is Owner: {isOwner}");
+                
+                if (!isTester && !isOwner)
+                {
+                    Console.WriteLine("Client Decision - Access denied: Not tester and not owner");
                     return Forbid();
                 }
+                
+                Console.WriteLine("Client Decision - Access granted");
 
                 // Use workflow service for the decision
                 var result = await _quoteWorkflow.ClientDecisionAsync(id, body.Accept, body.Note);
@@ -317,5 +415,15 @@ namespace ICCMS_API.Controllers
     {
         public bool Accept { get; set; }
         public string? Note { get; set; }
+    }
+
+    public class CreateQuotationFromEstimateRequest
+    {
+        public string ClientId { get; set; } = string.Empty;
+    }
+
+    public class PmRejectRequest
+    {
+        public string? Reason { get; set; }
     }
 }

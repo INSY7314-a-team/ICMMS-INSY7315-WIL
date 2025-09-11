@@ -162,6 +162,11 @@ namespace ICCMS_Web.Controllers
             }
         }
 
+        public IActionResult WorkflowTest()
+        {
+            return View();
+        }
+
         [HttpPost]
         public async Task<IActionResult> TestEndpoint(
             string endpoint,

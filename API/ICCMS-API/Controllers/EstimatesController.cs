@@ -11,10 +11,14 @@ namespace ICCMS_API.Controllers
     public class EstimatesController : ControllerBase
     {
         private readonly IFirebaseService _firebaseService;
+        private readonly IAiProcessingService _aiProcessingService;
+        private readonly IMaterialDatabaseService _materialDatabaseService;
 
-        public EstimatesController(IFirebaseService firebaseService)
+        public EstimatesController(IFirebaseService firebaseService, IAiProcessingService aiProcessingService, IMaterialDatabaseService materialDatabaseService)
         {
             _firebaseService = firebaseService;
+            _aiProcessingService = aiProcessingService;
+            _materialDatabaseService = materialDatabaseService;
         }
 
         [HttpGet]
@@ -104,5 +108,106 @@ namespace ICCMS_API.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
+
+        [HttpPost("process-blueprint")]
+        [Authorize(Roles = "Project Manager,Contractor,Tester")]
+        public async Task<ActionResult<Estimate>> ProcessBlueprint([FromBody] ProcessBlueprintRequest request)
+        {
+            try
+            {
+                var estimate = await _aiProcessingService.ProcessBlueprintToEstimateAsync(
+                    request.BlueprintUrl, 
+                    request.ProjectId, 
+                    request.ContractorId
+                );
+
+                var estimateId = await _firebaseService.AddDocumentAsync("estimates", estimate);
+                estimate.EstimateId = estimateId;
+
+                return Ok(estimate);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpPost("{id}/convert-to-quotation")]
+        [Authorize(Roles = "Project Manager,Tester")]
+        public async Task<ActionResult<string>> ConvertToQuotation(string id, [FromBody] ConvertToQuotationRequest request)
+        {
+            try
+            {
+                var estimate = await _firebaseService.GetDocumentAsync<Estimate>("estimates", id);
+                if (estimate == null)
+                    return NotFound();
+
+                var quotation = await _aiProcessingService.ConvertEstimateToQuotationAsync(estimate, request.ClientId);
+                var quotationId = await _firebaseService.AddDocumentAsync("quotations", quotation);
+
+                return Ok(quotationId);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("materials")]
+        [Authorize(Roles = "Project Manager,Contractor,Tester")]
+        public async Task<ActionResult<List<MaterialItem>>> GetMaterials()
+        {
+            try
+            {
+                var materials = await _materialDatabaseService.GetAllMaterialsAsync();
+                return Ok(materials);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("materials/category/{category}")]
+        [Authorize(Roles = "Project Manager,Contractor,Tester")]
+        public async Task<ActionResult<List<MaterialItem>>> GetMaterialsByCategory(string category)
+        {
+            try
+            {
+                var materials = await _materialDatabaseService.GetMaterialsByCategoryAsync(category);
+                return Ok(materials);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("materials/categories")]
+        [Authorize(Roles = "Project Manager,Contractor,Tester")]
+        public async Task<ActionResult<List<string>>> GetCategories()
+        {
+            try
+            {
+                var categories = await _materialDatabaseService.GetCategoriesAsync();
+                return Ok(categories);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+    }
+
+    public class ProcessBlueprintRequest
+    {
+        public string BlueprintUrl { get; set; } = string.Empty;
+        public string ProjectId { get; set; } = string.Empty;
+        public string ContractorId { get; set; } = string.Empty;
+    }
+
+    public class ConvertToQuotationRequest
+    {
+        public string ClientId { get; set; } = string.Empty;
     }
 }
