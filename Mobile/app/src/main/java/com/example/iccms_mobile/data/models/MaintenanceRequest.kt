@@ -2,7 +2,7 @@ package com.example.iccms_mobile.data.models
 
 import com.google.gson.annotations.SerializedName
 
-data class MaintenanceRequest(
+class MaintenanceRequest(
     @SerializedName("maintenanceRequestId")
     val maintenanceRequestId: String = "",
     

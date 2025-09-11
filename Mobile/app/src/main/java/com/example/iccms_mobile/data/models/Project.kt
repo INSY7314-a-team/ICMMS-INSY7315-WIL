@@ -2,7 +2,7 @@ package com.example.iccms_mobile.data.models
 
 import com.google.gson.annotations.SerializedName
 
-data class Project(
+class Project(
     @SerializedName("projectId")
     val projectId: String = "",
     
