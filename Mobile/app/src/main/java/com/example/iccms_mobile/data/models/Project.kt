@@ -3,36 +3,36 @@ package com.example.iccms_mobile.data.models
 import com.google.gson.annotations.SerializedName
 
 class Project(
-    @SerializedName("projectId")
-    val projectId: String = "",
+    @SerializedName("ProjectId")
+    val ProjectId: String = "",
     
-    @SerializedName("projectManagerId")
-    val projectManagerId: String = "",
+    @SerializedName("ProjectManagerId")
+    val ProjectManagerId: String = "",
     
-    @SerializedName("clientId")
-    val clientId: String = "",
+    @SerializedName("ClientId")
+    val ClientId: String = "",
     
-    @SerializedName("name")
-    val name: String = "",
+    @SerializedName("Name")
+    val Name: String = "",
     
-    @SerializedName("description")
-    val description: String = "",
+    @SerializedName("Description")
+    val Description: String = "",
     
-    @SerializedName("budgetPlanned")
-    val budgetPlanned: Double = 0.0,
+    @SerializedName("BudgetPlanned")
+    val BudgetPlanned: Double = 0.0,
     
-    @SerializedName("budgetActual")
-    val budgetActual: Double = 0.0,
+    @SerializedName("BudgetActual")
+    val BudgetActual: Double = 0.0,
     
-    @SerializedName("status")
-    val status: String = "",
+    @SerializedName("Status")
+    val Status: String = "",
     
-    @SerializedName("startDatePlanned")
-    val startDate: String = "",
+    @SerializedName("StartDatePlanned")
+    val StartDatePlanned: String = "",
     
-    @SerializedName("endDatePlanned")
-    val endDatePlanned: String = "",
+    @SerializedName("EndDatePlanned")
+    val EndDatePlanned: String = "",
     
-    @SerializedName("endDateActual")
-    val endDateActual: String? = null
+    @SerializedName("EndDateActual")
+    val EndDateActual: String? = null
 )

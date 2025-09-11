@@ -101,14 +101,14 @@ fun ClientDashboardScreen(
                     item {
                         StatCard(
                             title = "Active Projects",
-                            value = uiState.projects.count { it.status.lowercase() == "active" }.toString(),
+                            value = uiState.projects.count { it.Status.lowercase() == "active" }.toString(),
                             color = MaterialTheme.colorScheme.tertiary
                         )
                     }
                     item {
                         StatCard(
                             title = "Pending Quotes",
-                            value = uiState.quotations.count { it.status.lowercase() == "pending" }.toString(),
+                            value = uiState.quotations.count { it.Status.lowercase() == "pending" }.toString(),
                             color = MaterialTheme.colorScheme.secondary
                         )
                     }
@@ -144,7 +144,7 @@ fun ClientDashboardScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "R ${NumberFormat.getNumberInstance().format(uiState.projects.sumOf { it.budgetPlanned })}",
+                                text = "R ${NumberFormat.getNumberInstance().format(uiState.projects.sumOf { it.BudgetPlanned.toDouble() })}",
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -280,7 +280,7 @@ fun ProjectsSection(
             } else {
                 projects.forEach { project ->
                     ProjectItem(project = project)
-                    Log.d("ProjectItem", "Project: ${project.name}")
+                    Log.d("ProjectItem", "Project: ${project.Name}")
                     if (project != projects.last()) {
                         Divider(modifier = Modifier.padding(vertical = 8.dp))
                     }
@@ -294,12 +294,12 @@ fun ProjectsSection(
 fun ProjectItem(project: Project) {
     Column {
         Text(
-            text = project.name,
+            text = project.Name,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium
         )
         Text(
-            text = project.description,
+            text = project.Description,
             fontSize = 14.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -308,12 +308,12 @@ fun ProjectItem(project: Project) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "Status: ${project.status}",
+                text = "Status: ${project.Status}",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "R ${NumberFormat.getNumberInstance().format(project.budgetPlanned)}",
+                text = "R ${NumberFormat.getNumberInstance().format(project.BudgetPlanned)}",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -351,8 +351,8 @@ fun QuotationsSection(
                 quotations.forEach { quotation ->
                     QuotationItem(
                         quotation = quotation,
-                        onApprove = { onApprove(quotation.quotationId) },
-                        onReject = { onReject(quotation.quotationId) }
+                        onApprove = { onApprove(quotation.QuotationId) },
+                        onReject = { onReject(quotation.QuotationId) }
                     )
                     if (quotation != quotations.last()) {
                         Divider(modifier = Modifier.padding(vertical = 8.dp))
@@ -371,23 +371,23 @@ fun QuotationItem(
 ) {
     Column {
         Text(
-            text = quotation.description,
+            text = quotation.Description,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium
         )
         Text(
-            text = "R ${NumberFormat.getNumberInstance().format(quotation.total)}",
+            text = "R ${NumberFormat.getNumberInstance().format(quotation.Total)}",
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = "Status: ${quotation.status}",
+            text = "Status: ${quotation.Status}",
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         
-        if (quotation.status.lowercase() == "pending") {
+        if (quotation.Status.lowercase() == "pending") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -458,7 +458,7 @@ fun MaintenanceRequestsSection(
                 requests.forEach { request ->
                     MaintenanceRequestItem(
                         request = request,
-                        onDelete = { onDeleteRequest(request.maintenanceRequestId) }
+                        onDelete = { onDeleteRequest(request.MaintenanceRequestId) }
                     )
                     if (request != requests.last()) {
                         Divider(modifier = Modifier.padding(vertical = 8.dp))
@@ -476,27 +476,27 @@ fun MaintenanceRequestItem(
 ) {
     Column {
         Text(
-            text = request.description,
+            text = request.Description,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium
         )
         Text(
-            text = "Priority: ${request.priority}",
+            text = "Priority: ${request.Priority}",
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "Status: ${request.status}",
+            text = "Status: ${request.Status}",
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "Created: ${formatDate(request.createdAt)}",
+            text = "Created: ${formatDate(request.CreatedAt)}",
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         
-        if (request.status.lowercase() == "pending") {
+        if (request.Status.lowercase() == "pending") {
             Button(
                 onClick = onDelete,
                 colors = ButtonDefaults.buttonColors(
@@ -542,18 +542,18 @@ fun InvoicesSection(
                         onPay = { 
                             val payment = Payment(
                                 paymentId = "",
-                                invoiceId = invoice.invoiceId,
-                                amount = invoice.totalAmount,
+                                invoiceId = invoice.InvoiceId,
+                                amount = invoice.TotalAmount,
                                 paymentDate = "",
                                 method = "Card",
                                 status = "Paid",
                                 transactionId = "",
                                 notes = "",
                                 processedAt = "",
-                                projectId = invoice.projectId,
-                                clientId = invoice.clientId
+                                projectId = invoice.ProjectId,
+                                clientId = invoice.ClientId
                             )
-                            onPayInvoice(invoice.invoiceId, payment)
+                            onPayInvoice(invoice.InvoiceId, payment)
                         }
                     )
                     if (invoice != invoices.last()) {
@@ -572,28 +572,28 @@ fun InvoiceItem(
 ) {
     Column {
         Text(
-            text = invoice.description,
+            text = invoice.Description,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium
         )
         Text(
-            text = "R ${NumberFormat.getNumberInstance().format(invoice.totalAmount)}",
+            text = "R ${NumberFormat.getNumberInstance().format(invoice.TotalAmount)}",
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = "Status: ${invoice.status}",
+            text = "Status: ${invoice.Status}",
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "Due: ${formatDate(invoice.dueDate)}",
+            text = "Due: ${formatDate(invoice.DueDate)}",
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         
-        if (invoice.status.lowercase() == "pending") {
+        if (invoice.Status.lowercase() == "pending") {
             Button(
                 onClick = onPay,
                 colors = ButtonDefaults.buttonColors(
