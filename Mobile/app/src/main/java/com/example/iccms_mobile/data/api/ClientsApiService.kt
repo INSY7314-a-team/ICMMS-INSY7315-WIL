@@ -1,6 +1,10 @@
 package com.example.iccms_mobile.data.api
 
-import com.example.iccms_mobile.data.models.*
+import com.example.iccms_mobile.data.models.Invoice
+import com.example.iccms_mobile.data.models.MaintenanceRequest
+import com.example.iccms_mobile.data.models.Payment
+import com.example.iccms_mobile.data.models.Project
+import com.example.iccms_mobile.data.models.Quotation
 import retrofit2.Response
 import retrofit2.http.*
 

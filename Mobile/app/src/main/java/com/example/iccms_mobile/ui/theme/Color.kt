@@ -3,8 +3,10 @@ package com.example.iccms_mobile.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // TASKIT Brand Colors
-val TaskitYellow = Color(0xFFFFD700) // Bright golden yellow
+val TaskitYellow = Color(0xFFFFD700) // Bright golden yellow for highlights
 val TaskitYellowDark = Color(0xFFFFB300) // Darker yellow for pressed states
+val TaskitBlack = Color(0xFF000000) // Black for primary text
+val TaskitBlackSoft = Color(0xFF2D2D2D) // Soft black for secondary text
 val TaskitGrey = Color(0xFF424242) // Dark grey background
 val TaskitGreyLight = Color(0xFF616161) // Lighter grey for cards
 val TaskitGreyDark = Color(0xFF212121) // Very dark grey for surfaces

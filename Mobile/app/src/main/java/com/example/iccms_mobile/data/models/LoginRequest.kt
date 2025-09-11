@@ -1,6 +1,5 @@
 package com.example.iccms_mobile.data.models
-
-data class LoginRequest(
+class LoginRequest(
     val email: String,
     val password: String
 )
