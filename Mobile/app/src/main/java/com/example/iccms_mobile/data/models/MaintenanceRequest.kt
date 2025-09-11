@@ -3,36 +3,36 @@ package com.example.iccms_mobile.data.models
 import com.google.gson.annotations.SerializedName
 
 class MaintenanceRequest(
-    @SerializedName("maintenanceRequestId")
-    val maintenanceRequestId: String = "",
+    @SerializedName("MaintenanceRequestId")
+    val MaintenanceRequestId: String = "",
     
-    @SerializedName("clientId")
-    val clientId: String = "",
+    @SerializedName("ClientId")
+    val ClientId: String = "",
     
-    @SerializedName("projectId")
-    val projectId: String = "",
+    @SerializedName("ProjectId")
+    val ProjectId: String = "",
     
-    @SerializedName("description")
-    val description: String = "",
+    @SerializedName("Description")
+    val Description: String = "",
     
-    @SerializedName("priority")
-    val priority: String = "",
+    @SerializedName("Priority")
+    val Priority: String = "",
     
-    @SerializedName("status")
-    val status: String = "",
+    @SerializedName("Status")
+    val Status: String = "",
     
-    @SerializedName("mediaUrl")
-    val mediaUrl: String = "",
+    @SerializedName("MediaUrl")
+    val MediaUrl: String = "",
     
-    @SerializedName("requestedBy")
-    val requestedBy: String = "",
+    @SerializedName("RequestedBy")
+    val RequestedBy: String = "",
     
-    @SerializedName("assignedTo")
-    val assignedTo: String = "",
+    @SerializedName("AssignedTo")
+    val AssignedTo: String = "",
     
-    @SerializedName("createdAt")
-    val createdAt: String = "",
+    @SerializedName("CreatedAt")
+    val CreatedAt: String = "",
     
-    @SerializedName("resolvedAt")
-    val resolvedAt: String? = null
+    @SerializedName("ResolvedAt")
+    val ResolvedAt: String? = null
 )

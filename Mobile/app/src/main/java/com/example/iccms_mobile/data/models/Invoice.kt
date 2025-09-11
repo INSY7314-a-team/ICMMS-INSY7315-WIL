@@ -3,45 +3,45 @@ package com.example.iccms_mobile.data.models
 import com.google.gson.annotations.SerializedName
 
 data class Invoice(
-    @SerializedName("invoiceId")
-    val invoiceId: String = "",
+    @SerializedName("InvoiceId")
+    val InvoiceId: String = "",
     
-    @SerializedName("projectId")
-    val projectId: String = "",
+    @SerializedName("ProjectId")
+    val ProjectId: String = "",
     
-    @SerializedName("clientId")
-    val clientId: String = "",
+    @SerializedName("ClientId")
+    val ClientId: String = "",
     
-    @SerializedName("contractorId")
-    val contractorId: String = "",
+    @SerializedName("ContractorId")
+    val ContractorId: String = "",
     
-    @SerializedName("invoiceNumber")
-    val invoiceNumber: String = "",
+    @SerializedName("InvoiceNumber")
+    val InvoiceNumber: String = "",
     
-    @SerializedName("description")
-    val description: String = "",
+    @SerializedName("Description")
+    val Description: String = "",
     
-    @SerializedName("amount")
-    val amount: Double = 0.0,
+    @SerializedName("Amount")
+    val Amount: Double = 0.0,
     
-    @SerializedName("taxAmount")
-    val taxAmount: Double = 0.0,
+    @SerializedName("TaxAmount")
+    val TaxAmount: Double = 0.0,
     
-    @SerializedName("totalAmount")
-    val totalAmount: Double = 0.0,
+    @SerializedName("TotalAmount")
+    val TotalAmount: Double = 0.0,
     
-    @SerializedName("status")
-    val status: String = "",
+    @SerializedName("Status")
+    val Status: String = "",
     
-    @SerializedName("dueDate")
-    val dueDate: String = "",
+    @SerializedName("DueDate")
+    val DueDate: String = "",
     
-    @SerializedName("issuedDate")
-    val issuedDate: String = "",
+    @SerializedName("IssuedDate")
+    val IssuedDate: String = "",
     
-    @SerializedName("paidDate")
-    val paidDate: String? = null,
+    @SerializedName("PaidDate")
+    val PaidDate: String? = null,
     
-    @SerializedName("paidBy")
-    val paidBy: String = ""
+    @SerializedName("PaidBy")
+    val PaidBy: String = ""
 )

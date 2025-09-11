@@ -64,7 +64,7 @@ class ClientDashboardViewModel : ViewModel() {
             clientsRepository.approveQuotation(quotationId)
                 .onSuccess { updatedQuotation ->
                     val updatedQuotations = _uiState.value.quotations.map { quotation ->
-                        if (quotation.quotationId == quotationId) updatedQuotation else quotation
+                        if (quotation.QuotationId == quotationId) updatedQuotation else quotation
                     }
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -88,7 +88,7 @@ class ClientDashboardViewModel : ViewModel() {
             clientsRepository.rejectQuotation(quotationId)
                 .onSuccess { updatedQuotation ->
                     val updatedQuotations = _uiState.value.quotations.map { quotation ->
-                        if (quotation.quotationId == quotationId) updatedQuotation else quotation
+                        if (quotation.QuotationId == quotationId) updatedQuotation else quotation
                     }
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -113,8 +113,8 @@ class ClientDashboardViewModel : ViewModel() {
                 .onSuccess { newPayment ->
                     // Update the invoice status in the list
                     val updatedInvoices = _uiState.value.invoices.map { invoice ->
-                        if (invoice.invoiceId == invoiceId) {
-                            invoice.copy(status = "Paid", paidDate = newPayment.paymentDate)
+                        if (invoice.InvoiceId == invoiceId) {
+                            invoice.copy(Status = "Paid", PaidDate = newPayment.paymentDate)
                         } else {
                             invoice
                         }
@@ -163,7 +163,7 @@ class ClientDashboardViewModel : ViewModel() {
             clientsRepository.updateMaintenanceRequest(requestId, request)
                 .onSuccess {
                     val updatedRequests = _uiState.value.maintenanceRequests.map { req ->
-                        if (req.maintenanceRequestId == requestId) request else req
+                        if (req.MaintenanceRequestId == requestId) request else req
                     }
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -187,7 +187,7 @@ class ClientDashboardViewModel : ViewModel() {
             clientsRepository.deleteMaintenanceRequest(requestId)
                 .onSuccess {
                     val updatedRequests = _uiState.value.maintenanceRequests.filter { req ->
-                        req.maintenanceRequestId != requestId
+                        req.MaintenanceRequestId != requestId
                     }
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,

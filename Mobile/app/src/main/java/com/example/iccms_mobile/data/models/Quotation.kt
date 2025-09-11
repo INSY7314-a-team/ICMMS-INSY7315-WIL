@@ -3,42 +3,42 @@ package com.example.iccms_mobile.data.models
 import com.google.gson.annotations.SerializedName
 
 data class Quotation(
-    @SerializedName("quotationId")
-    val quotationId: String = "",
+    @SerializedName("QuotationId")
+    val QuotationId: String = "",
     
-    @SerializedName("projectId")
-    val projectId: String = "",
+    @SerializedName("ProjectId")
+    val ProjectId: String = "",
     
-    @SerializedName("maintenanceRequestId")
-    val maintenanceRequestId: String = "",
+    @SerializedName("MaintenanceRequestId")
+    val MaintenanceRequestId: String = "",
     
-    @SerializedName("clientId")
-    val clientId: String = "",
+    @SerializedName("ClientId")
+    val ClientId: String = "",
     
-    @SerializedName("contractorId")
-    val contractorId: String = "",
+    @SerializedName("ContractorId")
+    val ContractorId: String = "",
     
-    @SerializedName("adminApproverUserId")
-    val adminApproverUserId: String = "",
+    @SerializedName("AdminApproverUserId")
+    val AdminApproverUserId: String = "",
     
-    @SerializedName("description")
-    val description: String = "",
+    @SerializedName("Description")
+    val Description: String = "",
     
-    @SerializedName("total")
-    val total: Double = 0.0,
+    @SerializedName("Total")
+    val Total: Double = 0.0,
     
-    @SerializedName("status")
-    val status: String = "",
+    @SerializedName("Status")
+    val Status: String = "",
     
-    @SerializedName("validUntil")
-    val validUntil: String = "",
+    @SerializedName("ValidUntil")
+    val ValidUntil: String = "",
     
-    @SerializedName("createdAt")
-    val createdAt: String = "",
+    @SerializedName("CreatedAt")
+    val CreatedAt: String = "",
     
-    @SerializedName("sentAt")
-    val sentAt: String? = null,
+    @SerializedName("SentAt")
+    val SentAt: String? = null,
     
-    @SerializedName("approvedAt")
-    val approvedAt: String? = null
+    @SerializedName("ApprovedAt")
+    val ApprovedAt: String? = null
 )
