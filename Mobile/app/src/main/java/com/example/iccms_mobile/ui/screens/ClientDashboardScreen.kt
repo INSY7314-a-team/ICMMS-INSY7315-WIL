@@ -1,5 +1,6 @@
 package com.example.iccms_mobile.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -279,6 +280,7 @@ fun ProjectsSection(
             } else {
                 projects.forEach { project ->
                     ProjectItem(project = project)
+                    Log.d("ProjectItem", "Project: ${project.name}")
                     if (project != projects.last()) {
                         Divider(modifier = Modifier.padding(vertical = 8.dp))
                     }
