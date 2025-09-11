@@ -2,6 +2,7 @@ using Google.Cloud.Firestore;
 
 namespace ICCMS_API.Models
 {
+    [FirestoreData]
     public class Project
     {
         [FirestoreProperty("projectId")]

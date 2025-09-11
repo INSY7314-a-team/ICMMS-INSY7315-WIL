@@ -116,13 +116,23 @@ namespace ICCMS_API.Controllers
         {
             try
             {
-                project.ProjectManagerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                await _firebaseService.AddDocumentWithIdAsync(
-                    "projects",
-                    project.ProjectId,
-                    project
-                );
-                return Ok(project);
+                var newProject = new Project {
+                    ProjectManagerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+                    ClientId = project.ClientId,
+                    Name = project.Name,
+                    Description = project.Description,
+                    BudgetPlanned = project.BudgetPlanned,
+                    BudgetActual = project.BudgetActual,
+                    Status = project.Status,
+                    StartDate = project.StartDate,
+                    EndDatePlanned = project.EndDatePlanned,
+                    EndDateActual = project.EndDateActual,
+                };
+                var projectId = await _firebaseService.AddDocumentAsync("projects", newProject);
+                newProject.ProjectId = projectId;
+                await _firebaseService.UpdateDocumentAsync("projects", projectId, newProject);
+
+                return Ok(newProject);
             }
             catch (Exception ex)
             {
