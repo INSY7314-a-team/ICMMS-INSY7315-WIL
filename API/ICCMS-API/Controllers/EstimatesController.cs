@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ICCMS_API.Controllers
 {
@@ -14,7 +14,11 @@ namespace ICCMS_API.Controllers
         private readonly IAiProcessingService _aiProcessingService;
         private readonly IMaterialDatabaseService _materialDatabaseService;
 
-        public EstimatesController(IFirebaseService firebaseService, IAiProcessingService aiProcessingService, IMaterialDatabaseService materialDatabaseService)
+        public EstimatesController(
+            IFirebaseService firebaseService,
+            IAiProcessingService aiProcessingService,
+            IMaterialDatabaseService materialDatabaseService
+        )
         {
             _firebaseService = firebaseService;
             _aiProcessingService = aiProcessingService;
@@ -111,13 +115,15 @@ namespace ICCMS_API.Controllers
 
         [HttpPost("process-blueprint")]
         [Authorize(Roles = "Project Manager,Contractor,Tester")]
-        public async Task<ActionResult<Estimate>> ProcessBlueprint([FromBody] ProcessBlueprintRequest request)
+        public async Task<ActionResult<Estimate>> ProcessBlueprint(
+            [FromBody] ProcessBlueprintRequest request
+        )
         {
             try
             {
                 var estimate = await _aiProcessingService.ProcessBlueprintToEstimateAsync(
-                    request.BlueprintUrl, 
-                    request.ProjectId, 
+                    request.BlueprintUrl,
+                    request.ProjectId,
                     request.ContractorId
                 );
 
@@ -134,7 +140,10 @@ namespace ICCMS_API.Controllers
 
         [HttpPost("{id}/convert-to-quotation")]
         [Authorize(Roles = "Project Manager,Tester")]
-        public async Task<ActionResult<string>> ConvertToQuotation(string id, [FromBody] ConvertToQuotationRequest request)
+        public async Task<ActionResult<string>> ConvertToQuotation(
+            string id,
+            [FromBody] ConvertToQuotationRequest request
+        )
         {
             try
             {
@@ -142,7 +151,10 @@ namespace ICCMS_API.Controllers
                 if (estimate == null)
                     return NotFound();
 
-                var quotation = await _aiProcessingService.ConvertEstimateToQuotationAsync(estimate, request.ClientId);
+                var quotation = await _aiProcessingService.ConvertEstimateToQuotationAsync(
+                    estimate,
+                    request.ClientId
+                );
                 var quotationId = await _firebaseService.AddDocumentAsync("quotations", quotation);
 
                 return Ok(quotationId);
@@ -174,7 +186,9 @@ namespace ICCMS_API.Controllers
         {
             try
             {
-                var materials = await _materialDatabaseService.GetMaterialsByCategoryAsync(category);
+                var materials = await _materialDatabaseService.GetMaterialsByCategoryAsync(
+                    category
+                );
                 return Ok(materials);
             }
             catch (Exception ex)

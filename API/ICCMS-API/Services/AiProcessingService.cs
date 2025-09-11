@@ -11,20 +11,24 @@ namespace ICCMS_API.Services
             _materialDatabaseService = materialDatabaseService;
         }
 
-        public async Task<Estimate> ProcessBlueprintToEstimateAsync(string blueprintUrl, string projectId, string contractorId)
+        public async Task<Estimate> ProcessBlueprintToEstimateAsync(
+            string blueprintUrl,
+            string projectId,
+            string contractorId
+        )
         {
             try
             {
                 Console.WriteLine($"Processing blueprint: {blueprintUrl} for project: {projectId}");
-                
+
                 // Step 1: Extract line items from blueprint (AI processing)
                 var lineItems = await ExtractLineItemsFromBlueprintAsync(blueprintUrl);
                 Console.WriteLine($"Extracted {lineItems.Count} line items");
-                
+
                 // Step 2: Get pricing for line items
                 var pricedLineItems = await GetPricingForLineItemsAsync(lineItems);
                 Console.WriteLine($"Priced {pricedLineItems.Count} line items");
-                
+
                 // Step 3: Create estimate
                 var estimate = new Estimate
                 {
@@ -37,12 +41,12 @@ namespace ICCMS_API.Services
                     Status = "Draft",
                     ValidUntil = DateTime.UtcNow.AddDays(30),
                     CreatedAt = DateTime.UtcNow,
-                    Currency = "ZAR"
+                    Currency = "ZAR",
                 };
 
                 // Calculate totals
                 CalculateEstimateTotals(estimate);
-                
+
                 Console.WriteLine($"Created estimate with total: {estimate.TotalAmount}");
                 return estimate;
             }
@@ -53,11 +57,13 @@ namespace ICCMS_API.Services
             }
         }
 
-        public async Task<List<EstimateLineItem>> ExtractLineItemsFromBlueprintAsync(string blueprintUrl)
+        public async Task<List<EstimateLineItem>> ExtractLineItemsFromBlueprintAsync(
+            string blueprintUrl
+        )
         {
             // TODO: Implement AI blueprint processing
             // For now, return mock data based on the example you provided
-            
+
             var mockLineItems = new List<EstimateLineItem>
             {
                 new EstimateLineItem
@@ -70,7 +76,7 @@ namespace ICCMS_API.Services
                     Category = "Concrete",
                     IsAiGenerated = true,
                     AiConfidence = 0.95,
-                    Notes = "Extracted from blueprint - foundation work"
+                    Notes = "Extracted from blueprint - foundation work",
                 },
                 new EstimateLineItem
                 {
@@ -82,7 +88,7 @@ namespace ICCMS_API.Services
                     Category = "Masonry",
                     IsAiGenerated = true,
                     AiConfidence = 0.92,
-                    Notes = "Extracted from blueprint - wall construction"
+                    Notes = "Extracted from blueprint - wall construction",
                 },
                 new EstimateLineItem
                 {
@@ -94,14 +100,16 @@ namespace ICCMS_API.Services
                     Category = "Finishing",
                     IsAiGenerated = true,
                     AiConfidence = 0.88,
-                    Notes = "Extracted from blueprint - painting work"
-                }
+                    Notes = "Extracted from blueprint - painting work",
+                },
             };
 
             return await Task.FromResult(mockLineItems);
         }
 
-        public async Task<List<EstimateLineItem>> GetPricingForLineItemsAsync(List<EstimateLineItem> lineItems)
+        public async Task<List<EstimateLineItem>> GetPricingForLineItemsAsync(
+            List<EstimateLineItem> lineItems
+        )
         {
             var pricedLineItems = new List<EstimateLineItem>();
 
@@ -109,7 +117,7 @@ namespace ICCMS_API.Services
             {
                 // Try to find matching material in database
                 var material = await _materialDatabaseService.GetMaterialByNameAsync(item.Name);
-                
+
                 if (material != null)
                 {
                     item.UnitPrice = material.UnitPrice;
@@ -130,17 +138,22 @@ namespace ICCMS_API.Services
             return pricedLineItems;
         }
 
-        public async Task<Estimate> ConvertEstimateToQuotationAsync(Estimate estimate, string clientId)
+        public async Task<Estimate> ConvertEstimateToQuotationAsync(
+            Estimate estimate,
+            string clientId
+        )
         {
             // Convert EstimateLineItems to QuotationItems
-            var quotationItems = estimate.LineItems.Select(item => new QuotationItem
-            {
-                Name = item.Name,
-                Quantity = item.Quantity,
-                UnitPrice = item.UnitPrice,
-                TaxRate = 0.15, // Default 15% VAT
-                LineTotal = item.LineTotal
-            }).ToList();
+            var quotationItems = estimate
+                .LineItems.Select(item => new QuotationItem
+                {
+                    Name = item.Name,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    TaxRate = 0.15, // Default 15% VAT
+                    LineTotal = item.LineTotal,
+                })
+                .ToList();
 
             // Create quotation from estimate
             var quotation = new Quotation
@@ -155,7 +168,7 @@ namespace ICCMS_API.Services
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 Currency = estimate.Currency,
-                IsAiGenerated = true
+                IsAiGenerated = true,
             };
 
             // Calculate quotation totals

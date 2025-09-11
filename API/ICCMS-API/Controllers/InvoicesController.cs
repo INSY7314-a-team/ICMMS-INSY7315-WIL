@@ -1,9 +1,9 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
+using ICCMS_API.Auth;
+using ICCMS_API.Helpers;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
-using ICCMS_API.Helpers;
-using ICCMS_API.Auth;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ICCMS_API.Controllers
 {
@@ -15,7 +15,10 @@ namespace ICCMS_API.Controllers
         private readonly IFirebaseService _firebaseService;
         private readonly IInvoiceWorkflowService _invoiceWorkflow;
 
-        public InvoicesController(IFirebaseService firebaseService, IInvoiceWorkflowService invoiceWorkflow)
+        public InvoicesController(
+            IFirebaseService firebaseService,
+            IInvoiceWorkflowService invoiceWorkflow
+        )
         {
             _firebaseService = firebaseService;
             _invoiceWorkflow = invoiceWorkflow;
@@ -168,7 +171,8 @@ namespace ICCMS_API.Controllers
             try
             {
                 var invoice = await _invoiceWorkflow.IssueAsync(id);
-                if (invoice == null) return NotFound();
+                if (invoice == null)
+                    return NotFound();
                 return Ok();
             }
             catch (InvalidOperationException ex)
@@ -188,7 +192,8 @@ namespace ICCMS_API.Controllers
             try
             {
                 var invoice = await _invoiceWorkflow.MarkPaidAsync(id, body.PaidDate, body.PaidBy);
-                if (invoice == null) return NotFound();
+                if (invoice == null)
+                    return NotFound();
                 return Ok();
             }
             catch (InvalidOperationException ex)
@@ -208,7 +213,8 @@ namespace ICCMS_API.Controllers
             try
             {
                 var invoice = await _invoiceWorkflow.CancelAsync(id);
-                if (invoice == null) return NotFound();
+                if (invoice == null)
+                    return NotFound();
                 return Ok();
             }
             catch (InvalidOperationException ex)

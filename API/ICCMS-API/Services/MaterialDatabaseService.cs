@@ -1,5 +1,5 @@
-using System.Text.Json;
 using System.Linq;
+using System.Text.Json;
 using ICCMS_API.Models;
 
 namespace ICCMS_API.Services
@@ -13,21 +13,26 @@ namespace ICCMS_API.Services
 
         public MaterialDatabaseService()
         {
-            _databasePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "ConstructionMaterialsDatabase.json");
+            _databasePath = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "Data",
+                "ConstructionMaterialsDatabase.json"
+            );
         }
 
         private async Task LoadDatabaseAsync()
         {
-            if (_materials != null) return;
+            if (_materials != null)
+                return;
 
             try
             {
                 var json = await File.ReadAllTextAsync(_databasePath);
-                
+
                 // Parse the JSON as an object with materials array
                 using var document = JsonDocument.Parse(json);
                 var materialsArray = new List<MaterialItem>();
-                
+
                 if (document.RootElement.TryGetProperty("materials", out var materialsElement))
                 {
                     foreach (var materialElement in materialsElement.EnumerateArray())
@@ -39,20 +44,28 @@ namespace ICCMS_API.Services
                             Unit = materialElement.GetProperty("unit").GetString() ?? "",
                             UnitPrice = materialElement.GetProperty("unitPrice").GetDouble(),
                             Category = materialElement.GetProperty("category").GetString() ?? "",
-                            Description = materialElement.TryGetProperty("description", out var desc) ? desc.GetString() ?? "" : "",
-                            LastUpdated = materialElement.TryGetProperty("lastUpdated", out var lastUpdated) && 
-                                        DateTime.TryParse(lastUpdated.GetString(), out var date) ? date : DateTime.UtcNow
+                            Description = materialElement.TryGetProperty(
+                                "description",
+                                out var desc
+                            )
+                                ? desc.GetString() ?? ""
+                                : "",
+                            LastUpdated =
+                                materialElement.TryGetProperty("lastUpdated", out var lastUpdated)
+                                && DateTime.TryParse(lastUpdated.GetString(), out var date)
+                                    ? date
+                                    : DateTime.UtcNow,
                         };
                         materialsArray.Add(material);
                     }
                 }
-                
+
                 _materials = materialsArray;
-                
+
                 // Extract unique categories and units from materials
                 _categories = _materials.Select(m => m.Category).Distinct().ToList();
                 _units = _materials.Select(m => m.Unit).Distinct().ToList();
-                
+
                 Console.WriteLine($"Loaded {_materials.Count} materials from database");
             }
             catch (Exception ex)
@@ -80,13 +93,17 @@ namespace ICCMS_API.Services
         public async Task<List<MaterialItem>> GetMaterialsByCategoryAsync(string category)
         {
             await LoadDatabaseAsync();
-            return _materials?.Where(m => m.Category.Equals(category, StringComparison.OrdinalIgnoreCase)).ToList() ?? new List<MaterialItem>();
+            return _materials
+                    ?.Where(m => m.Category.Equals(category, StringComparison.OrdinalIgnoreCase))
+                    .ToList() ?? new List<MaterialItem>();
         }
 
         public async Task<MaterialItem?> GetMaterialByNameAsync(string name)
         {
             await LoadDatabaseAsync();
-            return _materials?.FirstOrDefault(m => m.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            return _materials?.FirstOrDefault(m =>
+                m.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
+            );
         }
 
         public async Task<double> GetUnitPriceAsync(string materialId)

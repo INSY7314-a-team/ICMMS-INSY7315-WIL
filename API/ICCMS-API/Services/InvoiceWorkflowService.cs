@@ -1,5 +1,5 @@
-using ICCMS_API.Models;
 using ICCMS_API.Helpers;
+using ICCMS_API.Models;
 
 namespace ICCMS_API.Services
 {
@@ -15,7 +15,8 @@ namespace ICCMS_API.Services
         public async Task<Invoice?> IssueAsync(string invoiceId)
         {
             var invoice = await _firebaseService.GetDocumentAsync<Invoice>("invoices", invoiceId);
-            if (invoice == null) return null;
+            if (invoice == null)
+                return null;
 
             // Check if already in correct status (idempotent)
             if (invoice.Status == "Issued")
@@ -44,10 +45,15 @@ namespace ICCMS_API.Services
             return invoice;
         }
 
-        public async Task<Invoice?> MarkPaidAsync(string invoiceId, DateTime paidDate, string paidBy)
+        public async Task<Invoice?> MarkPaidAsync(
+            string invoiceId,
+            DateTime paidDate,
+            string paidBy
+        )
         {
             var invoice = await _firebaseService.GetDocumentAsync<Invoice>("invoices", invoiceId);
-            if (invoice == null) return null;
+            if (invoice == null)
+                return null;
 
             // Check if already in correct status (idempotent)
             if (invoice.Status == "Paid")
@@ -58,7 +64,9 @@ namespace ICCMS_API.Services
             // Validate current status
             if (invoice.Status != "Issued")
             {
-                throw new InvalidOperationException("Invoice must be in Issued status to mark as paid");
+                throw new InvalidOperationException(
+                    "Invoice must be in Issued status to mark as paid"
+                );
             }
 
             // Validate required fields
@@ -80,7 +88,8 @@ namespace ICCMS_API.Services
         public async Task<Invoice?> CancelAsync(string invoiceId)
         {
             var invoice = await _firebaseService.GetDocumentAsync<Invoice>("invoices", invoiceId);
-            if (invoice == null) return null;
+            if (invoice == null)
+                return null;
 
             // Check if already cancelled (idempotent)
             if (invoice.Status == "Cancelled")
@@ -91,7 +100,9 @@ namespace ICCMS_API.Services
             // Validate current status - can only cancel Draft or Issued invoices
             if (invoice.Status != "Draft" && invoice.Status != "Issued")
             {
-                throw new InvalidOperationException("Invoice can only be cancelled if in Draft or Issued status");
+                throw new InvalidOperationException(
+                    "Invoice can only be cancelled if in Draft or Issued status"
+                );
             }
 
             // Update status
