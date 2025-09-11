@@ -217,11 +217,18 @@ namespace ICCMS_API.Controllers
                     MediaUrl = maintenanceRequest.MediaUrl,
                     RequestedBy = User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
                     AssignedTo = "",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
                 };
-                var maintenanceRequestId = await _firebaseService.AddDocumentAsync("maintenanceRequests", MR);
+                var maintenanceRequestId = await _firebaseService.AddDocumentAsync(
+                    "maintenanceRequests",
+                    MR
+                );
                 MR.MaintenanceRequestId = maintenanceRequestId;
-                await _firebaseService.UpdateDocumentAsync("maintenanceRequests", maintenanceRequestId, MR);
+                await _firebaseService.UpdateDocumentAsync(
+                    "maintenanceRequests",
+                    maintenanceRequestId,
+                    MR
+                );
                 return Ok(maintenanceRequestId);
             }
             catch (Exception ex)
