@@ -1,10 +1,22 @@
 @{
-    ViewData["Title"] = "API Testing";
+    ViewData["Title"] = "API Testing Dashboard";
 }
 
 <style>
 .bg-gradient-primary {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
 }
 
 .bg-gradient-light {
@@ -13,44 +25,42 @@
 
 .card {
     transition: all 0.3s ease;
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
 }
 
 .card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
 }
 
-.list-group-item {
+.testing-card {
+    transition: all 0.4s ease;
     border: none;
-    border-radius: 0;
-    transition: all 0.2s ease;
-    border-left: 3px solid transparent;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
 }
 
-.list-group-item:hover {
-    background-color: #f8f9fa;
-    border-left-color: #667eea;
-    transform: translateX(5px);
+.testing-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.2);
 }
 
-.list-group-item.active {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-left-color: #667eea;
-    border: none;
-}
-
-.list-group-item.active:hover {
-    transform: none;
-}
-
-.endpoint-card {
+.btn-testing {
+    border-radius: 30px;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
     transition: all 0.3s ease;
-    border: none;
-    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.9rem;
 }
 
-.endpoint-card:hover {
+.btn-testing:hover {
     transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
 
 .method-badge {
@@ -58,18 +68,6 @@
     font-weight: 600;
     padding: 0.5rem 0.75rem;
     border-radius: 20px;
-}
-
-.btn-test {
-    border-radius: 25px;
-    font-weight: 600;
-    padding: 0.5rem 1.5rem;
-    transition: all 0.3s ease;
-}
-
-.btn-test:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
 .alert {
@@ -97,108 +95,55 @@
     border-left-color: #17a2b8;
     background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
 }
-
-/* Console Output Styling */
-.console-output {
-    background-color: #1e1e1e;
-    border-radius: 0 0 0.375rem 0.375rem;
-}
-
-.console-entry {
-    margin-bottom: 2px;
-    border-left: 3px solid transparent;
-    padding-left: 8px;
-}
-
-.console-entry.log { border-left-color: #007bff; }
-.console-entry.error { border-left-color: #dc3545; }
-.console-entry.warn { border-left-color: #ffc107; }
-.console-entry.info { border-left-color: #17a2b8; }
-
-.console-timestamp {
-    color: #888;
-    font-size: 10px;
-    margin-right: 8px;
-}
-
-.console-level {
-    font-weight: bold;
-    margin-right: 8px;
-    text-transform: uppercase;
-    font-size: 10px;
-}
-
-.console-level.log { color: #007bff; }
-.console-level.error { color: #dc3545; }
-.console-level.warn { color: #ffc107; }
-.console-level.info { color: #17a2b8; }
-
-.console-minimized {
-    height: 40px !important;
-    overflow: hidden;
-}
 </style>
 
-<div class="container-fluid px-4 py-3">
-    <div class="row">
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
         <div class="col-12">
-            <nav aria-label="breadcrumb" class="mb-4">
-                <ol class="breadcrumb bg-transparent px-0">
-                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Testing")" class="text-decoration-none text-primary"><i class="fas fa-home me-1"></i>Testing Dashboard</a></li>
-                    <li class="breadcrumb-item active text-muted">API Testing</li>
-                </ol>
-            </nav>
-            <div class="d-flex align-items-center mb-4">
-                <div class="bg-gradient-primary rounded-circle p-3 me-3">
-                    <i class="fas fa-plug fa-2x text-white"></i>
-                </div>
-                <div>
-                    <h1 class="h2 mb-1 fw-bold text-dark">API Testing</h1>
-                    <p class="text-muted mb-0">Test all ICCMS API endpoints by controller and verify responses with detailed packet inspection</p>
-                </div>
-            </div>
-
-            <!-- Tester Status -->
-            <div class="alert alert-success border-0 rounded-3 mb-4">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center">
-                        <i class="fas fa-user-shield fa-lg me-3"></i>
-                        <div>
-                                            <h6 class="mb-1 fw-bold">Tester Access Granted</h6>
-                    <small class="text-muted">You have full access to all API endpoints for testing purposes</small>
-                    <br>
-                    <small class="text-muted mt-1 d-block">
-                        <strong>Endpoints Available:</strong> Admin (18), Project Manager (16), Contractor (7), Client (15) - Total: 56 endpoints
-                    </small>
-                    <small class="text-muted mt-1 d-block">
-                        <strong>How to use:</strong> Navigate by category or click "Test All Endpoints" for comprehensive testing
-                    </small>
+            <div class="card bg-gradient-primary text-white border-0 shadow-lg rounded-3">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h2 class="mb-2 fw-bold">
+                                <i class="fas fa-flask me-3"></i>API Testing Dashboard
+                            </h2>
+                            <p class="mb-0 opacity-90">
+                                Comprehensive testing interface for ICCMS API endpoints with real-time monitoring
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="d-flex flex-column align-items-end">
+                                <span class="badge bg-light text-dark fs-6 mb-2 px-3 py-2">
+                                    <i class="fas fa-server me-2"></i>100+ Endpoints
+                                </span>
+                                <span class="badge bg-success fs-6 px-3 py-2">
+                                    <i class="fas fa-shield-alt me-2"></i>Tester Role
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-primary btn-sm" onclick="testAllEndpoints()">
-                            <i class="fas fa-play-circle me-2"></i>Test All Endpoints
-                        </button>
-                    </div>
                 </div>
             </div>
-            
-            @if (TempData["SuccessMessage"] != null)
-            {
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    @TempData["SuccessMessage"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            }
-            @if (TempData["ErrorMessage"] != null)
-            {
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    @TempData["ErrorMessage"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            }
         </div>
     </div>
+
+    <!-- Status Messages -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
 
     <!-- Console Output Panel -->
     <div class="row mb-4">
@@ -220,14 +165,14 @@
                             <button type="button" class="btn btn-outline-light btn-sm" onclick="copyConsoleOutput()">
                                 <i class="fas fa-copy me-1"></i>Copy
                             </button>
-                            <button type="button" class="btn btn-outline-light btn-sm" onclick="toggleConsole()" id="toggleConsoleBtn">
-                                <i class="fas fa-minus me-1"></i>Minimize
+                            <button type="button" class="btn btn-outline-warning btn-sm" onclick="clearAllEditedPayloads()">
+                                <i class="fas fa-undo me-1"></i>Reset All Payloads
                             </button>
                         </div>
                     </div>
                 </div>
-                <div class="card-body bg-dark p-0" id="console-output-container">
-                    <div id="console-output" class="console-output p-3 text-light" style="height: 300px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.4;">
+                <div class="card-body bg-dark p-0">
+                    <div id="console-output" class="console-output p-3 text-light" style="height: 200px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.4;">
                         <div class="text-muted opacity-75">Console output will appear here...</div>
                     </div>
                 </div>
@@ -244,25 +189,75 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush" id="api-categories">
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="auth">
+                            <i class="fas fa-key me-2 text-primary"></i>
+                            <span>Authentication</span>
+                            <small class="text-muted ms-auto">3 endpoints</small>
+                        </a>
                         <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="admin">
                             <i class="fas fa-crown me-2 text-primary"></i>
-                            <span>Admin Endpoints</span>
-                            <small class="text-muted ms-auto">18 endpoints</small>
+                            <span>Admin Management</span>
+                            <small class="text-muted ms-auto">9 endpoints</small>
                         </a>
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="projectManager">
-                            <i class="fas fa-project-diagram me-2 text-success"></i>
-                            <span>Project Manager</span>
-                            <small class="text-muted ms-auto">16 endpoints</small>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="quotations">
+                            <i class="fas fa-file-invoice me-2 text-success"></i>
+                            <span>Quotations</span>
+                            <small class="text-muted ms-auto">15 endpoints</small>
                         </a>
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="contractor">
-                            <i class="fas fa-tools me-2 text-warning"></i>
-                            <span>Contractor Endpoints</span>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="invoices">
+                            <i class="fas fa-receipt me-2 text-info"></i>
+                            <span>Invoices</span>
+                            <small class="text-muted ms-auto">12 endpoints</small>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="documents">
+                            <i class="fas fa-file-alt me-2 text-warning"></i>
+                            <span>Documents</span>
+                            <small class="text-muted ms-auto">6 endpoints</small>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="estimates">
+                            <i class="fas fa-calculator me-2 text-secondary"></i>
+                            <span>Estimates</span>
+                            <small class="text-muted ms-auto">6 endpoints</small>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="messages">
+                            <i class="fas fa-comments me-2 text-info"></i>
+                            <span>Messages</span>
                             <small class="text-muted ms-auto">7 endpoints</small>
                         </a>
-                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="client">
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="notifications">
+                            <i class="fas fa-bell me-2 text-warning"></i>
+                            <span>Notifications</span>
+                            <small class="text-muted ms-auto">8 endpoints</small>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="payments">
+                            <i class="fas fa-credit-card me-2 text-success"></i>
+                            <span>Payments</span>
+                            <small class="text-muted ms-auto">8 endpoints</small>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="auditlogs">
+                            <i class="fas fa-clipboard-list me-2 text-dark"></i>
+                            <span>Audit Logs</span>
+                            <small class="text-muted ms-auto">6 endpoints</small>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="clients">
                             <i class="fas fa-building me-2 text-info"></i>
-                            <span>Client Endpoints</span>
+                            <span>Client Portal</span>
                             <small class="text-muted ms-auto">15 endpoints</small>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="contractors">
+                            <i class="fas fa-tools me-2 text-warning"></i>
+                            <span>Contractor Portal</span>
+                            <small class="text-muted ms-auto">6 endpoints</small>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="projectmanager">
+                            <i class="fas fa-project-diagram me-2 text-success"></i>
+                            <span>Project Manager</span>
+                            <small class="text-muted ms-auto">20 endpoints</small>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex align-items-center" data-category="users">
+                            <i class="fas fa-users me-2 text-primary"></i>
+                            <span>User Management</span>
+                            <small class="text-muted ms-auto">1 endpoint</small>
                         </a>
                     </div>
                 </div>
@@ -278,44 +273,6 @@
                     </h6>
                 </div>
                 <div class="card-body" id="endpoints-content">
-                    <!-- Test Progress Section -->
-                    <div id="test-progress-section" class="d-none mb-4">
-                        <div class="card border-primary">
-                            <div class="card-header bg-primary text-white">
-                                <h6 class="mb-0"><i class="fas fa-spinner fa-spin me-2"></i>Testing All Endpoints</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span id="current-test-info" class="fw-bold">Preparing tests...</span>
-                                        <span id="test-counter" class="badge bg-light text-dark">0 / 0</span>
-                                    </div>
-                                    <div class="progress">
-                                        <div id="test-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
-                                    </div>
-                                </div>
-                                <div class="small text-muted" id="current-endpoint-details">Initializing...</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Test Results Section -->
-                    <div id="test-results-section" class="d-none mb-4">
-                        <div class="card border-info">
-                            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Test Results Summary</h6>
-                                <div id="test-summary-badges">
-                                    <!-- Summary badges will be inserted here -->
-                                </div>
-                            </div>
-                            <div class="card-body">
-                                <div id="test-results-content">
-                                    <!-- Test results will be inserted here -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Default Content -->
                     <div id="default-content" class="text-center text-muted py-5">
                         <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
@@ -330,104 +287,87 @@
     </div>
 </div>
 
-<!-- Packet Inspection Modal -->
-<div class="modal fade" id="packetInspectionModal" tabindex="-1" aria-labelledby="packetInspectionModalLabel" aria-hidden="true">
+<!-- Payload Editor Modal -->
+<div class="modal fade" id="payloadEditorModal" tabindex="-1" aria-labelledby="payloadEditorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="packetInspectionModalLabel">
-                    <i class="fas fa-search"></i> Packet Inspection - <span id="modal-endpoint"></span>
+                <h5 class="modal-title" id="payloadEditorModalLabel">
+                    <i class="fas fa-edit me-2"></i>Edit Request Payload
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <h6 class="text-primary"><i class="fas fa-upload"></i> Request Packet</h6>
-                        <div class="card border-primary">
-                            <div class="card-header bg-primary text-white">
-                                <strong><i class="fas fa-headers"></i> Headers</strong>
-                            </div>
-                            <div class="card-body">
-                                <pre id="request-headers" class="bg-light p-3 rounded small"></pre>
-                            </div>
-                        </div>
-                        <div class="card border-primary mt-3">
-                            <div class="card-header bg-primary text-white">
-                                <strong><i class="fas fa-file-code"></i> Body</strong>
-                            </div>
-                            <div class="card-body">
-                                <pre id="request-body" class="bg-light p-3 rounded small"></pre>
-                            </div>
-                        </div>
-                        <div class="card border-primary mt-3">
-                            <div class="card-header bg-primary text-white">
-                                <strong><i class="fas fa-info-circle"></i> Request Details</strong>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-6">
-                                        <strong>Method:</strong><br>
-                                        <span id="request-method" class="badge bg-primary fs-6"></span>
-                                    </div>
-                                    <div class="col-6">
-                                        <strong>Endpoint:</strong><br>
-                                        <code id="request-endpoint" class="fs-6"></code>
-                                    </div>
-                                </div>
-                                <hr>
-                                <div><strong>Timestamp:</strong> <span id="request-timestamp"></span></div>
-                            </div>
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-code me-2"></i>JSON Payload
+                        </h6>
+                        <textarea id="payloadEditor" class="form-control" rows="20" style="font-family: 'Courier New', monospace; font-size: 12px;"></textarea>
+                        <div class="mt-2">
+                            <button class="btn btn-outline-primary btn-sm" onclick="formatJSON()">
+                                <i class="fas fa-magic me-1"></i>Format JSON
+                            </button>
+                            <button class="btn btn-outline-success btn-sm ms-2" onclick="validateJSON()">
+                                <i class="fas fa-check me-1"></i>Validate
+                            </button>
+                            <button class="btn btn-outline-info btn-sm ms-2" onclick="loadSamplePayload()">
+                                <i class="fas fa-undo me-1"></i>Reset to Sample
+                            </button>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <h6 class="text-success"><i class="fas fa-download"></i> Response Packet</h6>
-                        <div class="card border-success">
-                            <div class="card-header bg-success text-white">
-                                <strong><i class="fas fa-headers"></i> Headers</strong>
-                            </div>
+                        <h6 class="text-success mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Request Details
+                        </h6>
+                        <div class="card bg-light">
                             <div class="card-body">
-                                <pre id="response-headers" class="bg-light p-3 rounded small"></pre>
-                            </div>
-                        </div>
-                        <div class="card border-success mt-3">
-                            <div class="card-header bg-success text-white">
-                                <strong><i class="fas fa-file-code"></i> Body</strong>
-                            </div>
-                            <div class="card-body">
-                                <pre id="response-body" class="bg-light p-3 rounded small"></pre>
-                            </div>
-                        </div>
-                        <div class="card border-success mt-3">
-                            <div class="card-header bg-success text-white">
-                                <strong><i class="fas fa-chart-line"></i> Response Metrics</strong>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-6">
-                                        <strong>Status:</strong><br>
-                                        <span id="response-status" class="badge fs-6"></span>
+                                <p><strong>Method:</strong> <span id="modalMethod" class="badge bg-primary"></span></p>
+                                <p><strong>Endpoint:</strong> <code id="modalEndpoint"></code></p>
+                                <p><strong>Description:</strong> <span id="modalDescription"></span></p>
+                                
+                                <!-- ID Input Section -->
+                                <div id="idInputSection" class="mt-3" style="display: none;">
+                                    <hr>
+                                    <h6 class="text-primary">ID Configuration:</h6>
+                                    <div class="input-group mb-2">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-id-card"></i>
+                                        </span>
+                                        <input type="text" id="customIdInput" class="form-control" placeholder="Enter ID (e.g., user123, project456)" value="sample123">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="generateRandomId()">
+                                            <i class="fas fa-dice me-1"></i>Generate
+                                        </button>
                                     </div>
-                                    <div class="col-6">
-                                        <strong>Response Time:</strong><br>
-                                        <span id="response-time" class="text-success fw-bold"></span>
-                                    </div>
+                                    <small class="text-muted">This ID will replace <code>{id}</code> in the endpoint URL</small>
                                 </div>
+                                
                                 <hr>
-                                <div><strong>Timestamp:</strong> <span id="response-timestamp"></span></div>
+                                <h6 class="text-warning">Tips:</h6>
+                                <ul class="small">
+                                    <li>Use <code>Ctrl+A</code> to select all</li>
+                                    <li>Use <code>Ctrl+Z</code> to undo changes</li>
+                                    <li>Click "Format JSON" to beautify</li>
+                                    <li>Click "Validate" to check syntax</li>
+                                    <li>Set custom ID above for <code>{id}</code> endpoints</li>
+                                </ul>
                             </div>
                         </div>
-                    </div>
-                </div>
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <h6 class="text-info"><i class="fas fa-chart-bar"></i> Analysis</h6>
-                        <div class="card border-info">
-                            <div class="card-header bg-info text-white">
-                                <strong><i class="fas fa-analytics"></i> Test Results Analysis</strong>
-                            </div>
-                            <div class="card-body">
-                                <div id="packet-analysis"></div>
+                        <div class="mt-3">
+                            <h6 class="text-info">Sample Data Helpers:</h6>
+                            <div class="btn-group-vertical w-100" role="group">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="insertSampleId()">
+                                    <i class="fas fa-id-card me-1"></i>Insert Sample ID
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="insertCurrentDate()">
+                                    <i class="fas fa-calendar me-1"></i>Insert Current Date
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="insertSampleEmail()">
+                                    <i class="fas fa-envelope me-1"></i>Insert Sample Email
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="insertSampleAmount()">
+                                    <i class="fas fa-dollar-sign me-1"></i>Insert Sample Amount
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -435,10 +375,13 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times"></i> Close
+                    <i class="fas fa-times me-1"></i>Cancel
                 </button>
-                <button type="button" class="btn btn-primary" onclick="copyPacketData()">
-                    <i class="fas fa-copy"></i> Copy All Data
+                <button type="button" class="btn btn-success" onclick="saveAndTestPayload()">
+                    <i class="fas fa-play me-1"></i>Save & Test
+                </button>
+                <button type="button" class="btn btn-primary" onclick="savePayload()">
+                    <i class="fas fa-save me-1"></i>Save Payload
                 </button>
             </div>
         </div>
@@ -446,1419 +389,1725 @@
 </div>
 
 <script>
-// API endpoints configuration by controller
+// API endpoints configuration by controller - Updated to match current API structure
 const apiEndpoints = {
+    auth: {
+        name: 'Authentication',
+        icon: 'fas fa-key',
+        color: 'primary',
+        description: 'User authentication and token management',
+        endpoints: [
+            { 
+                method: 'POST', 
+                path: '/api/auth/login', 
+                description: 'User login with email and password', 
+                requiresBody: true,
+                sampleBody: {
+                    email: "user@example.com",
+                    password: "password123"
+                }
+            },
+            { 
+                method: 'POST', 
+                path: '/api/auth/verify-token', 
+                description: 'Verify Firebase token', 
+                requiresBody: true,
+                sampleBody: {
+                    token: "firebase_jwt_token_here"
+                }
+            },
+            { 
+                method: 'GET', 
+                path: '/api/auth/profile', 
+                description: 'Get authenticated user profile', 
+                requiresBody: false 
+            }
+        ]
+    },
     admin: {
-        name: 'Admin Endpoints',
+        name: 'Admin Management',
         icon: 'fas fa-crown',
         color: 'primary',
-        description: 'System administration and user management endpoints',
+        description: 'System administration and user management',
         endpoints: [
-            { method: 'GET', path: '/api/admin/dashboard', description: 'Get admin dashboard data', requiresBody: false },
-            { method: 'GET', path: '/api/admin/users', description: 'Get all users', requiresBody: false },
-            { method: 'GET', path: '/api/admin/deactivated', description: 'Get deactivated users', requiresBody: false },
-            { method: 'GET', path: '/api/admin/user/{id}', description: 'Get user by ID', requiresBody: false, hasId: true },
-            { method: 'GET', path: '/api/admin/messages', description: 'Get all messages', requiresBody: false },
-            { method: 'GET', path: '/api/admin/message/{id}', description: 'Get message by ID', requiresBody: false, hasId: true },
-            { method: 'GET', path: '/api/admin/projects/{id}/status', description: 'Get project status', requiresBody: false, hasId: true },
-            { method: 'GET', path: '/api/admin/documents', description: 'Get all documents', requiresBody: false },
-            { method: 'POST', path: '/api/admin/create/user', description: 'Create new user', requiresBody: true },
-            { method: 'POST', path: '/api/admin/create/document', description: 'Create new document', requiresBody: true },
-            { method: 'POST', path: '/api/admin/users/{id}/activate', description: 'Activate user', requiresBody: false, hasId: true },
-            { method: 'POST', path: '/api/admin/users/{id}/deactivate', description: 'Deactivate user', requiresBody: false, hasId: true },
-            { method: 'PUT', path: '/api/admin/update/user/{id}', description: 'Update user', requiresBody: true, hasId: true },
-            { method: 'PUT', path: '/api/admin/users/{id}/role', description: 'Update user role', requiresBody: true, hasId: true },
-            { method: 'PUT', path: '/api/admin/notifications/{id}', description: 'Update notification', requiresBody: true, hasId: true },
-            { method: 'PUT', path: '/api/admin/update/document/{id}', description: 'Update document', requiresBody: true, hasId: true },
-            { method: 'DELETE', path: '/api/admin/delete/user/{id}', description: 'Delete user', requiresBody: false, hasId: true },
-            { method: 'DELETE', path: '/api/admin/delete/documents/{id}', description: 'Delete document', requiresBody: false, hasId: true }
+            { 
+                method: 'GET', 
+                path: '/api/admin/dashboard', 
+                description: 'Get admin dashboard statistics', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/admin/users', 
+                description: 'Get all active users', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/admin/users/{id}', 
+                description: 'Get user by ID', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/admin/users', 
+                description: 'Create new user', 
+                requiresBody: true,
+                sampleBody: {
+                    firstName: "John",
+                    lastName: "Doe",
+                    email: "john.doe@example.com",
+                    role: "Client",
+                    isActive: true
+                }
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/admin/users/{id}', 
+                description: 'Update user', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    firstName: "John",
+                    lastName: "Doe",
+                    email: "john.doe@example.com",
+                    role: "Client",
+                    isActive: true
+                }
+            },
+            { 
+                method: 'DELETE', 
+                path: '/api/admin/users/{id}', 
+                description: 'Delete user', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/admin/users/{id}/deactivate', 
+                description: 'Deactivate user', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/admin/users/{id}/activate', 
+                description: 'Activate user', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/admin/users/{id}/audit-logs', 
+                description: 'Get user audit logs', 
+                requiresBody: false, 
+                hasId: true 
+            }
         ]
     },
-    projectManager: {
-        name: 'Project Manager Endpoints',
-        icon: 'fas fa-project-diagram',
+    quotations: {
+        name: 'Quotations',
+        icon: 'fas fa-file-invoice',
         color: 'success',
-        description: 'Project management and oversight endpoints',
+        description: 'Quotation management and workflow',
         endpoints: [
-            { method: 'GET', path: '/api/ProjectManager/projects', description: 'Get my projects', requiresBody: false },
-            { method: 'GET', path: '/api/ProjectManager/project/{id}', description: 'Get project by ID', requiresBody: false, hasId: true },
-            { method: 'GET', path: '/api/ProjectManager/project/{id}/phases', description: 'Get project phases', requiresBody: false, hasId: true },
-            { method: 'GET', path: '/api/ProjectManager/project/{id}/tasks', description: 'Get project tasks', requiresBody: false, hasId: true },
-            { method: 'GET', path: '/api/ProjectManager/project/{id}/documents', description: 'Get project documents', requiresBody: false, hasId: true },
-            { method: 'POST', path: '/api/ProjectManager/create/project', description: 'Create new project', requiresBody: true },
-            { method: 'POST', path: '/api/ProjectManager/create/project/{projectId}/phase', description: 'Create project phase', requiresBody: true, hasId: true },
-            { method: 'POST', path: '/api/ProjectManager/create/project/{projectId}/task', description: 'Create project task', requiresBody: true, hasId: true },
-            { method: 'POST', path: '/api/ProjectManager/create/project/{projectId}/document', description: 'Create project document', requiresBody: true, hasId: true },
-            { method: 'PUT', path: '/api/ProjectManager/update/project/{id}', description: 'Update project', requiresBody: true, hasId: true },
-            { method: 'PUT', path: '/api/ProjectManager/update/phase/{id}', description: 'Update phase', requiresBody: true, hasId: true },
-            { method: 'PUT', path: '/api/ProjectManager/update/task/{id}', description: 'Update task', requiresBody: true, hasId: true },
-            { method: 'PUT', path: '/api/ProjectManager/update/document/{id}', description: 'Update document', requiresBody: true, hasId: true },
-            { method: 'PUT', path: '/api/ProjectManager/approve/document/{id}', description: 'Approve document', requiresBody: false, hasId: true },
-            { method: 'DELETE', path: '/api/ProjectManager/delete/project/{id}', description: 'Delete project', requiresBody: false, hasId: true },
-            { method: 'DELETE', path: '/api/ProjectManager/delete/phase/{id}', description: 'Delete phase', requiresBody: false, hasId: true },
-            { method: 'DELETE', path: '/api/ProjectManager/delete/task/{id}', description: 'Delete task', requiresBody: false, hasId: true },
-            { method: 'DELETE', path: '/api/ProjectManager/delete/document/{id}', description: 'Delete document', requiresBody: false, hasId: true }
+            { 
+                method: 'GET', 
+                path: '/api/quotations', 
+                description: 'Get all quotations (PM/Admin/Tester)', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/quotations/{id}', 
+                description: 'Get quotation by ID (PM/Admin/Tester)', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/quotations/project/{projectId}', 
+                description: 'Get quotations by project (PM/Admin/Tester)', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/quotations/maintenance/{maintenanceRequestId}', 
+                description: 'Get quotations by maintenance request (PM/Admin/Tester)', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/quotations/client/{clientId}', 
+                description: 'Get quotations by client (PM/Admin/Tester)', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/quotations/me', 
+                description: 'Get my quotations (Client/Tester)', 
+                requiresBody: false 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/quotations', 
+                description: 'Create new quotation (PM/Tester)', 
+                requiresBody: true,
+                sampleBody: {
+                    projectId: "project123",
+                    clientId: "client456",
+                    contractorId: "contractor789",
+                    description: "Website development quotation",
+                    validUntil: "2024-12-31T23:59:59Z",
+                    status: "Draft",
+                    items: [
+                        {
+                            name: "Frontend Development",
+                            quantity: 40,
+                            unitPrice: 150.00,
+                            taxRate: 0.15
+                        },
+                        {
+                            name: "Backend Development",
+                            quantity: 30,
+                            unitPrice: 200.00,
+                            taxRate: 0.15
+                        }
+                    ],
+                    currency: "ZAR"
+                }
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/quotations/{id}', 
+                description: 'Update quotation (PM/Tester)', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    projectId: "project123",
+                    clientId: "client456",
+                    contractorId: "contractor789",
+                    description: "Updated website development quotation",
+                    validUntil: "2024-12-31T23:59:59Z",
+                    status: "Draft",
+                    items: [
+                        {
+                            name: "Frontend Development",
+                            quantity: 45,
+                            unitPrice: 160.00,
+                            taxRate: 0.15
+                        }
+                    ],
+                    currency: "ZAR"
+                }
+            },
+            { 
+                method: 'DELETE', 
+                path: '/api/quotations/{id}', 
+                description: 'Delete quotation (PM/Tester)', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/quotations/{id}/submit-for-approval', 
+                description: 'Submit quotation for approval (PM/Tester)', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/quotations/{id}/pm-approve', 
+                description: 'Approve quotation as PM (PM/Tester)', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/quotations/{id}/send-to-client', 
+                description: 'Send quotation to client (PM/Tester)', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/quotations/{id}/client-decision', 
+                description: 'Client decision on quotation (Client/Tester)', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    accept: true,
+                    note: "We accept this quotation with minor modifications"
+                }
+            },
+            { 
+                method: 'POST', 
+                path: '/api/quotations/{id}/convert-to-invoice', 
+                description: 'Convert accepted quotation to invoice (PM/Tester)', 
+                requiresBody: false, 
+                hasId: true 
+            }
         ]
     },
-    contractor: {
-        name: 'Contractor Endpoints',
-        icon: 'fas fa-tools',
+    invoices: {
+        name: 'Invoices',
+        icon: 'fas fa-receipt',
+        color: 'info',
+        description: 'Invoice management and workflow',
+        endpoints: [
+            { 
+                method: 'GET', 
+                path: '/api/invoices', 
+                description: 'Get all invoices (PM/Admin/Tester)', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/invoices/{id}', 
+                description: 'Get invoice by ID (PM/Admin/Tester)', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/invoices/project/{projectId}', 
+                description: 'Get invoices by project (PM/Admin/Tester)', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/invoices/client/{clientId}', 
+                description: 'Get invoices by client (PM/Admin/Tester)', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/invoices/me', 
+                description: 'Get my invoices (Client/Tester)', 
+                requiresBody: false 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/invoices', 
+                description: 'Create new invoice (PM/Tester)', 
+                requiresBody: true,
+                sampleBody: {
+                    projectId: "project123",
+                    clientId: "client456",
+                    contractorId: "contractor789",
+                    description: "Website development invoice",
+                    quotationId: "quotation123",
+                    dueDate: "2024-12-31T23:59:59Z",
+                    status: "Draft",
+                    items: [
+                        {
+                            name: "Frontend Development",
+                            quantity: 40,
+                            unitPrice: 150.00,
+                            taxRate: 0.15
+                        }
+                    ],
+                    currency: "ZAR"
+                }
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/invoices/{id}', 
+                description: 'Update invoice (PM/Tester)', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    projectId: "project123",
+                    clientId: "client456",
+                    contractorId: "contractor789",
+                    description: "Updated website development invoice",
+                    dueDate: "2024-12-31T23:59:59Z",
+                    status: "Draft",
+                    items: [
+                        {
+                            name: "Frontend Development",
+                            quantity: 45,
+                            unitPrice: 160.00,
+                            taxRate: 0.15
+                        }
+                    ],
+                    currency: "ZAR"
+                }
+            },
+            { 
+                method: 'DELETE', 
+                path: '/api/invoices/{id}', 
+                description: 'Delete invoice (PM/Tester)', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/invoices/{id}/issue', 
+                description: 'Issue invoice (PM/Tester)', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/invoices/{id}/mark-paid', 
+                description: 'Mark invoice as paid (PM/Tester)', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    paidDate: "2024-01-15T10:30:00Z",
+                    paidBy: "John Doe"
+                }
+            },
+            { 
+                method: 'POST', 
+                path: '/api/invoices/{id}/cancel', 
+                description: 'Cancel invoice (PM/Tester)', 
+                requiresBody: false, 
+                hasId: true 
+            }
+        ]
+    },
+    documents: {
+        name: 'Documents',
+        icon: 'fas fa-file-alt',
         color: 'warning',
-        description: 'Contractor-specific project execution endpoints',
+        description: 'Document management system',
         endpoints: [
-            { method: 'GET', path: '/api/Contractors/project/tasks', description: 'Get my assigned tasks', requiresBody: false },
-            { method: 'GET', path: '/api/Contractors/project/phases', description: 'Get my assigned phases', requiresBody: false },
-            { method: 'GET', path: '/api/Contractors/project/documents', description: 'Get my uploaded documents', requiresBody: false },
-            { method: 'POST', path: '/api/Contractors/upload/project/{projectId}/document', description: 'Upload project document', requiresBody: true, hasId: true },
-            { method: 'PUT', path: '/api/Contractors/update/project/task/{id}', description: 'Update assigned task', requiresBody: true, hasId: true },
-            { method: 'PUT', path: '/api/Contractors/update/document/{id}', description: 'Update uploaded document', requiresBody: true, hasId: true },
-            { method: 'DELETE', path: '/api/Contractors/delete/document/{id}', description: 'Delete uploaded document', requiresBody: false, hasId: true }
+            { 
+                method: 'GET', 
+                path: '/api/documents', 
+                description: 'Get all documents', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/documents/{id}', 
+                description: 'Get document by ID', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/documents/project/{projectId}', 
+                description: 'Get documents by project', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/documents', 
+                description: 'Create new document', 
+                requiresBody: true,
+                sampleBody: {
+                    projectId: "project123",
+                    name: "Project Specification",
+                    type: "PDF",
+                    url: "https://example.com/doc.pdf",
+                    uploadedBy: "user123",
+                    description: "Detailed project specification document"
+                }
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/documents/{id}', 
+                description: 'Update document', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    projectId: "project123",
+                    name: "Updated Project Specification",
+                    type: "PDF",
+                    url: "https://example.com/doc-updated.pdf",
+                    uploadedBy: "user123",
+                    description: "Updated detailed project specification document"
+                }
+            },
+            { 
+                method: 'DELETE', 
+                path: '/api/documents/{id}', 
+                description: 'Delete document', 
+                requiresBody: false, 
+                hasId: true 
+            }
         ]
     },
-    client: {
-        name: 'Client Endpoints',
+    estimates: {
+        name: 'Estimates',
+        icon: 'fas fa-calculator',
+        color: 'secondary',
+        description: 'Project cost estimation',
+        endpoints: [
+            { 
+                method: 'GET', 
+                path: '/api/estimates', 
+                description: 'Get all estimates', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/estimates/{id}', 
+                description: 'Get estimate by ID', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/estimates/project/{projectId}', 
+                description: 'Get estimates by project', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/estimates', 
+                description: 'Create new estimate', 
+                requiresBody: true,
+                sampleBody: {
+                    projectId: "project123",
+                    name: "Website Development Estimate",
+                    description: "Initial cost estimate for website development",
+                    estimatedCost: 15000.00,
+                    estimatedHours: 100,
+                    createdBy: "user123"
+                }
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/estimates/{id}', 
+                description: 'Update estimate', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    projectId: "project123",
+                    name: "Updated Website Development Estimate",
+                    description: "Revised cost estimate for website development",
+                    estimatedCost: 18000.00,
+                    estimatedHours: 120,
+                    createdBy: "user123"
+                }
+            },
+            { 
+                method: 'DELETE', 
+                path: '/api/estimates/{id}', 
+                description: 'Delete estimate', 
+                requiresBody: false, 
+                hasId: true 
+            }
+        ]
+    },
+    messages: {
+        name: 'Messages',
+        icon: 'fas fa-comments',
+        color: 'info',
+        description: 'Internal messaging system',
+        endpoints: [
+            { 
+                method: 'GET', 
+                path: '/api/messages', 
+                description: 'Get all messages', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/messages/{id}', 
+                description: 'Get message by ID', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/messages/user/{userId}', 
+                description: 'Get messages by user', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/messages/project/{projectId}', 
+                description: 'Get messages by project', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/messages', 
+                description: 'Create new message', 
+                requiresBody: true,
+                sampleBody: {
+                    senderId: "user123",
+                    recipientId: "user456",
+                    projectId: "project789",
+                    subject: "Project Update",
+                    content: "The project is progressing well and on schedule.",
+                    priority: "Normal"
+                }
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/messages/{id}', 
+                description: 'Update message', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    senderId: "user123",
+                    recipientId: "user456",
+                    projectId: "project789",
+                    subject: "Updated Project Update",
+                    content: "The project is progressing excellently and ahead of schedule.",
+                    priority: "High"
+                }
+            },
+            { 
+                method: 'DELETE', 
+                path: '/api/messages/{id}', 
+                description: 'Delete message', 
+                requiresBody: false, 
+                hasId: true 
+            }
+        ]
+    },
+    notifications: {
+        name: 'Notifications',
+        icon: 'fas fa-bell',
+        color: 'warning',
+        description: 'System notifications and alerts',
+        endpoints: [
+            { 
+                method: 'GET', 
+                path: '/api/notifications', 
+                description: 'Get all notifications', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/notifications/{id}', 
+                description: 'Get notification by ID', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/notifications/user/{userId}', 
+                description: 'Get notifications by user', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/notifications/user/{userId}/unread', 
+                description: 'Get unread notifications by user', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/notifications', 
+                description: 'Create new notification', 
+                requiresBody: true,
+                sampleBody: {
+                    userId: "user123",
+                    title: "Project Update",
+                    message: "Your project has been updated",
+                    type: "Info",
+                    isRead: false
+                }
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/notifications/{id}', 
+                description: 'Update notification', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    userId: "user123",
+                    title: "Updated Project Update",
+                    message: "Your project has been significantly updated",
+                    type: "Warning",
+                    isRead: false
+                }
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/notifications/{id}/mark-read', 
+                description: 'Mark notification as read', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'DELETE', 
+                path: '/api/notifications/{id}', 
+                description: 'Delete notification', 
+                requiresBody: false, 
+                hasId: true 
+            }
+        ]
+    },
+    payments: {
+        name: 'Payments',
+        icon: 'fas fa-credit-card',
+        color: 'success',
+        description: 'Payment processing and tracking',
+        endpoints: [
+            { 
+                method: 'GET', 
+                path: '/api/payments', 
+                description: 'Get all payments', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/payments/{id}', 
+                description: 'Get payment by ID', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/payments/invoice/{invoiceId}', 
+                description: 'Get payments by invoice', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/payments/project/{projectId}', 
+                description: 'Get payments by project', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/payments/client/{clientId}', 
+                description: 'Get payments by client', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/payments', 
+                description: 'Create new payment', 
+                requiresBody: true,
+                sampleBody: {
+                    invoiceId: "invoice123",
+                    amount: 5000.00,
+                    paymentMethod: "Bank Transfer",
+                    paymentDate: "2024-01-15T10:30:00Z",
+                    reference: "PAY-2024-001",
+                    status: "Completed"
+                }
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/payments/{id}', 
+                description: 'Update payment', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    invoiceId: "invoice123",
+                    amount: 5500.00,
+                    paymentMethod: "Bank Transfer",
+                    paymentDate: "2024-01-15T10:30:00Z",
+                    reference: "PAY-2024-001-UPDATED",
+                    status: "Completed"
+                }
+            },
+            { 
+                method: 'DELETE', 
+                path: '/api/payments/{id}', 
+                description: 'Delete payment', 
+                requiresBody: false, 
+                hasId: true 
+            }
+        ]
+    },
+    auditlogs: {
+        name: 'Audit Logs',
+        icon: 'fas fa-clipboard-list',
+        color: 'dark',
+        description: 'System audit and activity logging',
+        endpoints: [
+            { 
+                method: 'POST', 
+                path: '/api/auditlogs', 
+                description: 'Create audit log entry', 
+                requiresBody: true,
+                sampleBody: {
+                    logType: "UserAction",
+                    title: "User Login",
+                    description: "User successfully logged into the system",
+                    userId: "user123",
+                    entityId: "session456"
+                }
+            },
+            { 
+                method: 'GET', 
+                path: '/api/auditlogs', 
+                description: 'Get all audit logs (with limit)', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/auditlogs/{id}', 
+                description: 'Get audit log by ID', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/auditlogs/search', 
+                description: 'Search audit logs', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/auditlogs/by-entity/{entityId}', 
+                description: 'Get audit logs by entity', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/auditlogs/types', 
+                description: 'Get available audit log types', 
+                requiresBody: false 
+            }
+        ]
+    },
+    clients: {
+        name: 'Client Portal',
         icon: 'fas fa-building',
         color: 'info',
-        description: 'Client project management and financial endpoints',
+        description: 'Client-specific functionality',
         endpoints: [
-            { method: 'GET', path: '/api/Clients/projects', description: 'Get my projects', requiresBody: false },
-            { method: 'GET', path: '/api/Clients/project/{id}', description: 'Get project by ID', requiresBody: false, hasId: true },
-            { method: 'GET', path: '/api/Clients/quotations', description: 'Get my quotations', requiresBody: false },
-            { method: 'GET', path: '/api/Clients/quotation/{id}', description: 'Get quotation by ID', requiresBody: false, hasId: true },
-            { method: 'GET', path: '/api/Clients/invoices', description: 'Get my invoices', requiresBody: false },
-            { method: 'GET', path: '/api/Clients/invoice/{id}', description: 'Get invoice by ID', requiresBody: false, hasId: true },
-            { method: 'GET', path: '/api/Clients/maintenanceRequests', description: 'Get my maintenance requests', requiresBody: false },
-            { method: 'GET', path: '/api/Clients/maintenanceRequest/{id}', description: 'Get maintenance request by ID', requiresBody: false, hasId: true },
-            { method: 'POST', path: '/api/Clients/create/maintenanceRequest', description: 'Create maintenance request', requiresBody: true },
-            { method: 'POST', path: '/api/Clients/pay/invoice/{id}', description: 'Pay invoice', requiresBody: true, hasId: true },
-            { method: 'PUT', path: '/api/Clients/update/maintenanceRequest/{id}', description: 'Update maintenance request', requiresBody: true, hasId: true },
-            { method: 'PUT', path: '/api/Clients/approve/quotation/{id}', description: 'Approve quotation', requiresBody: false, hasId: true },
-            { method: 'PUT', path: '/api/Clients/reject/quotation/{id}', description: 'Reject quotation', requiresBody: false, hasId: true },
-            { method: 'DELETE', path: '/api/Clients/delete/maintenanceRequest/{id}', description: 'Delete maintenance request', requiresBody: false, hasId: true }
+            { 
+                method: 'GET', 
+                path: '/api/clients/projects', 
+                description: 'Get client projects', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/clients/project/{id}', 
+                description: 'Get project by ID', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/clients/project/{id}/phases', 
+                description: 'Get project phases', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/clients/project/{id}/tasks', 
+                description: 'Get project tasks', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/clients/project/{id}/documents', 
+                description: 'Get project documents', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/clients/project/{id}/messages', 
+                description: 'Get project messages', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/clients/project/{id}/notifications', 
+                description: 'Get project notifications', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/clients/project/{id}/payments', 
+                description: 'Get project payments', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/clients/project/{id}/quotations', 
+                description: 'Get project quotations', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/clients/project/{id}/invoices', 
+                description: 'Get project invoices', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/clients/project/{id}/estimates', 
+                description: 'Get project estimates', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/clients/project/{id}/status', 
+                description: 'Get project status', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/clients/project/{id}/message', 
+                description: 'Send project message', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    subject: "Project Question",
+                    content: "I have a question about the project timeline",
+                    priority: "Normal"
+                }
+            },
+            { 
+                method: 'POST', 
+                path: '/api/clients/project/{id}/feedback', 
+                description: 'Submit project feedback', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    rating: 5,
+                    comment: "Excellent work on the project!",
+                    category: "General"
+                }
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/clients/project/{id}/approve-phase/{phaseId}', 
+                description: 'Approve project phase', 
+                requiresBody: false, 
+                hasId: true 
+            }
+        ]
+    },
+    contractors: {
+        name: 'Contractor Portal',
+        icon: 'fas fa-tools',
+        color: 'warning',
+        description: 'Contractor-specific functionality',
+        endpoints: [
+            { 
+                method: 'GET', 
+                path: '/api/contractors/project/tasks', 
+                description: 'Get assigned tasks', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/contractors/project/phases', 
+                description: 'Get assigned phases', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/contractors/project/documents', 
+                description: 'Get project documents', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/contractors/project/messages', 
+                description: 'Get project messages', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/contractors/project/notifications', 
+                description: 'Get project notifications', 
+                requiresBody: false 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/contractors/task/{id}/update-status', 
+                description: 'Update task status', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    status: "InProgress",
+                    progress: 50,
+                    notes: "Task is 50% complete"
+                }
+            }
+        ]
+    },
+    projectmanager: {
+        name: 'Project Manager',
+        icon: 'fas fa-project-diagram',
+        color: 'success',
+        description: 'Project management and oversight',
+        endpoints: [
+            { 
+                method: 'GET', 
+                path: '/api/projectmanager/projects', 
+                description: 'Get managed projects', 
+                requiresBody: false 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/projectmanager/project/{id}', 
+                description: 'Get project by ID', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/projectmanager/project/{id}/phases', 
+                description: 'Get project phases', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/projectmanager/project/{id}/tasks', 
+                description: 'Get project tasks', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/projectmanager/project/{id}/documents', 
+                description: 'Get project documents', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/projectmanager/project/{id}/messages', 
+                description: 'Get project messages', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/projectmanager/project/{id}/notifications', 
+                description: 'Get project notifications', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/projectmanager/project/{id}/payments', 
+                description: 'Get project payments', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/projectmanager/project/{id}/quotations', 
+                description: 'Get project quotations', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/projectmanager/project/{id}/invoices', 
+                description: 'Get project invoices', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/projectmanager/project/{id}/estimates', 
+                description: 'Get project estimates', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'GET', 
+                path: '/api/projectmanager/project/{id}/status', 
+                description: 'Get project status', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'POST', 
+                path: '/api/projectmanager/create/project', 
+                description: 'Create new project', 
+                requiresBody: true,
+                sampleBody: {
+                    name: "Website Development",
+                    description: "Complete website development project",
+                    clientId: "client123",
+                    startDate: "2024-01-01T00:00:00Z",
+                    endDate: "2024-06-30T23:59:59Z",
+                    budget: 50000.00,
+                    status: "Planning"
+                }
+            },
+            { 
+                method: 'POST', 
+                path: '/api/projectmanager/create/project/{projectId}/phase', 
+                description: 'Create project phase', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    name: "Design Phase",
+                    description: "UI/UX design and wireframing",
+                    startDate: "2024-01-01T00:00:00Z",
+                    endDate: "2024-02-15T23:59:59Z",
+                    assignedTo: "contractor123",
+                    status: "NotStarted"
+                }
+            },
+            { 
+                method: 'POST', 
+                path: '/api/projectmanager/create/project/{projectId}/task', 
+                description: 'Create project task', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    name: "Create wireframes",
+                    description: "Design wireframes for all pages",
+                    phaseId: "phase123",
+                    assignedTo: "contractor456",
+                    priority: "High",
+                    estimatedHours: 40,
+                    status: "NotStarted"
+                }
+            },
+            { 
+                method: 'POST', 
+                path: '/api/projectmanager/create/project/{projectId}/document', 
+                description: 'Create project document', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    name: "Project Requirements",
+                    type: "PDF",
+                    url: "https://example.com/requirements.pdf",
+                    description: "Detailed project requirements document"
+                }
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/projectmanager/update/project/{id}', 
+                description: 'Update project', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    name: "Updated Website Development",
+                    description: "Updated complete website development project",
+                    clientId: "client123",
+                    startDate: "2024-01-01T00:00:00Z",
+                    endDate: "2024-07-31T23:59:59Z",
+                    budget: 60000.00,
+                    status: "InProgress"
+                }
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/projectmanager/update/phase/{id}', 
+                description: 'Update phase', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    name: "Updated Design Phase",
+                    description: "Updated UI/UX design and wireframing",
+                    startDate: "2024-01-01T00:00:00Z",
+                    endDate: "2024-02-28T23:59:59Z",
+                    assignedTo: "contractor123",
+                    status: "InProgress"
+                }
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/projectmanager/update/task/{id}', 
+                description: 'Update task', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    name: "Updated Create wireframes",
+                    description: "Updated design wireframes for all pages",
+                    phaseId: "phase123",
+                    assignedTo: "contractor456",
+                    priority: "High",
+                    estimatedHours: 50,
+                    status: "InProgress"
+                }
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/projectmanager/update/document/{id}', 
+                description: 'Update document', 
+                requiresBody: true, 
+                hasId: true,
+                sampleBody: {
+                    name: "Updated Project Requirements",
+                    type: "PDF",
+                    url: "https://example.com/requirements-updated.pdf",
+                    description: "Updated detailed project requirements document"
+                }
+            },
+            { 
+                method: 'PUT', 
+                path: '/api/projectmanager/approve/document/{id}', 
+                description: 'Approve document', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'DELETE', 
+                path: '/api/projectmanager/delete/project/{id}', 
+                description: 'Delete project', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'DELETE', 
+                path: '/api/projectmanager/delete/phase/{id}', 
+                description: 'Delete phase', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'DELETE', 
+                path: '/api/projectmanager/delete/task/{id}', 
+                description: 'Delete task', 
+                requiresBody: false, 
+                hasId: true 
+            },
+            { 
+                method: 'DELETE', 
+                path: '/api/projectmanager/delete/document/{id}', 
+                description: 'Delete document', 
+                requiresBody: false, 
+                hasId: true 
+            }
+        ]
+    },
+    users: {
+        name: 'User Management',
+        icon: 'fas fa-users',
+        color: 'primary',
+        description: 'User profile and management',
+        endpoints: [
+            { 
+                method: 'GET', 
+                path: '/api/users/profile', 
+                description: 'Get current user profile', 
+                requiresBody: false 
+            }
         ]
     }
 };
 
-// Simple test to verify JavaScript is working
-console.log('🚀 API Testing page JavaScript loaded successfully!');
-
 // Initialize the interface
-function initializeInterface() {
-    console.log('🔧 API Testing interface initializing...');
-    console.log('📄 Current document readyState:', document.readyState);
-    console.log('🔍 Console output element exists:', !!document.getElementById('console-output'));
-
-    // Check if DOM is ready
-    if (document.readyState === 'loading') {
-        console.log('⏳ DOM still loading, waiting...');
-        document.addEventListener('DOMContentLoaded', initializeInterface);
-        return;
-    }
-
-    originalConsoleLog('✅ DOM ready, proceeding with initialization...');
-
-    // Initialize console capture first
-    originalConsoleLog('🎯 Initializing console capture...');
-    const captureSuccess = initializeConsoleCapture();
-    if (captureSuccess) {
-        originalConsoleLog('✅ Console capture initialized successfully');
-    } else {
-        originalConsoleWarn('⚠️ Console capture initialization failed, retrying in 500ms...');
-        // Retry after a short delay
-        setTimeout(() => {
-            const retrySuccess = initializeConsoleCapture();
-            if (retrySuccess) {
-                originalConsoleLog('✅ Console capture initialized on retry');
-            } else {
-                originalConsoleWarn('⚠️ Console capture initialization failed on retry, continuing without capture...');
-            }
-        }, 500);
-    }
-
-    // Test the console immediately
-    originalConsoleLog('🚀 Interface initialization complete - console capture should now be active!');
-
-    // Add click handlers to category items
-    const categoryLinks = document.querySelectorAll('#api-categories a');
-    originalConsoleLog('Found category links:', categoryLinks.length);
-
-    categoryLinks.forEach((item, index) => {
-        originalConsoleLog(`Setting up handler for link ${index}:`, item.getAttribute('data-category'));
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 API Testing Dashboard loaded successfully!');
+    
+    // Category selection
+    document.querySelectorAll('[data-category]').forEach(item => {
         item.addEventListener('click', function(e) {
             e.preventDefault();
-
-            // Remove active class from all items
-            document.querySelectorAll('#api-categories a').forEach(a => a.classList.remove('active'));
-
-            // Add active class to clicked item
-            this.classList.add('active');
-
-            // Get category and display endpoints
             const category = this.getAttribute('data-category');
-            originalConsoleLog('Displaying endpoints for category:', category);
-            displayEndpoints(category);
+            showCategory(category);
         });
     });
+    
+    // Load saved payloads from localStorage
+    loadSavedPayloads();
+    
+    // Load and display custom ID badges
+    loadCustomIdBadges();
+});
 
-    // Load admin endpoints by default and set it as active
-    const adminLink = document.querySelector('[data-category="admin"]');
-    if (adminLink) {
-        adminLink.classList.add('active');
-        originalConsoleLog('Set admin link as active');
-    } else {
-        originalConsoleError('Admin link not found!');
-    }
-
-    originalConsoleLog('Loading admin endpoints by default');
-    displayEndpoints('admin');
-}
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeInterface);
-} else {
-    // DOM is already ready, initialize immediately
-    setTimeout(initializeInterface, 100); // Small delay to ensure all elements are rendered
-}
-
-// Global variables for test tracking
-let testResults = [];
-let currentTestIndex = 0;
-let totalTests = 0;
-
-// Console output tracking
-let consoleOutput = [];
-let originalConsoleLog = console.log;
-let originalConsoleError = console.error;
-let originalConsoleWarn = console.warn;
-let originalConsoleInfo = console.info;
-let consoleMinimized = false;
-let consoleCaptureInitialized = false;
-
-// Initialize console capture
-function initializeConsoleCapture() {
-    originalConsoleLog('🎯 Initializing console capture...');
-
-    // Check if console output element exists
-    const consoleDiv = document.getElementById('console-output');
-    if (!consoleDiv) {
-        originalConsoleError('❌ Console output element not found! Console capture cannot be initialized.');
-        return false;
-    }
-
-    // Prevent multiple initializations
-    if (consoleCaptureInitialized) {
-        originalConsoleLog('⚠️ Console capture already initialized, skipping...');
-        return true;
-    }
-
-    try {
-        // Override console methods to capture output
-        console.log = function(...args) {
-            captureConsoleMessage('log', args);
-            originalConsoleLog.apply(console, args);
-        };
-
-        console.error = function(...args) {
-            captureConsoleMessage('error', args);
-            originalConsoleError.apply(console, args);
-        };
-
-        console.warn = function(...args) {
-            captureConsoleMessage('warn', args);
-            originalConsoleWarn.apply(console, args);
-        };
-
-        console.info = function(...args) {
-            captureConsoleMessage('info', args);
-            originalConsoleInfo.apply(console, args);
-        };
-
-        consoleCaptureInitialized = true;
-        originalConsoleLog('✅ Console capture initialized successfully');
-
-        // Test the capture system
-        setTimeout(() => {
-            console.log('🧪 Console capture test message - if you see this in both console and panel, capture is working!');
-            console.error('🧪 Console capture test error - if you see this in both console and panel, capture is working!');
-        }, 1000);
-
-        return true;
-    } catch (error) {
-        originalConsoleError('❌ Failed to initialize console capture:', error);
-        return false;
+function loadSavedPayloads() {
+    const saved = localStorage.getItem('apiTestEditedPayloads');
+    if (saved) {
+        try {
+            editedPayloads = JSON.parse(saved);
+            console.log('📦 Loaded saved payloads:', Object.keys(editedPayloads).length);
+        } catch (error) {
+            console.warn('Failed to load saved payloads:', error);
+        }
     }
 }
 
-function captureConsoleMessage(level, args) {
-    try {
-        const timestamp = new Date().toLocaleTimeString();
-        const message = args.map(arg => {
-            if (typeof arg === 'object') {
-                try {
-                    return JSON.stringify(arg, null, 2);
-                } catch (e) {
-                    return '[Object]';
+function savePayloadsToStorage() {
+    localStorage.setItem('apiTestEditedPayloads', JSON.stringify(editedPayloads));
+}
+
+function loadCustomIdBadges() {
+    // Check all localStorage keys for custom IDs
+    Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('id-')) {
+            // Extract method and path from key
+            const parts = key.replace('id-', '').split(':');
+            if (parts.length === 2) {
+                const method = parts[0];
+                const path = parts[1];
+                
+                // Find the corresponding badge and show it
+                const badgeId = `customIdBadge-${getCategoryFromPath(path)}-${path.replace(/\//g, '-')}`;
+                const badge = document.getElementById(badgeId);
+                if (badge) {
+                    badge.classList.remove('d-none');
                 }
             }
-            return String(arg);
-        }).join(' ');
-
-        consoleOutput.push({
-            timestamp,
-            level,
-            message
-        });
-
-        // Limit console output to prevent memory issues
-        if (consoleOutput.length > 1000) {
-            consoleOutput = consoleOutput.slice(-500);
         }
-
-        // Update display immediately
-        updateConsoleDisplay();
-    } catch (error) {
-        // Fallback to original console if capture fails
-        originalConsoleError('Console capture error:', error);
-    }
+    });
 }
 
-function updateConsoleDisplay() {
-    try {
-        const consoleDiv = document.getElementById('console-output');
-        if (!consoleDiv) {
-            // Use original console if capture div not found
-            originalConsoleError('❌ Console output div not found!');
-            return;
-        }
-
-        if (consoleOutput.length === 0) {
-            consoleDiv.innerHTML = '<div class="text-muted opacity-75">Console output will appear here...</div>';
-            return;
-        }
-
-        // Create HTML content for console entries
-        const htmlContent = consoleOutput.map(entry => {
-            const levelClass = entry.level === 'error' ? 'error' : 
-                              entry.level === 'warn' ? 'warn' : 
-                              entry.level === 'info' ? 'info' : 'log';
-            
-            return `
-                <div class="console-entry ${levelClass}">
-                    <span class="console-timestamp">[${entry.timestamp}]</span>
-                    <span class="console-level ${levelClass}">${entry.level.toUpperCase()}</span>
-                    <span class="console-message">${entry.message}</span>
-                </div>
-            `;
-        }).join('');
-
-        consoleDiv.innerHTML = htmlContent;
-
-        // Auto-scroll to bottom
-        consoleDiv.scrollTop = consoleDiv.scrollHeight;
-    } catch (error) {
-        // Fallback to original console if display update fails
-        originalConsoleError('Console display update error:', error);
-    }
+function getCategoryFromPath(path) {
+    // Simple mapping to determine category from path
+    if (path.includes('/auth/')) return 'auth';
+    if (path.includes('/users/')) return 'users';
+    if (path.includes('/projects/')) return 'projects';
+    if (path.includes('/quotations/')) return 'quotations';
+    if (path.includes('/invoices/')) return 'invoices';
+    if (path.includes('/contractors/')) return 'contractors';
+    if (path.includes('/clients/')) return 'clients';
+    if (path.includes('/documents/')) return 'documents';
+    if (path.includes('/estimates/')) return 'estimates';
+    if (path.includes('/messages/')) return 'messages';
+    if (path.includes('/notifications/')) return 'notifications';
+    if (path.includes('/payments/')) return 'payments';
+    if (path.includes('/audit-logs/')) return 'audit-logs';
+    if (path.includes('/admin/')) return 'admin';
+    if (path.includes('/project-manager/')) return 'project-manager';
+    return 'unknown';
 }
 
-function clearConsoleOutput() {
-    consoleOutput = [];
-    updateConsoleDisplay();
-    originalConsoleLog('Console output cleared');
-}
-
-function copyConsoleOutput() {
-    try {
-        const consoleDiv = document.getElementById('console-output');
-        if (!consoleDiv) {
-            originalConsoleError('Console output div not found');
-            return;
-        }
-
-        const textToCopy = consoleOutput.map(entry =>
-            `[${entry.timestamp}] ${entry.level.toUpperCase()}: ${entry.message}`
-        ).join('\n');
-
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            // Show success feedback
-            const copyBtn = event.target.closest('button');
-            if (copyBtn) {
-                const originalHtml = copyBtn.innerHTML;
-                copyBtn.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
-                copyBtn.classList.remove('btn-outline-light');
-                copyBtn.classList.add('btn-success');
-
-                setTimeout(() => {
-                    copyBtn.innerHTML = originalHtml;
-                    copyBtn.classList.remove('btn-success');
-                    copyBtn.classList.add('btn-outline-light');
-                }, 2000);
-            }
-        }).catch(err => {
-            originalConsoleError('Failed to copy console output:', err);
-            alert('Failed to copy to clipboard');
-        });
-    } catch (error) {
-        originalConsoleError('Copy console output error:', error);
-    }
-}
-
-function toggleConsole() {
-    try {
-        const consoleContainer = document.getElementById('console-output-container');
-        const toggleBtn = document.getElementById('toggleConsoleBtn');
-        const consoleOutputDiv = document.getElementById('console-output');
-
-        if (!consoleContainer || !toggleBtn || !consoleOutputDiv) {
-            originalConsoleError('Console toggle elements not found');
-            return;
-        }
-
-        consoleMinimized = !consoleMinimized;
-
-        if (consoleMinimized) {
-            consoleOutputDiv.classList.add('console-minimized');
-            toggleBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Expand';
-        } else {
-            consoleOutputDiv.classList.remove('console-minimized');
-            toggleBtn.innerHTML = '<i class="fas fa-minus me-1"></i>Minimize';
-            // Scroll to bottom when expanding
-            setTimeout(() => {
-                consoleOutputDiv.scrollTop = consoleOutputDiv.scrollHeight;
-            }, 100);
-        }
-    } catch (error) {
-        originalConsoleError('Toggle console error:', error);
-    }
-}
-
-// Debug function for troubleshooting
-function debugSetup() {
-    originalConsoleLog('🐛 === DEBUG SETUP START ===');
-    originalConsoleLog('📄 Document readyState:', document.readyState);
-    originalConsoleLog('🔗 apiEndpoints object exists:', typeof apiEndpoints !== 'undefined');
-    originalConsoleLog('🔗 apiEndpoints keys:', apiEndpoints ? Object.keys(apiEndpoints) : 'N/A');
-    originalConsoleLog('🔗 testAllEndpoints function exists:', typeof testAllEndpoints === 'function');
-    originalConsoleLog('🔗 Button element:', document.querySelector('[onclick*="testAllEndpoints"]'));
-    originalConsoleLog('🔗 Console output element:', document.getElementById('console-output'));
-    originalConsoleLog('🔗 Test progress section:', document.getElementById('test-progress-section'));
-    originalConsoleLog('🔗 Test results section:', document.getElementById('test-results-section'));
-    originalConsoleLog('🔗 Console capture initialized:', consoleCaptureInitialized);
-    originalConsoleLog('🐛 === DEBUG SETUP END ===');
-}
-
-// Test console capture manually
-function testConsoleCapture() {
-    originalConsoleLog('🧪 === MANUAL CONSOLE TEST START ===');
-    console.log('🧪 This is a test log message');
-    console.error('🧪 This is a test error message');
-    console.warn('🧪 This is a test warning message');
-    console.info('🧪 This is a test info message');
-
-    // Test with object
-    console.log('🧪 Test object:', { test: 'value', number: 42 });
-
-    originalConsoleLog('🧪 === MANUAL CONSOLE TEST END ===');
-    originalConsoleLog('📝 If you see these messages in both the browser console AND the console output panel above, the capture system is working correctly!');
-
-    // Direct test - force update console display
-    setTimeout(() => {
-        originalConsoleLog('🔄 Forcing console display update...');
-        if (typeof updateConsoleDisplay === 'function') {
-            updateConsoleDisplay();
-        }
-        originalConsoleLog('🔄 Console display update forced');
-    }, 1000);
-}
-
-// Force initialize console capture (call this from browser console if needed)
-function forceInitializeConsole() {
-    originalConsoleLog('🔧 Force initializing console capture...');
-
-    if (typeof originalConsoleLog === 'undefined') {
-        originalConsoleLog('❌ Original console methods not stored, reinitializing...');
-        // Re-store original methods
-        originalConsoleLog = console.log;
-        originalConsoleError = console.error;
-        originalConsoleWarn = console.warn;
-        originalConsoleInfo = console.info;
-    }
-
-    const success = initializeConsoleCapture();
-    if (success) {
-        originalConsoleLog('✅ Force initialization complete');
-    } else {
-        originalConsoleLog('❌ Force initialization failed');
-    }
-}
-
-// Direct test - bypass all console capture and write directly to panel
-function directConsoleTest() {
-    originalConsoleLog('🎯 DIRECT TEST: Testing direct panel write...');
-
-    const consoleDiv = document.getElementById('console-output');
-    if (consoleDiv) {
-        originalConsoleLog('✅ Found console output div');
-
-        // Show current content
-        originalConsoleLog('📄 Current panel content:', consoleDiv.innerHTML.substring(0, 100) + '...');
-
-        // Add test content directly
-        const testContent = `
-            <div class="console-entry log" style="border-left: 3px solid #007bff; padding-left: 8px; margin-bottom: 4px;">
-                <span class="console-timestamp">[${new Date().toLocaleTimeString()}]</span>
-                <span class="console-level log" style="color: #007bff; margin-left: 8px;">LOG</span>
-                <span class="console-message" style="margin-left: 8px;">🎯 DIRECT TEST: This message was added directly to the panel!</span>
-            </div>
-            <div class="console-entry error" style="border-left: 3px solid #dc3545; padding-left: 8px; margin-bottom: 4px;">
-                <span class="console-timestamp">[${new Date().toLocaleTimeString()}]</span>
-                <span class="console-level error" style="color: #dc3545; margin-left: 8px;">ERROR</span>
-                <span class="console-message" style="margin-left: 8px;">🎯 DIRECT TEST: Error message added directly!</span>
-            </div>
-        `;
-
-        consoleDiv.innerHTML = testContent;
-        originalConsoleLog('✅ Direct content added to console panel');
-
-        // Verify the content was added
-        setTimeout(() => {
-            originalConsoleLog('🔍 Verification: Panel content after direct test:', consoleDiv.innerHTML.substring(0, 200) + '...');
-        }, 100);
-
-    } else {
-        originalConsoleError('❌ Console output div not found!');
-        originalConsoleError('🔍 Available elements with "console" in ID:', Array.from(document.querySelectorAll('*')).filter(el => el.id && el.id.includes('console')).map(el => el.id));
-    }
-}
-
-// Simple console test function
-function simpleConsoleTest() {
-    // First, check if DOM elements exist
-    originalConsoleLog('🔍 Checking DOM elements...');
-    const consoleDiv = document.getElementById('console-output');
-    const consoleContainer = document.getElementById('console-output-container');
-    
-    originalConsoleLog('Console div exists:', !!consoleDiv);
-    originalConsoleLog('Console container exists:', !!consoleContainer);
-    
-    if (consoleDiv) {
-        originalConsoleLog('✅ Found console output div, testing direct write...');
-        originalConsoleLog('Console div content length:', consoleDiv.innerHTML.length);
+function clearAllEditedPayloads() {
+    if (confirm('Are you sure you want to reset all edited payloads and IDs? This will restore all endpoints to their sample data.')) {
+        editedPayloads = {};
+        localStorage.removeItem('apiTestEditedPayloads');
         
-        // Add a test message directly to the panel
-        const testMessage = `
-            <div class="console-entry log" style="border-left: 3px solid #007bff; padding-left: 8px; margin-bottom: 4px;">
-                <span class="console-timestamp">[${new Date().toLocaleTimeString()}]</span>
-                <span class="console-level log" style="color: #007bff; margin-left: 8px;">LOG</span>
-                <span class="console-message" style="margin-left: 8px;">🧪 DIRECT TEST: This message was added directly to the panel!</span>
-            </div>
-        `;
-        
-        consoleDiv.innerHTML = testMessage;
-        originalConsoleLog('✅ Direct test message added to panel');
-    } else {
-        originalConsoleError('❌ Console output div not found!');
-        // Try to find any elements with 'console' in the ID
-        const allElements = document.querySelectorAll('*');
-        const consoleElements = Array.from(allElements).filter(el => el.id && el.id.includes('console'));
-        originalConsoleLog('Elements with "console" in ID:', consoleElements.map(el => el.id));
-    }
-    
-    // Now test console capture
-    console.log('🧪 Simple console test - this should appear in both browser console and panel');
-    console.error('🧪 Simple error test - this should appear in both browser console and panel');
-    console.warn('🧪 Simple warning test - this should appear in both browser console and panel');
-    console.info('🧪 Simple info test - this should appear in both browser console and panel');
-    
-    // Test with different data types
-    console.log('🧪 String test:', 'Hello World');
-    console.log('🧪 Number test:', 42);
-    console.log('🧪 Object test:', { name: 'Test', value: 123 });
-    console.log('🧪 Array test:', [1, 2, 3, 'test']);
-    
-    // Test with special characters
-    console.log('🧪 Special chars: 🚀 ✅ ❌ ⚠️ 🔧');
-    
-    originalConsoleLog('✅ Simple console test completed - check both browser console and panel above');
-}
-
-// Make functions available globally
-window.debugSetup = debugSetup;
-window.testConsoleCapture = testConsoleCapture;
-window.forceInitializeConsole = forceInitializeConsole;
-window.directConsoleTest = directConsoleTest;
-window.simpleConsoleTest = simpleConsoleTest;
-window.testAllEndpoints = testAllEndpoints;
-
-// Test all endpoints sequentially
-async function testAllEndpoints() {
-    console.log('🚀 testAllEndpoints function called');
-
-    try {
-        // Check if apiEndpoints exists
-        if (typeof apiEndpoints === 'undefined') {
-            console.error('❌ apiEndpoints object is not defined!');
-            alert('❌ Error: API endpoints configuration not found. Please refresh the page.');
-            return;
-        }
-
-        console.log('📋 apiEndpoints object:', apiEndpoints);
-        console.log('🔢 apiEndpoints keys:', Object.keys(apiEndpoints));
-
-        // Get test button for use in finally block
-        const testButton = document.querySelector('[onclick*="testAllEndpoints"]');
-        console.log('🔘 Test button found:', testButton);
-
-        // Reset test results
-        testResults = [];
-        currentTestIndex = 0;
-
-        // Collect all endpoints from all categories
-        const allEndpoints = [];
-        console.log('📚 Collecting endpoints...');
-
-        Object.entries(apiEndpoints).forEach(([categoryName, categoryData]) => {
-            console.log(`📂 Processing category: ${categoryName}`, categoryData);
-            categoryData.endpoints.forEach((endpoint, endpointIndex) => {
-                allEndpoints.push({
-                    ...endpoint,
-                    category: categoryName,
-                    categoryName: categoryData.name,
-                    endpointIndex: endpointIndex
-                });
-            });
-        });
-
-        totalTests = allEndpoints.length;
-        console.log(`🎯 Found ${totalTests} endpoints to test:`, allEndpoints);
-
-        if (totalTests === 0) {
-            console.log('❌ No endpoints found to test!');
-            alert('❌ No endpoints found to test!');
-            return;
-        }
-
-        // Show progress section and hide default content
-        console.log('📊 Showing progress section...');
-        const progressSection = document.getElementById('test-progress-section');
-        const defaultContent = document.getElementById('default-content');
-        const resultsSection = document.getElementById('test-results-section');
-
-        console.log('🔍 DOM elements found:', { progressSection, defaultContent, resultsSection });
-
-        // Check if elements exist before manipulating them
-        if (progressSection) {
-            progressSection.classList.remove('d-none');
-            console.log('✅ Progress section shown');
-        } else {
-            console.error('❌ Progress section not found!');
-        }
-
-        if (defaultContent) {
-            defaultContent.classList.add('d-none');
-            console.log('✅ Default content hidden');
-        } else {
-            console.error('❌ Default content not found!');
-        }
-
-        if (resultsSection) {
-            resultsSection.classList.add('d-none');
-            console.log('✅ Results section hidden');
-        } else {
-            console.error('❌ Results section not found!');
-        }
-
-        // Disable the test button
-        console.log('🔘 Test button found:', testButton);
-
-        if (testButton) {
-            testButton.disabled = true;
-            testButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Testing...';
-            console.log('✅ Button disabled and text updated');
-        }
-
-        // Continue with the rest of the function (the try block will wrap this)
-        console.log('🎯 Starting sequential endpoint testing...');
-
-        for (let i = 0; i < allEndpoints.length; i++) {
-            const endpoint = allEndpoints[i];
-            currentTestIndex = i + 1;
-
-            // Update progress UI
-            updateTestProgress(endpoint, currentTestIndex, totalTests);
-
-            // Test the endpoint
-            console.log(`🧪 Starting test ${currentTestIndex}/${totalTests}: ${endpoint.method} ${endpoint.path}`);
-            const result = await testEndpointSequential(endpoint);
-
-            // Store result
-            testResults.push(result);
-            console.log(`✅ Completed test ${currentTestIndex}/${totalTests}: ${result.success ? 'PASS' : 'FAIL'}`);
-
-            // Small delay between requests to avoid overwhelming the server
-            await new Promise(resolve => setTimeout(resolve, 500));
-        }
-
-        // Show results
-        console.log('🎉 All tests completed, displaying results...');
-        displayTestResults();
-
-        console.log('🏆 === TESTING COMPLETED ===');
-        const successfulTests = testResults.filter(r => r.success);
-        const failedTests = testResults.filter(r => !r.success);
-        console.log(`📊 Final Results: ${successfulTests.length} passed, ${failedTests.length} failed out of ${totalTests} total tests`);
-
-    } catch (error) {
-        console.error('❌ Error during sequential testing:', error);
-        alert('❌ Error during testing: ' + error.message);
-    } finally {
-        // Re-enable the test button
-        if (testButton) {
-            testButton.disabled = false;
-            testButton.innerHTML = '<i class="fas fa-play-circle me-2"></i>Test All Endpoints';
-            console.log('✅ Button re-enabled');
-        }
-
-        // Hide progress section
-        const progressSection = document.getElementById('test-progress-section');
-        if (progressSection) {
-            progressSection.classList.add('d-none');
-            console.log('✅ Progress section hidden');
-        }
-
-        console.log('🏁 Test execution completed');
-    }
-}
-
-function updateTestProgress(endpoint, current, total) {
-    const progressPercent = (current / total) * 100;
-
-    const currentTestInfo = document.getElementById('current-test-info');
-    const testCounter = document.getElementById('test-counter');
-    const testProgressBar = document.getElementById('test-progress-bar');
-    const currentEndpointDetails = document.getElementById('current-endpoint-details');
-
-    console.log('Updating progress for:', endpoint.path, { currentTestInfo, testCounter, testProgressBar, currentEndpointDetails });
-
-    if (currentTestInfo) {
-        currentTestInfo.innerHTML = `
-            <span class="badge bg-${getMethodColor(endpoint.method)} me-2">${endpoint.method}</span>
-            ${endpoint.path}
-        `;
-    }
-
-    if (testCounter) {
-        testCounter.textContent = `${current} / ${total}`;
-    }
-
-    if (testProgressBar) {
-        testProgressBar.style.width = `${progressPercent}%`;
-    }
-
-    if (currentEndpointDetails) {
-        currentEndpointDetails.textContent = `${endpoint.categoryName} - ${endpoint.description}`;
-    }
-}
-
-async function testEndpointSequential(endpoint) {
-    const requestStartTime = new Date();
-    console.log(`Testing endpoint: ${endpoint.method} ${endpoint.path}`);
-
-    // Prepare request data
-    let actualPath = endpoint.path;
-    let requestBody = '';
-
-    // Handle path parameters
-    if (endpoint.hasId) {
-        // For testing, use a sample ID
-        actualPath = actualPath.replace('{id}', '1');
-        console.log(`   Replaced path parameter: ${endpoint.path} → ${actualPath}`);
-    }
-
-    // Prepare request body if needed
-    if ((endpoint.method === 'POST' || endpoint.method === 'PUT') && endpoint.requiresBody) {
-        requestBody = getSampleBody(endpoint.category, endpoint.path);
-        console.log(`   Request body prepared (${requestBody.length} characters)`);
-    }
-
-    const requestHeaders = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-    };
-
-    const requestData = {
-        endpoint: actualPath,
-        method: endpoint.method,
-        requestBody: requestBody
-    };
-
-    const startTime = performance.now();
-
-    try {
-        const response = await fetch('/Testing/TestEndpoint', {
-            method: 'POST',
-            headers: requestHeaders,
-            body: new URLSearchParams(requestData)
-        });
-
-        const endTime = performance.now();
-        const responseTime = (endTime - startTime).toFixed(2);
-        const responseEndTime = new Date();
-
-        const responseBody = await response.text();
-
-        let parsedResponse = null;
-        try {
-            parsedResponse = JSON.parse(responseBody);
-        } catch (e) {
-            // Response is not JSON
-        }
-
-        console.log(`   ✅ ${endpoint.method} ${endpoint.path} - ${response.status} ${response.statusText} (${responseTime}ms)`);
-
-        return {
-            endpoint: endpoint,
-            success: response.ok,
-            statusCode: response.status,
-            statusText: response.statusText,
-            responseTime: responseTime,
-            requestData: requestData,
-            responseBody: responseBody,
-            parsedResponse: parsedResponse,
-            requestTime: requestStartTime.toISOString(),
-            responseTime: responseEndTime.toISOString(),
-            error: null
-        };
-
-    } catch (error) {
-        console.error(`   ❌ ${endpoint.method} ${endpoint.path} - Network Error: ${error.message}`);
-
-        return {
-            endpoint: endpoint,
-            success: false,
-            statusCode: 0,
-            statusText: 'Network Error',
-            responseTime: '0.00',
-            requestData: requestData,
-            responseBody: '',
-            parsedResponse: null,
-            requestTime: requestStartTime.toISOString(),
-            responseTime: new Date().toISOString(),
-            error: error.message
-        };
-    }
-}
-
-function displayTestResults() {
-    console.log('Displaying test results...');
-    console.log('Total test results:', testResults.length);
-
-    // Check if we have the required DOM elements
-    const testResultsSection = document.getElementById('test-results-section');
-    if (!testResultsSection) {
-        console.error('Test results section not found in DOM!');
-        return;
-    }
-
-    const successfulTests = testResults.filter(r => r.success);
-    const failedTests = testResults.filter(r => !r.success);
-
-    console.log(`Test Summary: ${successfulTests.length} passed, ${failedTests.length} failed, ${totalTests} total`);
-
-    // Log detailed results to console
-    console.log('=== TEST RESULTS SUMMARY ===');
-    console.log(`✅ Passed: ${successfulTests.length}`);
-    console.log(`❌ Failed: ${failedTests.length}`);
-    console.log(`📊 Total: ${totalTests}`);
-
-    if (failedTests.length > 0) {
-        console.log('Failed endpoints:');
-        failedTests.forEach(failure => {
-            console.error(`❌ ${failure.endpoint.method} ${failure.endpoint.path}`);
-            console.error(`   Status: ${failure.statusCode} ${failure.statusText}`);
-            if (failure.error) {
-                console.error(`   Error: ${failure.error}`);
+        // Clear all saved IDs
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('id-')) {
+                localStorage.removeItem(key);
             }
         });
-    }
-
-    // Update summary badges
-    const summaryBadges = document.getElementById('test-summary-badges');
-    if (summaryBadges) {
-        summaryBadges.innerHTML = `
-            <span class="badge bg-success me-2">${successfulTests.length} Passed</span>
-            <span class="badge bg-danger me-2">${failedTests.length} Failed</span>
-            <span class="badge bg-secondary">${totalTests} Total</span>
-        `;
-        console.log('Updated summary badges');
-    } else {
-        console.warn('test-summary-badges element not found');
-    }
-
-    // Create detailed results
-    let resultsHtml = '<div class="accordion" id="testResultsAccordion">';
-
-    // Group results by category
-    const resultsByCategory = {};
-    testResults.forEach(result => {
-        const category = result.endpoint.categoryName;
-        if (!resultsByCategory[category]) {
-            resultsByCategory[category] = [];
-        }
-        resultsByCategory[category].push(result);
-    });
-
-    let resultIndex = 0;
-    Object.entries(resultsByCategory).forEach(([categoryName, categoryResults]) => {
-        const categorySuccess = categoryResults.filter(r => r.success).length;
-        const categoryTotal = categoryResults.length;
-
-        resultsHtml += `
-            <div class="accordion-item">
-                <h2 class="accordion-header" id="heading${resultIndex}">
-                    <button class="accordion-button ${resultIndex === 0 ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${resultIndex}">
-                        <div class="d-flex align-items-center w-100">
-                            <span class="me-3">${categoryName}</span>
-                            <span class="badge bg-success me-2">${categorySuccess}/${categoryTotal} Passed</span>
-                            <small class="text-muted ms-auto">${categoryResults.length} endpoints</small>
-                        </div>
-                    </button>
-                </h2>
-                <div id="collapse${resultIndex}" class="accordion-collapse collapse ${resultIndex === 0 ? 'show' : ''}" data-bs-parent="#testResultsAccordion">
-                    <div class="accordion-body p-0">
-                        <div class="list-group list-group-flush">
-        `;
-
-        categoryResults.forEach(result => {
-            const statusBadge = result.success
-                ? '<span class="badge bg-success">PASS</span>'
-                : '<span class="badge bg-danger">FAIL</span>';
-
-            const methodBadge = `<span class="badge bg-${getMethodColor(result.endpoint.method)}">${result.endpoint.method}</span>`;
-
-            resultsHtml += `
-                <div class="list-group-item">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div>
-                            ${methodBadge}
-                            <code class="ms-2">${result.endpoint.path}</code>
-                        </div>
-                        <div>
-                            ${statusBadge}
-                            <small class="text-muted ms-2">${result.responseTime}ms</small>
-                        </div>
-                    </div>
-                    <small class="text-muted d-block mb-2">${result.endpoint.description}</small>
-                    ${!result.success ? `
-                        <div class="alert alert-danger py-2 mb-2">
-                            <strong>HTTP ${result.statusCode} ${result.statusText}</strong>
-                            ${result.error ? `<br><small>Error: ${result.error}</small>` : ''}
-                        </div>
-                    ` : ''}
-                    <div class="small text-muted">
-                        <strong>Request:</strong> ${result.requestData.endpoint} (${result.requestData.method})<br>
-                        <strong>Response:</strong> ${result.statusCode} ${result.statusText} (${result.responseTime}ms)
-                    </div>
-                </div>
-            `;
+        
+        // Hide all edited badges
+        document.querySelectorAll('[id^="editedBadge-"]').forEach(badge => {
+            badge.classList.add('d-none');
         });
-
-        resultsHtml += `
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        resultIndex++;
-    });
-
-    resultsHtml += '</div>';
-
-    const testResultsContent = document.getElementById('test-results-content');
-    if (testResultsContent) {
-        testResultsContent.innerHTML = resultsHtml;
-        console.log('Updated test results content');
-    } else {
-        console.warn('test-results-content element not found');
-    }
-
-    // Show results section
-    if (testResultsSection) {
-        testResultsSection.classList.remove('d-none');
-        console.log('Showed test results section');
-
-        // Scroll to results
-        setTimeout(() => {
-            testResultsSection.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-    } else {
-        console.warn('test-results-section element not found');
-    }
-}
-
-function clearTestResults() {
-    const testResultsSection = document.getElementById('test-results-section');
-    const defaultContent = document.getElementById('default-content');
-    const testProgressSection = document.getElementById('test-progress-section');
-
-    if (testResultsSection) testResultsSection.classList.add('d-none');
-    if (defaultContent) defaultContent.classList.remove('d-none');
-    if (testProgressSection) testProgressSection.classList.add('d-none');
-
-    testResults = [];
-    currentTestIndex = 0;
-    totalTests = 0;
-    console.log('Cleared test results');
-}
-
-function debugTest() {
-    console.log('=== DEBUG TEST STARTED ===');
-    console.log('1. Checking apiEndpoints object:', apiEndpoints);
-
-    if (!apiEndpoints) {
-        console.error('❌ apiEndpoints object is undefined!');
-        alert('apiEndpoints object is undefined!');
-        return;
-    }
-
-    console.log('2. Checking apiEndpoints structure:');
-    Object.entries(apiEndpoints).forEach(([key, value]) => {
-        console.log(`   ${key}:`, {
-            name: value.name,
-            endpointsCount: value.endpoints ? value.endpoints.length : 0,
-            hasEndpoints: !!value.endpoints
+        
+        // Hide all custom ID badges
+        document.querySelectorAll('[id^="customIdBadge-"]').forEach(badge => {
+            badge.classList.add('d-none');
         });
-    });
-
-    console.log('3. Checking DOM elements:');
-    const elements = [
-        'test-progress-section',
-        'default-content',
-        'test-results-section',
-        'test-summary-badges',
-        'test-results-content'
-    ];
-
-    elements.forEach(id => {
-        const element = document.getElementById(id);
-        console.log(`   ${id}:`, element ? '✅ Found' : '❌ Not found');
-    });
-
-    console.log('4. Checking buttons:');
-    const buttons = [
-        '[onclick*="testAllEndpoints"]',
-        '[onclick="clearTestResults()"]',
-        '[onclick="debugTest()"]'
-    ];
-
-    buttons.forEach(selector => {
-        const button = document.querySelector(selector);
-        console.log(`   ${selector}:`, button ? '✅ Found' : '❌ Not found');
-    });
-
-    console.log('5. Testing simple function call...');
-    try {
-        // Test if we can call displayEndpoints
-        console.log('   Calling displayEndpoints with admin...');
-        displayEndpoints('admin');
-        console.log('   ✅ displayEndpoints call successful');
-    } catch (error) {
-        console.error('   ❌ displayEndpoints call failed:', error);
+        
+        showValidationMessage('All payloads and IDs reset to sample data!', 'info');
+        console.log('🔄 All edited payloads and IDs cleared');
     }
-
-    console.log('=== DEBUG TEST COMPLETED ===');
-    alert('Debug test completed! Check the browser console (F12) for detailed results.');
 }
 
-// Test user management functions removed - tester role has direct access to all endpoints
-
-function displayEndpoints(category) {
-    console.log('displayEndpoints called with category:', category);
+function showCategory(category) {
     const categoryData = apiEndpoints[category];
-    console.log('categoryData found:', categoryData);
-
-    if (!categoryData) {
-        console.error('No category data found for:', category);
-        return;
-    }
-
-    const contentDiv = document.getElementById('endpoints-content');
-    const titleDiv = document.getElementById('selected-category-title');
-
-    console.log('Updating title and content for category:', category);
-    titleDiv.innerHTML = `<i class="${categoryData.icon} text-${categoryData.color}"></i> ${categoryData.name}`;
-
-    // Hide test sections when showing regular endpoints
-    const testProgressSection = document.getElementById('test-progress-section');
-    const testResultsSection = document.getElementById('test-results-section');
-    const defaultContent = document.getElementById('default-content');
-
-    if (testProgressSection) testProgressSection.classList.add('d-none');
-    if (testResultsSection) testResultsSection.classList.add('d-none');
-    if (defaultContent) defaultContent.classList.add('d-none');
-
-    let html = `
-        <div class="alert alert-${categoryData.color} border-0 rounded-3 mb-4">
-            <div class="d-flex align-items-center">
-                <i class="${categoryData.icon} fa-lg me-3"></i>
-                <div>
-                    <h6 class="mb-1 fw-bold">${categoryData.name}</h6>
-                    <small class="text-muted">${categoryData.description}</small>
-                </div>
-            </div>
-        </div>
-        <div class="row">`;
+    if (!categoryData) return;
     
-    categoryData.endpoints.forEach((endpoint, index) => {
+    // Update header
+    document.getElementById('selected-category-title').innerHTML = 
+        `<i class="${categoryData.icon} me-2 text-${categoryData.color}"></i>${categoryData.name}`;
+    
+    // Generate endpoints HTML
+    let endpointsHtml = `
+        <div class="mb-4">
+            <h5 class="text-${categoryData.color} mb-3">
+                <i class="${categoryData.icon} me-2"></i>${categoryData.name}
+            </h5>
+            <p class="text-muted mb-4">${categoryData.description}</p>
+        </div>
+        <div class="row">
+    `;
+    
+    categoryData.endpoints.forEach(endpoint => {
         const methodColor = getMethodColor(endpoint.method);
-        const methodIcon = getMethodIcon(endpoint.method);
+        const hasId = endpoint.hasId ? ' (requires ID)' : '';
         
-        html += `
+        endpointsHtml += `
             <div class="col-md-6 mb-4">
-                <div class="card endpoint-card shadow-sm h-100">
-                    <div class="card-header bg-${methodColor} text-white border-0 rounded-top-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0 fw-bold">
-                                <i class="${methodIcon} me-2"></i> ${endpoint.method} ${endpoint.path}
-                            </h6>
-                            <span class="badge bg-light text-dark method-badge">${endpoint.description}</span>
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-header bg-light border-0 py-3">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="badge bg-${methodColor} method-badge">${endpoint.method}</span>
+                            <small class="text-muted">${endpoint.path}${hasId}</small>
                         </div>
                     </div>
-                    <div class="card-body p-4">
-                        <p class="text-muted small mb-4 fst-italic">${endpoint.description}</p>
-                        
-                        ${endpoint.hasId ? `
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold text-dark">ID Parameter:</label>
-                                <input type="text" class="form-control form-control-sm border-0 bg-light" id="id-${category}-${index}" placeholder="Enter ID" value="1">
-                            </div>
-                        ` : ''}
-                        
+                    <div class="card-body">
+                        <h6 class="card-title">${endpoint.description}</h6>
+                        <p class="card-text text-muted small">${endpoint.path}</p>
                         ${endpoint.requiresBody ? `
-                            <div class="mb-4">
-                                <label class="form-label small fw-bold text-dark">Request Body (JSON):</label>
-                                <textarea class="form-control form-control-sm border-0 bg-light" id="body-${category}-${index}" rows="4" placeholder="Enter JSON request body">${getSampleBody(category, endpoint.path)}</textarea>
+                            <div class="mt-3">
+                                <button class="btn btn-outline-primary btn-sm" onclick="showPayloadEditor('${category}', '${endpoint.path}', '${endpoint.method}')" id="editBtn-${category}-${endpoint.path.replace(/\//g, '-')}">
+                                    <i class="fas fa-edit me-1"></i>Edit Payload
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm ms-2" onclick="showSampleBody('${category}', '${endpoint.path}')">
+                                    <i class="fas fa-code me-1"></i>View Sample
+                                </button>
+                                <span class="badge bg-success ms-2 d-none" id="editedBadge-${category}-${endpoint.path.replace(/\//g, '-')}">
+                                    <i class="fas fa-check me-1"></i>Edited
+                                </span>
+                                <span class="badge bg-info ms-2 d-none" id="customIdBadge-${category}-${endpoint.path.replace(/\//g, '-')}">
+                                    <i class="fas fa-id-card me-1"></i>Custom ID
+                                </span>
                             </div>
                         ` : ''}
-                        
-                        <div class="d-grid">
-                            <button class="btn btn-${methodColor} btn-sm btn-test" onclick="testEndpoint('${endpoint.method}', '${endpoint.path}', '${category}', ${index})">
-                                <i class="fas fa-play me-2"></i> Test Endpoint
+                        <div class="mt-3">
+                            <button class="btn btn-primary btn-sm" onclick="testEndpoint('${endpoint.path}', '${endpoint.method}', '${category}')">
+                                <i class="fas fa-play me-1"></i>Test Endpoint
                             </button>
                         </div>
-                        
-                        <div id="result-${category}-${index}" class="mt-4"></div>
                     </div>
                 </div>
             </div>
         `;
     });
     
-    html += '</div>';
-    contentDiv.innerHTML = html;
+    endpointsHtml += '</div>';
+    
+    document.getElementById('endpoints-content').innerHTML = endpointsHtml;
 }
 
 function getMethodColor(method) {
-    switch (method) {
-        case 'GET': return 'primary';
-        case 'POST': return 'success';
+    switch(method) {
+        case 'GET': return 'success';
+        case 'POST': return 'primary';
         case 'PUT': return 'warning';
         case 'DELETE': return 'danger';
         default: return 'secondary';
     }
 }
 
-function getMethodIcon(method) {
-    switch (method) {
-        case 'GET': return 'fas fa-download';
-        case 'POST': return 'fas fa-plus';
-        case 'PUT': return 'fas fa-edit';
-        case 'DELETE': return 'fas fa-trash';
-        default: return 'fas fa-question';
-    }
-}
+// Global variables for payload editor
+let currentEndpoint = null;
+let currentCategory = null;
+let currentMethod = null;
+let currentPath = null;
+let editedPayloads = {}; // Store edited payloads
 
-// No role switching needed - tester has access to all endpoints
-
-function getSampleBody(category, endpointPath) {
-    const samples = {
-        // Admin samples
-        'admin': {
-            'user': '{\n  "email": "test@example.com",\n  "password": "TestPass123!",\n  "fullName": "Test User",\n  "phone": "+1234567890",\n  "role": "Client"\n}',
-            'role': '{\n  "role": "Project Manager"\n}',
-            'document': '{\n  "projectId": "project123",\n  "fileName": "blueprint_v1.pdf",\n  "fileType": "application/pdf",\n  "fileSize": 2048576,\n  "fileUrl": "https://storage.example.com/documents/blueprint_v1.pdf",\n  "uploadedBy": "user456",\n  "description": "Main building blueprint version 1"\n}',
-            'notification': '{\n  "userId": "user123",\n  "title": "System Maintenance",\n  "message": "Scheduled maintenance on Sunday 2 AM - 4 AM",\n  "type": "System",\n  "isRead": false\n}'
-        },
-        // Project Manager samples
-        'projectManager': {
-            'project': '{\n  "projectManagerId": "pm123",\n  "clientId": "client456",\n  "name": "Office Renovation Project",\n  "description": "Complete renovation of office building",\n  "budgetPlanned": 50000.00,\n  "budgetActual": 0.00,\n  "status": "Planning",\n  "startDate": "2024-01-15T00:00:00Z",\n  "endDatePlanned": "2024-06-15T00:00:00Z"\n}',
-            'phase': '{\n  "projectId": "project123",\n  "name": "Foundation Phase",\n  "description": "Building foundation and structural work",\n  "startDate": "2024-01-15T00:00:00Z",\n  "endDate": "2024-03-15T00:00:00Z",\n  "status": "Not Started",\n  "progress": 0,\n  "budget": 15000.00,\n  "assignedTo": "contractor456",\n  "isActive": true\n}',
-            'task': '{\n  "projectId": "project123",\n  "phaseId": "phase789",\n  "name": "Install Electrical Wiring",\n  "description": "Install electrical wiring for the main floor",\n  "assignedTo": "contractor456",\n  "priority": "High",\n  "status": "Not Started",\n  "startDate": "2024-02-01T00:00:00Z",\n  "dueDate": "2024-02-15T00:00:00Z",\n  "progress": 0,\n  "estimatedHours": 40.0,\n  "actualHours": 0.0,\n  "isActive": true\n}',
-            'document': '{\n  "projectId": "project123",\n  "fileName": "blueprint_v1.pdf",\n  "fileType": "application/pdf",\n  "fileSize": 2048576,\n  "fileUrl": "https://storage.example.com/documents/blueprint_v1.pdf",\n  "uploadedBy": "user456",\n  "description": "Main building blueprint version 1",\n  "isActive": true\n}'
-        },
-        // Contractor samples
-        'contractor': {
-            'document': '{\n  "projectId": "project123",\n  "fileName": "progress_report.pdf",\n  "fileType": "application/pdf",\n  "fileSize": 1024000,\n  "fileUrl": "https://storage.example.com/documents/progress_report.pdf",\n  "description": "Weekly progress report",\n  "isActive": true\n}',
-            'task': '{\n  "projectId": "project123",\n  "phaseId": "phase789",\n  "name": "Install Electrical Wiring",\n  "description": "Install electrical wiring for the main floor",\n  "priority": "High",\n  "status": "In Progress",\n  "progress": 65,\n  "estimatedHours": 40.0,\n  "actualHours": 26.0,\n  "isActive": true\n}'
-        },
-        // Client samples
-        'client': {
-            'maintenanceRequest': '{\n  "projectId": "project456",\n  "description": "Air conditioning unit not working properly",\n  "priority": "High",\n  "mediaUrl": "",\n  "isActive": true\n}',
-            'payment': '{\n  "amount": 2200.00,\n  "method": "Bank Transfer",\n  "status": "Pending",\n  "transactionId": "TXN-2024-001",\n  "notes": "Payment for electrical work completion"\n}'
-        }
-    };
-
-    // Determine the appropriate sample based on endpoint path
-    let sampleKey = 'default';
-
-    if (endpointPath.includes('user') || endpointPath.includes('role')) {
-        sampleKey = 'user';
-    } else if (endpointPath.includes('project') && !endpointPath.includes('task') && !endpointPath.includes('phase') && !endpointPath.includes('document')) {
-        sampleKey = 'project';
-    } else if (endpointPath.includes('phase')) {
-        sampleKey = 'phase';
-    } else if (endpointPath.includes('task')) {
-        sampleKey = 'task';
-    } else if (endpointPath.includes('document')) {
-        sampleKey = 'document';
-    } else if (endpointPath.includes('maintenanceRequest') || endpointPath.includes('maintenance')) {
-        sampleKey = 'maintenanceRequest';
-    } else if (endpointPath.includes('payment') || endpointPath.includes('pay')) {
-        sampleKey = 'payment';
-    } else if (endpointPath.includes('notification')) {
-        sampleKey = 'notification';
-    }
-
-    const categorySamples = samples[category] || {};
-    return categorySamples[sampleKey] || '{\n  "name": "Test Item",\n  "description": "A test description"\n}';
-}
-
-async function testEndpoint(method, path, category, index) {
-    const resultDiv = document.getElementById(`result-${category}-${index}`);
-    resultDiv.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Testing...</div>';
-
-    // Get input values
-    let actualPath = path;
+function testEndpoint(path, method, category) {
+    const categoryData = apiEndpoints[category];
+    const endpoint = categoryData.endpoints.find(e => e.path === path && e.method === method);
+    
+    if (!endpoint) return;
+    
     let requestBody = '';
     
+    // Check if we have an edited payload for this endpoint
+    const payloadKey = `${method}:${path}`;
+    if (editedPayloads[payloadKey]) {
+        requestBody = editedPayloads[payloadKey];
+    } else if (endpoint.requiresBody && endpoint.sampleBody) {
+        requestBody = JSON.stringify(endpoint.sampleBody, null, 2);
+    }
+    
+    // Get custom ID or use default
+    let customId = 'sample123';
     if (path.includes('{id}')) {
-        const idInput = document.getElementById(`id-${category}-${index}`);
-        if (idInput && idInput.value) {
-            actualPath = path.replace('{id}', idInput.value);
-        } else {
-            resultDiv.innerHTML = '<div class="alert alert-warning">⚠️ Please enter an ID</div>';
-            return;
-        }
+        const idKey = `id-${method}:${path}`;
+        customId = localStorage.getItem(idKey) || 'sample123';
     }
     
-    if (method === 'POST' || method === 'PUT') {
-        const bodyInput = document.getElementById(`body-${category}-${index}`);
-        if (bodyInput && bodyInput.value) {
-            requestBody = bodyInput.value;
-        }
-    }
-
-    // Capture request details
-    const requestStartTime = new Date();
-    const requestHeaders = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-    };
+    // Replace {id} with custom ID
+    const actualPath = path.replace('{id}', customId);
     
-    const requestData = {
-        endpoint: actualPath,
-        method: method,
-        requestBody: requestBody
-    };
-
-    try {
-        const startTime = performance.now();
-        
-        const response = await fetch('/Testing/TestEndpoint', {
-            method: 'POST',
-            headers: requestHeaders,
-            body: new URLSearchParams(requestData)
-        });
-
-        const endTime = performance.now();
-        const responseTime = (endTime - startTime).toFixed(2);
-        const responseEndTime = new Date();
-
-        if (response.ok) {
-            const result = await response.json();
-            if (result.success) {
-                resultDiv.innerHTML = `
-                    <div class="alert alert-success">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <i class="fas fa-check-circle"></i> <strong>Success!</strong><br>
-                                <small>Status: ${result.statusCode} ${result.statusText}</small><br>
-                                <small>Response time: ${responseTime}ms</small>
-                            </div>
-                            <button class="btn btn-info btn-sm" onclick="showPacketInspectionFromButton(this, '${actualPath}', '${method}', '${responseTime}', '${requestStartTime.toISOString()}', '${responseEndTime.toISOString()}')" data-request='${JSON.stringify(requestData)}' data-response='${JSON.stringify(result)}'>
-                                <i class="fas fa-search"></i> Inspect Packets
-                            </button>
-                        </div>
-                    </div>
-                `;
-            } else {
-                resultDiv.innerHTML = `
-                    <div class="alert alert-warning">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong><br>
-                                <small>${result.message}</small><br>
-                                <small>Response time: ${responseTime}ms</small>
-                            </div>
-                            <button class="btn btn-info btn-sm" onclick="showPacketInspectionFromButton(this, '${actualPath}', '${method}', '${responseTime}', '${requestStartTime.toISOString()}', '${responseEndTime.toISOString()}')" data-request='${JSON.stringify(requestData)}' data-response='${JSON.stringify(result)}'>
-                                <i class="fas fa-search"></i> Inspect Packets
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
+    console.log(`🧪 Testing ${method} ${actualPath}`);
+    console.log(`🆔 Using ID: ${customId}`);
+    
+    // Make the API call
+    fetch('/Testing/TestEndpoint', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+        },
+        body: new URLSearchParams({
+            endpoint: actualPath,
+            method: method,
+            requestBody: requestBody
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log(`✅ ${method} ${actualPath} - Success (${data.statusCode})`);
+            console.log('Response:', data.responseBody);
         } else {
-            resultDiv.innerHTML = `
-                <div class="alert alert-danger">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <i class="fas fa-times-circle"></i> <strong>Error:</strong><br>
-                            <small>HTTP ${response.status} ${response.statusText}</small><br>
-                            <small>Response time: ${responseTime}ms</small>
-                        </div>
-                                                    <button class="btn btn-info btn-sm" onclick="showPacketInspectionFromButton(this, '${actualPath}', '${method}', '${responseTime}', '${requestStartTime.toISOString()}', '${responseEndTime.toISOString()}')" data-request='${JSON.stringify(requestData)}' data-response='{"success": false, "message": "HTTP Error"}'>
-                                <i class="fas fa-search"></i> Inspect Packets
-                            </button>
-                    </div>
-                </div>
-            `;
+            console.log(`❌ ${method} ${actualPath} - Failed (${data.statusCode})`);
+            console.log('Error:', data.message);
         }
-    } catch (error) {
-        resultDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> Error: ${error.message}</div>`;
-    }
+    })
+    .catch(error => {
+        console.log(`❌ ${method} ${actualPath} - Error`);
+        console.error('Error:', error);
+    });
 }
 
-function showPacketInspectionFromButton(button, endpoint, method, responseTime, requestTimestamp, responseTimestamp) {
-    const requestData = JSON.parse(button.getAttribute('data-request'));
-    const responseData = JSON.parse(button.getAttribute('data-response'));
-    showPacketInspection(endpoint, method, requestData, responseData, responseTime, requestTimestamp, responseTimestamp);
-}
-
-function showPacketInspection(endpoint, method, requestData, responseData, responseTime, requestTimestamp, responseTimestamp) {
-    // Populate modal with packet data
-    document.getElementById('modal-endpoint').textContent = `${method} ${endpoint}`;
-    document.getElementById('request-method').textContent = method;
-    document.getElementById('request-endpoint').textContent = endpoint;
-    document.getElementById('request-timestamp').textContent = new Date(requestTimestamp).toLocaleString();
+function showPayloadEditor(category, path, method) {
+    const categoryData = apiEndpoints[category];
+    const endpoint = categoryData.endpoints.find(e => e.path === path && e.method === method);
     
-    document.getElementById('response-status').textContent = responseData.success ? `${responseData.statusCode} ${responseData.statusText}` : 'Error';
-    document.getElementById('response-status').className = responseData.success ? 'badge bg-success fs-6' : 'badge bg-danger fs-6';
-    document.getElementById('response-time').textContent = `${responseTime}ms`;
-    document.getElementById('response-timestamp').textContent = new Date(responseTimestamp).toLocaleString();
-
-    // Request details
-    document.getElementById('request-headers').textContent = JSON.stringify({
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'RequestVerificationToken': '[HIDDEN]'
-    }, null, 2);
+    if (!endpoint) return;
     
-    document.getElementById('request-body').textContent = JSON.stringify(requestData, null, 2);
-
-    // Response details
-    if (responseData.headers) {
-        document.getElementById('response-headers').textContent = JSON.stringify(responseData.headers, null, 2);
+    // Store current context
+    currentCategory = category;
+    currentPath = path;
+    currentMethod = method;
+    currentEndpoint = endpoint;
+    
+    // Update modal content
+    document.getElementById('modalMethod').textContent = method;
+    document.getElementById('modalEndpoint').textContent = path;
+    document.getElementById('modalDescription').textContent = endpoint.description;
+    
+    // Show/hide ID input section based on whether path contains {id}
+    const idInputSection = document.getElementById('idInputSection');
+    const hasId = path.includes('{id}');
+    if (hasId) {
+        idInputSection.style.display = 'block';
+        // Load saved ID or use default
+        const idKey = `id-${method}:${path}`;
+        const savedId = localStorage.getItem(idKey) || 'sample123';
+        document.getElementById('customIdInput').value = savedId;
     } else {
-        document.getElementById('response-headers').textContent = 'No response headers available';
+        idInputSection.style.display = 'none';
     }
     
-    if (responseData.responseBody) {
-        try {
-            const formattedBody = JSON.stringify(JSON.parse(responseData.responseBody), null, 2);
-            document.getElementById('response-body').textContent = formattedBody;
-        } catch {
-            document.getElementById('response-body').textContent = responseData.responseBody || 'No response body';
-        }
-    } else {
-        document.getElementById('response-body').textContent = 'No response body available';
-    }
-
-    // Analysis
-    let analysis = '';
-    if (responseData.success) {
-        analysis += `<div class="alert alert-success"><i class="fas fa-check-circle"></i> API call successful</div>`;
-        if (responseData.statusCode === 200) {
-            analysis += `<div class="text-success"><i class="fas fa-check"></i> HTTP 200 OK - Standard success response</div>`;
-        } else if (responseData.statusCode === 201) {
-            analysis += `<div class="text-success"><i class="fas fa-check"></i> HTTP 201 Created - Resource successfully created</div>`;
-        }
-        
-        if (responseData.responseBody) {
-            try {
-                const body = JSON.parse(responseData.responseBody);
-                if (Array.isArray(body)) {
-                    analysis += `<div class="text-info"><i class="fas fa-list"></i> Response contains array with ${body.length} items</div>`;
-                } else if (typeof body === 'object') {
-                    analysis += `<div class="text-info"><i class="fas fa-object-group"></i> Response contains object with ${Object.keys(body).length} properties</div>`;
-                }
-            } catch {}
-        }
-    } else {
-        analysis += `<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> API call failed: ${responseData.message}</div>`;
+    // Load payload
+    const payloadKey = `${method}:${path}`;
+    let payload = '';
+    
+    if (editedPayloads[payloadKey]) {
+        payload = editedPayloads[payloadKey];
+    } else if (endpoint.sampleBody) {
+        payload = JSON.stringify(endpoint.sampleBody, null, 2);
     }
     
-    analysis += `<div class="text-muted"><i class="fas fa-clock"></i> Total response time: ${responseTime}ms</div>`;
-    analysis += `<div class="text-muted"><i class="fas fa-paper-plane"></i> Request sent: ${new Date(requestTimestamp).toLocaleTimeString()}</div>`;
-    analysis += `<div class="text-muted"><i class="fas fa-inbox"></i> Response received: ${new Date(responseTimestamp).toLocaleTimeString()}</div>`;
+    document.getElementById('payloadEditor').value = payload;
     
-    document.getElementById('packet-analysis').innerHTML = analysis;
-
     // Show modal
-    const modal = new bootstrap.Modal(document.getElementById('packetInspectionModal'));
+    const modal = new bootstrap.Modal(document.getElementById('payloadEditorModal'));
     modal.show();
 }
 
-function copyPacketData() {
-    const requestData = {
-        headers: document.getElementById('request-headers').textContent,
-        body: document.getElementById('request-body').textContent,
-        method: document.getElementById('request-method').textContent,
-        endpoint: document.getElementById('request-endpoint').textContent,
-        timestamp: document.getElementById('request-timestamp').textContent
-    };
+function formatJSON() {
+    const textarea = document.getElementById('payloadEditor');
+    try {
+        const obj = JSON.parse(textarea.value);
+        textarea.value = JSON.stringify(obj, null, 2);
+        showValidationMessage('JSON formatted successfully!', 'success');
+    } catch (error) {
+        showValidationMessage('Invalid JSON format: ' + error.message, 'danger');
+    }
+}
+
+function validateJSON() {
+    const textarea = document.getElementById('payloadEditor');
+    try {
+        JSON.parse(textarea.value);
+        showValidationMessage('JSON is valid!', 'success');
+    } catch (error) {
+        showValidationMessage('Invalid JSON: ' + error.message, 'danger');
+    }
+}
+
+function loadSamplePayload() {
+    if (currentEndpoint && currentEndpoint.sampleBody) {
+        const payload = JSON.stringify(currentEndpoint.sampleBody, null, 2);
+        document.getElementById('payloadEditor').value = payload;
+        showValidationMessage('Reset to sample payload', 'info');
+    }
+}
+
+function savePayload() {
+    const payload = document.getElementById('payloadEditor').value;
+    const payloadKey = `${currentMethod}:${currentPath}`;
+    editedPayloads[payloadKey] = payload;
     
-    const responseData = {
-        headers: document.getElementById('response-headers').textContent,
-        body: document.getElementById('response-body').textContent,
-        status: document.getElementById('response-status').textContent,
-        responseTime: document.getElementById('response-time').textContent,
-        timestamp: document.getElementById('response-timestamp').textContent
-    };
-    
-    const packetData = {
-        endpoint: document.getElementById('modal-endpoint').textContent,
-        request: requestData,
-        response: responseData,
-        analysis: document.getElementById('packet-analysis').innerText
-    };
-    
-    navigator.clipboard.writeText(JSON.stringify(packetData, null, 2)).then(() => {
-        // Show success message
-        const copyBtn = document.querySelector('#packetInspectionModal .btn-primary');
-        const originalText = copyBtn.innerHTML;
-        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-        copyBtn.className = 'btn btn-success';
+    // Save custom ID if applicable
+    if (currentPath.includes('{id}')) {
+        const customId = document.getElementById('customIdInput').value;
+        const idKey = `id-${currentMethod}:${currentPath}`;
+        localStorage.setItem(idKey, customId);
         
-        setTimeout(() => {
-            copyBtn.innerHTML = originalText;
-            copyBtn.className = 'btn btn-primary';
-        }, 2000);
+        // Show custom ID badge
+        const customIdBadgeId = `customIdBadge-${currentCategory}-${currentPath.replace(/\//g, '-')}`;
+        const customIdBadge = document.getElementById(customIdBadgeId);
+        if (customIdBadge) {
+            customIdBadge.classList.remove('d-none');
+        }
+    }
+    
+    // Save to localStorage
+    savePayloadsToStorage();
+    
+    // Show edited badge
+    const badgeId = `editedBadge-${currentCategory}-${currentPath.replace(/\//g, '-')}`;
+    const badge = document.getElementById(badgeId);
+    if (badge) {
+        badge.classList.remove('d-none');
+    }
+    
+    // Update edit button text
+    const editBtnId = `editBtn-${currentCategory}-${currentPath.replace(/\//g, '-')}`;
+    const editBtn = document.getElementById(editBtnId);
+    if (editBtn) {
+        editBtn.innerHTML = '<i class="fas fa-edit me-1"></i>Edit Payload';
+        editBtn.classList.remove('btn-success');
+        editBtn.classList.add('btn-outline-primary');
+    }
+    
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('payloadEditorModal'));
+    modal.hide();
+    
+    showValidationMessage('Payload and ID saved successfully!', 'success');
+}
+
+function saveAndTestPayload() {
+    savePayload();
+    
+    // Test the endpoint with the edited payload
+    setTimeout(() => {
+        testEndpoint(currentPath, currentMethod, currentCategory);
+    }, 500);
+}
+
+// Helper functions for sample data
+function generateRandomId() {
+    const randomId = 'id_' + Math.random().toString(36).substr(2, 9);
+    document.getElementById('customIdInput').value = randomId;
+    showValidationMessage(`Generated ID: ${randomId}`, 'info');
+}
+
+function insertSampleId() {
+    const customId = document.getElementById('customIdInput').value || 'sample123';
+    insertTextAtCursor(`"${customId}"`);
+}
+
+function insertCurrentDate() {
+    const now = new Date().toISOString();
+    insertTextAtCursor(`"${now}"`);
+}
+
+function insertSampleEmail() {
+    insertTextAtCursor('"user@example.com"');
+}
+
+function insertSampleAmount() {
+    insertTextAtCursor('1500.00');
+}
+
+function insertTextAtCursor(text) {
+    const textarea = document.getElementById('payloadEditor');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const value = textarea.value;
+    
+    textarea.value = value.substring(0, start) + text + value.substring(end);
+    textarea.selectionStart = textarea.selectionEnd = start + text.length;
+    textarea.focus();
+}
+
+function showValidationMessage(message, type) {
+    // Create a temporary alert
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.parentNode.removeChild(alertDiv);
+        }
+    }, 3000);
+}
+
+function showSampleBody(category, path) {
+    const categoryData = apiEndpoints[category];
+    const endpoint = categoryData.endpoints.find(e => e.path === path);
+    
+    if (endpoint && endpoint.sampleBody) {
+        const sampleJson = JSON.stringify(endpoint.sampleBody, null, 2);
+        console.log(`📋 Sample Body for ${path}:`);
+        console.log(sampleJson);
+        
+        // You could also show this in a modal or alert
+        alert(`Sample Body for ${path}:\n\n${sampleJson}`);
+    }
+}
+
+function clearConsoleOutput() {
+    document.getElementById('console-output').innerHTML = '<div class="text-muted opacity-75">Console output cleared...</div>';
+}
+
+function copyConsoleOutput() {
+    const consoleText = document.getElementById('console-output').textContent;
+    navigator.clipboard.writeText(consoleText).then(() => {
+        console.log('Console output copied to clipboard');
     });
 }
+
+// Override console methods to capture output
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+const originalConsoleInfo = console.info;
+
+function captureConsoleMessage(type, args) {
+    const timestamp = new Date().toLocaleTimeString();
+    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)).join(' ');
+    
+    const consoleOutput = document.getElementById('console-output');
+    if (consoleOutput) {
+        const messageElement = document.createElement('div');
+        messageElement.className = `mb-1 text-${type === 'error' ? 'danger' : type === 'warn' ? 'warning' : 'light'}`;
+        messageElement.innerHTML = `<span class="text-muted">[${timestamp}]</span> ${message}`;
+        
+        consoleOutput.appendChild(messageElement);
+        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+}
+
+console.log = function(...args) {
+    captureConsoleMessage('log', args);
+    originalConsoleLog.apply(console, args);
+};
+
+console.error = function(...args) {
+    captureConsoleMessage('error', args);
+    originalConsoleError.apply(console, args);
+};
+
+console.warn = function(...args) {
+    captureConsoleMessage('warn', args);
+    originalConsoleWarn.apply(console, args);
+};
+
+console.info = function(...args) {
+    captureConsoleMessage('info', args);
+    originalConsoleInfo.apply(console, args);
+};
 </script>
-
-
-
-Call the Update Endpoints - maintance update,
-Call Post Audit Log ()

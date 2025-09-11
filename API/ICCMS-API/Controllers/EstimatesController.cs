@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
@@ -6,6 +7,7 @@ namespace ICCMS_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin,Project Manager,Client,Contractor,Tester")] // All authenticated users can access estimates
     public class EstimatesController : ControllerBase
     {
         private readonly IFirebaseService _firebaseService;

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
@@ -6,6 +7,7 @@ namespace ICCMS_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin,Project Manager,Client,Tester")] // Admin oversight, PM management, Client view, Tester access
     public class PaymentsController : ControllerBase
     {
         private readonly IFirebaseService _firebaseService;

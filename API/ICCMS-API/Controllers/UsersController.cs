@@ -8,7 +8,7 @@ namespace ICCMS_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(Roles = "Admin,Project Manager,Client,Contractor,Tester")] // All authenticated users can access their profile
     public class UsersController : ControllerBase
     {
         private readonly IAuthService _authService;

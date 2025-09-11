@@ -42,6 +42,10 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IFirebaseService, FirebaseService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+// Add workflow services
+builder.Services.AddScoped<IQuoteWorkflowService, QuoteWorkflowService>();
+builder.Services.AddScoped<IInvoiceWorkflowService, InvoiceWorkflowService>();
+
 // Add Authentication
 builder
     .Services.AddAuthentication("Bearer")
