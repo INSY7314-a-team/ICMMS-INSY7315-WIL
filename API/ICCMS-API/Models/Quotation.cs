@@ -43,5 +43,52 @@ namespace ICCMS_API.Models
 
         [FirestoreProperty("approvedAt")]
         public DateTime? ApprovedAt { get; set; }
+
+        // New fields for enhanced workflow
+        [FirestoreProperty("items")]
+        public List<QuotationItem> Items { get; set; } = new List<QuotationItem>();
+
+        [FirestoreProperty("subtotal")]
+        public double Subtotal { get; set; }
+
+        [FirestoreProperty("taxTotal")]
+        public double TaxTotal { get; set; }
+
+        [FirestoreProperty("grandTotal")]
+        public double GrandTotal { get; set; }
+
+        [FirestoreProperty("currency")]
+        public string Currency { get; set; } = "ZAR";
+
+        [FirestoreProperty("adminApprovedAt")]
+        public DateTime? AdminApprovedAt { get; set; }
+
+        [FirestoreProperty("clientRespondedAt")]
+        public DateTime? ClientRespondedAt { get; set; }
+
+        [FirestoreProperty("clientDecisionNote")]
+        public string? ClientDecisionNote { get; set; }
+
+        [FirestoreProperty("updatedAt")]
+        public DateTime UpdatedAt { get; set; }
+
+        // New fields for AI workflow
+        [FirestoreProperty("isAiGenerated")]
+        public bool IsAiGenerated { get; set; } = false;
+
+        [FirestoreProperty("estimateId")]
+        public string? EstimateId { get; set; }
+
+        [FirestoreProperty("pmEditedAt")]
+        public DateTime? PmEditedAt { get; set; }
+
+        [FirestoreProperty("pmEditNotes")]
+        public string? PmEditNotes { get; set; }
+
+        [FirestoreProperty("pmRejectedAt")]
+        public DateTime? PmRejectedAt { get; set; }
+
+        [FirestoreProperty("pmRejectReason")]
+        public string? PmRejectReason { get; set; }
     }
 }

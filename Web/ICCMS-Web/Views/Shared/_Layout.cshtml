@@ -1,5 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,21 +8,22 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/ICCMS_Web.styles.css" asp-append-version="true" />
-    
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 </head>
+
 <body>
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container-fluid">
                 <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">ICCMS</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
+                    aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
@@ -29,19 +31,35 @@
                         @if (User.Identity.IsAuthenticated && User.IsInRole("Tester"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Testing" asp-action="Index">Testing</a>
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Testing"
+                                    asp-action="Index">Testing</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Testing"
+                                    asp-action="WorkflowTest">
+                                    <i class="fas fa-robot"></i> AI Workflow
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="AuditLogs" asp-action="Index">
+                                    <i class="fas fa-clipboard-list"></i> Audit Logs
+                                </a>
                             </li>
                         }
                         @if (User.Identity.IsAuthenticated && User.IsInRole("Admin"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Users" asp-action="Index">Users</a>
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Users"
+                                    asp-action="Index">Users</a>
                             </li>
                         }
-                        @if (User.Identity.IsAuthenticated && User.IsInRole("Client"))
+
+                        @if (User.Identity.IsAuthenticated && User.IsInRole("Project Manager") ||
+                                                User.IsInRole("Tester"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Clients" asp-action="Index">Client Dashboard</a>
+                                <a class="nav-link text-dark" asp-area="" asp-controller="ProjectManager"
+                                    asp-action="Dashboard">Dashboard</a>
                             </li>
                         }
                     </ul>
@@ -52,7 +70,8 @@
                                 <span class="nav-link text-dark">Welcome, @User.Identity.Name!</span>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Auth" asp-action="Logout">Logout</a>
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Auth"
+                                    asp-action="Logout">Logout</a>
                             </li>
                         }
                         else
@@ -65,7 +84,17 @@
                 </div>
             </div>
         </nav>
-
+        @if (User.Identity.IsAuthenticated)
+        {
+            <div class="text-muted small">
+                Debug Info:
+                User: @User.Identity.Name |
+                Roles: @string.Join(", ", User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c
+                            => c.Value)) |
+            IsAdmin: @User.IsInRole("Admin") |
+            IsTester: @User.IsInRole("Tester")
+        </div>
+                }
     </header>
     <div class="container">
         <main role="main" class="pb-3">
@@ -89,7 +118,7 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
-    
+
     <!-- Firebase Configuration -->
     <script>
         // Your Firebase configuration
@@ -104,12 +133,12 @@
 
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
-        
+
         // Global Firebase auth instance
         const auth = firebase.auth();
-        
+
         // Listen for auth state changes
-        auth.onAuthStateChanged(function(user) {
+        auth.onAuthStateChanged(function (user) {
             if (user) {
                 console.log('User is signed in:', user.email);
             } else {
@@ -117,7 +146,8 @@
             }
         });
     </script>
-    
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
+
 </html>
