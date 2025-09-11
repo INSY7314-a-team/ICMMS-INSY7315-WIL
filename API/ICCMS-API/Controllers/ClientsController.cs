@@ -210,9 +210,12 @@ namespace ICCMS_API.Controllers
                 maintenanceRequest.ClientId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 maintenanceRequest.Status = "Pending";
                 maintenanceRequest.CreatedAt = DateTime.UtcNow;
+                var maintenanceRequestId = await _firebaseService.AddDocumentAsync<MaintenanceRequest>("maintenanceRequests", maintenanceRequest);
+                maintenanceRequest.MaintenanceRequestId = maintenanceRequestId; 
                 var newMaintenanceRequest =
-                    await _firebaseService.AddDocumentAsync<MaintenanceRequest>(
+                    await _firebaseService.UpdateDocumentAsync<MaintenanceRequest>(
                         "maintenanceRequests",
+                        maintenanceRequestId,
                         maintenanceRequest
                     );
                 return Ok(newMaintenanceRequest);
