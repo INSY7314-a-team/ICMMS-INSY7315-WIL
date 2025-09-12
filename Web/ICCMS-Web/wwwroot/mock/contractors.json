@@ -1,0 +1,5 @@
+[
+  { "id":1,"name":"Mthembu Construction","specialty":"Structural","status":"Active" },
+  { "id":2,"name":"Elite Builders","specialty":"Commercial","status":"Planning" },
+  { "id":3,"name":"ProBuild SA","specialty":"Industrial","status":"Active" }
+]

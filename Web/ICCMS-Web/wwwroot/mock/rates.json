@@ -1,0 +1,7 @@
+[
+  {"code":"MAT-CONC-C30","type":"Material","name":"C30 Concrete","unit":"m3","unitPrice":1450},
+  {"code":"LAB-FORM-CRW","type":"Labour","name":"Formwork Crew","unit":"hr","unitPrice":220},
+  {"code":"MAT-LAM-FLR","type":"Material","name":"Laminate Flooring","unit":"sqm","unitPrice":310},
+  {"code":"LAB-INSTALL","type":"Labour","name":"Install Team","unit":"hr","unitPrice":250},
+  {"code":"ALLOW-MISC","type":"Allowance","name":"Miscellaneous","unit":"ea","unitPrice":1000}
+]

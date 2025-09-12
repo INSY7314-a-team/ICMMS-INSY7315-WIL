@@ -1,0 +1,5 @@
+[
+  { "id":"C-1001","name":"Thandi Nkosi","org":"Nkosi Developments","email":"thandi@nkosi.dev","phone":"+27 82 555 0101" },
+  { "id":"C-1002","name":"Johan Pretorius","org":"Pretorius Holdings","email":"johan@pretorius.co.za","phone":"+27 83 555 0202" },
+  { "id":"C-1003","name":"Aisha Patel","org":"Seaview Estates","email":"aisha@seaview.co.za","phone":"+27 84 555 0303" }
+]

@@ -4,6 +4,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+// builder.Services.AddSingleton<IBlueprintParser, MockBlueprintParser>();
 
 // Add session support
 builder.Services.AddDistributedMemoryCache();
@@ -13,6 +14,10 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
+
+//Mock parser
+//builder.Services.AddSingleton<IBlueprintParser, MockBlueprintParser>();
+
 
 // Add HttpClient
 builder.Services.AddHttpClient();

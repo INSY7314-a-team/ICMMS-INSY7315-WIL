@@ -1,31 +1,545 @@
- <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Project Manager Dashboard</h1>
-        <div className="text-sm text-gray-600">
-          Last updated: {new Date().toLocaleDateString()}
-        </div>
+@using System.Security.Claims
+@inject IConfiguration Configuration
+@{
+    ViewData["Title"] = "Project Manager Dashboard";
+    var token = User.FindFirst("FirebaseToken")?.Value ?? string.Empty;
+}
+
+<style>
+  .muted{color:#6b7280}
+  .chip{padding:.2rem .6rem;border-radius:999px;font-size:.75rem}
+  .chip.ok{background:#e8f5e9;color:#2e7d32}
+  .chip.warn{background:#fff8e1;color:#b26a00}
+  .chip.danger{background:#ffebee;color:#c62828}
+  .btn-brand{background:#FFD200;border-color:#FFD200;color:#111}
+  .btn-brand:hover{filter:brightness(.95)}
+  .scroll-x{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px}
+  .card-proj{min-width:320px}
+  .status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+  .dot-ok{background:#2e7d32}.dot-warn{background:#b26a00}.dot-danger{background:#c62828}.dot-neutral{background:#9ca3af}
+  .skeleton{background:linear-gradient(90deg,#f4f4f5 25%,#ededee 37%,#f4f4f5 63%);border-radius:8px;height:14px;animation:shimmer 1.4s infinite}
+  @@keyframes shimmer{0%{background-position:-40rem 0}100%{background-position:40rem 0}}
+</style>
+
+<div class="container-fluid px-3 px-md-4 py-3">
+  <!-- Header -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+    <div>
+      <h1 class="h3 fw-bold mb-1">Project Manager</h1>
+      <div class="muted">Operational overview</div>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+      <div class="muted">Last updated: <span id="last-updated">—</span></div>
+      <button class="btn btn-outline-secondary btn-sm" id="refresh-btn"><i class="fas fa-rotate"></i> Refresh</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3"><div class="card p-3"><div class="d-flex align-items-center gap-2">
+      <div class="bg-primary bg-opacity-10 p-2 rounded"><i class="fas fa-diagram-project text-primary"></i></div>
+      <div><div class="muted small">Active Projects</div><div class="h5 mb-0" id="kpi-projects">—</div></div>
+    </div></div></div>
+    <div class="col-6 col-lg-3"><div class="card p-3"><div class="d-flex align-items-center gap-2">
+      <div class="bg-success bg-opacity-10 p-2 rounded"><i class="fas fa-sack-dollar text-success"></i></div>
+      <div><div class="muted small">Planned Budget</div><div class="h5 mb-0" id="kpi-budget">—</div></div>
+    </div></div></div>
+    <div class="col-6 col-lg-3"><div class="card p-3"><div class="d-flex align-items-center gap-2">
+      <div class="bg-warning bg-opacity-10 p-2 rounded"><i class="fas fa-helmet-safety text-warning"></i></div>
+      <div><div class="muted small">Contractors</div><div class="h5 mb-0" id="kpi-contractors">—</div></div>
+    </div></div></div>
+    <div class="col-6 col-lg-3"><div class="card p-3"><div class="d-flex align-items-center gap-2">
+      <div class="bg-danger bg-opacity-10 p-2 rounded"><i class="fas fa-screwdriver-wrench text-danger"></i></div>
+      <div><div class="muted small">Open Maintenance</div><div class="h5 mb-0" id="kpi-maint">—</div></div>
+    </div></div></div>
+  </div>
+
+  <!-- Actions (replace just this line) -->
+  <button class="btn btn-brand" id="btn-new-quote">
+    <i class="fas fa-file-invoice"></i> Generate New Quote
+  </button>
+  <a class="btn btn-link" asp-controller="Quotes" asp-action="Index">View All Quotes</a>
+
+
+  <!-- Search + quick actions -->
+  <div class="row g-2 align-items-center mb-3">
+    <div class="col-12 col-md-8">
+      <div class="input-group">
+        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+        <input id="global-search" class="form-control border-start-0 ps-0" placeholder="Search projects by name or description...">
       </div>
-      
-      <MetricsGrid />
-      
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Active Projects</h2>
-              <p className="text-gray-600 mt-1">Projects currently in progress</p>
-            </div>
-            <div className="p-6 space-y-4">
-              {activeProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
+    </div>
+    <div class="col-12 col-md-4 text-md-end d-flex gap-2 justify-content-md-end">
+      <div class="btn-group" role="group">
+        <button class="btn btn-outline-secondary proj-filter active" data-filter="all">All</button>
+        <button class="btn btn-outline-secondary proj-filter" data-filter="active">Active</button>
+        <button class="btn btn-outline-secondary proj-filter" data-filter="at-risk">At Risk</button>
+        <button class="btn btn-outline-secondary proj-filter" data-filter="completed">Completed</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Main grid -->
+  <div class="row g-3">
+    <div class="col-12 col-xl-8">
+      <!-- Projects (cards + view all) -->
+      <div class="card mb-3">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <strong>Projects</strong>
+          <div class="d-flex align-items-center gap-3">
+            <small class="muted" id="projects-sub">—</small>
+            <button class="btn btn-sm btn-link" id="btn-view-all-projects">View all</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="projects-cards" class="scroll-x">
+            <div class="card card-proj p-3">
+              <div class="skeleton mb-2" style="height:18px"></div>
+              <div class="skeleton" style="width:70%"></div>
             </div>
           </div>
         </div>
-        
-        <div className="space-y-6">
-          <BudgetOverview />
-          <RecentActivity />
+      </div>
+
+      <!-- Quick: Start a new project (call to action) -->
+      <div class="card">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div class="me-3">
+            <div class="text-uppercase small muted">Quick Action</div>
+            <h5 class="mb-1 fw-semibold">Create a new project</h5>
+            <div class="muted">Capture scope, budget, dates, and assign later from the project modal.</div>
+          </div>
+          <button class="btn btn-brand" id="btn-new-project-cta">Start New Project</button>
         </div>
       </div>
     </div>
+
+    <div class="col-12 col-xl-4">
+      <!-- Maintenance Inbox -->
+      <div class="card mb-3">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <strong>Maintenance Inbox</strong>
+          <button class="btn btn-sm btn-link" id="btn-view-all-maint">View all</button>
+        </div>
+        <div class="card-body" id="maint-list">
+          <div class="skeleton mb-2" style="height:18px"></div>
+          <div class="skeleton" style="width:70%"></div>
+        </div>
+      </div>
+
+      <!-- Contractors snapshot -->
+      <div class="card">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <strong>Contractors</strong>
+          <button class="btn btn-sm btn-link" onclick="location.href='/ProjectManager/Contractors'">View all</button>
+        </div>
+        <div class="card-body" id="contractors-list">
+          <div class="skeleton mb-2" style="height:18px"></div>
+          <div class="skeleton" style="width:70%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Edit Project Modal -->
+<div class="modal fade" id="projectModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Project</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="project-form">
+          <input type="hidden" id="proj-id">
+          <div class="row g-3">
+            <div class="col-md-7">
+              <label class="form-label">Name</label>
+              <input id="proj-name" class="form-control">
+            </div>
+            <div class="col-md-5">
+              <label class="form-label">Status</label>
+              <select id="proj-status" class="form-select">
+                <option>In Progress</option><option>On Track</option>
+                <option>At Risk</option><option>Delayed</option>
+                <option>On Hold</option><option>Completed</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea id="proj-desc" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Budget (Planned)</label>
+              <input id="proj-bp" class="form-control" type="number" min="0" step="1">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Budget (Actual)</label>
+              <input id="proj-ba" class="form-control" type="number" min="0" step="1">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <div class="muted small">ZAR</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Start (Planned)</label>
+              <input id="proj-start" class="form-control" type="date">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">End (Planned)</label>
+              <input id="proj-endp" class="form-control" type="date">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">End (Actual)</label>
+              <input id="proj-enda" class="form-control" type="date">
+            </div>
+          </div>
+        </form>
+        <div class="alert alert-info mt-3 mb-0">
+          Mock mode: edits are stored locally (browser <code>localStorage</code>).
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" id="btn-reset-proj">Reset</button>
+        <button class="btn btn-brand" id="btn-save-proj">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Project Modal (rich form) -->
+<div class="modal fade" id="newProjectModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Create New Project</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="new-proj-form">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label">Project Name <span class="text-danger">*</span></label>
+              <input id="np-name" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Type</label>
+              <select id="np-type" class="form-select">
+                <option>Build</option><option>Renovation</option><option>Fit-out</option><option>Maintenance</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Client</label>
+              <input id="np-client" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Location</label>
+              <input id="np-location" class="form-control">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Budget (Planned) <span class="text-danger">*</span></label>
+              <input id="np-bp" class="form-control" type="number" min="0" step="1" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Start (Planned) <span class="text-danger">*</span></label>
+              <input id="np-start" class="form-control" type="date" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">End (Planned) <span class="text-danger">*</span></label>
+              <input id="np-endp" class="form-control" type="date" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea id="np-desc" class="form-control" rows="3" placeholder="Scope, key milestones, risks..."></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Risk Category</label>
+              <select id="np-risk" class="form-select"><option>Low</option><option>Medium</option><option>High</option></select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Tags (comma separated)</label>
+              <input id="np-tags" class="form-control" placeholder="e.g. office, phase1">
+            </div>
+          </div>
+        </form>
+        <div class="alert alert-info mt-3 mb-0">
+          Mock mode: new projects are added to the in-memory list and saved as drafts locally.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-brand" id="btn-create-proj">Create Project</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NEW QUOTE WIZARD -->
+<!-- NEW QUOTE WIZARD -->
+<div class="modal fade" id="quoteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Generate New Quote</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Tabs -->
+        
+        <ul class="nav nav-tabs" id="quoteTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-client" type="button" role="tab">Client</button>
+          </li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-precon" type="button">Pre-con</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-demo" type="button">Demo</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-struct" type="button">Struct</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-mep" type="button">MEP</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-finish" type="button">Finishes</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-closeout" type="button">Closeout</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-breakdown" type="button">Breakdown</button></li>
+
+        </ul>
+
+        <div class="tab-content pt-3">
+          <!-- CLIENT -->
+          <div class="tab-pane fade show active" id="tab-client" role="tabpanel">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Select existing client</label>
+                <select id="q-client-select" class="form-select"></select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Quote title</label>
+                <input id="q-title" class="form-control" placeholder="e.g. Sandton Office – Full Build">
+              </div>
+
+              <div class="col-12 d-flex gap-2">
+                <button class="btn btn-outline-secondary" id="q-btn-blueprint">Generate from blueprint (mock)</button>
+                <span class="text-muted small align-self-center">Mock: adds a few suggested items.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- PHASES -->
+          <div class="tab-pane fade" id="tab-precon">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <strong>Pre-construction</strong>
+              <div>
+                <button class="btn btn-sm btn-outline-secondary q-add" data-phase="precon" data-type="Material">Add Material</button>
+                <button class="btn btn-sm btn-outline-secondary q-add" data-phase="precon" data-type="Labour">Add Labour</button>
+              </div>
+            </div>
+            <div id="q-rows-precon"></div>
+          </div>
+
+          <div class="tab-pane fade" id="tab-demo">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <strong>Demolition / Site prep</strong>
+              <div>
+                <button class="btn btn-sm btn-outline-secondary q-add" data-phase="demo" data-type="Material">Add Material</button>
+                <button class="btn btn-sm btn-outline-secondary q-add" data-phase="demo" data-type="Labour">Add Labour</button>
+              </div>
+            </div>
+            <div id="q-rows-demo"></div>
+          </div>
+
+          <div class="tab-pane fade" id="tab-struct">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <strong>Structural / Core & Shell</strong>
+              <div>
+                <button class="btn btn-sm btn-outline-secondary q-add" data-phase="struct" data-type="Material">Add Material</button>
+                <button class="btn btn-sm btn-outline-secondary q-add" data-phase="struct" data-type="Labour">Add Labour</button>
+              </div>
+            </div>
+            <div id="q-rows-struct"></div>
+          </div>
+
+          <div class="tab-pane fade" id="tab-mep">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <strong>MEP rough-in</strong>
+              <div>
+                <button class="btn btn-sm btn-outline-secondary q-add" data-phase="mep" data-type="Material">Add Material</button>
+                <button class="btn btn-sm btn-outline-secondary q-add" data-phase="mep" data-type="Labour">Add Labour</button>
+              </div>
+            </div>
+            <div id="q-rows-mep"></div>
+          </div>
+
+          <div class="tab-pane fade" id="tab-finish">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <strong>Finishes / Fit-out</strong>
+              <div>
+                <button class="btn btn-sm btn-outline-secondary q-add" data-phase="finish" data-type="Material">Add Material</button>
+                <button class="btn btn-sm btn-outline-secondary q-add" data-phase="finish" data-type="Labour">Add Labour</button>
+              </div>
+            </div>
+            <div id="q-rows-finish"></div>
+          </div>
+
+          <div class="tab-pane fade" id="tab-closeout">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <strong>Commissioning & Closeout</strong>
+              <div>
+                <button class="btn btn-sm btn-outline-secondary q-add" data-phase="closeout" data-type="Material">Add Material</button>
+                <button class="btn btn-sm btn-outline-secondary q-add" data-phase="closeout" data-type="Labour">Add Labour</button>
+              </div>
+            </div>
+            <div id="q-rows-closeout"></div>
+          </div>
+          <!-- BREAKDOWN -->
+        <div class="tab-pane fade" id="tab-breakdown">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong>Phase Cost Breakdown</strong>
+            <div class="small muted">Expand a phase to view item-level markup & tax (read-only)</div>
+          </div>
+          <div id="q-breakdown">
+            <div class="muted">No items yet. Add items in the phase tabs to see a breakdown.</div>
+          </div>
+        </div>
+        </div>
+
+        
+
+
+        <!-- Sticky running totals (always visible at bottom of modal body) -->
+        <style>
+          .quote-summary-sticky{
+            position: sticky;
+            bottom: 0;
+            background: #FFF7CC;
+            border-top: 1px solid #E6C200;
+            padding: 12px 8px;
+            box-shadow: 0 -2px 6px rgba(0,0,0,0.04);
+            z-index: 1;
+          }
+          .quote-summary-sticky .form-control{
+            height: 34px;
+            padding: 4px 8px;
+          }
+        </style>
+        <div class="quote-summary-sticky">
+          <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-2">
+              <label class="form-label small mb-1">Markup %</label>
+              <input id="q-markup" type="number" class="form-control" value="10" min="0" step="0.5">
+            </div>
+            <div class="col-6 col-md-2">
+              <label class="form-label small mb-1">Tax %</label>
+              <input id="q-tax" type="number" class="form-control" value="15" min="0" step="0.5">
+            </div>
+            <div class="col-12 col-md-8">
+              <div id="q-sticky-summary" class="text-end"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer d-flex justify-content-between">
+        <div>
+          <button class="btn btn-outline-secondary" id="q-prev">Back</button>
+          <button class="btn btn-outline-secondary" id="q-next">Next</button>
+        </div>
+        <button class="btn btn-brand" id="q-finalize">Finalize & Create Quote</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Hidden post form to QuotesController.Create -->
+<form id="quote-post-form" method="post" asp-controller="Quotes" asp-action="Create" class="d-none">
+  @Html.AntiForgeryToken()
+</form>
+
+
+<!-- Hidden POST form for MVC model binding -->
+<form id="quotePostForm" method="post" action="/Quotes/Create" class="d-none">
+  @Html.AntiForgeryToken()
+</form>
+
+<!-- View All Projects (fullscreen) -->
+<div class="modal fade" id="allProjectsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-fullscreen">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">All Projects</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <input id="all-proj-search" class="form-control" placeholder="Search all projects..." style="max-width:320px">
+          <div class="muted small" id="all-proj-sub">—</div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Name</th><th>Status</th><th>Budget (Plan)</th><th>Budget (Actual)</th>
+                <th>Start</th><th>End (Plan)</th><th>End (Actual)</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="all-proj-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- View All Maintenance (fullscreen) -->
+<div class="modal fade" id="allMaintModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-fullscreen">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">All Maintenance Requests</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <input id="maint-search" class="form-control" placeholder="Search maintenance..." style="max-width:320px">
+          <div class="muted small" id="maint-sub">—</div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead><tr>
+              <th>Title</th><th>Site</th><th>Priority</th><th>Reported</th><th>Status</th><th></th>
+            </tr></thead>
+            <tbody id="maint-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Tasks (for a maintenance request) -->
+<div class="modal fade" id="assignModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Assign Tasks</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div id="assign-header" class="mb-3"></div>
+        <div class="border rounded p-2 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <strong>Tasks</strong>
+            <button class="btn btn-sm btn-brand" id="btn-add-task"><i class="fas fa-plus me-1"></i>Add Task</button>
+          </div>
+          <div id="task-list" class="mt-2"></div>
+        </div>
+        <div class="alert alert-info mb-0">Mock mode: assignments are saved to <code>localStorage</code> and the request is marked as “Assigned”.</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-brand" id="btn-save-assign">Save Assignments</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>window.PM = { token: '@token', root: '@Url.Content("~/")' };</script>
+<script src="~/js/pm/dashboard.js"></script>
+
+

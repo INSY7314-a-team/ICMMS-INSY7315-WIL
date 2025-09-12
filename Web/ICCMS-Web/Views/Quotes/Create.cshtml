@@ -1,0 +1,160 @@
+@model ICCMS_Web.Models.Quote
+@using ICCMS_Web.Models
+@{
+  ViewData["Title"]="Create Quote";
+  var rates = (List<Rate>) (ViewBag.Rates ?? new List<Rate>());
+  var srs   = (List<ServiceRequest>) (ViewBag.ServiceRequests ?? new List<ServiceRequest>());
+}
+
+<div class="container py-3">
+  <h1 class="h4">Create Quote</h1>
+  <form asp-action="Create" method="post">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">Project ID</label>
+        <input class="form-control" asp-for="ProjectId" placeholder="P-1001" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Client Name</label>
+        <input class="form-control" asp-for="ClientName" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Link Service Request</label>
+        <select class="form-select" asp-for="ServiceRequestId">
+          <option value="">(none)</option>
+          @foreach(var sr in srs){ <option value="@sr.Id">@sr.Id - @sr.Title</option> }
+        </select>
+      </div>
+      <div class="col-12">
+        <label class="form-label">Title</label>
+        <input class="form-control" asp-for="Title" />
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <div class="d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">Items</h6>
+        <div>
+          <select id="rate-picker" class="form-select form-select-sm d-inline-block" style="width:280px">
+            <option value="">Add from rate library…</option>
+            @foreach(var r in rates){
+              <option value="@($"{r.Type}|{r.Name}|{r.Unit}|{r.UnitPrice}")">[@r.Type] @r.Name (@r.Unit) – R @r.UnitPrice</option>
+            }
+          </select>
+          <button class="btn btn-sm btn-outline-secondary ms-2" type="button" id="btn-add-custom">Add custom</button>
+          <label class="btn btn-sm btn-outline-primary ms-2 mb-0">
+            Parse Blueprint<input type="file" id="bp-file" hidden />
+          </label>
+        </div>
+      </div>
+
+      <div class="table-responsive mt-2">
+        <table class="table table-sm align-middle" id="items-table">
+          <thead><tr><th>Type</th><th>Name</th><th>Qty</th><th>Unit</th><th>Unit Price</th><th>Line Total</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="row g-3 mt-3">
+      <div class="col-md-4">
+        <label class="form-label">Markup %</label>
+        <input class="form-control" asp-for="MarkupPercent" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Tax %</label>
+        <input class="form-control" asp-for="TaxPercent" />
+      </div>
+      <div class="col-md-4">
+        <div class="border rounded p-3">
+          <div>Subtotal: <strong id="sub">R 0</strong></div>
+          <div>Estimated Total: <strong id="tot">R 0</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <input type="hidden" name="ItemsJson" id="ItemsJson" />
+    <div class="mt-3 d-flex gap-2">
+      <button class="btn btn-primary" type="submit" onclick="beforeSubmit()">Save</button>
+      <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+    </div>
+  </form>
+</div>
+
+@section Scripts{
+<script>
+  const items = [];
+  function render(){
+    const tb = document.querySelector('#items-table tbody');
+    tb.innerHTML = items.map((x,i)=>`
+      <tr>
+        <td><input class="form-control form-control-sm" value="${x.type}"></td>
+        <td><input class="form-control form-control-sm" value="${x.name}"></td>
+        <td><input class="form-control form-control-sm qty" type="number" min="0" step="0.01" value="${x.qty}"></td>
+        <td><input class="form-control form-control-sm" value="${x.unit}"></td>
+        <td><input class="form-control form-control-sm price" type="number" min="0" step="0.01" value="${x.unitPrice}"></td>
+        <td class="lt">R ${(x.qty*x.unitPrice).toFixed(2)}</td>
+        <td><button class="btn btn-sm btn-outline-danger" onclick="delItem(${i})">Remove</button></td>
+      </tr>`).join('');
+    tb.querySelectorAll('.qty,.price').forEach((el,idx)=>{
+      el.addEventListener('input', ()=>{ 
+        const row = el.closest('tr');
+        const i = [...tb.children].indexOf(row);
+        const q = parseFloat(row.querySelector('.qty').value)||0;
+        const p = parseFloat(row.querySelector('.price').value)||0;
+        items[i].qty=q; items[i].unitPrice=p;
+        row.querySelector('.lt').textContent = 'R '+(q*p).toFixed(2);
+        updateTotals();
+      });
+    });
+    updateTotals();
+  }
+  function addItem(obj){ items.push(obj); render(); }
+  function delItem(i){ items.splice(i,1); render(); }
+  function updateTotals(){
+    const sub = items.reduce((a,b)=>a + (b.qty*b.unitPrice), 0);
+    const mp = parseFloat(document.getElementById('MarkupPercent').value||'0');
+    const tx = parseFloat(document.getElementById('TaxPercent').value||'0');
+    const mk = sub*mp/100, tax = (sub+mk)*tx/100, tot = sub+mk+tax;
+    document.getElementById('sub').textContent = 'R '+sub.toFixed(2);
+    document.getElementById('tot').textContent = 'R '+tot.toFixed(2);
+  }
+  document.getElementById('MarkupPercent').addEventListener('input',updateTotals);
+  document.getElementById('TaxPercent').addEventListener('input',updateTotals);
+
+  // Rate picker
+  document.getElementById('rate-picker').addEventListener('change', (e)=>{
+    const v = e.target.value; if(!v) return;
+    const [type,name,unit,unitPrice] = v.split('|');
+    addItem({type,name,qty:1,unit,unitPrice: parseFloat(unitPrice)||0});
+    e.target.value='';
+  });
+
+  // Custom
+  document.getElementById('btn-add-custom').addEventListener('click', ()=>{
+    addItem({type:'Material',name:'Custom Item',qty:1,unit:'ea',unitPrice:0});
+  });
+
+  // Blueprint parse (mock)
+  document.getElementById('bp-file').addEventListener('change', async (e)=>{
+    const f = e.target.files[0]; if(!f) return;
+    const fd = new FormData(); fd.append('file', f);
+    const res = await fetch('@Url.Action("ParseBlueprint","Quotes")', {method:'POST', body:fd});
+    if(!res.ok){ alert('Parse failed'); return; }
+    const data = await res.json();
+    (data.suggestedItems||[]).forEach(s => addItem(s));
+  });
+
+  function beforeSubmit(){
+    // Move items into model via hidden field binding hacks (simple)
+    const payload = JSON.stringify(items);
+    document.getElementById('ItemsJson').value = payload;
+    // Hook to default model binder:
+    // We’ll add Items from ItemsJson in a small binder shim below:
+    const form = document.forms[0];
+    const hj = document.createElement('input');
+    hj.type='hidden'; hj.name='__HasItemsJson'; hj.value='1';
+    form.appendChild(hj);
+  }
+</script>
+}

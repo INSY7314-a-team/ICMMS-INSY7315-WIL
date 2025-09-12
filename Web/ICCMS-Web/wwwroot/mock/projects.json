@@ -1,0 +1,17 @@
+[
+  { "projectId":"P-1001","name":"Sandton Office","description":"Grade-A office build","status":"In Progress","budgetPlanned":2500000,"budgetActual":1650000,"startDatePlanned":"2025-02-01","endDatePlanned":"2025-11-30","endDateActual":null },
+  { "projectId":"P-1002","name":"Cape Town Residential","description":"Luxury apartments","status":"At Risk","budgetPlanned":4200000,"budgetActual":1900000,"startDatePlanned":"2025-01-15","endDatePlanned":"2025-12-20","endDateActual":null },
+
+  { "projectId":"P-1003","name":"Durban Warehouse","description":"Industrial storage facility","status":"On Track","budgetPlanned":1800000,"budgetActual":740000,"startDatePlanned":"2025-03-01","endDatePlanned":"2025-10-15","endDateActual":null },
+  { "projectId":"P-1004","name":"Pretoria Clinic","description":"Community health center expansion","status":"Delayed","budgetPlanned":2200000,"budgetActual":900000,"startDatePlanned":"2024-11-20","endDatePlanned":"2025-09-10","endDateActual":null },
+  { "projectId":"P-1005","name":"Gqeberha Port Yard","description":"Container yard resurfacing","status":"Completed","budgetPlanned":950000,"budgetActual":910000,"startDatePlanned":"2024-05-10","endDatePlanned":"2024-09-30","endDateActual":"2024-09-21" },
+  { "projectId":"P-1006","name":"Bloem Mall Refresh","description":"Retail center refurbishment","status":"On Hold","budgetPlanned":1300000,"budgetActual":200000,"startDatePlanned":"2025-02-10","endDatePlanned":"2025-08-30","endDateActual":null },
+  { "projectId":"P-1007","name":"Nelspruit School","description":"STEM block and labs","status":"In Progress","budgetPlanned":1600000,"budgetActual":870000,"startDatePlanned":"2025-01-25","endDatePlanned":"2025-09-05","endDateActual":null },
+  { "projectId":"P-1008","name":"Polokwane Roads","description":"Arterial resurfacing phase 1","status":"Planning","budgetPlanned":3000000,"budgetActual":150000,"startDatePlanned":"2025-06-01","endDatePlanned":"2026-02-28","endDateActual":null },
+  { "projectId":"P-1009","name":"Umhlanga Hotel","description":"Seafront boutique hotel","status":"At Risk","budgetPlanned":5200000,"budgetActual":3100000,"startDatePlanned":"2024-12-01","endDatePlanned":"2025-12-10","endDateActual":null },
+  { "projectId":"P-1010","name":"Kimberley Solar Farm","description":"50MW solar array","status":"On Track","budgetPlanned":6800000,"budgetActual":2600000,"startDatePlanned":"2025-02-20","endDatePlanned":"2026-01-31","endDateActual":null },
+  { "projectId":"P-1011","name":"Tshwane Data Center","description":"Tier III facility","status":"In Progress","budgetPlanned":7800000,"budgetActual":4200000,"startDatePlanned":"2024-10-05","endDatePlanned":"2025-12-31","endDateActual":null },
+  { "projectId":"P-1012","name":"Soweto Housing","description":"RDP housing upgrade pilot","status":"On Track","budgetPlanned":2400000,"budgetActual":1100000,"startDatePlanned":"2025-03-10","endDatePlanned":"2025-11-15","endDateActual":null },
+  { "projectId":"P-1013","name":"Stellenbosch Winery","description":"Visitor center & cellar","status":"Completed","budgetPlanned":1400000,"budgetActual":1385000,"startDatePlanned":"2024-02-01","endDatePlanned":"2024-12-01","endDateActual":"2024-11-20" },
+  { "projectId":"P-1014","name":"Richards Bay Pipeline","description":"Fuel pipeline upgrade","status":"Delayed","budgetPlanned":4600000,"budgetActual":1800000,"startDatePlanned":"2024-08-15","endDatePlanned":"2025-10-30","endDateActual":null }
+]

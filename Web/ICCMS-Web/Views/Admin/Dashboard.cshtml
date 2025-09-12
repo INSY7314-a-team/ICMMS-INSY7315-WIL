@@ -1,0 +1,380 @@
+@using System.Security.Claims
+@inject IConfiguration Configuration
+@{
+    ViewData["Title"] = "Overseer Dashboard";
+    var apiBase  = Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7136";
+    var token    = User.FindFirst("FirebaseToken")?.Value ?? string.Empty;
+    var fullName = User.FindFirst(ClaimTypes.Name)?.Value ?? "Administrator";
+}
+
+<style>
+  .muted{color:#6b7280}
+  .chip{padding:.2rem .6rem;border-radius:999px;font-size:.75rem}
+  .chip.ok{background:#e8f5e9;color:#2e7d32}
+  .chip.warn{background:#fff8e1;color:#b26a00}
+  .chip.danger{background:#ffebee;color:#c62828}
+  .btn-brand{background:#FFD200;border-color:#FFD200;color:#111}
+  .btn-brand:hover{filter:brightness(.95)}
+  .kpi{display:flex;align-items:center;gap:12px}
+  .kpi .icon{width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:#eef1ff}
+  .scroll-x{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px}
+  .card-proj{min-width:300px}
+  .status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+  .dot-ok{background:#2e7d32}.dot-warn{background:#b26a00}.dot-danger{background:#c62828}.dot-neutral{background:#9ca3af}
+  .skeleton{background:linear-gradient(90deg,#f4f4f5 25%,#ededee 37%,#f4f4f5 63%);border-radius:8px;height:14px;animation:shimmer 1.4s infinite}
+  @@keyframes shimmer{0%{background-position:-40rem 0}100%{background-position:40rem 0}}
+</style>
+
+<div class="container-fluid px-3 px-md-4 py-3">
+  <!-- Header -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+    <div>
+      <h1 class="h3 fw-bold mb-1">Hi, @fullName 👋</h1>
+      <div class="muted">Overseer Dashboard</div>
+    </div>
+    <div class="muted">Last updated: <span id="last-updated">—</span></div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card p-3">
+        <div class="kpi">
+          <div class="icon"><i class="fas fa-diagram-project text-primary"></i></div>
+          <div><div class="muted small">Active Projects</div><div class="h5 mb-0" id="kpi-projects">—</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card p-3">
+        <div class="kpi">
+          <div class="icon"><i class="fas fa-users text-success"></i></div>
+          <div><div class="muted small">Total Users</div><div class="h5 mb-0" id="kpi-users">—</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card p-3">
+        <div class="kpi">
+          <div class="icon"><i class="fas fa-file-circle-question text-warning"></i></div>
+          <div><div class="muted small">Pending Approvals</div><div class="h5 mb-0" id="kpi-pending">—</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card p-3">
+        <div class="kpi">
+          <div class="icon"><i class="fas fa-triangle-exclamation text-danger"></i></div>
+          <div><div class="muted small">Error Rate (24h)</div><div class="h5 mb-0" id="kpi-errors">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="row g-2 mb-3 align-items-center">
+    <div class="col-12 col-md-8">
+      <div class="input-group">
+        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+        <input id="global-search" class="form-control border-start-0 ps-0" placeholder="Search projects by name or description...">
+      </div>
+    </div>
+    <div class="col-12 col-md-4 text-md-end">
+      <div class="btn-group" role="group" aria-label="proj-filters">
+        <button class="btn btn-outline-secondary proj-filter active" data-filter="all">All</button>
+        <button class="btn btn-outline-secondary proj-filter" data-filter="active">Active</button>
+        <button class="btn btn-outline-secondary proj-filter" data-filter="at-risk">At Risk</button>
+        <button class="btn btn-outline-secondary proj-filter" data-filter="completed">Completed</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Grid -->
+  <div class="row g-3">
+    <!-- Left: Projects + System Health -->
+    <div class="col-12 col-xl-8">
+
+      <!-- Projects (scrollable cards) -->
+      <div class="card mb-3">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <strong>Projects</strong>
+          <small class="muted" id="projects-sub">—</small>
+        </div>
+        <div class="card-body">
+          <div id="projects-cards" class="scroll-x">
+            <div class="card card-proj p-3">
+              <div class="skeleton mb-2" style="height:18px"></div>
+              <div class="skeleton" style="width:70%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Health -->
+      <div class="card">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <strong>System Health</strong>
+          <small class="muted" id="health-sub">—</small>
+        </div>
+        <div class="card-body">
+          <div class="row g-3" id="services-grid">
+            <div class="col-12"><div class="skeleton"></div></div>
+          </div>
+          <div class="mt-3 row g-3">
+            <div class="col-12 col-md-6">
+              <div class="p-3 border rounded-3">
+                <div class="d-flex justify-content-between">
+                  <strong>API Uptime</strong><span id="uptime-val">—</span>
+                </div>
+                <div class="progress mt-2" style="height:6px">
+                  <div id="uptime-bar" class="progress-bar" style="width:0%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="p-3 border rounded-3">
+                <div class="d-flex justify-content-between">
+                  <strong>Storage Usage</strong><span id="storage-val">—</span>
+                </div>
+                <div class="progress mt-2" style="height:6px">
+                  <div id="storage-bar" class="progress-bar bg-warning" style="width:0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right: Governance + Audits -->
+    <div class="col-12 col-xl-4">
+      <div class="card mb-3">
+        <div class="card-header bg-white"><strong>Governance</strong></div>
+        <div class="card-body">
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <strong>Pending User Requests</strong>
+              <span class="badge bg-secondary" id="pending-users-count">—</span>
+            </div>
+            <div id="pending-users-list" class="mt-2"></div>
+          </div>
+          <div>
+            <div class="d-flex justify-content-between align-items-center">
+              <strong>Documents Awaiting Approval</strong>
+              <span class="badge bg-secondary" id="pending-docs-count">—</span>
+            </div>
+            <div id="pending-docs-list" class="mt-2"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header bg-white"><strong>Audit & Incidents (24h)</strong></div>
+        <div class="card-body" id="audit-list">
+          <div class="skeleton mb-2" style="height:18px"></div>
+          <div class="skeleton" style="width:70%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const TOKEN='@token';
+  const authHeaders = TOKEN ? { 'Authorization': `Bearer ${TOKEN}` } : {};
+
+  function setUpdated(){ document.getElementById('last-updated').textContent = new Date().toLocaleString(); }
+  async function getJson(url){ const r=await fetch(url,{headers:authHeaders}); if(!r.ok) throw new Error(r.status); return r.json(); }
+  async function getJsonWithFallback(url, fallback){ try{ return await getJson(url); } catch { return fallback; } }
+  const safe=(o,...k)=>{ for(const x of k){ if(o && Object.prototype.hasOwnProperty.call(o,x)) return o[x]; } };
+  const fmtMoney=(v)=>'R '+(Number(v)||0).toLocaleString();
+  const timeAgo=(ts)=>{ const d=(Date.now()-new Date(ts).getTime())/1000, f=(v,u)=>`${Math.floor(v)} ${u}${Math.floor(v)!==1?'s':''} ago`;
+    if(d<60) return f(d,'sec'); if(d<3600) return f(d/60,'min'); if(d<86400) return f(d/3600,'hour'); return f(d/86400,'day'); };
+  const dotClass=(s)=>{ const v=(s||'').toLowerCase(); if(v.includes('degraded')||v.includes('partial'))return'dot-warn';
+    if(v.includes('down')||v.includes('incident'))return'dot-danger'; if(v.includes('healthy')||v.includes('ok'))return'dot-ok'; return 'dot-neutral'; };
+  function statusChip(s){
+    const v=(s||'').toLowerCase();
+    if(v==='completed') return '<span class="chip ok">Completed</span>';
+    if(v==='at risk'||v==='delayed'||v==='on hold') return `<span class="chip danger">${s||'At Risk'}</span>`;
+    if(v==='in progress'||v==='on track') return `<span class="chip warn">${s||'In Progress'}</span>`;
+    return `<span class="chip">${s||'—'}</span>`;
+  }
+
+  // ---------- Projects ----------
+  let PROJECTS=[]; let PROJ_FILTER='all';
+  function renderProjects(){
+    const q=document.getElementById('global-search').value.trim().toLowerCase();
+    let list=PROJECTS.slice();
+    if(PROJ_FILTER==='active') list=list.filter(p=>(p.status||'').toLowerCase()!=='completed');
+    if(PROJ_FILTER==='at-risk') list=list.filter(p=>['at risk','delayed','on hold'].includes((p.status||'').toLowerCase()));
+    if(PROJ_FILTER==='completed') list=list.filter(p=>(p.status||'').toLowerCase()==='completed');
+    if(q) list=list.filter(p=>(p.name||'').toLowerCase().includes(q)||(p.description||'').toLowerCase().includes(q));
+
+    const wrap=document.getElementById('projects-cards');
+    if(!list.length){ wrap.innerHTML='<div class="muted">No matching projects.</div>'; }
+    else {
+      wrap.innerHTML=list.map(p=>{
+        const planned=Number(p.budgetPlanned)||0, actual=Number(p.budgetActual)||0;
+        const pct=planned>0?Math.min(100,Math.round(actual/planned*100)):0;
+        const start=p.startDatePlanned?new Date(p.startDatePlanned).toLocaleDateString():'—';
+        const endPl=p.endDatePlanned?new Date(p.endDatePlanned).toLocaleDateString():'—';
+        const endAc=p.endDateActual?new Date(p.endDateActual).toLocaleDateString():'—';
+        return `
+          <div class="card card-proj">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="d-flex align-items-center"><span class="status-dot ${dotClass(p.status)}"></span><strong>${p.name||'—'}</strong></div>
+                ${statusChip(p.status)}
+              </div>
+              <div class="muted small mb-2">${p.description||''}</div>
+              <div class="mb-2">
+                <div class="d-flex justify-content-between small"><span>Budget</span><span>${fmtMoney(actual)} / ${fmtMoney(planned)}</span></div>
+                <div class="progress" style="height:6px"><div class="progress-bar" style="width:${pct}%"></div></div>
+              </div>
+              <div class="small d-flex justify-content-between">
+                <span><i class="fas fa-play me-1"></i>${start}</span>
+                <span><i class="fas fa-flag-checkered me-1"></i>${endPl}</span>
+                <span><i class="fas fa-check me-1"></i>${endAc}</span>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+    document.getElementById('projects-sub').textContent=`${list.length} shown / ${PROJECTS.length} total`;
+  }
+  async function loadProjects(){
+    const raw = await getJsonWithFallback('@Url.Content("~/mock/projects.json")', []);
+    PROJECTS = raw.map(p=>({
+      id:safe(p,'projectId','id'),
+      name:safe(p,'name'), description:safe(p,'description'), status:safe(p,'status'),
+      budgetPlanned:safe(p,'budgetPlanned'), budgetActual:safe(p,'budgetActual'),
+      startDatePlanned:safe(p,'startDatePlanned'), endDatePlanned:safe(p,'endDatePlanned'), endDateActual:safe(p,'endDateActual')
+    }));
+    const active=PROJECTS.filter(p=>(p.status||'').toLowerCase()!=='completed').length;
+    document.getElementById('kpi-projects').textContent=active;
+    renderProjects();
+  }
+  document.addEventListener('input',(e)=>{ if(e.target.id==='global-search') renderProjects(); });
+  document.addEventListener('click',(e)=>{
+    if(e.target.matches('.proj-filter')){
+      document.querySelectorAll('.proj-filter').forEach(b=>b.classList.remove('active'));
+      e.target.classList.add('active'); PROJ_FILTER=e.target.dataset.filter; renderProjects();
+    }
+  });
+
+  // ---------- Users (fallback to contractors if users.json missing) ----------
+  async function loadUsers(){
+    const fallbackUsers=[
+      {id:'U1',name:'PM – Thando',role:'Project Manager'},
+      {id:'U2',name:'Contractor – Mthembu',role:'Contractor'},
+      {id:'U3',name:'Admin – Lerato',role:'Admin'}
+    ];
+    let users = await getJsonWithFallback('@Url.Content("~/mock/users.json")', fallbackUsers);
+    // If we only have contractors, count them as external users
+    if(!Array.isArray(users) || !users.length){
+      const contractors = await getJsonWithFallback('@Url.Content("~/mock/contractors.json")', []);
+      users = contractors.map(c=>({ id:c.id||c.email||c.name, name:c.name, role:'Contractor' }));
+    }
+    document.getElementById('kpi-users').textContent = users.length;
+    // Pending user requests (optional mock)
+    const pending = await getJsonWithFallback('@Url.Content("~/mock/pending-users.json")', [
+      { id:'PU-1001', name:'New Contractor: J. Dlamini', role:'Contractor', requestedAt:new Date().toISOString() }
+    ]);
+    document.getElementById('pending-users-count').textContent = pending.length;
+    const box=document.getElementById('pending-users-list');
+    box.innerHTML = pending.slice(0,5).map(p=>`
+      <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+        <div>
+          <div class="small fw-semibold">${p.name}</div>
+          <div class="small muted">${p.role||'—'} • ${timeAgo(p.requestedAt||new Date())}</div>
+        </div>
+        <span class="chip warn">Review</span>
+      </div>`).join('');
+  }
+
+  // ---------- Documents (approvals) ----------
+  async function loadDocs(){
+    const docs = await getJsonWithFallback('@Url.Content("~/mock/documents.json")', []);
+    const pending = docs.filter(d => (d.status||'').toLowerCase()==='pending');
+    document.getElementById('kpi-pending').textContent = pending.length;
+    document.getElementById('pending-docs-count').textContent = pending.length;
+    const box=document.getElementById('pending-docs-list');
+    box.innerHTML = pending.slice(0,5).map(d=>`
+      <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+        <div>
+          <div class="small fw-semibold">${d.fileName||d.name||'Document'}</div>
+          <div class="small muted">${(d.project||'General')}</div>
+        </div>
+        <span class="chip warn">Pending</span>
+      </div>`).join('') || '<div class="muted small">No pending approvals.</div>';
+  }
+
+  // ---------- System Health ----------
+  async function loadHealth(){
+    const services = await getJsonWithFallback('@Url.Content("~/mock/services.json")', [
+      { name:'API Gateway', status:'Healthy', latencyMs:42, errors24h:1 },
+      { name:'Auth',        status:'Healthy', latencyMs:85, errors24h:0 },
+      { name:'Firestore',   status:'Degraded', latencyMs:210, errors24h:12 },
+      { name:'Storage',     status:'Healthy', latencyMs:55, errors24h:2 }
+    ]);
+    const grid=document.getElementById('services-grid');
+    grid.innerHTML = services.map(s=>`
+      <div class="col-12 col-md-6">
+        <div class="p-3 border rounded-3 h-100">
+          <div class="d-flex justify-content-between align-items-start">
+            <div><span class="status-dot ${dotClass(s.status)}"></span><strong>${s.name}</strong></div>
+            <span class="chip ${s.status.toLowerCase().includes('healthy')?'ok':s.status.toLowerCase().includes('degraded')?'warn':'danger'}">${s.status}</span>
+          </div>
+          <div class="small muted mt-2">Latency: ${s.latencyMs||'—'} ms • Errors(24h): ${s.errors24h||0}</div>
+        </div>
+      </div>`).join('');
+    // error rate (rough) & uptime/storage
+    const totalErrors = services.reduce((a,b)=>a+(Number(b.errors24h)||0),0);
+    document.getElementById('kpi-errors').textContent = totalErrors.toString();
+
+    const health = await getJsonWithFallback('@Url.Content("~/mock/health.json")',
+      { apiUptime: 99.95, storageUsedGB: 68, storageTotalGB: 120 });
+    const upPct = Number(health.apiUptime)||0;
+    document.getElementById('uptime-val').textContent = upPct.toFixed(2)+'%';
+    document.getElementById('uptime-bar').style.width = Math.min(100, upPct) + '%';
+
+    const used=Number(health.storageUsedGB)||0, total=Number(health.storageTotalGB)||0;
+    const stPct = total>0 ? Math.round(used/total*100) : 0;
+    document.getElementById('storage-val').textContent = `${used}GB / ${total}GB (${stPct}%)`;
+    document.getElementById('storage-bar').style.width = stPct + '%';
+
+    document.getElementById('health-sub').textContent = `${services.length} services`;
+  }
+
+  // ---------- Audits / Incidents ----------
+  async function loadAudits(){
+    const data = await getJsonWithFallback('@Url.Content("~/mock/audits.json")', [
+      { id:'A-001', ts:new Date().toISOString(), actor:'system', action:'RoleReview', severity:'info',  note:'Weekly role audit summary generated' },
+      { id:'A-002', ts:new Date(Date.now()-3600e3).toISOString(), actor:'api', action:'RateLimit', severity:'warn',  note:'Spike on /documents endpoint' },
+      { id:'A-003', ts:new Date(Date.now()-2*3600e3).toISOString(), actor:'firestore', action:'Quota', severity:'danger', note:'Write quota at 85%' }
+    ]);
+    const box=document.getElementById('audit-list');
+    const sev=(s)=> s==='danger'?'text-danger':(s==='warn'?'text-warning':'text-success');
+    box.innerHTML = data.slice(0,10).sort((a,b)=>new Date(b.ts)-new Date(a.ts)).map(a=>`
+      <div class="d-flex gap-2 pb-2 mb-2 border-bottom">
+        <div class="${sev(a.severity)} d-flex align-items-center justify-content-center" style="width:34px;height:34px;border-radius:8px;background:#f5f5f5">
+          <i class="fas ${a.severity==='danger'?'fa-triangle-exclamation':a.severity==='warn'?'fa-circle-exclamation':'fa-circle-check'}"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="d-flex justify-content-between">
+            <strong>${a.action}</strong>
+            <span class="muted small">${timeAgo(a.ts)}</span>
+          </div>
+          <div class="small muted">${a.note||''}</div>
+          <div class="small muted">actor: ${a.actor||'n/a'}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  async function bootstrap(){
+    await Promise.all([loadProjects(), loadUsers(), loadDocs(), loadHealth(), loadAudits()]);
+    setUpdated();
+  }
+  bootstrap();
+</script>

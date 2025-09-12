@@ -1,0 +1,25 @@
+[
+  {
+    "id":"Q-0001","projectId":"P-1001","clientName":"Pinnacle Properties",
+    "title":"Sandton Office - Core & Shell","status":"Sent",
+    "items":[
+      {"type":"Material","name":"C30 Concrete","qty":120,"unit":"m3","unitPrice":1450},
+      {"type":"Labour","name":"Formwork Crew","qty":240,"unit":"hr","unitPrice":220}
+    ],
+    "subtotal": 226800.00,
+    "markupPercent": 10, "taxPercent": 15, "total": 0,
+    "createdAt":"2025-09-10T09:00:00Z","sentAt":"2025-09-11T08:30:00Z",
+    "attachmentUrls":["/mock/sample_plan.pdf"]
+  },
+  {
+    "id":"Q-0002","projectId":"P-1002","clientName":"Seaside Dev Co",
+    "title":"Cape Town Residential - Fitout","status":"Draft",
+    "items":[
+      {"type":"Material","name":"Laminate Flooring","qty":600,"unit":"sqm","unitPrice":310},
+      {"type":"Labour","name":"Install Team","qty":140,"unit":"hr","unitPrice":250}
+    ],
+    "subtotal": 4500800.00,
+    "markupPercent": 12, "taxPercent": 15, "total": 0,
+    "createdAt":"2025-09-09T10:00:00Z"
+  }
+]
