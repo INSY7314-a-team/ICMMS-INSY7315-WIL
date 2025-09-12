@@ -1,8 +1,0 @@
-{
-  "totalAreaSqm": 4200,
-  "counts": { "Doors": 46, "Windows": 128, "Bathrooms": 12 },
-  "suggestedItems": [
-    {"type":"Material","name":"C30 Concrete","qty":120,"unit":"m3","unitPrice":1450},
-    {"type":"Labour","name":"Formwork Crew","qty":240,"unit":"hr","unitPrice":220}
-  ]
-}

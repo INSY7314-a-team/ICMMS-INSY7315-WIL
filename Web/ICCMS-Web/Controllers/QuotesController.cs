@@ -2,6 +2,8 @@ using System.Text.Json;
 using ICCMS_Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+
 
 namespace ICCMS_Web.Controllers
 {
@@ -9,12 +11,12 @@ namespace ICCMS_Web.Controllers
     public class QuotesController : Controller
     {
         private readonly IWebHostEnvironment _env;
-        private readonly IBlueprintParser _parser;
+        //private readonly IBlueprintParser _parser;
         private string MockPath(string rel) => Path.Combine(_env.WebRootPath, rel.Replace('/','\\'));
 
-        public QuotesController(IWebHostEnvironment env, IBlueprintParser parser){
-            _env = env; _parser = parser;
-        }
+        // public QuotesController(IWebHostEnvironment env, IBlueprintParser parser){
+        //     _env = env; //_parser = parser;
+        // }
 
         // ---------- LIST ----------
         [AllowAnonymous] // keep anon for tests
@@ -67,17 +69,7 @@ namespace ICCMS_Web.Controllers
 
 
         // ---------- PARSE BLUEPRINT (Mock) ----------
-        [HttpPost, AllowAnonymous]
-        public async Task<IActionResult> ParseBlueprint(){
-            var file = Request.Form.Files.FirstOrDefault();
-            if (file == null) return BadRequest("No file.");
-            using var ms = new MemoryStream();
-            await file.CopyToAsync(ms);
-            ms.Position = 0;
-            var extract = await _parser.ParseAsync(ms, file.FileName);
-            return Json(extract);
-        }
-
+        
         // ---------- SEND ----------
         [HttpPost, AllowAnonymous]
         public IActionResult Send(string id){
@@ -115,6 +107,13 @@ namespace ICCMS_Web.Controllers
             TempData["ok"] = "Quote rejected (mock).";
             return RedirectToAction(nameof(Index));
         }
+
+        [HttpPost, ValidateAntiForgeryToken, AllowAnonymous]
+        public IActionResult Preview(QuotePreviewVM model)
+        {
+            return View("~/Views/Quotes/Preview.cshtml", model);
+        }
+
 
         // ---------- helpers ----------
         private T? ReadMock<T>(string rel){

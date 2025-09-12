@@ -452,6 +452,11 @@
   @Html.AntiForgeryToken()
 </form>
 
+<form id="quote-preview-form" method="post" asp-controller="Quotes" asp-action="Preview" target="_blank" class="d-none">
+  @Html.AntiForgeryToken()
+</form>
+
+
 
 <!-- Hidden POST form for MVC model binding -->
 <form id="quotePostForm" method="post" action="/Quotes/Create" class="d-none">

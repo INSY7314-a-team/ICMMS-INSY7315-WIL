@@ -32,6 +32,10 @@ namespace ICCMS_Web.Models
     // NEW: assignment
     public string? ContractorId { get; set; }
     public string? ContractorName { get; set; }
+
+    public string? PhaseKey { get; set; }
+    public string? PhaseName { get; set; }
+
 }
 
 
