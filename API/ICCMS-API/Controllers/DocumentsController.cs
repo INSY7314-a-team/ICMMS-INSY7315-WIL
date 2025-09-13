@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ICCMS_API.Controllers
 {
@@ -10,19 +10,61 @@ namespace ICCMS_API.Controllers
     [Authorize(Roles = "Admin,Project Manager,Client,Contractor,Tester")] // All authenticated users can access documents
     public class DocumentsController : ControllerBase
     {
+        private readonly ISupabaseService _supabaseService;
         private readonly IFirebaseService _firebaseService;
 
-        public DocumentsController(IFirebaseService firebaseService)
+        public DocumentsController(
+            ISupabaseService supabaseService,
+            IFirebaseService firebaseService
+        )
         {
+            _supabaseService = supabaseService;
             _firebaseService = firebaseService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<Document>>> GetDocuments()
+        public async Task<ActionResult<List<string>>> GetDocuments()
         {
             try
             {
-                var documents = await _firebaseService.GetCollectionAsync<Document>("documents");
+                var documents = await _supabaseService.ListFilesAsync("upload");
+                Console.WriteLine($"Documents: {documents}");
+                return Ok(documents);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting documents: {ex.Message}");
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("{fileName}")]
+        public async Task<ActionResult<byte[]>> GetDocument(string fileName)
+        {
+            try
+            {
+                Console.WriteLine($"Getting document: {fileName}");
+                var document = await _supabaseService.DownloadFileAsync("upload", fileName);
+                if (document == null || document.Length == 0)
+                    return NotFound();
+                Console.WriteLine($"Document found: {fileName}");
+                return Ok(document);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting document: {ex.Message}");
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("project/{projectId}")]
+        public async Task<ActionResult<List<string>>> GetDocumentsByProject(string projectId)
+        {
+            try
+            {
+                // For now, return all documents. In a real implementation, you'd filter by project
+                // This would require storing document metadata in a database
+                var documents = await _supabaseService.ListFilesAsync("documents");
                 return Ok(documents);
             }
             catch (Exception ex)
@@ -31,58 +73,96 @@ namespace ICCMS_API.Controllers
             }
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Document>> GetDocument(string id)
+        [HttpPost("upload")]
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<Document>> UploadDocument(
+            [FromForm] IFormFile file,
+            [FromForm] string projectId,
+            [FromForm] string description = ""
+        )
         {
             try
             {
-                var document = await _firebaseService.GetDocumentAsync<Document>("documents", id);
-                if (document == null)
-                    return NotFound();
+                Console.WriteLine(
+                    $"UploadDocument called with file: {file?.FileName}, projectId: {projectId}, description: {description}"
+                );
+
+                if (file == null || file.Length == 0)
+                {
+                    Console.WriteLine("No file uploaded");
+                    return BadRequest("No file uploaded");
+                }
+
+                Console.WriteLine(
+                    $"File details: {file.FileName}, Size: {file.Length}, ContentType: {file.ContentType}"
+                );
+
+                // Generate a unique filename
+                var fileName = $"{Guid.NewGuid()}_{file.FileName}";
+                Console.WriteLine($"Generated filename: {fileName}");
+
+                // Upload file to Supabase
+                using var stream = file.OpenReadStream();
+                Console.WriteLine("Starting Supabase upload...");
+
+                var fileUrl = await _supabaseService.UploadFileAsync(
+                    "documents",
+                    fileName,
+                    stream,
+                    file.ContentType
+                );
+
+                Console.WriteLine($"Supabase upload successful. File URL: {fileUrl}");
+
+                // Create document metadata
+                var document = new Document
+                {
+                    DocumentId = Guid.NewGuid().ToString(),
+                    ProjectId = projectId,
+                    FileName = fileName,
+                    FileType = file.ContentType,
+                    FileSize = file.Length,
+                    FileUrl = fileUrl,
+                    UploadedAt = DateTime.UtcNow,
+                    Description = description,
+                    Status = "Active",
+                };
+
+                await _firebaseService.AddDocumentAsync("documents", document);
+
+                Console.WriteLine("Document metadata created successfully");
                 return Ok(document);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                Console.WriteLine($"Error in UploadDocument: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
-        [HttpGet("project/{projectId}")]
-        public async Task<ActionResult<List<Document>>> GetDocumentsByProject(string projectId)
+        [HttpPut("update/{fileName}")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UpdateDocument(
+            string fileName,
+            [FromForm] IFormFile file,
+            [FromForm] string description = ""
+        )
         {
             try
             {
-                var documents = await _firebaseService.GetCollectionAsync<Document>("documents");
-                var projectDocuments = documents.Where(d => d.ProjectId == projectId).ToList();
-                return Ok(projectDocuments);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
-        }
+                if (file == null || file.Length == 0)
+                    return BadRequest("No file uploaded");
 
-        [HttpPost]
-        public async Task<ActionResult<string>> CreateDocument([FromBody] Document document)
-        {
-            try
-            {
-                document.UploadedAt = DateTime.UtcNow;
-                var documentId = await _firebaseService.AddDocumentAsync("documents", document);
-                return Ok(documentId);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
-        }
+                // Upload updated file to Supabase
+                using var stream = file.OpenReadStream();
+                await _supabaseService.UploadFileAsync(
+                    "documents",
+                    fileName,
+                    stream,
+                    file.ContentType
+                );
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateDocument(string id, [FromBody] Document document)
-        {
-            try
-            {
-                await _firebaseService.UpdateDocumentAsync("documents", id, document);
                 return NoContent();
             }
             catch (Exception ex)
@@ -91,12 +171,12 @@ namespace ICCMS_API.Controllers
             }
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteDocument(string id)
+        [HttpDelete("{fileName}")]
+        public async Task<IActionResult> DeleteDocument(string fileName)
         {
             try
             {
-                await _firebaseService.DeleteDocumentAsync("documents", id);
+                await _supabaseService.DeleteFileAsync("documents", fileName);
                 return NoContent();
             }
             catch (Exception ex)

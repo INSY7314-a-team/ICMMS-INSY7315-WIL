@@ -42,6 +42,9 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IFirebaseService, FirebaseService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+// Add Supabase service
+builder.Services.AddScoped<ISupabaseService, SupabaseService>();
+
 // Add workflow services
 builder.Services.AddScoped<IQuoteWorkflowService, QuoteWorkflowService>();
 builder.Services.AddScoped<IInvoiceWorkflowService, InvoiceWorkflowService>();
@@ -65,7 +68,11 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy
-                .WithOrigins("https://localhost:7271", "http://localhost:5148", "http://localhost:5031")
+                .WithOrigins(
+                    "https://localhost:7271",
+                    "http://localhost:5148",
+                    "http://localhost:5031"
+                )
                 .AllowAnyMethod()
                 .AllowAnyHeader()
                 .AllowCredentials();
