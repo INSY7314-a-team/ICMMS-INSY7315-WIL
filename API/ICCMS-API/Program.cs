@@ -42,6 +42,9 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IFirebaseService, FirebaseService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+// Add notification service
+builder.Services.AddScoped<IFcmNotificationService, FcmNotificationService>();
+
 // Add Supabase service
 builder.Services.AddScoped<ISupabaseService, SupabaseService>();
 
@@ -69,9 +72,9 @@ builder.Services.AddCors(options =>
         {
             policy
                 .WithOrigins(
-                    "https://localhost:7271",
-                    "http://localhost:5148",
-                    "http://localhost:5031"
+                    "https://localhost:7271", // check this
+                    "http://localhost:5148", // web server
+                    "http://localhost:5031" // check this
                 )
                 .AllowAnyMethod()
                 .AllowAnyHeader()

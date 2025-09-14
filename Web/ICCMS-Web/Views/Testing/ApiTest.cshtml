@@ -2193,24 +2193,28 @@
         let formHtml = '<div class="file-upload-form">';
 
         endpoint.fileUploadFields.forEach(field => {
-            if (field.type === 'file') {
+            if (field.name === 'projectId') {
+                let options = projects.map(p => `<option value="${p.projectId}">${p.name || p.projectId}</option>`).join('');
                 formHtml += `
-                    <div class="mb-3">
-                        <label for="fileInput" class="form-label">${field.description} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>
-                        <input type="file" class="form-control" id="fileInput" ${field.required ? 'required' : ''}>
-                        <div class="form-text">Select a file to upload</div>
-                    </div>
+                    <label for="${field.name}" class="form-label">${field.description} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>
+                    <select class="form-control" id="${field.name}" name="${field.name}" ${field.required ? 'required' : ''}>
+                        <option value="">Select Project</option>
+                        ${options}
+                    </select>
+                `;
+            } else if (field.type === 'file') {
+                formHtml += `
+                    <label for="${field.name}" class="form-label">${field.description} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>
+                    <input type="file" class="form-control" id="${field.name}" name="${field.name}" ${field.required ? 'required' : ''}>
+                    <div class="form-text">Select a file to upload</div>
                 `;
             } else {
                 formHtml += `
-                    <div class="mb-3">
-                        <label for="${field.name}Input" class="form-label">${field.description} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>
-                        <input type="${field.type}" class="form-control" id="${field.name}Input" ${field.required ? 'required' : ''} placeholder="Enter ${field.description.toLowerCase()}">
-                    </div>
+                    <label for="${field.name}" class="form-label">${field.description} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>
+                    <input type="text" class="form-control" id="${field.name}" name="${field.name}" placeholder="Enter ${field.description}" ${field.required ? 'required' : ''}>
                 `;
             }
         });
-
         formHtml += '</div>';
 
         // Replace payload editor with file upload form
@@ -2359,4 +2363,73 @@
                 showValidationMessage(`Upload error: ${error.message}`, 'danger');
             });
     }
+
+    let projects = [];
+    async function loadProjects() {
+        try {
+            const token = await getAuthToken();
+            if (!token) {
+                console.warn('No authentication token available, skipping project loading');
+                return;
+            }
+            
+            const response = await fetch('https://localhost:7136/api/projectmanager/projects', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (response.ok) {
+                projects = await response.json();
+                console.log('Projects loaded successfully:', projects.length);
+            } else {
+                console.error('Failed to load projects:', response.status, response.statusText);
+            }
+        } catch (e) {
+            console.error('Error loading projects:', e);
+        }
+    }
+
+    // Get auth token from server-side authentication
+    async function getAuthToken() {
+        try {
+            // The token should be available from the server-side authentication
+            // We'll make a request to get the current user's token through the server
+            const response = await fetch('/Testing/GetAuthToken', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.token) {
+                    console.log('Auth token obtained from server');
+                    return data.token;
+                }
+            }
+            
+            console.warn('No auth token available from server');
+            return null;
+        } catch (error) {
+            console.error('Error getting auth token:', error);
+            return null;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        await loadProjects();
+        console.log('🚀 API Testing Dashboard loaded successfully!');
+
+        // Category selection
+        document.querySelectorAll('[data-category]').forEach(item => {
+            item.addEventListener('click', function (e) {
+                e.preventDefault();
+                const category = this.getAttribute('data-category');
+                showCategory(category);
+            });
+        });
+
+        // Load saved payloads from localStorage
+        loadSavedPayloads();
+
+        // Load and display custom ID badges
+        loadCustomIdBadges();
+    });
 </script>

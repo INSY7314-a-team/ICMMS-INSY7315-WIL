@@ -170,6 +170,27 @@ namespace ICCMS_Web.Controllers
             return View();
         }
 
+        [HttpGet("GetAuthToken")]
+        public IActionResult GetAuthToken()
+        {
+            try
+            {
+                var firebaseToken = User.FindFirst("FirebaseToken")?.Value;
+                if (string.IsNullOrEmpty(firebaseToken))
+                {
+                    return Json(
+                        new { success = false, message = "No authentication token available" }
+                    );
+                }
+
+                return Json(new { success = true, token = firebaseToken });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
         [HttpPost]
         public async Task<IActionResult> TestEndpoint(
             string endpoint,
@@ -194,6 +215,7 @@ namespace ICCMS_Web.Controllers
                 switch (method.ToUpper())
                 {
                     case "GET":
+                        Console.WriteLine($"{endpoint}");
                         response = await _httpClient.GetAsync($"{_apiBaseUrl}{endpoint}");
                         break;
                     case "POST":

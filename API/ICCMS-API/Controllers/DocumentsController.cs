@@ -62,13 +62,14 @@ namespace ICCMS_API.Controllers
         {
             try
             {
-                // For now, return all documents. In a real implementation, you'd filter by project
-                // This would require storing document metadata in a database
-                var documents = await _supabaseService.ListFilesAsync("documents");
+                var allDocuments = await _firebaseService.GetCollectionAsync<Document>("documents");
+                var documents = allDocuments.Where(d => d.ProjectId == projectId).ToList();
+                Console.WriteLine($"Documents: {documents}");
                 return Ok(documents);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"Error getting documents: {ex.Message}");
                 return StatusCode(500, ex.Message);
             }
         }
