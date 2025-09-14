@@ -1,25 +1,89 @@
 [
   {
-    "id":"Q-0001","projectId":"P-1001","clientName":"Pinnacle Properties",
-    "title":"Sandton Office - Core & Shell","status":"Sent",
-    "items":[
-      {"type":"Material","name":"C30 Concrete","qty":120,"unit":"m3","unitPrice":1450},
-      {"type":"Labour","name":"Formwork Crew","qty":240,"unit":"hr","unitPrice":220}
-    ],
-    "subtotal": 226800.00,
-    "markupPercent": 10, "taxPercent": 15, "total": 0,
-    "createdAt":"2025-09-10T09:00:00Z","sentAt":"2025-09-11T08:30:00Z",
-    "attachmentUrls":["/mock/sample_plan.pdf"]
+    "Id": "Q-2001",
+    "ProjectId": "",
+    "ServiceRequestId": null,
+    "ClientName": "Acme Ltd",
+    "Title": "Sample Accepted Quote",
+    "Status": "Rejected",
+    "Items": [],
+    "Subtotal": 0,
+    "MarkupPercent": 10,
+    "TaxPercent": 15,
+    "Total": 12345,
+    "CreatedAt": "2025-09-14T20:51:30.8830951Z",
+    "SentAt": null,
+    "DecidedAt": "2025-09-14T21:21:36.1037696Z",
+    "AttachmentUrls": []
   },
   {
-    "id":"Q-0002","projectId":"P-1002","clientName":"Seaside Dev Co",
-    "title":"Cape Town Residential - Fitout","status":"Draft",
-    "items":[
-      {"type":"Material","name":"Laminate Flooring","qty":600,"unit":"sqm","unitPrice":310},
-      {"type":"Labour","name":"Install Team","qty":140,"unit":"hr","unitPrice":250}
+    "Id": "Q-1002",
+    "ProjectId": "",
+    "ServiceRequestId": null,
+    "ClientName": "Johan Pretorius",
+    "Title": "Quote for Johan Pretorius",
+    "Status": "Accepted",
+    "Items": [
+      {
+        "Type": "Labour",
+        "Name": "Demo crew",
+        "Notes": null,
+        "Qty": 40,
+        "Unit": "hrs",
+        "UnitPrice": 220,
+        "LineTotal": 8800,
+        "ContractorId": null,
+        "ContractorName": null,
+        "PhaseKey": null,
+        "PhaseName": null
+      },
+      {
+        "Type": "Material",
+        "Name": "Skips \u0026 disposal",
+        "Notes": null,
+        "Qty": 3,
+        "Unit": "ea",
+        "UnitPrice": 1450,
+        "LineTotal": 4350,
+        "ContractorId": null,
+        "ContractorName": null,
+        "PhaseKey": null,
+        "PhaseName": null
+      },
+      {
+        "Type": "Material",
+        "Name": "Rebar 10mm",
+        "Notes": null,
+        "Qty": 120,
+        "Unit": "m",
+        "UnitPrice": 35,
+        "LineTotal": 4200,
+        "ContractorId": null,
+        "ContractorName": null,
+        "PhaseKey": null,
+        "PhaseName": null
+      },
+      {
+        "Type": "Labour",
+        "Name": "Electrician",
+        "Notes": null,
+        "Qty": 24,
+        "Unit": "hrs",
+        "UnitPrice": 280,
+        "LineTotal": 6720,
+        "ContractorId": null,
+        "ContractorName": null,
+        "PhaseKey": null,
+        "PhaseName": null
+      }
     ],
-    "subtotal": 4500800.00,
-    "markupPercent": 12, "taxPercent": 15, "total": 0,
-    "createdAt":"2025-09-09T10:00:00Z"
+    "Subtotal": 24070,
+    "MarkupPercent": 10,
+    "TaxPercent": 15,
+    "Total": 30448.55,
+    "CreatedAt": "2025-09-14T20:51:30.8837272Z",
+    "SentAt": "2025-09-14T20:51:30.8838312Z",
+    "DecidedAt": "2025-09-14T20:53:43.5108647Z",
+    "AttachmentUrls": []
   }
 ]

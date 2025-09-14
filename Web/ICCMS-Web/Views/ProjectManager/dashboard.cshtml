@@ -14,6 +14,9 @@
   .btn-brand{background:#FFD200;border-color:#FFD200;color:#111}
   .btn-brand:hover{filter:brightness(.95)}
   .scroll-x{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px}
+  .scroll-y{display:block;max-height:70vh;overflow-y:auto}
+  .scroll-y .card-proj{min-width:100%;max-width:100%;}
+
   .card-proj{min-width:320px}
   .status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
   .dot-ok{background:#2e7d32}.dot-warn{background:#b26a00}.dot-danger{background:#c62828}.dot-neutral{background:#9ca3af}
@@ -82,25 +85,165 @@
 
   <!-- Main grid -->
   <div class="row g-3">
-    <div class="col-12 col-xl-8">
+    <div class="col-12 col-xl-8 order-2 order-xl-2">
       <!-- Projects (cards + view all) -->
-      <div class="card mb-3">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center">
-          <strong>Projects</strong>
-          <div class="d-flex align-items-center gap-3">
-            <small class="muted" id="projects-sub">—</small>
-            <button class="btn btn-sm btn-link" id="btn-view-all-projects">View all</button>
-          </div>
-        </div>
-        <div class="card-body">
-          <div id="projects-cards" class="scroll-x">
-            <div class="card card-proj p-3">
-              <div class="skeleton mb-2" style="height:18px"></div>
-              <div class="skeleton" style="width:70%"></div>
+     <!-- ===== Projects by Phase (inline, fetches /mock/projects.json) ===== -->
+<div id="ProjectsPhaseBoard">
+  <style>
+    .ph-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin:8px 0}
+    @@media (max-width:1200px){.ph-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @@media (max-width:700px){.ph-grid{grid-template-columns:1fr;}}
+    .ph-col{border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;background:#fafafa}
+    .ph-head{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#f3f4f6;border-bottom:1px solid #e5e7eb}
+    .ph-title{font-weight:700;font-size:.95rem}
+    .ph-count{font-size:.8rem;color:#374151}
+    .ph-list{max-height:68vh;overflow-y:auto;padding:8px}
+    .proj{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:8px;margin-bottom:8px}
+    .proj-top{display:flex;justify-content:space-between;gap:8px}
+    .proj-name{font-weight:600}
+    .proj-sub{font-size:.8rem;color:#6b7280}
+    .kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:6px}
+    .kv div{background:#f9fafb;border:1px dashed #e5e7eb;border-radius:8px;padding:6px}
+    .k{font-size:.72rem;color:#6b7280}
+    .v{font-size:.9rem;font-weight:600}
+    .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+    .chip{font-size:.72rem;border:1px solid #e5e7eb;border-radius:9999px;padding:2px 8px;background:#fff}
+    .dot{width:10px;height:10px;border-radius:9999px;display:inline-block;margin-right:6px;vertical-align:middle}
+    .ok{background:#16a34a}.warn{background:#f59e0b}.risk{background:#dc2626}.hold{background:#6b7280}.plan{background:#0891b2}
+    .badge{font-size:.7rem;background:#eef2ff;border:1px solid #e5e7eb;border-radius:6px;padding:2px 6px}
+  </style>
+
+  <div class="ph-grid" id="projectsByPhase"></div>
+
+  <script>
+  (async function(){
+    const mount = document.getElementById('projectsByPhase');
+    if(!mount) return;
+
+    // FETCH from your mock: wwwroot/mock/projects.json -> /mock/projects.json
+    let data = [];
+    try{
+      const res = await fetch('/mock/projects.json', { cache: 'no-store' });
+      if(!res.ok) throw new Error(res.status);
+      data = await res.json();
+    }catch(e){
+      console.error('Could not load /mock/projects.json', e);
+      mount.innerHTML = '<div class="proj-sub" style="padding:8px">No data.</div>';
+      return;
+    }
+
+    // Helpers
+    const rands = n => new Intl.NumberFormat(undefined,{style:'currency',currency:'ZAR',maximumFractionDigits:0}).format(Number(n)||0);
+    const dotClass = s => {
+      const v = (s||'').toLowerCase();
+      if(['on track','in progress','completed'].includes(v)) return 'ok';
+      if(['at risk','delayed'].includes(v)) return 'risk';
+      if(['on hold'].includes(v)) return 'hold';
+      if(['planning','planned'].includes(v)) return 'plan';
+      return 'warn';
+    };
+
+    // Determine current phase per project.
+    // Prefer: currentPhaseKey/Name OR first phase with status != "Done" OR fallback "Unassigned".
+    function currentPhaseName(p){
+      if(p.currentPhaseName) return p.currentPhaseName;
+      if(Array.isArray(p.phases)){
+        const nxt = p.phases.find(x => (x.status||'').toLowerCase() !== 'done');
+        return (nxt && (nxt.phaseName || nxt.name)) || (p.phases[0] && (p.phases[0].phaseName || p.phases[0].name));
+      }
+      return 'Unassigned';
+    }
+    function currentPhaseKey(p){
+      if(p.currentPhaseKey) return p.currentPhaseKey;
+      if(Array.isArray(p.phases)){
+        const nxt = p.phases.find(x => (x.status||'').toLowerCase() !== 'done') || p.phases[0];
+        return (nxt && (nxt.phaseKey || (nxt.phaseName||nxt.name||'unassigned').toLowerCase().replace(/\s+/g,'-'))) || 'unassigned';
+      }
+      return 'unassigned';
+    }
+
+    // Collect phase columns (stable preferred order if present)
+    const preferred = ['Site Prep','Access & Safety','Execution','QA & Closeout'];
+    const phaseMap = new Map(); // key -> name
+    data.forEach(p=>{
+      const k = currentPhaseKey(p);
+      const n = currentPhaseName(p);
+      if(k && n) phaseMap.set(k, n);
+    });
+
+    // Order: preferred first (if present), then the rest alpha
+    const present = new Map(Array.from(phaseMap).map(([k,n])=>[n,k]));
+    const orderedNames = preferred.filter(n=>present.has(n))
+      .concat(Array.from(phaseMap.values()).filter(n=>!preferred.includes(n)).sort((a,b)=>a.localeCompare(b)));
+    const ordered = orderedNames.map(n=>[present.get(n) || n.toLowerCase().replace(/\s+/g,'-'), n]);
+
+    // Build columns
+    const colHtml = ([key,name]) => {
+      const items = data.filter(p => currentPhaseKey(p) === key);
+      const cards = items.map(p=>{
+        const qs = p.quoteSummary || {};
+        const sr = p.serviceRequests || {};
+        const cs = p.contractorSummary || {};
+        // Phase details from the matching phase (if available)
+        const ph = (Array.isArray(p.phases) ? p.phases.find(x => (x.phaseKey||'')===key || (x.phaseName||'')===name) : null) || {};
+        return `
+          <div class="proj">
+            <div class="proj-top">
+              <div>
+                <div class="proj-name"><span class="dot ${dotClass(p.status)}"></span>${p.name||''}</div>
+                <div class="proj-sub">
+                  ${p.clientName||''} • ${p.status||''}
+                  ${name ? ` • Phase: <span class="badge">${name}${ph.status?` — ${ph.status}`:''}</span>` : ''}
+                </div>
+              </div>
+              <div class="proj-sub">Progress <strong>${('progressPercent' in p)?(p.progressPercent||0):0}%</strong></div>
+            </div>
+
+            <div class="kv">
+              <div><div class="k">Budget (Planned)</div><div class="v">${rands(p.budgetPlanned)}</div></div>
+              <div><div class="k">Budget (Actual)</div><div class="v">${rands(p.budgetActual)}</div></div>
+              <div><div class="k">Latest Quote</div><div class="v">
+                ${(qs.latestQuoteStatus||'—')} ${qs.latestQuoteId?`• ${qs.latestQuoteId}`:''} ${qs.latestQuoteTotal?`• ${rands(qs.latestQuoteTotal)}`:''}
+              </div></div>
+              <div><div class="k">Phase Total</div><div class="v">
+                ${rands(ph.amountTotal||0)} ${ph.itemsCount?`• ${ph.itemsCount} items`:''}
+              </div></div>
+            </div>
+
+            <div class="chips">
+              ${qs.totalQuotes!=null?`<span class="chip">Quotes T ${qs.totalQuotes}</span>`:''}
+              ${qs.Accepted!=null?`<span class="chip">Acc ${qs.Accepted}</span>`:''}
+              ${qs.Sent!=null?`<span class="chip">Sent ${qs.Sent}</span>`:''}
+              ${qs.InReview!=null?`<span class="chip">InRev ${qs.InReview}</span>`:''}
+              ${qs.Draft!=null?`<span class="chip">Draft ${qs.Draft}</span>`:''}
+              ${qs.Rejected!=null?`<span class="chip">Rej ${qs.Rejected}</span>`:''}
+              ${sr.New!=null?`<span class="chip">SR New ${sr.New}</span>`:''}
+              ${sr.InProgress!=null?`<span class="chip">SR WIP ${sr.InProgress}</span>`:''}
+              ${sr.Closed!=null?`<span class="chip">SR Closed ${sr.Closed}</span>`:''}
+              ${cs.assignedCount!=null?`<span class="chip">Ctrs ${cs.assignedCount}</span>`:''}
             </div>
           </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="ph-col">
+          <div class="ph-head">
+            <div class="ph-title">${name}</div>
+            <div class="ph-count">${items.length} project${items.length===1?'':'s'}</div>
+          </div>
+          <div class="ph-list">${cards || '<div class="proj-sub" style="padding:8px">No projects in this phase.</div>'}</div>
         </div>
-      </div>
+      `;
+    };
+
+    mount.innerHTML = ordered.map(colHtml).join('');
+  })();
+  </script>
+</div>
+<!-- ===== End Projects by Phase ===== -->
+
+
 
       <!-- Quick: Start a new project (call to action) -->
       <div class="card">
@@ -115,9 +258,9 @@
       </div>
     </div>
 
-    <div class="col-12 col-xl-4">
+    <div class="col-12 col-xl-4 d-flex flex-column gap-3 order-1 order-xl-1">
       <!-- Maintenance Inbox -->
-      <div class="card mb-3">
+      <div class="card mb-3 order-3">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
           <strong>Maintenance Inbox</strong>
           <button class="btn btn-sm btn-link" id="btn-view-all-maint">View all</button>
@@ -127,9 +270,101 @@
           <div class="skeleton" style="width:70%"></div>
         </div>
       </div>
+      <!-- Accepted Quotes (ready to start projects) -->
+      <!-- Accepted Quotes (ready to start projects) -->
+      <div class="card mb-3 order-1">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <strong>Accepted Quotes</strong>
+          <button class="btn btn-sm btn-link" onclick="location.href='/Quotes'">View all</button>
+        </div>
+        <div class="card-body" id="accepted-quotes-list">
+          <div class="muted">Loading…</div>
+        </div>
+      </div>
+
+      <script>
+      (function(){
+        // Minimal, isolated, no dependency on dashboard.js
+        const host = document.getElementById('accepted-quotes-list');
+        if(!host) { return; }
+
+        host.innerHTML = '<div class="muted">Loading…</div>';
+
+        // try a few paths (works whether app runs from / or a virtual dir)
+        const urls = [
+          '@Url.Content("~/mock/quotes.json")',
+          '/mock/quotes.json'
+        ];
+
+        (async function tryFetch(i){
+          if(i >= urls.length){
+            host.innerHTML = '<div class="muted">No accepted quotes yet.</div>';
+            return;
+          }
+          try{
+            const res = await fetch(urls[i], { cache: 'no-store' });
+            // show exactly what path was used
+            console.log('[accepted-quotes] fetch', urls[i], 'status', res.status);
+
+            if(!res.ok) throw new Error('HTTP ' + res.status);
+
+            // tolerate empty file: treat as []
+            const txt = await res.text();
+            const data = txt.trim() ? JSON.parse(txt) : [];
+
+            const accepted = (Array.isArray(data) ? data : [])
+              .filter(q => String(q.status || q.Status || '').toLowerCase() === 'accepted')
+              .sort((a,b)=> new Date(b.decidedAt||b.DecidedAt||0) - new Date(a.decidedAt||a.DecidedAt||0))
+              .slice(0,5);
+
+            console.log('[accepted-quotes] items total:', Array.isArray(data)?data.length:'n/a', 'accepted:', accepted.length);
+
+            if(!accepted.length){
+              host.innerHTML = '<div class="muted">No accepted quotes yet.</div>';
+              return;
+            }
+
+            host.innerHTML = accepted.map(q=>{
+              const id = q.id || q.Id || 'Q-?';
+              const title = q.title || q.Title || 'Quote';
+              const client = q.clientName || q.ClientName || '';
+              const total = 'R ' + (Number(q.total || q.Total || 0)).toLocaleString();
+              const when = q.decidedAt || q.DecidedAt;
+              const decided = when ? new Date(when).toLocaleString() : '—';
+              return `
+                <div class="d-flex align-items-start mb-2 pb-2 border-bottom">
+                  <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-start">
+                      <div>
+                        <strong>${title}</strong>
+                        <div class="small muted">${client}</div>
+                      </div>
+                      <div class="text-end">
+                        <div class="small muted">${id}</div>
+                        <div>${total}</div>
+                      </div>
+                    </div>
+                    <div class="small muted mt-1">Accepted: ${decided}</div>
+                  </div>
+                  <div class="ms-2">
+                    <button class="btn btn-sm btn-brand btn-setup-project" data-qid="${id}">
+                      <i class="fas fa-hammer me-1"></i>Start Setup
+                    </button>
+                  </div>
+                </div>`;
+            }).join('');
+          }catch(err){
+            console.log('[accepted-quotes] fetch failed for', urls[i], err);
+            tryFetch(i+1);
+          }
+        })(0);
+      })();
+      </script>
+
+
 
       <!-- Contractors snapshot -->
-      <div class="card">
+      <div class="card order-2">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
           <strong>Contractors</strong>
           <button class="btn btn-sm btn-link" onclick="location.href='/ProjectManager/Contractors'">View all</button>
@@ -207,6 +442,58 @@
   </div>
 </div>
 
+<!-- Invoice Modal (separate from project setup) -->
+<div class="modal fade" id="invoiceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          Create Invoice
+          <small class="text-muted d-block mt-1">
+            For: <span id="inv-quote-title">Quote</span> • <span id="inv-quote-total">R 0</span>
+          </small>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="inv-quote-id" />
+
+        <div class="mb-3">
+          <label class="form-label">Invoice type</label>
+          <select id="inv-type" class="form-select">
+            <option value="DepositFinal">Deposit + Final</option>
+            <option value="OnceOff">Once-off Before Start</option>
+            <option value="OnCompletion">On Completion</option>
+          </select>
+        </div>
+
+        <div class="inv-deposit-wrap mb-3">
+          <label class="form-label">Deposit %</label>
+          <input id="inv-deposit-pct" type="number" min="0" step="1" class="form-control" value="30">
+          <div class="small text-muted mt-1">Final invoice will cover the remaining balance.</div>
+        </div>
+
+        <div class="inv-onceoff-wrap mb-3 d-none">
+          <label class="form-label">Once-off amount (R)</label>
+          <input id="inv-onceoff-amt" type="number" min="0" step="1" class="form-control" value="0">
+          <div class="small text-muted mt-1">Bill the full amount once before work starts.</div>
+        </div>
+
+        <div class="alert alert-info mb-0">
+          Stub only: this stores a draft invoice in <code>localStorage</code>. API wiring comes later.
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        <button class="btn btn-brand" id="inv-save-draft">Save Draft</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- New Project Modal (rich form) -->
 <div class="modal fade" id="newProjectModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -269,6 +556,100 @@
       <div class="modal-footer">
         <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
         <button class="btn btn-brand" id="btn-create-proj">Create Project</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Project Setup (from an accepted quote) -->
+<div class="modal fade" id="projectSetupModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Project Setup</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Step 1: Invoice plan -->
+        <div class="border rounded p-3 mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong>1) Invoice Plan</strong>
+            <span class="small muted">we’re stubbing notifications for now</span>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Plan type</label>
+              <select id="ps-plan-type" class="form-select">
+                <option value="DepositFinal">Deposit + Final</option>
+                <option value="OnceOffUpfront">Once-off (upfront)</option>
+                <option value="EndOfProject">End-of-project</option>
+              </select>
+            </div>
+            <div class="col-md-3 ps-deposit-wrap">
+              <label class="form-label">Deposit %</label>
+              <input type="number" id="ps-deposit-pct" class="form-control" value="30" min="0" step="1">
+            </div>
+            <div class="col-md-3 ps-onceoff-wrap d-none">
+              <label class="form-label">Once-off amount (R)</label>
+              <input type="number" id="ps-onceoff-amt" class="form-control" value="0" min="0" step="1">
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Phase tasks -->
+        <div class="border rounded p-3 mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong>2) Phase Planning & Tasks</strong>
+            <button class="btn btn-sm btn-brand" id="ps-add-phase-task"><i class="fas fa-plus me-1"></i>Add Task</button>
+          </div>
+          <div id="ps-task-list" class="small muted">Add tasks for each phase (name, due date, contractor).</div>
+          <template id="ps-task-row-tpl">
+            <div class="ps-task-row border rounded p-2 mb-2">
+              <div class="row g-2 align-items-end">
+                <div class="col-lg-3">
+                  <label class="form-label">Phase</label>
+                  <select class="form-select ps-task-phase">
+                    <option value="precon">Precon</option>
+                    <option value="demo">Demo</option>
+                    <option value="struct">Struct</option>
+                    <option value="mep">MEP</option>
+                    <option value="finish">Finishes</option>
+                    <option value="closeout">Closeout</option>
+                  </select>
+                </div>
+                <div class="col-lg-4">
+                  <label class="form-label">Task name</label>
+                  <input class="form-control ps-task-name" placeholder="e.g. Pour slab, final inspection…">
+                </div>
+                <div class="col-lg-3">
+                  <label class="form-label">Due date</label>
+                  <input type="date" class="form-control ps-task-due">
+                </div>
+                <div class="col-lg-2">
+                  <label class="form-label">Contractor</label>
+                  <select class="form-select ps-task-ctr"></select>
+                </div>
+              </div>
+              <div class="text-end mt-2">
+                <button class="btn btn-outline-secondary btn-sm ps-task-del"><i class="fas fa-trash"></i></button>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Step 3: Review -->
+        <div class="border rounded p-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong>3) Review</strong>
+            <span class="small muted">we’ll create a project draft locally for now</span>
+          </div>
+          <div id="ps-review" class="small muted">No tasks yet.</div>
+        </div>
+      </div>
+
+      <div class="modal-footer d-flex justify-content-between">
+        <div class="muted small" id="ps-selected-quote">—</div>
+        <button class="btn btn-brand" id="ps-create-project">Create Project (mock)</button>
       </div>
     </div>
   </div>
@@ -440,7 +821,7 @@
           <button class="btn btn-outline-secondary" id="q-prev">Back</button>
           <button class="btn btn-outline-secondary" id="q-next">Next</button>
         </div>
-        <button class="btn btn-brand" id="q-finalize">Finalize & Create Quote</button>
+        <button class="btn btn-brand" id="q-finalize">Preview Quote</button>
       </div>
     </div>
   </div>
@@ -456,12 +837,13 @@
   @Html.AntiForgeryToken()
 </form>
 
-
-
-<!-- Hidden POST form for MVC model binding -->
-<form id="quotePostForm" method="post" action="/Quotes/Create" class="d-none">
+<!-- Hidden form used by the wizard to open the preview tab -->
+<form id="quote-preview-form" method="post"
+      asp-controller="Quotes" asp-action="Preview"
+      target="_blank" class="d-none">
   @Html.AntiForgeryToken()
 </form>
+
 
 <!-- View All Projects (fullscreen) -->
 <div class="modal fade" id="allProjectsModal" tabindex="-1" aria-hidden="true">

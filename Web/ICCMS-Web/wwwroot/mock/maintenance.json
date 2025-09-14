@@ -1,0 +1,5 @@
+[
+  { "id":"M-1001", "title":"Burst pipe at Basement", "site":"Sandton Office", "priority":"High",   "reportedAt":"2025-01-01T08:00:00Z", "description":"Water leaking near pump room", "status":"Open" },
+  { "id":"M-1002", "title":"HVAC not cooling",       "site":"Cape Town Residential - Block B", "priority":"Medium","reportedAt":"2025-01-02T09:30:00Z", "description":"Unit 4 complaints",       "status":"Open" },
+  { "id":"M-1003", "title":"Light fittings flicker", "site":"Pretoria Commercial", "priority":"Low", "reportedAt":"2025-01-03T12:15:00Z", "description":"Lobby LED strip issue", "status":"Open" }
+]

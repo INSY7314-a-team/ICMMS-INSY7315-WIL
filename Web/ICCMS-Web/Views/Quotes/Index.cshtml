@@ -1,43 +1,129 @@
-@model List<ICCMS_Web.Models.Quote>
-@{ ViewData["Title"]="Quotes"; }
-<div class="container py-3">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h4 mb-0">Quotes</h1>
-    <a class="btn btn-primary" asp-action="Create">Create Quote</a>
+@using ICCMS_Web.Models
+@model List<Quote>
+@{
+    ViewData["Title"] = "Quotes";
+}
+
+<style>
+  /* tiny styling so this page matches your vibe */
+  .muted{color:#6b7280}
+  .chip{padding:.2rem .6rem;border-radius:999px;font-size:.75rem}
+  .chip.ok{background:#e8f5e9;color:#2e7d32}
+  .chip.warn{background:#fff8e1;color:#b26a00}
+  .chip.danger{background:#ffebee;color:#c62828}
+  .btn-brand{background:#FFD200;border-color:#FFD200;color:#111}
+  .btn-brand:hover{filter:brightness(.95)}
+  .table-sm td, .table-sm th{vertical-align:middle}
+</style>
+
+<div class="container-fluid px-3 px-md-4 py-3">
+  <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+    <div>
+      <h1 class="h3 fw-bold mb-1">Quotes</h1>
+      <div class="muted">All quotes you've created from the PM dashboard</div>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-brand" href="/ProjectManager/Dashboard">
+        <i class="fas fa-file-invoice"></i> Create New Quote
+      </a>
+    </div>
   </div>
 
-  @if (TempData["ok"]!=null){ <div class="alert alert-success">@TempData["ok"]</div> }
+  @if (TempData["ok"] != null)
+  {
+    <div class="alert alert-success">@TempData["ok"]</div>
+  }
 
+  <!-- Search + quick filters -->
+  <div class="row g-2 align-items-center mb-3">
+    <div class="col-12 col-md-6">
+      <div class="input-group">
+        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+        <input id="q-search" class="form-control border-start-0 ps-0" placeholder="Search by client or title...">
+      </div>
+    </div>
+    <div class="col-12 col-md-6 d-flex justify-content-md-end">
+      <div class="btn-group" role="group" id="q-filters">
+        <button type="button" class="btn btn-outline-secondary active" data-filter="all">All</button>
+        <button type="button" class="btn btn-outline-secondary" data-filter="Draft">Draft</button>
+        <button type="button" class="btn btn-outline-secondary" data-filter="Sent">Sent</button>
+        <button type="button" class="btn btn-outline-secondary" data-filter="Accepted">Accepted</button>
+        <button type="button" class="btn btn-outline-secondary" data-filter="Rejected">Rejected</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quotes table -->
   <div class="card">
-    <div class="card-body p-0">
+    <div class="card-body">
       <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-          <thead><tr>
-            <th>ID</th><th>Title</th><th>Project</th><th>Status</th>
-            <th>Total</th><th>Created</th><th></th>
-          </tr></thead>
-          <tbody>
-          @foreach (var q in Model){
+        <table class="table table-sm align-middle" id="quotes-table">
+          <thead>
             <tr>
-              <td>@q.Id</td>
-              <td>@q.Title</td>
-              <td>@q.ProjectId</td>
-              <td>@q.Status</td>
-              <td>R @q.Total.ToString("N0")</td>
-              <td>@q.CreatedAt.ToLocalTime().ToString("g")</td>
-              <td class="text-end">
-                @if(q.Status=="Draft"){
-                  <form asp-action="Send" method="post" class="d-inline">
-                    <input type="hidden" name="id" value="@q.Id" />
-                    <button class="btn btn-sm btn-outline-primary">Send</button>
-                  </form>
-                }
-                @if(q.Status=="Sent"){
-                  <a class="btn btn-sm btn-success" asp-action="Accept" asp-route-id="@q.Id">Mock Accept</a>
-                  <a class="btn btn-sm btn-danger" asp-action="Reject" asp-route-id="@q.Id">Mock Reject</a>
-                }
-              </td>
+              <th style="width:110px;">ID</th>
+              <th>Title</th>
+              <th>Client</th>
+              <th style="width:130px;">Created</th>
+              <th style="width:120px;">Status</th>
+              <th class="text-end" style="width:120px;">Subtotal</th>
+              <th class="text-end" style="width:110px;">Markup %</th>
+              <th class="text-end" style="width:90px;">Tax %</th>
+              <th class="text-end" style="width:120px;">Total</th>
+              <th class="text-end" style="width:220px;">Actions</th>
             </tr>
+          </thead>
+          <tbody>
+          @foreach (var q in Model)
+          {
+              string chipClass = (q.Status ?? "Draft").ToLower() switch {
+                  "accepted" => "chip ok",
+                  "sent"     => "chip warn",
+                  "rejected" => "chip danger",
+                  _          => "chip"
+              };
+              <tr data-status="@q.Status" data-title="@((q.Title ?? "") + " " + (q.ClientName ?? ""))">
+                <td>@q.Id</td>
+                <td>
+                  <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(q.Title) ? q.Title : "—")</div>
+                  <div class="small muted">(@q.Items?.Count ?? 0) items</div>
+                </td>
+                <td>@(q.ClientName ?? "—")</td>
+                <td>@q.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                <td><span class="@chipClass">@q.Status</span></td>
+                <td class="text-end">R @q.Subtotal.ToString("N2")</td>
+                <td class="text-end">@q.MarkupPercent.ToString("0.##")%</td>
+                <td class="text-end">@q.TaxPercent.ToString("0.##")%</td>
+                <td class="text-end"><strong>R @q.Total.ToString("N2")</strong></td>
+                <td class="text-end">
+                  <!-- Send (POST) -->
+                  @if (!string.Equals(q.Status, "Sent", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(q.Status, "Accepted", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(q.Status, "Rejected", StringComparison.OrdinalIgnoreCase))
+                  {
+                      <form method="post" asp-controller="Quotes" asp-action="Send" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@q.Id" />
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                          <i class="fas fa-paper-plane"></i> Send
+                        </button>
+                      </form>
+                  }
+
+                  <!-- Accept / Reject (GET stubs for now) -->
+                  @if (!string.Equals(q.Status, "Accepted", StringComparison.OrdinalIgnoreCase))
+                  {
+                    <a class="btn btn-sm btn-outline-success" asp-controller="Quotes" asp-action="Accept" asp-route-id="@q.Id">
+                      <i class="fas fa-check"></i> Accept
+                    </a>
+                  }
+                  @if (!string.Equals(q.Status, "Rejected", StringComparison.OrdinalIgnoreCase))
+                  {
+                    <a class="btn btn-sm btn-outline-danger" asp-controller="Quotes" asp-action="Reject" asp-route-id="@q.Id">
+                      <i class="fas fa-xmark"></i> Reject
+                    </a>
+                  }
+                </td>
+              </tr>
           }
           </tbody>
         </table>
@@ -45,3 +131,35 @@
     </div>
   </div>
 </div>
+
+@section Scripts{
+<script>
+  (function(){
+    const search = document.getElementById('q-search');
+    const rows = [...document.querySelectorAll('#quotes-table tbody tr')];
+    const btns = document.querySelectorAll('#q-filters .btn');
+    let active = 'all';
+
+    function apply(){
+      const q = (search.value || '').trim().toLowerCase();
+      rows.forEach(r=>{
+        const s = (r.dataset.status || '').toLowerCase();
+        const t = (r.dataset.title || '').toLowerCase();
+        const okStatus = (active==='all') || (s===active.toLowerCase());
+        const okText = !q || t.includes(q);
+        r.style.display = (okStatus && okText) ? '' : 'none';
+      });
+    }
+
+    search.addEventListener('input', apply);
+    btns.forEach(b=> b.addEventListener('click', ()=>{
+      btns.forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      active = b.dataset.filter || 'all';
+      apply();
+    }));
+
+    apply();
+  })();
+</script>
+}

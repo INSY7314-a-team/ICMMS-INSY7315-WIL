@@ -2,8 +2,6 @@ using System.Text.Json;
 using ICCMS_Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-
 
 namespace ICCMS_Web.Controllers
 {
@@ -11,82 +9,104 @@ namespace ICCMS_Web.Controllers
     public class QuotesController : Controller
     {
         private readonly IWebHostEnvironment _env;
-        //private readonly IBlueprintParser _parser;
+        public QuotesController(IWebHostEnvironment env){ _env = env; }
+
         private string MockPath(string rel) => Path.Combine(_env.WebRootPath, rel.Replace('/','\\'));
 
-        // public QuotesController(IWebHostEnvironment env, IBlueprintParser parser){
-        //     _env = env; //_parser = parser;
-        // }
-
         // ---------- LIST ----------
-        [AllowAnonymous] // keep anon for tests
+        [AllowAnonymous]
         public IActionResult Index(){
             var quotes = ReadMock<List<Quote>>("mock/quotes.json") ?? new();
             foreach (var q in quotes) RecalcTotals(q);
             return View("~/Views/Quotes/Index.cshtml", quotes.OrderByDescending(q=>q.CreatedAt).ToList());
         }
 
-        // ---------- CREATE (GET) ----------
-        [AllowAnonymous]
-        public IActionResult Create(){
-            var rates = ReadMock<List<Rate>>("mock/rates.json") ?? new();
-            var srs   = ReadMock<List<ServiceRequest>>("mock/service_requests.json") ?? new();
-            ViewBag.Rates = rates;
-            ViewBag.ServiceRequests = srs;
-            return View("~/Views/Quotes/Create.cshtml", new Quote());
-        }
-
-        // ---------- CREATE (POST) ----------
+        // ---------- PREVIEW (from wizard) ----------
+        // Receives the QuotePreviewVM from the hidden form (wizard).
+        // We compute subtotals here so the preview page shows the right numbers.
         [HttpPost, ValidateAntiForgeryToken, AllowAnonymous]
-        public IActionResult Create(Quote model)
+        public IActionResult Preview(QuotePreviewVM vm)
         {
-        // Bind Items from hidden JSON
-        var itemsJson = Request.Form["ItemsJson"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(itemsJson))
-        {
-            try {
-                model.Items = System.Text.Json.JsonSerializer.Deserialize<List<QuoteItem>>(
-                    itemsJson,
-                    new System.Text.Json.JsonSerializerOptions{ PropertyNameCaseInsensitive = true }
-                ) ?? new();
-            } catch { model.Items = new(); }
+            // If Items are coming as a JSON blob (safer for complex lists), hydrate them
+            var itemsJson = Request.Form["ItemsJson"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(itemsJson))
+            {
+                try {
+                    vm.Items = JsonSerializer.Deserialize<List<PreviewItem>>(itemsJson,
+                        new JsonSerializerOptions{ PropertyNameCaseInsensitive = true }) ?? new();
+                } catch { vm.Items = new(); }
+            }
+
+            // Calc
+            vm.Subtotal = Math.Round(vm.Items.Sum(i => i.Qty * i.UnitPrice), 2);
+            vm.MarkupAmount = Math.Round(vm.Subtotal * vm.MarkupPercent / 100.0, 2);
+            vm.TaxAmount = Math.Round((vm.Subtotal + vm.MarkupAmount) * vm.TaxPercent / 100.0, 2);
+            vm.Total = Math.Round(vm.Subtotal + vm.MarkupAmount + vm.TaxAmount, 2);
+
+            return View("~/Views/Quotes/Preview.cshtml", vm);
         }
 
-        // Defaults (if not set)
-        if (model.MarkupPercent <= 0) model.MarkupPercent = 10;
-        if (model.TaxPercent    <= 0) model.TaxPercent    = 15;
+        // ---------- CREATE & SEND (from preview) ----------
+        // Takes the same VM again, converts to Quote model, saves into mock/quotes.json,
+        // and marks it “Waiting Approval” + SentAt now (notification = stub for later).
+        [HttpPost, ValidateAntiForgeryToken, AllowAnonymous]
+        public IActionResult CreateFromPreview(QuotePreviewVM vm)
+        {
+            // hydrate items if they came as a JSON blob
+            var itemsJson = Request.Form["ItemsJson"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(itemsJson))
+            {
+                try {
+                    vm.Items = JsonSerializer.Deserialize<List<PreviewItem>>(itemsJson,
+                        new JsonSerializerOptions{ PropertyNameCaseInsensitive = true }) ?? new();
+                } catch { vm.Items = new(); }
+            }
 
-        // Persist to mocks
-        var list = ReadMock<List<Quote>>("mock/quotes.json") ?? new();
-        model.Id = "Q-" + (1000 + list.Count + 1);
-        model.CreatedAt = DateTime.UtcNow;
-        RecalcTotals(model);
-        list.Add(model);
-        WriteMock("mock/quotes.json", list);
-        TempData["ok"] = "Quote created.";
-        return RedirectToAction(nameof(Index));
+            var list = ReadMock<List<Quote>>("mock/quotes.json") ?? new();
+
+            var q = new Quote {
+                Id = "Q-" + (1000 + list.Count + 1),
+                ProjectId = vm.ProjectId ?? "",
+                ClientName = vm.ClientName ?? "",
+                Title = vm.Title ?? $"Quote for {vm.ClientName}",
+                Status = "Waiting Approval", // per your request
+                MarkupPercent = vm.MarkupPercent,
+                TaxPercent = vm.TaxPercent,
+                CreatedAt = DateTime.UtcNow,
+                SentAt = DateTime.UtcNow, // we “send” it as part of this action (notifications later)
+                Items = vm.Items.Select(i => new QuoteItem{
+                    Type = i.Type ?? "Material",
+                    Name = i.Name ?? "",
+                    Qty = i.Qty,
+                    Unit = i.Unit ?? "ea",
+                    UnitPrice = i.UnitPrice,
+                    ContractorId = i.ContractorId,
+                    ContractorName = i.ContractorName
+                }).ToList()
+            };
+
+            RecalcTotals(q);
+            list.Add(q);
+            WriteMock("mock/quotes.json", list);
+
+            TempData["ok"] = "Quote created & sent (mock). Client notifications are stubbed.";
+            return RedirectToAction(nameof(Index));
         }
 
-
-        // ---------- PARSE BLUEPRINT (Mock) ----------
-        
-        // ---------- SEND ----------
+        // ---------- SEND (optional: if you want separate send step) ----------
         [HttpPost, AllowAnonymous]
         public IActionResult Send(string id){
             var list = ReadMock<List<Quote>>("mock/quotes.json") ?? new();
             var q = list.FirstOrDefault(x=>x.Id==id);
             if (q==null) return NotFound();
-            // --- API (disabled) ---
-            // await _http.PostAsync($"{_apiBase}/quotes/{id}/send", null);
-
-            q.Status = "Sent";
+            q.Status = "Waiting Approval";
             q.SentAt = DateTime.UtcNow;
             WriteMock("mock/quotes.json", list);
             TempData["ok"] = "Quote sent (mock).";
             return RedirectToAction(nameof(Index));
         }
 
-        // ---------- ACCEPT / REJECT (Client flow stub) ----------
+        // ---------- ACCEPT / REJECT (dev-only buttons for now) ----------
         [AllowAnonymous]
         public IActionResult Accept(string id){
             var list = ReadMock<List<Quote>>("mock/quotes.json") ?? new();
@@ -107,13 +127,6 @@ namespace ICCMS_Web.Controllers
             TempData["ok"] = "Quote rejected (mock).";
             return RedirectToAction(nameof(Index));
         }
-
-        [HttpPost, ValidateAntiForgeryToken, AllowAnonymous]
-        public IActionResult Preview(QuotePreviewVM model)
-        {
-            return View("~/Views/Quotes/Preview.cshtml", model);
-        }
-
 
         // ---------- helpers ----------
         private T? ReadMock<T>(string rel){

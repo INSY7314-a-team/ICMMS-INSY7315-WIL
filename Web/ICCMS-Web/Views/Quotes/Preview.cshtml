@@ -1,3 +1,8 @@
+@using System.Text.Json;
+@using ICCMS_Web.Models;
+@using Microsoft.AspNetCore.Authorization;
+@using Microsoft.AspNetCore.Mvc;
+
 @model ICCMS_Web.Models.QuotePreviewVM
 @using System.Security.Claims
 @{
@@ -208,11 +213,52 @@
       </div>
     </div>
 
-    <!-- Actions (screen only) -->
-    <div class="mt-4 no-print d-flex gap-2">
+  
+  <form method="post" asp-action="CreateFromPreview" asp-controller="Quotes" class="btn btn-warning">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="ProjectId" value="@Model.ProjectId" />
+    <input type="hidden" name="Title" value="@Model.Title" />
+    <input type="hidden" name="MarkupPercent" value="@Model.MarkupPercent" />
+    <input type="hidden" name="TaxPercent" value="@Model.TaxPercent" />
+
+    <input type="hidden" name="ClientId" value="@Model.ClientId" />
+    <input type="hidden" name="ClientName" value="@Model.ClientName" />
+    <input type="hidden" name="ClientOrg" value="@Model.ClientOrg" />
+    <input type="hidden" name="ClientEmail" value="@Model.ClientEmail" />
+    <input type="hidden" name="ClientPhone" value="@Model.ClientPhone" />
+    <input type="hidden" name="ClientAddress" value="@Model.ClientAddress" />
+
+    <!-- Easier binding for complex list: send items as JSON -->
+    <input type="hidden" name="ItemsJson" value='@JsonSerializer.Serialize(Model.Items)' />
+
+    <button class="btn btn-brand" type="submit">Create &amp; Send Quote</button>
+  </form>
+
+      <!-- Actions (screen only) -->
+      @* Minimal post-back to save the quote. Keeps your preview UI untouched. *@
+    <form method="post" asp-controller="Quotes" asp-action="CreateFromPreview" class="d-inline">
+      @Html.AntiForgeryToken()
+
+      <!-- top-level fields the controller needs -->
+      <input type="hidden" name="ProjectId" value="@Model.ProjectId" />
+      <input type="hidden" name="Title" value="@Model.Title" />
+      <input type="hidden" name="MarkupPercent" value="@Model.MarkupPercent" />
+      <input type="hidden" name="TaxPercent" value="@Model.TaxPercent" />
+
+      <input type="hidden" name="ClientId" value="@Model.ClientId" />
+      <input type="hidden" name="ClientName" value="@Model.ClientName" />
+      <input type="hidden" name="ClientOrg" value="@Model.ClientOrg" />
+      <input type="hidden" name="ClientEmail" value="@Model.ClientEmail" />
+      <input type="hidden" name="ClientPhone" value="@Model.ClientPhone" />
+      <input type="hidden" name="ClientAddress" value="@Model.ClientAddress" />
+
+      <!-- send items as JSON (textarea avoids quote-escaping headaches) -->
+      <textarea name="ItemsJson" class="d-none">
+    @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Items ?? new List<ICCMS_Web.Models.PreviewItem>()))
+      </textarea>
       <button class="btn btn-primary" onclick="window.print()">Download PDF</button>
-      <button class="btn btn-warning" disabled title="Stub for later">Send quote</button>
-    </div>
+    </form>
+
   </div>
 </body>
 </html>
