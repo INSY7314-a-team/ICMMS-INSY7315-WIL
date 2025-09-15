@@ -46,5 +46,27 @@ namespace ICCMS_API.Models
 
         [FirestoreProperty("paidBy")]
         public string PaidBy { get; set; } = string.Empty;
+
+        // New fields for enhanced workflow
+        [FirestoreProperty("items")]
+        public List<InvoiceItem> Items { get; set; } = new List<InvoiceItem>();
+
+        [FirestoreProperty("subtotal")]
+        public double Subtotal { get; set; }
+
+        [FirestoreProperty("taxTotal")]
+        public double TaxTotal { get; set; }
+
+        [FirestoreProperty("currency")]
+        public string Currency { get; set; } = "ZAR";
+
+        [FirestoreProperty("quotationId")]
+        public string? QuotationId { get; set; }
+
+        [FirestoreProperty("createdAt")]
+        public DateTime CreatedAt { get; set; }
+
+        [FirestoreProperty("updatedAt")]
+        public DateTime UpdatedAt { get; set; }
     }
 }

@@ -8,6 +8,7 @@ namespace ICCMS_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    // No authorization required - this is for login/authentication
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;

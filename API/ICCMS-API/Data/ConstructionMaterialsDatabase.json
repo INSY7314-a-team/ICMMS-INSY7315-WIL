@@ -1,0 +1,163 @@
+{
+  "materials": [
+    {
+      "id": "cement_001",
+      "name": "Cement",
+      "unit": "KG",
+      "unitPrice": 12.50,
+      "category": "Concrete",
+      "description": "Portland cement for construction",
+      "lastUpdated": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": "brick_001",
+      "name": "Bricks",
+      "unit": "PIECE",
+      "unitPrice": 3.25,
+      "category": "Masonry",
+      "description": "Standard red clay bricks",
+      "lastUpdated": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": "paint_001",
+      "name": "Paint",
+      "unit": "LITER",
+      "unitPrice": 85.00,
+      "category": "Finishing",
+      "description": "Interior/exterior paint",
+      "lastUpdated": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": "steel_rebar_001",
+      "name": "Steel Rebar",
+      "unit": "KG",
+      "unitPrice": 45.00,
+      "category": "Reinforcement",
+      "description": "Steel reinforcement bars",
+      "lastUpdated": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": "sand_001",
+      "name": "Sand",
+      "unit": "CUBIC_METER",
+      "unitPrice": 180.00,
+      "category": "Concrete",
+      "description": "Fine construction sand",
+      "lastUpdated": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": "gravel_001",
+      "name": "Gravel",
+      "unit": "CUBIC_METER",
+      "unitPrice": 220.00,
+      "category": "Concrete",
+      "description": "Coarse aggregate for concrete",
+      "lastUpdated": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": "tiles_001",
+      "name": "Floor Tiles",
+      "unit": "SQUARE_METER",
+      "unitPrice": 120.00,
+      "category": "Finishing",
+      "description": "Ceramic floor tiles",
+      "lastUpdated": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": "roofing_001",
+      "name": "Roofing Sheets",
+      "unit": "SQUARE_METER",
+      "unitPrice": 95.00,
+      "category": "Roofing",
+      "description": "Metal roofing sheets",
+      "lastUpdated": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": "electrical_wire_001",
+      "name": "Electrical Wire",
+      "unit": "METER",
+      "unitPrice": 15.50,
+      "category": "Electrical",
+      "description": "Copper electrical wire",
+      "lastUpdated": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": "plumbing_pipe_001",
+      "name": "PVC Pipe",
+      "unit": "METER",
+      "unitPrice": 25.00,
+      "category": "Plumbing",
+      "description": "PVC water pipe",
+      "lastUpdated": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": "insulation_001",
+      "name": "Insulation",
+      "unit": "SQUARE_METER",
+      "unitPrice": 45.00,
+      "category": "Insulation",
+      "description": "Thermal insulation material",
+      "lastUpdated": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": "window_001",
+      "name": "Windows",
+      "unit": "PIECE",
+      "unitPrice": 850.00,
+      "category": "Windows",
+      "description": "Standard aluminum windows",
+      "lastUpdated": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": "door_001",
+      "name": "Doors",
+      "unit": "PIECE",
+      "unitPrice": 650.00,
+      "category": "Doors",
+      "description": "Standard wooden doors",
+      "lastUpdated": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": "labor_001",
+      "name": "General Labor",
+      "unit": "HOUR",
+      "unitPrice": 85.00,
+      "category": "Labor",
+      "description": "General construction labor",
+      "lastUpdated": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": "equipment_001",
+      "name": "Equipment Rental",
+      "unit": "DAY",
+      "unitPrice": 450.00,
+      "category": "Equipment",
+      "description": "Heavy construction equipment rental",
+      "lastUpdated": "2024-01-15T10:00:00Z"
+    }
+  ],
+  "categories": [
+    "Concrete",
+    "Masonry", 
+    "Finishing",
+    "Reinforcement",
+    "Roofing",
+    "Electrical",
+    "Plumbing",
+    "Insulation",
+    "Windows",
+    "Doors",
+    "Labor",
+    "Equipment"
+  ],
+  "units": [
+    "KG",
+    "PIECE",
+    "LITER",
+    "CUBIC_METER",
+    "SQUARE_METER",
+    "METER",
+    "HOUR",
+    "DAY"
+  ]
+}

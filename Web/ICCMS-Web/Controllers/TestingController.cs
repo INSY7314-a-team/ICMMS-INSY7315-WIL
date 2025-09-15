@@ -116,13 +116,19 @@ namespace ICCMS_Web.Controllers
                 _httpClient.DefaultRequestHeaders.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", firebaseToken);
 
-                // Test multiple endpoints for integration
+                // Test multiple endpoints for integration - updated to current API structure
                 var endpoints = new[]
                 {
-                    "/api/admin",
-                    "/api/clients",
-                    "/api/projects",
-                    "/api/contractors",
+                    "/api/admin/dashboard",
+                    "/api/users/profile",
+                    "/api/quotations",
+                    "/api/invoices",
+                    "/api/documents",
+                    "/api/estimates",
+                    "/api/messages",
+                    "/api/notifications",
+                    "/api/payments",
+                    "/api/auditlogs",
                 };
 
                 var results = new List<string>();
@@ -154,6 +160,11 @@ namespace ICCMS_Web.Controllers
                 TempData["ErrorMessage"] = $"Error: {ex.Message}";
                 return View();
             }
+        }
+
+        public IActionResult WorkflowTest()
+        {
+            return View();
         }
 
         [HttpPost]

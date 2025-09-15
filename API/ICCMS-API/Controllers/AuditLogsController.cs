@@ -7,7 +7,7 @@ namespace ICCMS_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(Roles = "Admin,Project Manager,Tester")] // Admin oversight, PM management, Tester access
     public class AuditLogsController : ControllerBase
     {
         private readonly IFirebaseService _firebaseService;
