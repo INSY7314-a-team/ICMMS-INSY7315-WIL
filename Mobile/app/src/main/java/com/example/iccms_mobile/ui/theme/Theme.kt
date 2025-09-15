@@ -12,33 +12,37 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = TaskitYellow,
-    onPrimary = TaskitBlack,
-    secondary = TaskitYellowDark,
-    onSecondary = TaskitBlack,
-    tertiary = TaskitGreyLight,
-    onTertiary = TaskitBlack,
-    background = TaskitGreyVeryLight,
-    onBackground = TaskitBlack,
-    surface = TaskitGreyLight,
-    onSurface = TaskitBlack,
-    surfaceVariant = TaskitGreyDark,
-    onSurfaceVariant = TaskitBlackSoft
+    primary = ModernYellow,
+    onPrimary = ModernBlack,
+    secondary = ModernYellowDark,
+    onSecondary = ModernBlack,
+    tertiary = ModernYellowVariant,
+    onTertiary = ModernBlack,
+    background = ModernWhiteSoft,
+    onBackground = ModernBlack,
+    surface = ModernGreyLight,
+    onSurface = ModernBlack,
+    surfaceVariant = ModernGrey,
+    onSurfaceVariant = ModernBlackSecondary,
+    error = ModernError,
+    onError = ModernWhite
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = TaskitYellow,
-    onPrimary = TaskitBlack,
-    secondary = TaskitYellowDark,
-    onSecondary = TaskitBlack,
-    tertiary = TaskitGreyLight,
-    onTertiary = TaskitBlack,
-    background = TaskitGreyVeryLight,
-    onBackground = TaskitBlack,
-    surface = TaskitGreyLight,
-    onSurface = TaskitBlack,
-    surfaceVariant = TaskitGreyDark,
-    onSurfaceVariant = TaskitBlackSoft
+    primary = ModernYellow,
+    onPrimary = ModernBlack,
+    secondary = ModernYellowDark,
+    onSecondary = ModernBlack,
+    tertiary = ModernYellowVariant,
+    onTertiary = ModernBlack,
+    background = ModernWhite,
+    onBackground = ModernBlack,
+    surface = ModernGreyLight,
+    onSurface = ModernBlack,
+    surfaceVariant = ModernGrey,
+    onSurfaceVariant = ModernBlackSecondary,
+    error = ModernError,
+    onError = ModernWhite
 )
 
 @Composable

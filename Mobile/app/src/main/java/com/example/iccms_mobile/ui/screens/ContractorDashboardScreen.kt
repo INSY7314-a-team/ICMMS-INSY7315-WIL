@@ -15,7 +15,11 @@ import com.example.iccms_mobile.data.models.UserInfo
 @Composable
 fun ContractorDashboardScreen(
     user: UserInfo,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onNavigateToAssignments: () -> Unit = {},
+    onNavigateToSubmitQuotations: () -> Unit = {},
+    onNavigateToProgressUpdates: () -> Unit = {},
+    onNavigateToMessages: () -> Unit = {}
 ) {
     Scaffold(
         topBar = {
@@ -116,7 +120,7 @@ fun ContractorDashboardScreen(
                     // View Assignments
                     Card(
                         modifier = Modifier.weight(1f),
-                        onClick = { /* TODO: Navigate to assignments */ }
+                        onClick = onNavigateToAssignments
                     ) {
                         Column(
                             modifier = Modifier
@@ -135,7 +139,7 @@ fun ContractorDashboardScreen(
                     // Submit Quotations
                     Card(
                         modifier = Modifier.weight(1f),
-                        onClick = { /* TODO: Navigate to submit quotations */ }
+                        onClick = onNavigateToSubmitQuotations
                     ) {
                         Column(
                             modifier = Modifier
@@ -161,7 +165,7 @@ fun ContractorDashboardScreen(
                     // Update Progress
                     Card(
                         modifier = Modifier.weight(1f),
-                        onClick = { /* TODO: Navigate to progress updates */ }
+                        onClick = onNavigateToProgressUpdates
                     ) {
                         Column(
                             modifier = Modifier
@@ -180,7 +184,7 @@ fun ContractorDashboardScreen(
                     // View Messages
                     Card(
                         modifier = Modifier.weight(1f),
-                        onClick = { /* TODO: Navigate to messages */ }
+                        onClick = onNavigateToMessages
                     ) {
                         Column(
                             modifier = Modifier

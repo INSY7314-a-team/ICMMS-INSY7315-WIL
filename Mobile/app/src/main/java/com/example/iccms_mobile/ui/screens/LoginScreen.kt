@@ -61,7 +61,8 @@ fun LoginScreen(
                 painter = painterResource(id = R.drawable.taskit_logo_png),
                 contentDescription = "TASKIT Logo",
                 modifier = Modifier
-                    .size(380.dp)
+                    .sizeIn(minWidth = 200.dp, maxWidth = 300.dp)
+                    .aspectRatio(1f)
                     .padding(bottom = 10.dp),
                 contentScale = ContentScale.Fit
             )
