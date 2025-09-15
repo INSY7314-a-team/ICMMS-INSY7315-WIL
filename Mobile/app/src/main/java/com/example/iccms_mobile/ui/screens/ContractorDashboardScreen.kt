@@ -1,26 +1,41 @@
 package com.example.iccms_mobile.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.iccms_mobile.data.models.UserInfo
+import com.example.iccms_mobile.ui.screens.contractor.*
+import com.example.iccms_mobile.ui.viewmodel.ContractorDashboardViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContractorDashboardScreen(
     user: UserInfo,
     onLogout: () -> Unit,
-    onNavigateToAssignments: () -> Unit = {},
-    onNavigateToSubmitQuotations: () -> Unit = {},
-    onNavigateToProgressUpdates: () -> Unit = {},
-    onNavigateToMessages: () -> Unit = {}
+    onNavigateToUploadDocument: () -> Unit = {},
+    onNavigateToTaskDetails: (String) -> Unit = {},
+    onNavigateToPhaseDetails: (String) -> Unit = {},
+    onNavigateToDocumentDetails: (String) -> Unit = {}
 ) {
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val contractorViewModel = remember { ContractorDashboardViewModel() }
+    
+    val tabs = listOf(
+        TabItem("Overview", Icons.Default.Home),
+        TabItem("Tasks", Icons.Default.List),
+        TabItem("Phases", Icons.Default.Build),
+        TabItem("Documents", Icons.Default.Menu)
+    )
     Scaffold(
         topBar = {
             TopAppBar(
@@ -31,216 +46,66 @@ fun ContractorDashboardScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            NavigationBar(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 8.dp
+            ) {
+                tabs.forEachIndexed { index, tab ->
+                    NavigationBarItem(
+                        icon = {
+                            Icon(
+                                tab.icon,
+                                contentDescription = tab.title,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        },
+                        label = {
+                            Text(
+                                tab.title,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        },
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    )
+                }
+            }
         }
     ) { paddingValues ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Role Verification Card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "🔨 CONTRACTOR DASHBOARD",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
-                        Text(
-                            text = "Role: ${user.Role}",
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
-                }
-            }
-            
-            // Welcome Card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Welcome, ${user.FullName}!",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Text(
-                            text = user.Email,
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                        Text(
-                            text = "Contractor",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
-                    }
-                }
-            }
-            
-            // Contractor Quick Actions
-            item {
-                Text(
-                    text = "Contractor Actions",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(vertical = 8.dp)
+            when (selectedTab) {
+                0 -> ContractorOverviewScreen(
+                    user = user,
+                    viewModel = contractorViewModel
                 )
-            }
-            
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // View Assignments
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToAssignments
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "My Assignments",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                    
-                    // Submit Quotations
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToSubmitQuotations
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Submit Quotations",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-            }
-            
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Update Progress
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToProgressUpdates
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Update Progress",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                    
-                    // View Messages
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToMessages
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Messages",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-            }
-            
-            // Work Overview Section
-            item {
-                Text(
-                    text = "Work Overview",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                1 -> ContractorTasksScreen(
+                    viewModel = contractorViewModel,
+                    onNavigateToTaskDetails = onNavigateToTaskDetails
                 )
-            }
-            
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Active Assignments: --",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        Text(
-                            text = "Completed Tasks: --",
-                            fontSize = 14.sp,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
-                        Text(
-                            text = "Pending Quotations: --",
-                            fontSize = 14.sp,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
-                        Text(
-                            text = "Upcoming Deadlines: --",
-                            fontSize = 14.sp
-                        )
-                    }
-                }
+                2 -> ContractorPhasesScreen(
+                    viewModel = contractorViewModel,
+                    onNavigateToPhaseDetails = onNavigateToPhaseDetails
+                )
+                3 -> ContractorDocumentsScreen(
+                    viewModel = contractorViewModel,
+                    onNavigateToUploadDocument = onNavigateToUploadDocument,
+                    onNavigateToDocumentDetails = onNavigateToDocumentDetails
+                )
             }
         }
     }

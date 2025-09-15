@@ -2392,23 +2392,23 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\maxat\\.nuget\\packages\\": {},
+    "C:\\Users\\nicol\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\maxat\\OneDrive - ADvTECH Ltd\\Varsity College\\2025\\Semester 2\\INSY7315\\ICMMS-INSY7314-WIL-\\Web\\ICCMS-Web\\ICCMS-Web.csproj",
+      "projectUniqueName": "C:\\Users\\nicol\\OneDrive - ADvTECH Ltd\\2025\\Semester 2\\INSY7315_WIL_ContructionApp\\Code\\ICMMS-INSY7314-WIL-\\Web\\ICCMS-Web\\ICCMS-Web.csproj",
       "projectName": "ICCMS-Web",
-      "projectPath": "C:\\Users\\maxat\\OneDrive - ADvTECH Ltd\\Varsity College\\2025\\Semester 2\\INSY7315\\ICMMS-INSY7314-WIL-\\Web\\ICCMS-Web\\ICCMS-Web.csproj",
-      "packagesPath": "C:\\Users\\maxat\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\maxat\\OneDrive - ADvTECH Ltd\\Varsity College\\2025\\Semester 2\\INSY7315\\ICMMS-INSY7314-WIL-\\Web\\ICCMS-Web\\obj\\",
+      "projectPath": "C:\\Users\\nicol\\OneDrive - ADvTECH Ltd\\2025\\Semester 2\\INSY7315_WIL_ContructionApp\\Code\\ICMMS-INSY7314-WIL-\\Web\\ICCMS-Web\\ICCMS-Web.csproj",
+      "packagesPath": "C:\\Users\\nicol\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\nicol\\OneDrive - ADvTECH Ltd\\2025\\Semester 2\\INSY7315_WIL_ContructionApp\\Code\\ICMMS-INSY7314-WIL-\\Web\\ICCMS-Web\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\maxat\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\nicol\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -2435,7 +2435,7 @@
         "auditLevel": "low",
         "auditMode": "direct"
       },
-      "SdkAnalysisLevel": "9.0.200"
+      "SdkAnalysisLevel": "9.0.300"
     },
     "frameworks": {
       "net9.0": {
@@ -2469,7 +2469,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.203/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

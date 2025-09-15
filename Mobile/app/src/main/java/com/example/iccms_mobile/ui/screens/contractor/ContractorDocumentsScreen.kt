@@ -1,8 +1,10 @@
-package com.example.iccms_mobile.ui.screens.client
+package com.example.iccms_mobile.ui.screens.contractor
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,21 +13,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.collectAsState
-import com.example.iccms_mobile.data.models.Quotation
-import com.example.iccms_mobile.ui.viewmodel.ClientDashboardViewModel
-import java.text.NumberFormat
+import com.example.iccms_mobile.data.models.Document
+import com.example.iccms_mobile.ui.viewmodel.ContractorDashboardViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ClientQuotationsScreen(
-    viewModel: ClientDashboardViewModel,
-    onNavigateToQuotationDetails: (String) -> Unit = {}
+fun ContractorDocumentsScreen(
+    viewModel: ContractorDashboardViewModel,
+    onNavigateToUploadDocument: () -> Unit = {},
+    onNavigateToDocumentDetails: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     
-    // Load quotations data when screen is first displayed
+    // Load documents data when screen is first displayed
     LaunchedEffect(Unit) {
         viewModel.loadDashboardData()
     }
@@ -35,11 +37,22 @@ fun ClientQuotationsScreen(
             TopAppBar(
                 title = { 
                     Text(
-                        "Quotations",
+                        "Project Documents",
                         style = MaterialTheme.typography.headlineMedium
                     )
                 }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onNavigateToUploadDocument,
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Upload Document"
+                )
+            }
         }
     ) { paddingValues ->
         LazyColumn(
@@ -55,29 +68,29 @@ fun ClientQuotationsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    StatCard(
-                        title = "Total Quotes",
-                        value = uiState.quotations.size.toString(),
+                    DocumentStatCard(
+                        title = "Total Docs",
+                        value = uiState.documents.size.toString(),
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
-                    StatCard(
+                    DocumentStatCard(
                         title = "Pending",
-                        value = uiState.quotations.count { it.Status.lowercase() == "pending" }.toString(),
+                        value = uiState.documents.count { it.Status.lowercase() == "pending" }.toString(),
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f)
                     )
-                    StatCard(
+                    DocumentStatCard(
                         title = "Approved",
-                        value = uiState.quotations.count { it.Status.lowercase() == "approved" }.toString(),
+                        value = uiState.documents.count { it.Status.lowercase() == "approved" }.toString(),
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.weight(1f)
                     )
                 }
             }
             
-            // Quotations List
-            if (uiState.quotations.isEmpty() && !uiState.isLoading) {
+            // Documents List
+            if (uiState.documents.isEmpty() && !uiState.isLoading) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth()
@@ -89,17 +102,17 @@ fun ClientQuotationsScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "📋",
+                                text = "📄",
                                 fontSize = 48.sp
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "No Quotations Found",
+                                text = "No Documents Found",
                                 style = MaterialTheme.typography.headlineSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "Quotations from contractors will appear here",
+                                text = "Upload your first project document to get started",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -107,12 +120,11 @@ fun ClientQuotationsScreen(
                     }
                 }
             } else {
-                items(uiState.quotations) { quotation ->
-                    QuotationCard(
-                        quotation = quotation,
-                        onClick = { onNavigateToQuotationDetails(quotation.QuotationId) },
-                        onApprove = { viewModel.approveQuotation(quotation.QuotationId) },
-                        onReject = { viewModel.rejectQuotation(quotation.QuotationId) }
+                items(uiState.documents) { document ->
+                    DocumentCard(
+                        document = document,
+                        onClick = { onNavigateToDocumentDetails(document.DocumentId) },
+                        onDelete = { viewModel.deleteDocument(document.DocumentId) }
                     )
                 }
             }
@@ -131,11 +143,10 @@ fun ClientQuotationsScreen(
 }
 
 @Composable
-fun QuotationCard(
-    quotation: Quotation,
+fun DocumentCard(
+    document: Document,
     onClick: () -> Unit,
-    onApprove: () -> Unit,
-    onReject: () -> Unit
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -152,20 +163,32 @@ fun QuotationCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = quotation.Description,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = getFileTypeIcon(document.FileType),
+                        contentDescription = document.FileType,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
                     )
-                    Text(
-                        text = "Contractor ID: ${quotation.ContractorId}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = document.FileName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = document.Description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
                 }
-                QuotationStatusChip(status = quotation.Status)
+                DocumentStatusChip(status = document.Status)
             }
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -177,61 +200,64 @@ fun QuotationCard(
             ) {
                 Column {
                     Text(
-                        text = "Total Amount",
+                        text = "File Size",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "R ${NumberFormat.getNumberInstance().format(quotation.Total)}",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        text = formatFileSize(document.FileSize),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Column {
                     Text(
-                        text = "Valid Until",
+                        text = "Uploaded",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = formatDate(quotation.ValidUntil),
+                        text = formatDate(document.UploadedAt),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
             
-            Text(
-                text = "Created: ${formatDate(quotation.CreatedAt)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            
-            if (quotation.Status.lowercase() == "pending") {
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Document Actions
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { /* Download document */ },
+                    modifier = Modifier.weight(1f)
                 ) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Download",
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Download")
+                }
+                
+                if (document.Status.lowercase() == "pending") {
                     Button(
-                        onClick = onApprove,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiary
-                        )
-                    ) {
-                        Text("Approve")
-                    }
-                    Button(
-                        onClick = onReject,
+                        onClick = onDelete,
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error
                         )
                     ) {
-                        Text("Reject")
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Delete")
                     }
                 }
             }
@@ -240,7 +266,7 @@ fun QuotationCard(
 }
 
 @Composable
-fun QuotationStatusChip(status: String) {
+fun DocumentStatusChip(status: String) {
     val (backgroundColor, textColor) = when (status.lowercase()) {
         "pending" -> MaterialTheme.colorScheme.secondary to MaterialTheme.colorScheme.onSecondary
         "approved" -> MaterialTheme.colorScheme.tertiary to MaterialTheme.colorScheme.onTertiary
@@ -261,6 +287,47 @@ fun QuotationStatusChip(status: String) {
     }
 }
 
+@Composable
+fun getFileTypeIcon(fileType: String): androidx.compose.ui.graphics.vector.ImageVector {
+    return when (fileType.lowercase()) {
+        "pdf" -> Icons.Default.Menu
+        "doc", "docx" -> Icons.Default.Menu
+        "jpg", "jpeg", "png", "gif" -> Icons.Default.Star
+        "zip", "rar" -> Icons.Default.Build
+        "xls", "xlsx" -> Icons.Default.List
+        else -> Icons.Default.Home
+    }
+}
+
+@Composable
+fun DocumentStatCard(
+    title: String,
+    value: String,
+    color: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = color)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+            )
+        }
+    }
+}
 
 private fun formatDate(dateString: String): String {
     return try {
@@ -270,5 +337,14 @@ private fun formatDate(dateString: String): String {
         outputFormat.format(date ?: Date())
     } catch (e: Exception) {
         dateString
+    }
+}
+
+private fun formatFileSize(bytes: Long): String {
+    return when {
+        bytes < 1024 -> "$bytes B"
+        bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+        bytes < 1024 * 1024 * 1024 -> "${bytes / (1024 * 1024)} MB"
+        else -> "${bytes / (1024 * 1024 * 1024)} GB"
     }
 }

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -11,7 +12,9 @@ import androidx.navigation.compose.rememberNavController
 import com.example.iccms_mobile.ui.screens.ClientDashboardScreen
 import com.example.iccms_mobile.ui.screens.ContractorDashboardScreen
 import com.example.iccms_mobile.ui.screens.LoginScreen
+import com.example.iccms_mobile.ui.screens.client.CreateMaintenanceRequestScreen
 import com.example.iccms_mobile.ui.viewmodel.AuthViewModel
+import com.example.iccms_mobile.ui.viewmodel.ClientDashboardViewModel
 
 @Composable
 fun AppNavigation(
@@ -89,12 +92,38 @@ fun AppNavigation(
                         navController.navigate("login") {
                             popUpTo("client_dashboard") { inclusive = true }
                         }
+                    },
+                    onNavigateToCreateRequest = {
+                        navController.navigate("create_maintenance_request")
                     }
                 )
             } ?: run {
                 // User is null, redirect to login
                 navController.navigate("login") {
                     popUpTo("client_dashboard") { inclusive = true }
+                }
+            }
+        }
+        
+        composable("create_maintenance_request") {
+            val authState by authViewModel.uiState.collectAsState()
+            
+            authState.user?.let { user ->
+                val clientDashboardViewModel: ClientDashboardViewModel = viewModel()
+                
+                CreateMaintenanceRequestScreen(
+                    viewModel = clientDashboardViewModel,
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onRequestCreated = {
+                        navController.popBackStack()
+                    }
+                )
+            } ?: run {
+                // User is null, redirect to login
+                navController.navigate("login") {
+                    popUpTo("create_maintenance_request") { inclusive = true }
                 }
             }
         }

@@ -1,8 +1,10 @@
-package com.example.iccms_mobile.ui.screens.client
+package com.example.iccms_mobile.ui.screens.contractor
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,21 +13,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.collectAsState
-import com.example.iccms_mobile.data.models.Quotation
-import com.example.iccms_mobile.ui.viewmodel.ClientDashboardViewModel
-import java.text.NumberFormat
+import com.example.iccms_mobile.data.models.Phase
+import com.example.iccms_mobile.ui.viewmodel.ContractorDashboardViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ClientQuotationsScreen(
-    viewModel: ClientDashboardViewModel,
-    onNavigateToQuotationDetails: (String) -> Unit = {}
+fun ContractorPhasesScreen(
+    viewModel: ContractorDashboardViewModel,
+    onNavigateToPhaseDetails: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     
-    // Load quotations data when screen is first displayed
+    // Load phases data when screen is first displayed
     LaunchedEffect(Unit) {
         viewModel.loadDashboardData()
     }
@@ -35,7 +36,7 @@ fun ClientQuotationsScreen(
             TopAppBar(
                 title = { 
                     Text(
-                        "Quotations",
+                        "Project Phases",
                         style = MaterialTheme.typography.headlineMedium
                     )
                 }
@@ -55,29 +56,29 @@ fun ClientQuotationsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    StatCard(
-                        title = "Total Quotes",
-                        value = uiState.quotations.size.toString(),
+                    PhaseStatCard(
+                        title = "Total Phases",
+                        value = uiState.projectPhases.size.toString(),
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
-                    StatCard(
-                        title = "Pending",
-                        value = uiState.quotations.count { it.Status.lowercase() == "pending" }.toString(),
+                    PhaseStatCard(
+                        title = "In Progress",
+                        value = uiState.projectPhases.count { it.Status.lowercase() == "in progress" }.toString(),
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f)
                     )
-                    StatCard(
-                        title = "Approved",
-                        value = uiState.quotations.count { it.Status.lowercase() == "approved" }.toString(),
+                    PhaseStatCard(
+                        title = "Completed",
+                        value = uiState.projectPhases.count { it.Status.lowercase() == "completed" }.toString(),
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.weight(1f)
                     )
                 }
             }
             
-            // Quotations List
-            if (uiState.quotations.isEmpty() && !uiState.isLoading) {
+            // Phases List
+            if (uiState.projectPhases.isEmpty() && !uiState.isLoading) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth()
@@ -89,17 +90,17 @@ fun ClientQuotationsScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "📋",
+                                text = "🏗️",
                                 fontSize = 48.sp
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "No Quotations Found",
+                                text = "No Phases Assigned",
                                 style = MaterialTheme.typography.headlineSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "Quotations from contractors will appear here",
+                                text = "You will be notified when new project phases are assigned to you",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -107,12 +108,10 @@ fun ClientQuotationsScreen(
                     }
                 }
             } else {
-                items(uiState.quotations) { quotation ->
-                    QuotationCard(
-                        quotation = quotation,
-                        onClick = { onNavigateToQuotationDetails(quotation.QuotationId) },
-                        onApprove = { viewModel.approveQuotation(quotation.QuotationId) },
-                        onReject = { viewModel.rejectQuotation(quotation.QuotationId) }
+                items(uiState.projectPhases) { phase ->
+                    PhaseCard(
+                        phase = phase,
+                        onClick = { onNavigateToPhaseDetails(phase.PhaseId) }
                     )
                 }
             }
@@ -131,11 +130,9 @@ fun ClientQuotationsScreen(
 }
 
 @Composable
-fun QuotationCard(
-    quotation: Quotation,
-    onClick: () -> Unit,
-    onApprove: () -> Unit,
-    onReject: () -> Unit
+fun PhaseCard(
+    phase: Phase,
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -154,18 +151,49 @@ fun QuotationCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = quotation.Description,
+                        text = phase.Name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "Contractor ID: ${quotation.ContractorId}",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = phase.Description,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
-                QuotationStatusChip(status = quotation.Status)
+                PhaseStatusChip(status = phase.Status)
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Progress Bar
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Progress",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "${phase.Progress}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                LinearProgressIndicator(
+                    progress = phase.Progress / 100f,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = when (phase.Status.lowercase()) {
+                        "completed" -> MaterialTheme.colorScheme.tertiary
+                        "in progress" -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.secondary
+                    }
+                )
             }
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -177,25 +205,25 @@ fun QuotationCard(
             ) {
                 Column {
                     Text(
-                        text = "Total Amount",
+                        text = "Budget",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "R ${NumberFormat.getNumberInstance().format(quotation.Total)}",
-                        style = MaterialTheme.typography.titleLarge,
+                        text = "R ${String.format("%.2f", phase.Budget)}",
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
                 Column {
                     Text(
-                        text = "Valid Until",
+                        text = "End Date",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = formatDate(quotation.ValidUntil),
+                        text = formatDate(phase.EndDate),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -203,48 +231,57 @@ fun QuotationCard(
             }
             
             Text(
-                text = "Created: ${formatDate(quotation.CreatedAt)}",
+                text = "Started: ${formatDate(phase.StartDate)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp)
             )
             
-            if (quotation.Status.lowercase() == "pending") {
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = onApprove,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiary
-                        )
-                    ) {
-                        Text("Approve")
+            // Phase Status Indicator
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = when (phase.Status.lowercase()) {
+                        "completed" -> Icons.Default.CheckCircle
+                        "in progress" -> Icons.Default.Build
+                        else -> Icons.Default.DateRange
+                    },
+                    contentDescription = phase.Status,
+                    tint = when (phase.Status.lowercase()) {
+                        "completed" -> MaterialTheme.colorScheme.tertiary
+                        "in progress" -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.secondary
+                    },
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = when (phase.Status.lowercase()) {
+                        "completed" -> "Phase completed successfully"
+                        "in progress" -> "Phase in progress"
+                        else -> "Phase pending start"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = when (phase.Status.lowercase()) {
+                        "completed" -> MaterialTheme.colorScheme.tertiary
+                        "in progress" -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.secondary
                     }
-                    Button(
-                        onClick = onReject,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Text("Reject")
-                    }
-                }
+                )
             }
         }
     }
 }
 
 @Composable
-fun QuotationStatusChip(status: String) {
+fun PhaseStatusChip(status: String) {
     val (backgroundColor, textColor) = when (status.lowercase()) {
-        "pending" -> MaterialTheme.colorScheme.secondary to MaterialTheme.colorScheme.onSecondary
-        "approved" -> MaterialTheme.colorScheme.tertiary to MaterialTheme.colorScheme.onTertiary
-        "rejected" -> MaterialTheme.colorScheme.error to MaterialTheme.colorScheme.onError
+        "pending" -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+        "in progress" -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimary
+        "completed" -> MaterialTheme.colorScheme.tertiary to MaterialTheme.colorScheme.onTertiary
         else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
     
@@ -261,6 +298,35 @@ fun QuotationStatusChip(status: String) {
     }
 }
 
+@Composable
+fun PhaseStatCard(
+    title: String,
+    value: String,
+    color: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = color)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+            )
+        }
+    }
+}
 
 private fun formatDate(dateString: String): String {
     return try {

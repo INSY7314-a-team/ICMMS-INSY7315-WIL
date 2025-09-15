@@ -41,10 +41,13 @@ class ClientDashboardViewModel : ViewModel() {
                 val invoices = invoicesResult.getOrElse { emptyList() }
                 val maintenanceRequests = maintenanceRequestsResult.getOrElse { emptyList() }
                 
+                // Add mock quotations for testing
+                val mockQuotations = quotations + createMockQuotations()
+                
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     projects = projects,
-                    quotations = quotations,
+                    quotations = mockQuotations,
                     invoices = invoices,
                     maintenanceRequests = maintenanceRequests
                 )
@@ -206,5 +209,81 @@ class ClientDashboardViewModel : ViewModel() {
     
     fun clearMessages() {
         _uiState.value = _uiState.value.copy(errorMessage = null, successMessage = null)
+    }
+    
+    private fun createMockQuotations(): List<Quotation> {
+        val currentDate = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+        val validUntilDate = java.util.Calendar.getInstance().apply {
+            add(java.util.Calendar.DAY_OF_MONTH, 30) // Valid for 30 days
+        }.time
+        val validUntil = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault()).format(validUntilDate)
+        
+        val approvedDate = java.util.Calendar.getInstance().apply {
+            add(java.util.Calendar.DAY_OF_MONTH, -5) // Approved 5 days ago
+        }.time
+        val approvedAt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault()).format(approvedDate)
+        
+        return listOf(
+            Quotation(
+                QuotationId = "QUO-2024-001",
+                ProjectId = "PROJ-001",
+                MaintenanceRequestId = "MR-2024-001",
+                ClientId = "CLIENT-001",
+                ContractorId = "CONTRACTOR-001",
+                AdminApproverUserId = "ADMIN-001",
+                Description = "Kitchen Renovation - Cabinet Installation and Plumbing Work",
+                Total = 45000.00,
+                Status = "Pending",
+                ValidUntil = validUntil,
+                CreatedAt = currentDate,
+                SentAt = currentDate,
+                ApprovedAt = null
+            ),
+            Quotation(
+                QuotationId = "QUO-2024-002",
+                ProjectId = "PROJ-002",
+                MaintenanceRequestId = "MR-2024-002",
+                ClientId = "CLIENT-001",
+                ContractorId = "CONTRACTOR-002",
+                AdminApproverUserId = "ADMIN-001",
+                Description = "Bathroom Remodeling - Tile Work and Fixture Installation",
+                Total = 32000.00,
+                Status = "Approved",
+                ValidUntil = validUntil,
+                CreatedAt = currentDate,
+                SentAt = currentDate,
+                ApprovedAt = approvedAt
+            ),
+            Quotation(
+                QuotationId = "QUO-2024-003",
+                ProjectId = "PROJ-003",
+                MaintenanceRequestId = "MR-2024-003",
+                ClientId = "CLIENT-001",
+                ContractorId = "CONTRACTOR-003",
+                AdminApproverUserId = "ADMIN-001",
+                Description = "Roof Repair and Gutter Installation",
+                Total = 18500.00,
+                Status = "Pending",
+                ValidUntil = validUntil,
+                CreatedAt = currentDate,
+                SentAt = currentDate,
+                ApprovedAt = null
+            ),
+            Quotation(
+                QuotationId = "QUO-2024-004",
+                ProjectId = "PROJ-004",
+                MaintenanceRequestId = "MR-2024-004",
+                ClientId = "CLIENT-001",
+                ContractorId = "CONTRACTOR-004",
+                AdminApproverUserId = "ADMIN-001",
+                Description = "Electrical Panel Upgrade and Outlet Installation",
+                Total = 12500.00,
+                Status = "Rejected",
+                ValidUntil = validUntil,
+                CreatedAt = currentDate,
+                SentAt = currentDate,
+                ApprovedAt = null
+            )
+        )
     }
 }
