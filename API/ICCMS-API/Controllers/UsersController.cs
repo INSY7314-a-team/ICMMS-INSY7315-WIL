@@ -45,5 +45,47 @@ namespace ICCMS_API.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
+        // Add endpoint for users to update their device token for push notifications
+        [HttpPut("device-token")]
+        public async Task<IActionResult> UpdateDeviceToken(
+            [FromBody] UpdateDeviceTokenRequest request
+        )
+        {
+            try
+            {
+                var userId = HttpContext.Items["UserId"] as string;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized();
+                }
+
+                if (string.IsNullOrEmpty(request.DeviceToken))
+                {
+                    return BadRequest(new { error = "Device token is required" });
+                }
+
+                var user = await _firebaseService.GetDocumentAsync<User>("users", userId);
+                if (user == null)
+                {
+                    return NotFound(new { error = "User not found" });
+                }
+
+                // Update the device token
+                user.DeviceToken = request.DeviceToken;
+                await _firebaseService.UpdateDocumentAsync("users", userId, user);
+
+                return Ok(new { message = "Device token updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+    }
+
+    public class UpdateDeviceTokenRequest
+    {
+        public string DeviceToken { get; set; } = string.Empty;
     }
 }
