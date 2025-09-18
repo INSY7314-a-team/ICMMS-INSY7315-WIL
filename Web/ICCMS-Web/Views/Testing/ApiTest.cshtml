@@ -230,8 +230,8 @@
                         <a href="#" class="list-group-item list-group-item-action d-flex align-items-center"
                             data-category="messages">
                             <i class="fas fa-comments me-2 text-info"></i>
-                            <span>Messages</span>
-                            <small class="text-muted ms-auto">7 endpoints</small>
+                            <span>Messages & Workflow</span>
+                            <small class="text-muted ms-auto">25 endpoints</small>
                         </a>
                         <a href="#" class="list-group-item list-group-item-action d-flex align-items-center"
                             data-category="notifications">
@@ -928,11 +928,12 @@
             ]
         },
         messages: {
-            name: 'Messages',
+            name: 'Messages & Workflow',
             icon: 'fas fa-comments',
             color: 'info',
-            description: 'Internal messaging system',
+            description: 'Comprehensive messaging system with validation and workflow integration',
             endpoints: [
+                // Basic Message Operations
                 {
                     method: 'GET',
                     path: '/api/messages',
@@ -963,15 +964,18 @@
                 {
                     method: 'POST',
                     path: '/api/messages',
-                    description: 'Create new message',
+                    description: 'Create new message (with validation)',
                     requiresBody: true,
                     sampleBody: {
                         senderId: "user123",
-                        recipientId: "user456",
+                        receiverId: "user456",
                         projectId: "project789",
                         subject: "Project Update",
                         content: "The project is progressing well and on schedule.",
-                        priority: "Normal"
+                        threadId: null,
+                        parentMessageId: null,
+                        threadParticipants: ["user123", "user456"],
+                        messageType: "direct"
                     }
                 },
                 {
@@ -982,11 +986,12 @@
                     hasId: true,
                     sampleBody: {
                         senderId: "user123",
-                        recipientId: "user456",
+                        receiverId: "user456",
                         projectId: "project789",
                         subject: "Updated Project Update",
                         content: "The project is progressing excellently and ahead of schedule.",
-                        priority: "High"
+                        isRead: false,
+                        sentAt: "2024-01-15T10:30:00Z"
                     }
                 },
                 {
@@ -995,6 +1000,144 @@
                     description: 'Delete message',
                     requiresBody: false,
                     hasId: true
+                },
+                // Threading Operations
+                {
+                    method: 'POST',
+                    path: '/api/messages/thread',
+                    description: 'Create new message thread',
+                    requiresBody: true,
+                    sampleBody: {
+                        projectId: "project789",
+                        subject: "New Discussion Thread",
+                        content: "Let's discuss the project requirements in detail.",
+                        participants: ["user123", "user456", "user789"],
+                        threadType: "general",
+                        tags: ["discussion", "requirements"]
+                    }
+                },
+                {
+                    method: 'POST',
+                    path: '/api/messages/reply',
+                    description: 'Reply to message in thread',
+                    requiresBody: true,
+                    sampleBody: {
+                        parentMessageId: "msg-uuid-123",
+                        content: "I agree with your assessment. Let's proceed with the implementation.",
+                        additionalRecipients: []
+                    }
+                },
+                {
+                    method: 'GET',
+                    path: '/api/messages/threads',
+                    description: 'Get all message threads',
+                    requiresBody: false
+                },
+                {
+                    method: 'GET',
+                    path: '/api/messages/thread/{threadId}',
+                    description: 'Get messages in specific thread',
+                    requiresBody: false,
+                    hasId: true
+                },
+                // Broadcast Operations
+                {
+                    method: 'POST',
+                    path: '/api/messages/broadcast',
+                    description: 'Broadcast message to all project users',
+                    requiresBody: true,
+                    sampleBody: {
+                        senderId: "user123",
+                        projectId: "project789",
+                        subject: "Important Project Announcement",
+                        content: "Please note that the project deadline has been extended by one week."
+                    }
+                },
+                // File Attachments
+                {
+                    method: 'POST',
+                    path: '/api/messages/attachment',
+                    description: 'Upload message attachment',
+                    requiresBody: false,
+                    isFileUpload: true,
+                    fileUploadFields: [
+                        { name: 'file', type: 'file', required: true, description: 'File to attach' },
+                        { name: 'messageId', type: 'text', required: true, description: 'Message ID' },
+                        { name: 'description', type: 'text', required: false, description: 'Attachment description' },
+                        { name: 'category', type: 'text', required: false, description: 'Attachment category' }
+                    ]
+                },
+                {
+                    method: 'GET',
+                    path: '/api/messages/attachment/{attachmentId}',
+                    description: 'Get attachment details',
+                    requiresBody: false,
+                    hasId: true
+                },
+                {
+                    method: 'GET',
+                    path: '/api/messages/message/{messageId}/attachments',
+                    description: 'Get all attachments for a message',
+                    requiresBody: false,
+                    hasId: true
+                },
+                {
+                    method: 'DELETE',
+                    path: '/api/messages/attachment/{attachmentId}',
+                    description: 'Delete message attachment',
+                    requiresBody: false,
+                    hasId: true
+                },
+                // Workflow Integration
+                {
+                    method: 'GET',
+                    path: '/api/messages/workflow',
+                    description: 'Get workflow messages',
+                    requiresBody: false
+                },
+                {
+                    method: 'POST',
+                    path: '/api/messages/workflow/quote-approval',
+                    description: 'Send quote approval notification',
+                    requiresBody: true,
+                    sampleBody: {
+                        quoteId: "quote123",
+                        action: "approved",
+                        userId: "user123"
+                    }
+                },
+                {
+                    method: 'POST',
+                    path: '/api/messages/workflow/invoice-payment',
+                    description: 'Send invoice payment notification',
+                    requiresBody: true,
+                    sampleBody: {
+                        invoiceId: "invoice456",
+                        action: "paid",
+                        userId: "user123"
+                    }
+                },
+                {
+                    method: 'POST',
+                    path: '/api/messages/workflow/project-update',
+                    description: 'Send project update notification',
+                    requiresBody: true,
+                    sampleBody: {
+                        projectId: "project789",
+                        updateType: "status_changed",
+                        userId: "user123"
+                    }
+                },
+                {
+                    method: 'POST',
+                    path: '/api/messages/workflow/system-alert',
+                    description: 'Send system alert',
+                    requiresBody: true,
+                    sampleBody: {
+                        alertType: "maintenance",
+                        message: "System maintenance scheduled for tonight at 2 AM",
+                        recipients: ["user123", "user456", "user789"]
+                    }
                 }
             ]
         },
@@ -2412,6 +2555,8 @@
             return null;
         }
     }
+
+
 
     document.addEventListener('DOMContentLoaded', async function () {
         await loadProjects();

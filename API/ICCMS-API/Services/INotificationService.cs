@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FirebaseAdmin.Messaging;
 
-public interface IFcmNotificationService
+public interface INotificationService
 {
     Task<string> SendToDeviceAsync(
         string deviceToken,

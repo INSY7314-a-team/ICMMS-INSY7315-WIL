@@ -1,7 +1,13 @@
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using ICCMS_API.Authentication;
 using ICCMS_API.Services;
+using Microsoft.AspNetCore.Http;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 // Initialize Firebase Admin SDK BEFORE creating the builder
 try
@@ -36,17 +42,28 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "ICCMS API", Version = "v1" });
+
+    //c.OperationFilter<FileUploadOperationFilter>();
+});
 
 // Add Firebase services
 builder.Services.AddScoped<IFirebaseService, FirebaseService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Add notification service
-builder.Services.AddScoped<IFcmNotificationService, FcmNotificationService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // Add Supabase service
 builder.Services.AddScoped<ISupabaseService, SupabaseService>();
+
+// Add message validation service
+builder.Services.AddScoped<IMessageValidationService, MessageValidationService>();
+
+// Add workflow message service
+builder.Services.AddScoped<IWorkflowMessageService, WorkflowMessageService>();
 
 // Add workflow services
 builder.Services.AddScoped<IQuoteWorkflowService, QuoteWorkflowService>();
@@ -102,3 +119,37 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+public class FileUploadOperationFilter : IOperationFilter
+{
+    public void Apply(OpenApiOperation operation, OperationFilterContext context)
+    {
+        var fileParams = context
+            .MethodInfo.GetParameters()
+            .Where(p => p.ParameterType == typeof(IFormFile))
+            .ToList();
+
+        if (fileParams.Any())
+        {
+            operation.RequestBody = new OpenApiRequestBody
+            {
+                Content = new Dictionary<string, OpenApiMediaType>
+                {
+                    ["multipart/form-data"] = new OpenApiMediaType
+                    {
+                        Schema = new OpenApiSchema
+                        {
+                            Type = "object",
+                            Properties = new Dictionary<string, OpenApiSchema>
+                            {
+                                ["file"] = new OpenApiSchema { Type = "string", Format = "binary" },
+                                ["projectId"] = new OpenApiSchema { Type = "string" },
+                                ["description"] = new OpenApiSchema { Type = "string" },
+                            },
+                        },
+                    },
+                },
+            };
+        }
+    }
+}

@@ -1,6 +1,11 @@
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using FirebaseAdmin.Messaging;
+using ICCMS_API.Models;
+
 namespace ICCMS_API.Services;
 
-public class FcmNotificationService : IFcmNotificationService
+public class NotificationService : INotificationService
 {
     public async Task<string> SendToDeviceAsync(
         string deviceToken,
@@ -9,10 +14,10 @@ public class FcmNotificationService : IFcmNotificationService
         Dictionary<string, string>? data = null
     )
     {
-        var message = new Message()
+        var message = new FirebaseAdmin.Messaging.Message()
         {
             Token = deviceToken,
-            Notification = new Notification { Title = title, Body = body },
+            Notification = new FirebaseAdmin.Messaging.Notification { Title = title, Body = body },
             Data = data ?? new Dictionary<string, string>(), // Custom data, e.g., { "projectId": "123", "action": "taskAssigned" }
         };
 
@@ -27,10 +32,10 @@ public class FcmNotificationService : IFcmNotificationService
         Dictionary<string, string>? data = null
     )
     {
-        var message = new MulticastMessage()
+        var message = new FirebaseAdmin.Messaging.MulticastMessage()
         {
             Tokens = deviceTokens,
-            Notification = new Notification { Title = title, Body = body },
+            Notification = new FirebaseAdmin.Messaging.Notification { Title = title, Body = body },
             Data = data ?? new Dictionary<string, string>(),
         };
 
@@ -44,10 +49,10 @@ public class FcmNotificationService : IFcmNotificationService
         Dictionary<string, string>? data = null
     )
     {
-        var message = new Message()
+        var message = new FirebaseAdmin.Messaging.Message()
         {
             Topic = topic, // e.g., "project-123" or "contractors"
-            Notification = new Notification { Title = title, Body = body },
+            Notification = new FirebaseAdmin.Messaging.Notification { Title = title, Body = body },
             Data = data ?? new Dictionary<string, string>(),
         };
 

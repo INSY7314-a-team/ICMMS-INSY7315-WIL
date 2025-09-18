@@ -76,6 +76,7 @@ namespace ICCMS_API.Controllers
 
         [HttpPost("upload")]
         [Consumes("multipart/form-data")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<ActionResult<Document>> UploadDocument(
             [FromForm] IFormFile file,
             [FromForm] string projectId,
@@ -144,6 +145,7 @@ namespace ICCMS_API.Controllers
 
         [HttpPut("update/{fileName}")]
         [Consumes("multipart/form-data")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> UpdateDocument(
             string fileName,
             [FromForm] IFormFile file,
