@@ -5,7 +5,6 @@
 }
 
 <style>
-  /* tiny styling so this page matches your vibe */
   .muted{color:#6b7280}
   .chip{padding:.2rem .6rem;border-radius:999px;font-size:.75rem}
   .chip.ok{background:#e8f5e9;color:#2e7d32}
@@ -23,9 +22,9 @@
       <div class="muted">All quotes you've created from the PM dashboard</div>
     </div>
     <div class="d-flex gap-2">
-      <a class="btn btn-brand" href="/ProjectManager/Dashboard">
+      <button class="btn btn-brand" id="btn-new-quote">
         <i class="fas fa-file-invoice"></i> Create New Quote
-      </a>
+      </button>
     </div>
   </div>
 
@@ -34,42 +33,20 @@
     <div class="alert alert-success">@TempData["ok"]</div>
   }
 
-  <!-- Search + quick filters -->
-  <div class="row g-2 align-items-center mb-3">
-    <div class="col-12 col-md-6">
-      <div class="input-group">
-        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-        <input id="q-search" class="form-control border-start-0 ps-0" placeholder="Search by client or title...">
-      </div>
-    </div>
-    <div class="col-12 col-md-6 d-flex justify-content-md-end">
-      <div class="btn-group" role="group" id="q-filters">
-        <button type="button" class="btn btn-outline-secondary active" data-filter="all">All</button>
-        <button type="button" class="btn btn-outline-secondary" data-filter="Draft">Draft</button>
-        <button type="button" class="btn btn-outline-secondary" data-filter="Sent">Sent</button>
-        <button type="button" class="btn btn-outline-secondary" data-filter="Accepted">Accepted</button>
-        <button type="button" class="btn btn-outline-secondary" data-filter="Rejected">Rejected</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Quotes table -->
   <div class="card">
     <div class="card-body">
       <div class="table-responsive">
-        <table class="table table-sm align-middle" id="quotes-table">
+        <table class="table table-sm align-middle">
           <thead>
             <tr>
-              <th style="width:110px;">ID</th>
+              <th>ID</th>
               <th>Title</th>
               <th>Client</th>
-              <th style="width:130px;">Created</th>
-              <th style="width:120px;">Status</th>
-              <th class="text-end" style="width:120px;">Subtotal</th>
-              <th class="text-end" style="width:110px;">Markup %</th>
-              <th class="text-end" style="width:90px;">Tax %</th>
-              <th class="text-end" style="width:120px;">Total</th>
-              <th class="text-end" style="width:220px;">Actions</th>
+              <th>Status</th>
+              <th>Reason</th>
+              <th>Items</th>
+              <th>Total</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -81,46 +58,30 @@
                   "rejected" => "chip danger",
                   _          => "chip"
               };
-              <tr data-status="@q.Status" data-title="@((q.Title ?? "") + " " + (q.ClientName ?? ""))">
+              <tr>
                 <td>@q.Id</td>
-                <td>
-                  <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(q.Title) ? q.Title : "—")</div>
-                  <div class="small muted">(@q.Items?.Count ?? 0) items</div>
-                </td>
-                <td>@(q.ClientName ?? "—")</td>
-                <td>@q.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                <td>@q.Title</td>
+                <td>@q.ClientName</td>
                 <td><span class="@chipClass">@q.Status</span></td>
-                <td class="text-end">R @q.Subtotal.ToString("N2")</td>
-                <td class="text-end">@q.MarkupPercent.ToString("0.##")%</td>
-                <td class="text-end">@q.TaxPercent.ToString("0.##")%</td>
-                <td class="text-end"><strong>R @q.Total.ToString("N2")</strong></td>
-                <td class="text-end">
-                  <!-- Send (POST) -->
-                  @if (!string.Equals(q.Status, "Sent", StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(q.Status, "Accepted", StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(q.Status, "Rejected", StringComparison.OrdinalIgnoreCase))
+                <td>@(q.Status == "Rejected" ? q.RejectionReason ?? "—" : "—")</td>
+                <td>@(q.Items?.Count ?? 0)</td>
+                <td>R @q.Total.ToString("N2")</td>
+                <td>
+                  @if (q.Status == "Rejected")
                   {
-                      <form method="post" asp-controller="Quotes" asp-action="Send" class="d-inline">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@q.Id" />
-                        <button type="submit" class="btn btn-sm btn-outline-secondary">
-                          <i class="fas fa-paper-plane"></i> Send
-                        </button>
-                      </form>
+                      <a asp-controller="Quotes" asp-action="Edit" asp-route-id="@q.Id" 
+                         class="btn btn-sm btn-outline-warning">
+                        Reopen
+                      </a>
                   }
-
-                  <!-- Accept / Reject (GET stubs for now) -->
-                  @if (!string.Equals(q.Status, "Accepted", StringComparison.OrdinalIgnoreCase))
+                  else if (q.Status == "Accepted")
                   {
-                    <a class="btn btn-sm btn-outline-success" asp-controller="Quotes" asp-action="Accept" asp-route-id="@q.Id">
-                      <i class="fas fa-check"></i> Accept
-                    </a>
+                      <span class="badge bg-success">Accepted</span>
                   }
-                  @if (!string.Equals(q.Status, "Rejected", StringComparison.OrdinalIgnoreCase))
+                  else
                   {
-                    <a class="btn btn-sm btn-outline-danger" asp-controller="Quotes" asp-action="Reject" asp-route-id="@q.Id">
-                      <i class="fas fa-xmark"></i> Reject
-                    </a>
+                      <a asp-controller="Quotes" asp-action="Send" asp-route-id="@q.Id"
+                         class="btn btn-sm btn-outline-secondary">Send</a>
                   }
                 </td>
               </tr>
@@ -132,34 +93,14 @@
   </div>
 </div>
 
-@section Scripts{
-<script>
-  (function(){
-    const search = document.getElementById('q-search');
-    const rows = [...document.querySelectorAll('#quotes-table tbody tr')];
-    const btns = document.querySelectorAll('#q-filters .btn');
-    let active = 'all';
+<!-- NEW QUOTE WIZARD -->
+@await Html.PartialAsync("~/Views/Shared/_QuoteWizard.cshtml")
 
-    function apply(){
-      const q = (search.value || '').trim().toLowerCase();
-      rows.forEach(r=>{
-        const s = (r.dataset.status || '').toLowerCase();
-        const t = (r.dataset.title || '').toLowerCase();
-        const okStatus = (active==='all') || (s===active.toLowerCase());
-        const okText = !q || t.includes(q);
-        r.style.display = (okStatus && okText) ? '' : 'none';
-      });
-    }
+<!-- Hidden Preview POST form -->
+<form id="quote-preview-form" method="post" asp-controller="Quotes" asp-action="Preview" target="_blank" class="d-none">
+  @Html.AntiForgeryToken()
+</form>
 
-    search.addEventListener('input', apply);
-    btns.forEach(b=> b.addEventListener('click', ()=>{
-      btns.forEach(x=>x.classList.remove('active'));
-      b.classList.add('active');
-      active = b.dataset.filter || 'all';
-      apply();
-    }));
-
-    apply();
-  })();
-</script>
-}
+<!-- Boot flags for JS -->
+<script>window.PM = { root: '@Url.Content("~/")', QUOTE_ONLY: true };</script>
+<script src="~/js/pm/pm-quote.js"></script>

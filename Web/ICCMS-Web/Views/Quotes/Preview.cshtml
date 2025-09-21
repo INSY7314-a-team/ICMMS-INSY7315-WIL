@@ -133,13 +133,6 @@
       </div>
     </div>
 
-    <!-- Phase guide -->
-    <div class="guide p-3 mb-3">
-      <div class="fw-semibold mb-1">Phase guide</div>
-      <div class="small muted">
-        Pre-construction (design, permits) • Demo (strip-out) • Struct (core & shell) • MEP (first fix) • Finishes (fit-out) • Closeout (testing, handover).
-      </div>
-    </div>
 
     <!-- Breakdown -->
     @foreach (var g in groups)
@@ -256,7 +249,7 @@
       <textarea name="ItemsJson" class="d-none">
     @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Items ?? new List<ICCMS_Web.Models.PreviewItem>()))
       </textarea>
-      <button class="btn btn-primary" onclick="window.print()">Download PDF</button>
+      <button class="btn btn-primary" onclick="window.print()">Download Quote</button>
     </form>
 
   </div>

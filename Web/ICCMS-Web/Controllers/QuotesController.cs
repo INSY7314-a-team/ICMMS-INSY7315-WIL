@@ -149,5 +149,8 @@ namespace ICCMS_Web.Controllers
             var taxed  = Math.Round((q.Subtotal + markup) * q.TaxPercent/100.0,2);
             q.Total = Math.Round(q.Subtotal + markup + taxed,2);
         }
+
+
+        
     }
 }

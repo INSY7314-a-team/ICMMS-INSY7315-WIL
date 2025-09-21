@@ -17,6 +17,8 @@ namespace ICCMS_Web.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? SentAt { get; set; }
         public DateTime? DecidedAt { get; set; }
+        public string? RejectionReason { get; set; }  // NEW: why the client rejected
+
         public List<string> AttachmentUrls { get; set; } = new(); // plans, photos
     }
 

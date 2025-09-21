@@ -1,0 +1,93 @@
+@* Model-agnostic shared quote wizard *@
+<div class="modal fade" id="quoteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">New Quote</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <ul class="nav nav-tabs" id="quoteTabs" role="tablist">
+          <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-client">Client</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-blueprint">Blueprint</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-estimate">Estimate</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-preview">Preview</button></li>
+        </ul>
+
+        <div class="tab-content mt-3">
+          <div class="tab-pane fade show active" id="tab-client">
+            <label for="clientSelect" class="form-label">Select Client</label>
+            <select id="clientSelect" class="form-select">
+              <option value="">-- Choose client --</option>
+            </select>
+            <div class="mt-3">
+              <label for="q-title" class="form-label">Quote title</label>
+              <input id="q-title" class="form-control" placeholder="e.g. Sandton Office – Full Build">
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="tab-blueprint">
+            <label for="blueprintUpload" class="form-label">Upload Blueprint</label>
+            <input type="file" id="blueprintUpload" class="form-control" />
+            <div class="mt-2 d-flex gap-2">
+              <button class="btn btn-outline-secondary" id="btn-mock-blueprint">Use Mock Blueprint</button>
+              <span class="text-muted small align-self-center">Fills estimate with sample labour + materials.</span>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="tab-estimate">
+            <div class="mb-2 d-flex gap-2">
+              <button class="btn btn-outline-secondary btn-sm" id="btn-add-labour">Add Labour</button>
+              <button class="btn btn-outline-secondary btn-sm" id="btn-add-material">Add Material</button>
+            </div>
+            <table class="table table-sm table-bordered">
+              <thead>
+                <tr><th style="width:40%">Item</th><th style="width:12%">Qty</th><th style="width:12%">Unit</th><th style="width:16%">Unit Price</th><th>Total</th></tr>
+              </thead>
+              <tbody id="estimateTableBody"></tbody>
+              <tfoot>
+                <tr><th colspan="4" class="text-end">Grand Subtotal</th><th id="estimateSubtotal">R 0</th></tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div class="tab-pane fade" id="tab-preview">
+            <div id="quotePreviewArea" class="mb-3"></div>
+            <button class="btn btn-success" id="btn-finalize-quote">Finalize Quote</button>
+          </div>
+        </div>
+
+        <style>
+          .quote-summary-sticky{position:sticky;bottom:0;background:#FFF7CC;border-top:1px solid #E6C200;padding:12px 8px;box-shadow:0 -2px 6px rgba(0,0,0,.04);z-index:1}
+          .quote-summary-sticky .form-control{height:34px;padding:4px 8px}
+        </style>
+        <div class="quote-summary-sticky">
+          <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-2">
+              <label class="form-label small mb-1">Markup %</label>
+              <input id="est-markup" type="number" class="form-control" value="10" min="0" step="0.5">
+            </div>
+            <div class="col-6 col-md-2">
+              <label class="form-label small mb-1">Tax %</label>
+              <input id="est-tax" type="number" class="form-control" value="15" min="0" step="0.5">
+            </div>
+            <div class="col-12 col-md-8">
+              <div id="est-summary" class="text-end small"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Hidden Preview POST form -->
+<form id="quote-preview-form" method="post" asp-controller="Quotes" asp-action="Preview" target="_blank" class="d-none">
+  @Html.AntiForgeryToken()
+</form>
+
+<!-- Boot flags + JS (loaded once per page via this partial) -->
+<script>window.PM = Object.assign({ root: '@Url.Content("~/")', QUOTE_ONLY: true }, window.PM||{});</script>
+<script src="~/js/pm/pm-quote.js"></script>
