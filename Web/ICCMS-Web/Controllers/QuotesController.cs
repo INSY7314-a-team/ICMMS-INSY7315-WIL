@@ -21,13 +21,10 @@ namespace ICCMS_Web.Controllers
             return View("~/Views/Quotes/Index.cshtml", quotes.OrderByDescending(q=>q.CreatedAt).ToList());
         }
 
-        // ---------- PREVIEW (from wizard) ----------
-        // Receives the QuotePreviewVM from the hidden form (wizard).
-        // We compute subtotals here so the preview page shows the right numbers.
+        // ---------- PREVIEW ----------
         [HttpPost, ValidateAntiForgeryToken, AllowAnonymous]
         public IActionResult Preview(QuotePreviewVM vm)
         {
-            // If Items are coming as a JSON blob (safer for complex lists), hydrate them
             var itemsJson = Request.Form["ItemsJson"].FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(itemsJson))
             {
@@ -37,7 +34,6 @@ namespace ICCMS_Web.Controllers
                 } catch { vm.Items = new(); }
             }
 
-            // Calc
             vm.Subtotal = Math.Round(vm.Items.Sum(i => i.Qty * i.UnitPrice), 2);
             vm.MarkupAmount = Math.Round(vm.Subtotal * vm.MarkupPercent / 100.0, 2);
             vm.TaxAmount = Math.Round((vm.Subtotal + vm.MarkupAmount) * vm.TaxPercent / 100.0, 2);
@@ -46,35 +42,67 @@ namespace ICCMS_Web.Controllers
             return View("~/Views/Quotes/Preview.cshtml", vm);
         }
 
-        // ---------- CREATE & SEND (from preview) ----------
-        // Takes the same VM again, converts to Quote model, saves into mock/quotes.json,
-        // and marks it “Waiting Approval” + SentAt now (notification = stub for later).
-        [HttpPost, ValidateAntiForgeryToken, AllowAnonymous]
+        // ---------- CREATE & SEND ----------
+       [HttpPost, ValidateAntiForgeryToken, AllowAnonymous]
         public IActionResult CreateFromPreview(QuotePreviewVM vm)
         {
-            // hydrate items if they came as a JSON blob
+            // ---------- 1. Hydrate items from JSON ----------
             var itemsJson = Request.Form["ItemsJson"].FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(itemsJson))
             {
-                try {
+                try
+                {
                     vm.Items = JsonSerializer.Deserialize<List<PreviewItem>>(itemsJson,
-                        new JsonSerializerOptions{ PropertyNameCaseInsensitive = true }) ?? new();
-                } catch { vm.Items = new(); }
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+                }
+                catch
+                {
+                    vm.Items = new();
+                }
             }
 
+            // ---------- 2. Load all existing quotes ----------
             var list = ReadMock<List<Quote>>("mock/quotes.json") ?? new();
 
-            var q = new Quote {
-                Id = "Q-" + (1000 + list.Count + 1),
+            // ---------- 3. Handle reopen ----------
+            if (!string.IsNullOrWhiteSpace(vm.OriginalQuoteId))
+            {
+                var old = list.FirstOrDefault(x => x.Id == vm.OriginalQuoteId);
+                if (old != null)
+                {
+                    old.Status = "Rejected & Reopened";
+                    old.DecidedAt = DateTime.UtcNow;
+                    old.RejectionReason = old.RejectionReason ?? "(Reopened without reason)";
+
+                    Console.WriteLine($"[CreateFromPreview] Marked old quote {old.Id} as Rejected & Reopened");
+                }
+                else
+                {
+                    Console.WriteLine($"[CreateFromPreview] WARNING: Could not find old quote {vm.OriginalQuoteId}");
+                }
+            }
+
+            // ---------- 4. Generate next sequential ID ----------
+            int maxNum = list
+                .Select(x => int.TryParse(x.Id?.Replace("Q-", ""), out var n) ? n : 0)
+                .DefaultIfEmpty(1000)
+                .Max();
+            string newId = "Q-" + (maxNum + 1);
+
+            // ---------- 5. Create new quote ----------
+            var q = new Quote
+            {
+                Id = newId,
                 ProjectId = vm.ProjectId ?? "",
                 ClientName = vm.ClientName ?? "",
                 Title = vm.Title ?? $"Quote for {vm.ClientName}",
-                Status = "Waiting Approval", // per your request
+                Status = "Waiting Approval",
                 MarkupPercent = vm.MarkupPercent,
                 TaxPercent = vm.TaxPercent,
                 CreatedAt = DateTime.UtcNow,
-                SentAt = DateTime.UtcNow, // we “send” it as part of this action (notifications later)
-                Items = vm.Items.Select(i => new QuoteItem{
+                SentAt = DateTime.UtcNow,
+                Items = vm.Items.Select(i => new QuoteItem
+                {
                     Type = i.Type ?? "Material",
                     Name = i.Name ?? "",
                     Qty = i.Qty,
@@ -82,18 +110,23 @@ namespace ICCMS_Web.Controllers
                     UnitPrice = i.UnitPrice,
                     ContractorId = i.ContractorId,
                     ContractorName = i.ContractorName
-                }).ToList()
+                }).ToList(),
+                OriginalQuoteId = vm.OriginalQuoteId
             };
 
+            Console.WriteLine($"[CreateFromPreview] Created new quote with Id={q.Id}, OriginalQuoteId={q.OriginalQuoteId}");
+
+            // ---------- 6. Save both old + new ----------
             RecalcTotals(q);
             list.Add(q);
             WriteMock("mock/quotes.json", list);
 
-            TempData["ok"] = "Quote created & sent (mock). Client notifications are stubbed.";
+            TempData["ok"] = "Quote created & sent (mock).";
             return RedirectToAction(nameof(Index));
         }
 
-        // ---------- SEND (optional: if you want separate send step) ----------
+
+        // ---------- SEND ----------
         [HttpPost, AllowAnonymous]
         public IActionResult Send(string id){
             var list = ReadMock<List<Quote>>("mock/quotes.json") ?? new();
@@ -106,7 +139,7 @@ namespace ICCMS_Web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // ---------- ACCEPT / REJECT (dev-only buttons for now) ----------
+        // ---------- ACCEPT / REJECT ----------
         [AllowAnonymous]
         public IActionResult Accept(string id){
             var list = ReadMock<List<Quote>>("mock/quotes.json") ?? new();
@@ -117,15 +150,49 @@ namespace ICCMS_Web.Controllers
             TempData["ok"] = "Quote accepted (mock).";
             return RedirectToAction(nameof(Index));
         }
-        [AllowAnonymous]
-        public IActionResult Reject(string id){
-            var list = ReadMock<List<Quote>>("mock/quotes.json") ?? new();
-            var q = list.FirstOrDefault(x=>x.Id==id);
-            if (q==null) return NotFound();
-            q.Status = "Rejected"; q.DecidedAt = DateTime.UtcNow;
-            WriteMock("mock/quotes.json", list);
-            TempData["ok"] = "Quote rejected (mock).";
-            return RedirectToAction(nameof(Index));
+
+        [HttpGet, AllowAnonymous]
+        public IActionResult Reject(string id, string? reason)
+        {
+            try
+            {
+                Console.WriteLine($"[Reject] Called with id={id}, reason={reason}");
+
+                var list = ReadMock<List<Quote>>("mock/quotes.json") ?? new();
+                Console.WriteLine($"[Reject] Loaded {list.Count} quotes from JSON");
+
+                var q = list.FirstOrDefault(x => x.Id == id);
+                if (q == null)
+                {
+                    Console.WriteLine($"[Reject] Quote with id={id} not found!");
+                    return NotFound();
+                }
+
+                q.Status = "Rejected";
+                q.DecidedAt = DateTime.UtcNow;
+                q.RejectionReason = reason ?? "(no reason)";
+
+                Console.WriteLine($"[Reject] Updated quote {q.Id}: Status={q.Status}, Reason={q.RejectionReason}");
+
+                WriteMock("mock/quotes.json", list);
+                Console.WriteLine($"[Reject] Saved changes back to quotes.json");
+
+                return Json(new { ok = true, id = q.Id, status = q.Status, reason = q.RejectionReason });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Reject] ERROR: {ex}");
+                return Json(new { ok = false, error = ex.ToString() });
+            }
+        }
+
+        [HttpGet]
+        public IActionResult Get(string id)
+        {
+            var quotes = ReadMock<List<Quote>>("mock/quotes.json") ?? new();
+            var q = quotes.FirstOrDefault(x => x.Id == id);
+            if (q == null) return NotFound();
+            return Json(q);
         }
 
         // ---------- helpers ----------
@@ -149,8 +216,5 @@ namespace ICCMS_Web.Controllers
             var taxed  = Math.Round((q.Subtotal + markup) * q.TaxPercent/100.0,2);
             q.Total = Math.Round(q.Subtotal + markup + taxed,2);
         }
-
-
-        
     }
 }

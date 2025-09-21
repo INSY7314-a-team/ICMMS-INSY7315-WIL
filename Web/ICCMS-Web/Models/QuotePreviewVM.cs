@@ -24,6 +24,9 @@ namespace ICCMS_Web.Models
         public double MarkupAmount { get; set; }
         public double TaxAmount { get; set; }
         public double Total { get; set; }
+
+        // 🔹 NEW: when reopening, keep track of the old quote being replaced
+        public string? OriginalQuoteId { get; set; }
     }
 
     public class PreviewItem

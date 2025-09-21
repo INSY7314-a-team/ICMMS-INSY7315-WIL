@@ -55,9 +55,15 @@
               string chipClass = (q.Status ?? "Draft").ToLower() switch {
                   "accepted" => "chip ok",
                   "sent"     => "chip warn",
+                  "waiting approval" => "chip warn",
                   "rejected" => "chip danger",
+                  "rejected & reopened" => "chip danger",
                   _          => "chip"
               };
+
+              // detect if this quote was replaced by another
+              bool reopenedOld = Model.Any(x => x.OriginalQuoteId == q.Id);
+
               <tr>
                 <td>@q.Id</td>
                 <td>@q.Title</td>
@@ -67,22 +73,28 @@
                 <td>@(q.Items?.Count ?? 0)</td>
                 <td>R @q.Total.ToString("N2")</td>
                 <td>
-                  @if (q.Status == "Rejected")
-                  {
-                      <a asp-controller="Quotes" asp-action="Edit" asp-route-id="@q.Id" 
-                         class="btn btn-sm btn-outline-warning">
-                        Reopen
-                      </a>
-                  }
-                  else if (q.Status == "Accepted")
-                  {
-                      <span class="badge bg-success">Accepted</span>
-                  }
-                  else
-                  {
-                      <a asp-controller="Quotes" asp-action="Send" asp-route-id="@q.Id"
-                         class="btn btn-sm btn-outline-secondary">Send</a>
-                  }
+                    @* Case 1: old quote that was reopened *@
+                    @if (reopenedOld)
+                    {
+                        <span class="badge bg-danger">Rejected &amp; Reopened</span>
+                    }
+                    @* Case 2: freshly rejected (can be reopened) *@
+                    else if (q.Status == "Rejected")
+                    {
+                        <a href="#" class="btn btn-sm btn-outline-warning btn-reopen" data-id="@q.Id">Reopen</a>
+                    }
+                    @* Case 3: waiting approval (including reopened copies) *@
+                    else if (q.Status == "Waiting Approval")
+                    {
+                        <a asp-controller="Quotes" asp-action="Accept" asp-route-id="@q.Id"
+                           class="btn btn-sm btn-outline-success">Accept</a>
+                        <a href="#" class="btn btn-sm btn-outline-danger btn-reject" data-id="@q.Id">Reject</a>
+                    }
+                    @* Case 4: accepted *@
+                    else if (q.Status == "Accepted")
+                    {
+                        <span class="badge bg-success">Accepted</span>
+                    }
                 </td>
               </tr>
           }
@@ -101,6 +113,74 @@
   @Html.AntiForgeryToken()
 </form>
 
+<script>
+// Reopen button
+document.querySelectorAll('.btn-reopen').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const id = btn.dataset.id;
+    console.log("[Reopen] clicked for ID:", id);
+
+    const res = await fetch(`/Quotes/Get?id=${id}`);
+    console.log("[Reopen] fetch status:", res.status);
+
+    if (res.ok) {
+      const q = await res.json();
+      console.log("[Reopen] fetched quote:", q);
+
+      // hydrate wizard
+      window.hydrateQuote(q);
+
+      // inject hidden OriginalQuoteId
+      const form = document.getElementById('quote-preview-form');
+      if (form) {
+        form.querySelectorAll('input[name="OriginalQuoteId"]').forEach(x => x.remove());
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'OriginalQuoteId';
+        input.value = q.id;
+        form.appendChild(input);
+
+        console.log("[Reopen] hidden input injected:", input);
+      }
+    } else {
+      console.error("[Reopen] fetch failed for", id);
+    }
+  });
+});
+
+// Reject button
+document.querySelectorAll('.btn-reject').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const id = btn.dataset.id;
+    console.log("[Reject] clicked for ID:", id);
+
+    const reason = prompt("Please enter a rejection reason:");
+    console.log("[Reject] reason entered:", reason);
+
+    if (!reason) {
+      console.warn("[Reject] cancelled (no reason entered)");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/Quotes/Reject?id=${id}&reason=${encodeURIComponent(reason)}`);
+      console.log("[Reject] fetch status:", res.status);
+
+      if (res.ok) {
+        const data = await res.json();
+        console.log("[Reject] server response:", data);
+        location.reload();
+      } else {
+        console.error("[Reject] server returned non-OK status:", res.status);
+      }
+    } catch (err) {
+      console.error("[Reject] fetch error:", err);
+    }
+  });
+});
+</script>
+
 <!-- Boot flags for JS -->
 <script>window.PM = { root: '@Url.Content("~/")', QUOTE_ONLY: true };</script>
-<script src="~/js/pm/pm-quote.js"></script>

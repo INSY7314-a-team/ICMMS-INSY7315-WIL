@@ -19,6 +19,10 @@ namespace ICCMS_Web.Models
         public DateTime? DecidedAt { get; set; }
         public string? RejectionReason { get; set; }  // NEW: why the client rejected
 
+        //Original ID to check to see if Quote is a Reopened Quote
+        public string? OriginalQuoteId { get; set; }
+
+
         public List<string> AttachmentUrls { get; set; } = new(); // plans, photos
     }
 

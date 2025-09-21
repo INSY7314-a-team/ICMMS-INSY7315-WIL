@@ -191,7 +191,13 @@ function submitQuote() {
     add(`Items[${idx}].UnitPrice`, String(it.unitPrice||0));
   });
 
-  pform.submit();
+  console.log("[Submit] fields:");
+[...pform.querySelectorAll('input')].forEach(inp => {
+  console.log("   ", inp.name, "=", inp.value);
+});
+
+pform.submit();
+
 }
 
 // --- Tabs / modal helpers ---
@@ -201,47 +207,76 @@ function goTab(id) {
 }
 
 // --- Prefill the wizard from an existing quote ---
-window.hydrateQuote = function(q){
+// --- Prefill the wizard from an existing quote ---
+window.hydrateQuote = async function(q) {
+  console.log("Hydrate called with:", q);
+
   // open modal first
   const modalEl = document.getElementById('quoteModal');
   if (modalEl) new bootstrap.Modal(modalEl).show();
 
-  // client (we only have ClientName; best effort match by text)
+  // ✅ ensure clients are loaded before trying to select
+  await loadClients();
+
+  // client (match by ClientName best effort)
   const sel = document.getElementById('clientSelect');
-  if (sel && q.ClientName){
+  if (sel && (q.ClientName || q.clientName)) {
     let matched = false;
-    [...sel.options].forEach(opt=>{
-      if (!matched && (opt.text||'').trim().toLowerCase() === String(q.ClientName||'').trim().toLowerCase()){
-        opt.selected = true; matched = true;
+    [...sel.options].forEach(opt => {
+      if (!matched && (opt.text || '').trim().toLowerCase() === String(q.ClientName || q.clientName || '').trim().toLowerCase()) {
+        opt.selected = true;
+        matched = true;
       }
     });
   }
 
   // title / percentages
   const titleEl = document.getElementById('q-title');
-  if (titleEl) titleEl.value = q.Title || '';
+  if (titleEl) titleEl.value = q.Title || q.title || '';
+
   const mEl = document.getElementById('est-markup');
-  if (mEl && q.MarkupPercent != null) mEl.value = q.MarkupPercent;
+  if (mEl && (q.MarkupPercent ?? q.markupPercent) != null) {
+    mEl.value = q.MarkupPercent ?? q.markupPercent;
+  }
+
   const tEl = document.getElementById('est-tax');
-  if (tEl && q.TaxPercent != null) tEl.value = q.TaxPercent;
+  if (tEl && (q.TaxPercent ?? q.taxPercent) != null) {
+    tEl.value = q.TaxPercent ?? q.taxPercent;
+  }
 
   // items
-  if (Array.isArray(q.Items)) {
-    EST.items = q.Items.map(it => ({
-      name: it.Name || '',
-      qty: Number(it.Qty||0),
-      unit: it.Unit || 'ea',
-      unitPrice: Number(it.UnitPrice||0)
+  if (Array.isArray(q.Items ?? q.items)) {
+    const arr = q.Items ?? q.items;
+    EST.items = arr.map(it => ({
+      name: it.Name || it.name || '',
+      qty: Number(it.Qty ?? it.qty ?? 0),
+      unit: it.Unit || it.unit || 'ea',
+      unitPrice: Number(it.UnitPrice ?? it.unitPrice ?? 0)
     }));
   } else {
     EST.items = [];
   }
   renderEstimate();
 
+  // hidden field: OriginalQuoteId (for controller to know we reopened)
+  const form = document.getElementById('quote-preview-form');
+  if (form) {
+    let hidden = form.querySelector('input[name="OriginalQuoteId"]');
+    if (!hidden) {
+      hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = 'OriginalQuoteId';
+      form.appendChild(hidden);
+    }
+    hidden.value = q.Id || q.id || '';
+  }
+
   // jump to Estimate tab so PM can tweak then Preview
   const tabBtn = document.querySelector('#quoteTabs button[data-bs-target="#tab-estimate"]');
   if (tabBtn) new bootstrap.Tab(tabBtn).show();
 };
+
+
 
 
 // --- Wire UI ---
