@@ -2,7 +2,12 @@ using ICCMS_Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Register services
+builder.Services.AddScoped<IApiClient, ApiClient>();
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<ILoginAttemptService, LoginAttemptService>();
+
+// Add MVC
 builder.Services.AddControllersWithViews();
 
 // Add session support
@@ -14,42 +19,33 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-// Add HttpClient
-builder.Services.AddHttpClient();
+// Cookie authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = "Cookies";
+    options.DefaultSignInScheme = "Cookies";
+    options.DefaultChallengeScheme = "Cookies";
+})
+.AddCookie("Cookies", options =>
+{
+    options.LoginPath = "/Auth/Login";
+    options.LogoutPath = "/Auth/Logout";
+    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+    options.SlidingExpiration = true;
+});
 
-// Add Login Attempt Service
-builder.Services.AddSingleton<ILoginAttemptService, LoginAttemptService>();
-
-// Add Authentication with Cookies
-builder
-    .Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = "Cookies";
-        options.DefaultSignInScheme = "Cookies";
-        options.DefaultChallengeScheme = "Cookies";
-    })
-    .AddCookie(
-        "Cookies",
-        options =>
-        {
-            options.LoginPath = "/Auth/Login";
-            options.LogoutPath = "/Auth/Logout";
-            options.ExpireTimeSpan = TimeSpan.FromHours(8);
-            options.SlidingExpiration = true;
-        }
-    );
-
+// Authorization policies
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("ProjectManagerOnly", policy => policy.RequireRole("ProjectManager"));
+    options.AddPolicy("ProjectManagerOnly", policy => policy.RequireRole("Project Manager", "Tester"));
     options.AddPolicy("ContractorOnly", policy => policy.RequireRole("Contractor"));
     options.AddPolicy("ClientOnly", policy => policy.RequireRole("Client"));
 });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Middleware
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -58,15 +54,15 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
 
-// Add session middleware
 app.UseSession();
-
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
+// Default route
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();

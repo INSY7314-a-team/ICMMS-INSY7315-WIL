@@ -37,25 +37,25 @@ namespace ICCMS_Web.Controllers
                 var projectsResponse = await _httpClient.GetAsync($"{_apiBaseUrl}/api/clients/projects");
                 var quotationsResponse = await _httpClient.GetAsync($"{_apiBaseUrl}/api/clients/quotations");
 
-                var projects = new List<Project>();
-                var quotations = new List<Quotation>();
+                var projects = new List<ProjectDto>();
+                var quotations = new List<QuotationDto>();
 
                 if (projectsResponse.IsSuccessStatusCode)
                 {
                     var projectsBody = await projectsResponse.Content.ReadAsStringAsync();
-                    projects = JsonSerializer.Deserialize<List<Project>>(
+                    projects = JsonSerializer.Deserialize<List<ProjectDto>>(
                         projectsBody,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    ) ?? new List<Project>();
+                    ) ?? new List<ProjectDto>();
                 }
 
                 if (quotationsResponse.IsSuccessStatusCode)
                 {
                     var quotationsBody = await quotationsResponse.Content.ReadAsStringAsync();
-                    quotations = JsonSerializer.Deserialize<List<Quotation>>(
+                    quotations = JsonSerializer.Deserialize<List<QuotationDto>>(
                         quotationsBody,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    ) ?? new List<Quotation>();
+                    ) ?? new List<QuotationDto>();
                 }
 
                 var viewModel = new ClientDashboardViewModel
@@ -91,7 +91,7 @@ namespace ICCMS_Web.Controllers
                 if (response.IsSuccessStatusCode)
                 {
                     var responseBody = await response.Content.ReadAsStringAsync();
-                    var project = JsonSerializer.Deserialize<Project>(
+                    var project = JsonSerializer.Deserialize<ProjectDto>(
                         responseBody,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
@@ -128,7 +128,7 @@ namespace ICCMS_Web.Controllers
                 if (response.IsSuccessStatusCode)
                 {
                     var responseBody = await response.Content.ReadAsStringAsync();
-                    var quotation = JsonSerializer.Deserialize<Quotation>(
+                    var quotation = JsonSerializer.Deserialize<QuotationDto>(
                         responseBody,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
@@ -218,7 +218,7 @@ namespace ICCMS_Web.Controllers
 
     public class ClientDashboardViewModel
     {
-        public List<Project> Projects { get; set; } = new List<Project>();
-        public List<Quotation> Quotations { get; set; } = new List<Quotation>();
+        public List<ProjectDto> Projects { get; set; } = new List<ProjectDto>();
+        public List<QuotationDto> Quotations { get; set; } = new List<QuotationDto>();
     }
 }

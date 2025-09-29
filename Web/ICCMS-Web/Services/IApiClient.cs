@@ -1,0 +1,13 @@
+using System.Security.Claims;
+using System.Threading.Tasks;
+
+namespace ICCMS_Web.Services
+{
+    public interface IApiClient
+    {
+        // Generic GET helper
+        Task<T?> GetAsync<T>(string endpoint, ClaimsPrincipal user);
+        Task<T?> PostAsync<T>(string endpoint, object data, ClaimsPrincipal user);
+
+    }
+}

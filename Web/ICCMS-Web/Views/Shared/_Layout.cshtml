@@ -19,55 +19,61 @@
 
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">ICCMS</a>
+                <!-- Brand -->
+                <a class="navbar-brand" asp-controller="Home" asp-action="Index">ICCMS</a>
+
+                <!-- Mobile nav toggle -->
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
-                    aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
+
+                <!-- Main navigation -->
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
+                        <!-- Tester menu -->
                         @if (User.Identity.IsAuthenticated && User.IsInRole("Tester"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Testing"
-                                    asp-action="Index">Testing</a>
+                                <a class="nav-link text-dark" asp-controller="Testing" asp-action="Index">Testing</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="MessagesTest" asp-action="Index">
+                                <a class="nav-link text-dark" asp-controller="MessagesTest" asp-action="Index">
                                     <i class="fas fa-comments"></i> Message Testing
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Testing"
-                                    asp-action="WorkflowTest">
+                                <a class="nav-link text-dark" asp-controller="Testing" asp-action="WorkflowTest">
                                     <i class="fas fa-robot"></i> AI Workflow
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="AuditLogs" asp-action="Index">
+                                <a class="nav-link text-dark" asp-controller="AuditLogs" asp-action="Index">
                                     <i class="fas fa-clipboard-list"></i> Audit Logs
                                 </a>
                             </li>
                         }
+
+                        <!-- Admin menu -->
                         @if (User.Identity.IsAuthenticated && User.IsInRole("Admin"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Users"
-                                    asp-action="Index">Users</a>
+                                <a class="nav-link text-dark" asp-controller="Users" asp-action="Index">Users</a>
                             </li>
                         }
 
-                        @if (User.Identity.IsAuthenticated && User.IsInRole("Project Manager") ||
-                                                User.IsInRole("Tester"))
+                        <!-- Project Manager (and Tester overlap) -->
+                        @if (User.Identity.IsAuthenticated && (User.IsInRole("Project Manager") || User.IsInRole("Tester")))
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="ProjectManager"
-                                    asp-action="Dashboard">Dashboard</a>
+                                <a class="nav-link text-dark" asp-controller="ProjectManager" asp-action="Dashboard">Dashboard</a>
                             </li>
                         }
                     </ul>
+
+                    <!-- Right-side auth menu -->
                     <ul class="navbar-nav">
                         @if (User.Identity.IsAuthenticated)
                         {
@@ -75,32 +81,34 @@
                                 <span class="nav-link text-dark">Welcome, @User.Identity.Name!</span>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Auth"
-                                    asp-action="Logout">Logout</a>
+                                <a class="nav-link text-dark" asp-controller="Auth" asp-action="Logout">Logout</a>
                             </li>
                         }
                         else
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Auth" asp-action="Login">Login</a>
+                                <a class="nav-link text-dark" asp-controller="Auth" asp-action="Login">Login</a>
                             </li>
                         }
                     </ul>
                 </div>
             </div>
         </nav>
-        @if (User.Identity.IsAuthenticated)
+
+        <!-- Debug Info (only in Dev) -->
+        @if (User.Identity.IsAuthenticated && Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
         {
-            <div class="text-muted small">
-                Debug Info:
-                User: @User.Identity.Name |
-                Roles: @string.Join(", ", User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c
-                            => c.Value)) |
-            IsAdmin: @User.IsInRole("Admin") |
-            IsTester: @User.IsInRole("Tester")
-        </div>
-                }
+            <div class="text-muted small px-3">
+                Debug Info: 
+                User: @User.Identity.Name | 
+                Roles: @string.Join(", ", User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value)) | 
+                IsAdmin: @User.IsInRole("Admin") | 
+                IsTester: @User.IsInRole("Tester")
+            </div>
+        }
     </header>
+
+    <!-- Page Content -->
     <div class="container">
         <main role="main" class="pb-3">
             @if (TempData["SuccessMessage"] != null)
@@ -120,13 +128,15 @@
             @RenderBody()
         </main>
     </div>
+
+    <!-- Scripts -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
 
     <!-- Firebase Configuration -->
     <script>
-        // Your Firebase configuration
+        // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyC0JDtGyh7sL_doZobuoQwg7LDrIE4BQN0",
             authDomain: "icmms-ecba6.firebaseapp.com",
@@ -138,21 +148,18 @@
 
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
-
-        // Global Firebase auth instance
         const auth = firebase.auth();
 
-        // Listen for auth state changes
+        // Log auth state changes (debug only)
         auth.onAuthStateChanged(function (user) {
             if (user) {
-                console.log('User is signed in:', user.email);
+                console.log('[Firebase] Signed in:', user.email);
             } else {
-                console.log('User is signed out');
+                console.log('[Firebase] Signed out');
             }
         });
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>
-
 </html>

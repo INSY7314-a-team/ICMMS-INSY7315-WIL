@@ -1,47 +1,47 @@
-using Google.Cloud.Firestore;
+using System.Text.Json.Serialization;
 
 namespace ICCMS_Web.Models
 {
-    [FirestoreData]
-    public class Quotation
+    // Mirrors API/ICCMS-API/Models/Quotation.cs payload
+    public class QuotationDto
     {
-        [FirestoreProperty("quotationId")]
+        [JsonPropertyName("quotationId")]
         public string QuotationId { get; set; } = string.Empty;
 
-        [FirestoreProperty("projectId")]
+        [JsonPropertyName("projectId")]
         public string ProjectId { get; set; } = string.Empty;
 
-        [FirestoreProperty("maintenanceRequestId")]
+        [JsonPropertyName("maintenanceRequestId")]
         public string MaintenanceRequestId { get; set; } = string.Empty;
 
-        [FirestoreProperty("clientId")]
+        [JsonPropertyName("clientId")]
         public string ClientId { get; set; } = string.Empty;
 
-        [FirestoreProperty("contractorId")]
+        [JsonPropertyName("contractorId")]
         public string ContractorId { get; set; } = string.Empty;
 
-        [FirestoreProperty("adminApproverUserId")]
+        [JsonPropertyName("adminApproverUserId")]
         public string AdminApproverUserId { get; set; } = string.Empty;
 
-        [FirestoreProperty("description")]
+        [JsonPropertyName("description")]
         public string Description { get; set; } = string.Empty;
 
-        [FirestoreProperty("total")]
+        [JsonPropertyName("total")]
         public double Total { get; set; }
 
-        [FirestoreProperty("status")]
+        [JsonPropertyName("status")]
         public string Status { get; set; } = string.Empty;
 
-        [FirestoreProperty("validUntil")]
+        [JsonPropertyName("validUntil")]
         public DateTime ValidUntil { get; set; }
 
-        [FirestoreProperty("createdAt")]
+        [JsonPropertyName("createdAt")]
         public DateTime CreatedAt { get; set; }
 
-        [FirestoreProperty("sentAt")]
+        [JsonPropertyName("sentAt")]
         public DateTime? SentAt { get; set; }
 
-        [FirestoreProperty("approvedAt")]
+        [JsonPropertyName("approvedAt")]
         public DateTime? ApprovedAt { get; set; }
     }
 }

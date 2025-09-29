@@ -1,31 +1,167 @@
- <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Project Manager Dashboard</h1>
-        <div className="text-sm text-gray-600">
-          Last updated: {new Date().toLocaleDateString()}
-        </div>
-      </div>
-      
-      <MetricsGrid />
-      
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Active Projects</h2>
-              <p className="text-gray-600 mt-1">Projects currently in progress</p>
-            </div>
-            <div className="p-6 space-y-4">
-              {activeProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
-            </div>
-          </div>
-        </div>
-        
-        <div className="space-y-6">
-          <BudgetOverview />
-          <RecentActivity />
-        </div>
-      </div>
+@model ICCMS_Web.Models.DashboardViewModel
+@using System.Security.Claims
+@inject IConfiguration Configuration
+
+@{
+    ViewData["Title"] = "Project Manager – Dashboard";
+
+    // Grab the API token stored in claims (populated at login)
+    var token = User.FindFirst("FirebaseToken")?.Value ?? string.Empty;
+}
+
+<style>
+  /* ============ BUTTON STYLING ============ */
+  .btn-brand {
+      background: #FFD200;
+      border-color: #FFD200;
+      color: #111;
+  }
+  .btn-brand:hover { filter: brightness(.95); }
+
+  /* ============ STICKY FOOTER BAR (used in wizards) ============ */
+  .quote-summary-sticky {
+      position: sticky;
+      bottom: 0;
+      background: #FFF7CC;
+      border-top: 1px solid #E6C200;
+      padding: 12px 8px;
+      box-shadow: 0 -2px 6px rgba(0,0,0,.04);
+      z-index: 1;
+  }
+  .quote-summary-sticky .form-control {
+      height: 34px;
+      padding: 4px 8px;
+  }
+</style>
+
+<div class="container-fluid px-3 px-md-4 py-3">
+
+  <!-- ================= HEADER ================= -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+    <div>
+      <h1 class="h3 fw-bold mb-1">Project Manager</h1>
+      <div class="text-muted">Manage Projects + Generate Quotes</div>
     </div>
+
+    <!-- HEADER ACTION BUTTONS -->
+    <div class="d-flex gap-2">
+      <!-- Button: view all quotes -->
+      <a class="btn btn-outline-secondary" asp-controller="Quotes" asp-action="Index">
+        <i class="fas fa-list"></i> View All Quotes
+      </a>
+
+      <!-- Button: new project (opens Project Wizard modal) -->
+      <button class="btn btn-brand" id="btn-new-project">
+        <i class="fas fa-plus"></i> Create New Project
+      </button>
+
+      <!-- Button: new quote (opens Quote Wizard modal) -->
+      <button class="btn btn-brand" id="btn-new-quote">
+        <i class="fas fa-file-invoice"></i> Generate New Quote
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= QUOTES SNAPSHOT ================= -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Quotes Snapshot</h5>
+      <span class="text-muted small">
+        Total Quotes: <strong>@Model?.TotalQuotes</strong>
+      </span>
+    </div>
+
+    <div class="card-body">
+      <h6 class="mb-2">Recently Accepted</h6>
+
+      <ul class="list-group mb-3">
+        @if (Model?.RecentAcceptedQuotes != null && Model.RecentAcceptedQuotes.Any())
+        {
+            foreach (var q in Model.RecentAcceptedQuotes)
+            {
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <!-- Quote description (acts as title) -->
+                        <div>
+                          <strong>@q.Description</strong> 
+                          <span class="badge bg-success ms-2">Accepted</span>
+                        </div>
+
+                        <!-- ApprovedAt date (or fallback to CreatedAt) -->
+                        <div class="text-muted small">
+                            @if (q.ApprovedAt.HasValue)
+                            {
+                                @q.ApprovedAt.Value.ToString("yyyy-MM-dd HH:mm")
+                            }
+                            else
+                            {
+                                @q.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                            }
+                        </div>
+
+                        <!-- ClientId until we wire up client lookup -->
+                        <div class="text-muted small">Client: @q.ClientId</div>
+                    </div>
+
+                    <!-- Action button: create invoice + start project -->
+                    <a asp-controller="Invoices" asp-action="Create" asp-route-quoteId="@q.QuotationId"
+                       class="btn btn-sm btn-success">
+                        Create Invoice & Start Project
+                    </a>
+                </li>
+            }
+        }
+        else
+        {
+            <!-- If no accepted quotes -->
+            <li class="list-group-item text-muted">No accepted quotes yet.</li>
+        }
+      </ul>
+
+      <!-- Link to full quotes list -->
+      <a class="btn btn-outline-primary btn-sm" asp-controller="Quotes" asp-action="Index">
+        Go to Quotes
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODALS ================= -->
+@* Quote Wizard modal *@
+@await Html.PartialAsync("~/Views/Shared/_QuoteWizard.cshtml", new ICCMS_Web.Models.QuotationDto())
+
+
+@* Project Wizard modal *@
+@await Html.PartialAsync("~/Views/Shared/_ProjectWizard.cshtml", new ICCMS_Web.Models.ProjectDto())
+
+
+<!-- Hidden Preview POST form (used by QuoteWizard) -->
+<form id="quote-preview-form" method="post" asp-controller="Quotes" asp-action="Preview" 
+      target="_blank" class="d-none">
+  @Html.AntiForgeryToken()
+</form>
+
+<!-- ================= SCRIPTS ================= -->
+<script>
+  // Boot flags (token + root path)
+  window.PM = { 
+      token: '@token', 
+      root: '@Url.Content("~/")' 
+  };
+
+  console.log("[Dashboard] Project Manager Dashboard loaded. Token present:", !!window.PM.token);
+
+  // === QUOTE WIZARD TRIGGER ===
+  document.getElementById("btn-new-quote")?.addEventListener("click", () => {
+      console.log("[Dashboard] Opening Quote Wizard modal");
+      var modal = new bootstrap.Modal(document.getElementById("quoteWizardModal"));
+      modal.show();
+  });
+
+  // === PROJECT WIZARD TRIGGER ===
+  document.getElementById("btn-new-project")?.addEventListener("click", () => {
+      console.log("[Dashboard] Opening Project Wizard modal");
+      var modal = new bootstrap.Modal(document.getElementById("projectWizardModal"));
+      modal.show();
+  });
+</script>
