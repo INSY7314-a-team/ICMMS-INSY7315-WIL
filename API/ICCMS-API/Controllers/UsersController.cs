@@ -8,7 +8,7 @@ namespace ICCMS_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin,Project Manager,Client,Contractor,Tester")] // All authenticated users can access their profile
+    //[Authorize(Roles = "Admin,Project Manager,Client,Contractor,Tester")] // All authenticated users can access their profile
     public class UsersController : ControllerBase
     {
         private readonly IAuthService _authService;
@@ -82,10 +82,42 @@ namespace ICCMS_API.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
-    }
 
-    public class UpdateDeviceTokenRequest
-    {
-        public string DeviceToken { get; set; } = string.Empty;
+        [HttpGet("clients")]
+        public async Task<ActionResult<List<User>>> GetClients()
+        {
+            try
+            {
+                var clients = await _firebaseService.GetCollectionAsync<User>("users");
+                var activeClients = clients.Where(u => u.IsActive && u.Role == "Client").ToList();
+                return Ok(activeClients);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("contractors")]
+        public async Task<ActionResult<List<User>>> GetContractors()
+        {
+            try
+            {
+                var contractors = await _firebaseService.GetCollectionAsync<User>("users");
+                var activeContractors = contractors
+                    .Where(u => u.IsActive && u.Role == "Contractor")
+                    .ToList();
+                return Ok(activeContractors);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
     }
+}
+
+public class UpdateDeviceTokenRequest
+{
+    public string DeviceToken { get; set; } = string.Empty;
 }
