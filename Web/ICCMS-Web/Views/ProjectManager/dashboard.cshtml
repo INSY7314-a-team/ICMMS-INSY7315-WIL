@@ -39,28 +39,104 @@
   <!-- ================= HEADER ================= -->
   <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
     <div>
-      <h1 class="h3 fw-bold mb-1">Project Manager</h1>
-      <div class="text-muted">Manage Projects + Generate Quotes</div>
+      <h1 class="h3 fw-bold mb-1">Project Manager Dashboard</h1>
+      <div class="text-muted">Track Projects, Quotes, Clients & Contractors</div>
     </div>
 
     <!-- HEADER ACTION BUTTONS -->
     <div class="d-flex gap-2">
-      <!-- Button: view all quotes -->
       <a class="btn btn-outline-secondary" asp-controller="Quotes" asp-action="Index">
         <i class="fas fa-list"></i> View All Quotes
       </a>
 
-      <!-- Button: new project (opens Project Wizard modal) -->
       <button class="btn btn-brand" id="btn-new-project">
         <i class="fas fa-plus"></i> Create New Project
       </button>
 
-      <!-- Button: new quote (opens Quote Wizard modal) -->
       <button class="btn btn-brand" id="btn-new-quote">
         <i class="fas fa-file-invoice"></i> Generate New Quote
       </button>
     </div>
   </div>
+
+  <!-- ================= DASHBOARD CARDS ================= -->
+<div class="row g-3 mb-4">
+
+  <!-- Projects (MAIN CARD) -->
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Active Projects (@Model?.TotalProjects)</h5>
+        <ul class="list-group mb-2">
+          @foreach (var p in Model?.RecentProjects ?? new List<ProjectDto>())
+          {
+              <li class="list-group-item">@p.Name</li>
+          }
+        </ul>
+        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#projectsModal">
+          View All Projects
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Accepted Quotes -->
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Accepted Quotes (@Model?.RecentAcceptedQuotes?.Count ?? 0)</h5>
+        <ul class="list-group mb-2">
+          @foreach (var q in Model?.RecentAcceptedQuotes ?? new List<QuotationDto>())
+          {
+              <li class="list-group-item">@q.Description</li>
+          }
+        </ul>
+
+        <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#quotesModal">
+          View All Quotes
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Clients -->
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Active Clients (@Model?.TotalClients)</h5>
+        <ul class="list-group mb-2">
+          @foreach (var c in Model?.RecentClients ?? new List<UserDto>())
+          {
+              <li class="list-group-item">@c.FullName</li>
+          }
+        </ul>
+        <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#clientsModal">
+          View All Clients
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contractors -->
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Active Contractors (@Model?.TotalContractors)</h5>
+        <ul class="list-group mb-2">
+          @foreach (var c in Model?.RecentContractors ?? new List<UserDto>())
+          {
+              <li class="list-group-item">@c.FullName</li>
+          }
+        </ul>
+        <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#contractorsModal">
+          View All Contractors
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
 
   <!-- ================= QUOTES SNAPSHOT ================= -->
   <div class="card shadow-sm mb-4">
@@ -81,13 +157,10 @@
             {
                 <li class="list-group-item d-flex justify-content-between align-items-center">
                     <div>
-                        <!-- Quote description (acts as title) -->
                         <div>
                           <strong>@q.Description</strong> 
                           <span class="badge bg-success ms-2">Accepted</span>
                         </div>
-
-                        <!-- ApprovedAt date (or fallback to CreatedAt) -->
                         <div class="text-muted small">
                             @if (q.ApprovedAt.HasValue)
                             {
@@ -98,12 +171,8 @@
                                 @q.CreatedAt.ToString("yyyy-MM-dd HH:mm")
                             }
                         </div>
-
-                        <!-- ClientId until we wire up client lookup -->
                         <div class="text-muted small">Client: @q.ClientId</div>
                     </div>
-
-                    <!-- Action button: create invoice + start project -->
                     <a asp-controller="Invoices" asp-action="Create" asp-route-quoteId="@q.QuotationId"
                        class="btn btn-sm btn-success">
                         Create Invoice & Start Project
@@ -113,12 +182,10 @@
         }
         else
         {
-            <!-- If no accepted quotes -->
             <li class="list-group-item text-muted">No accepted quotes yet.</li>
         }
       </ul>
 
-      <!-- Link to full quotes list -->
       <a class="btn btn-outline-primary btn-sm" asp-controller="Quotes" asp-action="Index">
         Go to Quotes
       </a>
@@ -130,10 +197,38 @@
 @* Quote Wizard modal *@
 @await Html.PartialAsync("~/Views/Shared/_QuoteWizard.cshtml", new ICCMS_Web.Models.QuotationDto())
 
-
 @* Project Wizard modal *@
 @await Html.PartialAsync("~/Views/Shared/_ProjectWizard.cshtml", new ICCMS_Web.Models.ProjectDto())
 
+@* Projects Modal *@
+<div class="modal fade" id="projectsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">All Projects</h5></div>
+      <div class="modal-body">[Projects list coming soon]</div>
+    </div>
+  </div>
+</div>
+
+@* Clients Modal *@
+<div class="modal fade" id="clientsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">All Clients</h5></div>
+      <div class="modal-body">[Clients list coming soon]</div>
+    </div>
+  </div>
+</div>
+
+@* Contractors Modal *@
+<div class="modal fade" id="contractorsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">All Contractors</h5></div>
+      <div class="modal-body">[Contractors list coming soon]</div>
+    </div>
+  </div>
+</div>
 
 <!-- Hidden Preview POST form (used by QuoteWizard) -->
 <form id="quote-preview-form" method="post" asp-controller="Quotes" asp-action="Preview" 
@@ -143,24 +238,16 @@
 
 <!-- ================= SCRIPTS ================= -->
 <script>
-  // Boot flags (token + root path)
-  window.PM = { 
-      token: '@token', 
-      root: '@Url.Content("~/")' 
-  };
+  window.PM = { token: '@token', root: '@Url.Content("~/")' };
 
   console.log("[Dashboard] Project Manager Dashboard loaded. Token present:", !!window.PM.token);
 
-  // === QUOTE WIZARD TRIGGER ===
   document.getElementById("btn-new-quote")?.addEventListener("click", () => {
-      console.log("[Dashboard] Opening Quote Wizard modal");
       var modal = new bootstrap.Modal(document.getElementById("quoteWizardModal"));
       modal.show();
   });
 
-  // === PROJECT WIZARD TRIGGER ===
   document.getElementById("btn-new-project")?.addEventListener("click", () => {
-      console.log("[Dashboard] Opening Project Wizard modal");
       var modal = new bootstrap.Modal(document.getElementById("projectWizardModal"));
       modal.show();
   });

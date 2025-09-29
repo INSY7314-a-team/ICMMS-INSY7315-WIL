@@ -83,7 +83,7 @@ namespace ICCMS_Web.Controllers
                 if (testResponse.IsSuccessStatusCode)
                 {
                     var responseBody = await testResponse.Content.ReadAsStringAsync();
-                    var users = JsonSerializer.Deserialize<List<User>>(
+                    var users = JsonSerializer.Deserialize<List<UserDto>>(
                         responseBody,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
