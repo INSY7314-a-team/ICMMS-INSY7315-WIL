@@ -118,10 +118,7 @@ namespace ICCMS_Web.Controllers
                     );
                     if (payloadDict != null)
                     {
-                        // Use current user as sender, and create a test receiver ID
                         //payloadDict["senderId"] = currentUserId;
-                        // For testing, we'll use a known test user ID for receiver
-                        // You might want to create a test user in your database
                         //payloadDict["receiverId"] = currentUserId;
                         payload = payloadDict;
                     }
