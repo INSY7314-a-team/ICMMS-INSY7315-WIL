@@ -12,6 +12,8 @@ namespace ICCMS_Web.Models
         // === Quotes ===
         public int TotalQuotes { get; set; }
         public List<QuotationDto> RecentAcceptedQuotes  { get; set; } = new();
+        public List<QuotationDto> AllQuotes { get; set; } = new();
+
 
         // === Clients ===
         public int TotalClients { get; set; }

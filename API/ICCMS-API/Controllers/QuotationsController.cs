@@ -409,7 +409,17 @@ namespace ICCMS_API.Controllers
         {
             return StatusCode(410, "This endpoint has been deprecated. Use /pm-approve instead.");
         }
+
+        [HttpGet("debug-claims")]
+        [AllowAnonymous]
+        public IActionResult DebugClaims()
+        {
+            return Ok(User.Claims.Select(c => new { c.Type, c.Value }));
+        }
+
     }
+
+
 
     public class ClientDecisionBody
     {

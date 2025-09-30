@@ -69,7 +69,8 @@ namespace ICCMS_Web.Controllers
                 RecentProjects = recentProjects,
 
                 TotalQuotes = allQuotes.Count,
-                RecentAcceptedQuotes = acceptedQuotes,   // ✅ matches ViewModel
+                RecentAcceptedQuotes = acceptedQuotes,
+                AllQuotes = allQuotes, 
 
                 TotalClients = allClients.Count,
                 RecentClients = recentClients,
