@@ -8,6 +8,7 @@
 }
 
 <style>
+  /* === Dashboard button branding === */
   .btn-brand {
       background: #FFD200;
       border-color: #FFD200;
@@ -18,7 +19,17 @@
 
 <div class="container-fluid px-3 px-md-4 py-3">
 
-  <!-- HEADER -->
+  <!-- ================= ALERTS ================= -->
+  @if (TempData["SuccessMessage"] != null)
+  {
+      <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+  }
+  @if (TempData["ErrorMessage"] != null)
+  {
+      <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+  }
+
+  <!-- ================= HEADER ================= -->
   <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
     <div>
       <h1 class="h3 fw-bold mb-1">Project Manager Dashboard</h1>
@@ -26,20 +37,24 @@
     </div>
 
     <div class="d-flex gap-2">
-      <!-- Top button now opens modal -->
+      <!-- Button: All Quotes -->
       <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#quotesModal">
         <i class="fas fa-list"></i> View All Quotes
       </button>
+
+      <!-- Button: Create New Project -->
       <button class="btn btn-brand" id="btn-new-project">
         <i class="fas fa-plus"></i> Create New Project
       </button>
+
+      <!-- Button: Generate New Quote -->
       <button class="btn btn-brand" id="btn-new-quote">
         <i class="fas fa-file-invoice"></i> Generate New Quote
       </button>
     </div>
   </div>
 
-  <!-- DASHBOARD CARDS -->
+  <!-- ================= DASHBOARD CARDS ================= -->
   <div class="row g-3 mb-4">
 
     <!-- Projects -->
@@ -50,7 +65,7 @@
           <ul class="list-group mb-2">
             @foreach (var p in Model?.RecentProjects ?? new List<ProjectDto>())
             {
-                <li class="list-group-item">@p.Name</li>
+                <li class="list-group-item">@p.Name (@p.Status)</li>
             }
           </ul>
           <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#projectsModal">
@@ -68,7 +83,7 @@
           <ul class="list-group mb-2">
             @foreach (var q in Model?.RecentAcceptedQuotes ?? new List<QuotationDto>())
             {
-                <li class="list-group-item">@q.Description</li>
+                <li class="list-group-item">@q.Description (Total: R @q.GrandTotal)</li>
             }
           </ul>
           <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#quotesModal">
@@ -119,10 +134,10 @@
 
 <!-- ================= MODALS ================= -->
 
-<!-- Quote Wizard -->
-@await Html.PartialAsync("~/Views/Shared/_QuoteWizard.cshtml", new ICCMS_Web.Models.QuotationDto())
+<!-- ✅ NEW QUOTE WIZARD -->
+@await Html.PartialAsync("~/Views/Shared/_QuoteWizard.cshtml")
 
-<!-- Project Wizard -->
+<!-- ✅ PROJECT WIZARD -->
 @await Html.PartialAsync("~/Views/Shared/_ProjectWizard.cshtml", new ICCMS_Web.Models.ProjectDto())
 
 <!-- Projects Modal -->
@@ -130,7 +145,16 @@
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header"><h5 class="modal-title">All Projects</h5></div>
-      <div class="modal-body">[Projects list coming soon]</div>
+      <div class="modal-body">
+        <ul class="list-group">
+          @foreach (var p in Model?.RecentProjects ?? new List<ProjectDto>())
+          {
+              <li class="list-group-item">
+                  <b>@p.Name</b> — @p.Status (Budget: R @p.BudgetPlanned)
+              </li>
+          }
+        </ul>
+      </div>
     </div>
   </div>
 </div>
@@ -140,7 +164,14 @@
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header"><h5 class="modal-title">All Clients</h5></div>
-      <div class="modal-body">[Clients list coming soon]</div>
+      <div class="modal-body">
+        <ul class="list-group">
+          @foreach (var c in Model?.RecentClients ?? new List<UserDto>())
+          {
+              <li class="list-group-item">@c.FullName</li>
+          }
+        </ul>
+      </div>
     </div>
   </div>
 </div>
@@ -150,7 +181,14 @@
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header"><h5 class="modal-title">All Contractors</h5></div>
-      <div class="modal-body">[Contractors list coming soon]</div>
+      <div class="modal-body">
+        <ul class="list-group">
+          @foreach (var c in Model?.RecentContractors ?? new List<UserDto>())
+          {
+              <li class="list-group-item">@c.FullName</li>
+          }
+        </ul>
+      </div>
     </div>
   </div>
 </div>
@@ -164,7 +202,37 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        @await Html.PartialAsync("~/Views/Shared/_QuotesTable.cshtml", Model?.AllQuotes ?? new List<ICCMS_Web.Models.QuotationDto>())
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Grand Total</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+          @foreach (var q in Model?.AllQuotes ?? new List<QuotationDto>())
+          {
+              <tr>
+                <td>@q.Description</td>
+                <td>@q.Status</td>
+                <td>R @q.GrandTotal</td>
+                <td>
+                  <a class="btn btn-sm btn-outline-primary" asp-controller="Quotes" asp-action="Preview" asp-route-id="@q.QuotationId" target="_blank">Preview</a>
+                  
+                  @if (q.Status.Equals("ClientAccepted", StringComparison.OrdinalIgnoreCase))
+                  {
+                      <form asp-controller="ProjectManager" asp-action="SyncProjectFromQuote" method="post" style="display:inline;">
+                          <input type="hidden" name="quotationId" value="@q.QuotationId" />
+                          <button type="submit" class="btn btn-sm btn-brand">Sync to Project</button>
+                      </form>
+                  }
+                </td>
+              </tr>
+          }
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -176,16 +244,21 @@
 </form>
 
 <script>
+  // === Bootstrapping global PM object ===
   window.PM = { token: '@token', root: '@Url.Content("~/")' };
 
-  console.log("[Dashboard] Project Manager Dashboard loaded. Token present:", !!window.PM.token);
+  console.log("[Dashboard] Loaded. Token present:", !!window.PM.token);
 
+  // --- Open Quote Wizard ---
   document.getElementById("btn-new-quote")?.addEventListener("click", () => {
-      var modal = new bootstrap.Modal(document.getElementById("quoteWizardModal"));
+      console.log("[Dashboard] Opening Quote Wizard modal");
+      var modal = new bootstrap.Modal(document.getElementById("quoteModal"));
       modal.show();
   });
 
+  // --- Open Project Wizard ---
   document.getElementById("btn-new-project")?.addEventListener("click", () => {
+      console.log("[Dashboard] Opening Project Wizard modal");
       var modal = new bootstrap.Modal(document.getElementById("projectWizardModal"));
       modal.show();
   });

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace ICCMS_Web.Models
@@ -26,8 +28,19 @@ namespace ICCMS_Web.Models
         [JsonPropertyName("description")]
         public string Description { get; set; } = string.Empty;
 
-        [JsonPropertyName("total")]
-        public double Total { get; set; }
+        // 🔑 New: line items in this quotation
+        [JsonPropertyName("items")]
+        public List<QuotationItemDto> Items { get; set; } = new();
+
+        // 🔑 Totals expected by Views
+        [JsonPropertyName("subtotal")]
+        public double Subtotal { get; set; }
+
+        [JsonPropertyName("taxTotal")]
+        public double TaxTotal { get; set; }
+
+        [JsonPropertyName("grandTotal")]
+        public double GrandTotal { get; set; }
 
         [JsonPropertyName("status")]
         public string Status { get; set; } = string.Empty;

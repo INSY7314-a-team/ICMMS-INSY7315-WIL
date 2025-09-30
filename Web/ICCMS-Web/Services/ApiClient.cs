@@ -57,7 +57,6 @@ namespace ICCMS_Web.Services
 
                 // ===== Success: log raw JSON =====
                 var json = await res.Content.ReadAsStringAsync();
-                _logger.LogInformation("GET {Endpoint}: Raw JSON body:\n{Json}", endpoint, json);
 
                 try
                 {

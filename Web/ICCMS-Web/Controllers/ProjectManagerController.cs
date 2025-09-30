@@ -26,12 +26,12 @@ namespace ICCMS_Web.Controllers
             _logger.LogInformation("=== Loading Project Manager Dashboard for {User} ===", User.Identity?.Name);
 
             // ================= FETCH PROJECTS =================
-            _logger.LogInformation("Fetching projects from API...");
-            var allProjects = await _apiClient.GetAsync<List<ProjectDto>>("/api/projects", User);
+            _logger.LogInformation("Fetching projects from API (/api/projectmanager/projects)...");
+            var allProjects = await _apiClient.GetAsync<List<ProjectDto>>("/api/projectmanager/projects", User);
             if (allProjects == null) allProjects = new List<ProjectDto>();
 
             var recentProjects = allProjects
-                .OrderByDescending(p => p.StartDate) // valid property on ProjectDto
+                .OrderByDescending(p => p.StartDate)
                 .Take(5)
                 .ToList();
             _logger.LogInformation("Fetched {Count} total projects.", allProjects.Count);
@@ -42,7 +42,7 @@ namespace ICCMS_Web.Controllers
             if (allQuotes == null) allQuotes = new List<QuotationDto>();
 
             var acceptedQuotes = allQuotes
-                .Where(q => q.Status.Equals("Accepted", StringComparison.OrdinalIgnoreCase))
+                .Where(q => q.Status.Equals("ClientAccepted", StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(q => q.ApprovedAt ?? q.CreatedAt)
                 .Take(5)
                 .ToList();
@@ -70,7 +70,7 @@ namespace ICCMS_Web.Controllers
 
                 TotalQuotes = allQuotes.Count,
                 RecentAcceptedQuotes = acceptedQuotes,
-                AllQuotes = allQuotes, 
+                AllQuotes = allQuotes,
 
                 TotalClients = allClients.Count,
                 RecentClients = recentClients,
@@ -137,6 +137,67 @@ namespace ICCMS_Web.Controllers
                 _logger.LogError(ex, "Error creating project {Name}", project.Name);
                 TempData["ErrorMessage"] = $"Unexpected error: {ex.Message}";
                 return View(project);
+            }
+        }
+
+        /// <summary>
+        /// Sync a ClientAccepted Quotation into a Project (manual, since API doesn’t auto-update).
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SyncProjectFromQuote(string quotationId)
+        {
+            _logger.LogInformation("Attempting to sync project from quotation {Q}", quotationId);
+
+            try
+            {
+                // Get the quotation details
+                var quote = await _apiClient.GetAsync<QuotationDto>($"/api/quotations/{quotationId}", User);
+                if (quote == null)
+                {
+                    TempData["ErrorMessage"] = "Quotation not found.";
+                    return RedirectToAction("Dashboard");
+                }
+
+                if (!quote.Status.Equals("ClientAccepted", StringComparison.OrdinalIgnoreCase))
+                {
+                    TempData["ErrorMessage"] = "Only accepted quotations can be synced to projects.";
+                    return RedirectToAction("Dashboard");
+                }
+
+                // Build a new ProjectDto from the Quotation
+                var project = new ProjectDto
+                {
+                    ProjectId = Guid.NewGuid().ToString(),
+                    ClientId = quote.ClientId,
+                    Name = quote.Description ?? $"Project from Quote {quote.QuotationId}",
+                    Description = $"Auto-generated from accepted quotation {quote.QuotationId}",
+                    BudgetPlanned = quote.GrandTotal,
+                    Status = "Active",
+                    StartDate = DateTime.UtcNow,
+                    EndDatePlanned = DateTime.UtcNow.AddMonths(1)
+                };
+
+                _logger.LogInformation("Built ProjectDto from quotation {Q}", quotationId);
+
+                // Send to API
+                var created = await _apiClient.PostAsync<ProjectDto>(
+                    "/api/projectmanager/create/project", project, User);
+
+                if (created == null)
+                {
+                    TempData["ErrorMessage"] = "Failed to sync project from quotation.";
+                    return RedirectToAction("Dashboard");
+                }
+
+                TempData["SuccessMessage"] = $"Project '{created.Name}' created from quotation {quotationId}.";
+                return RedirectToAction("Dashboard");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error syncing project from quotation {Q}", quotationId);
+                TempData["ErrorMessage"] = $"Unexpected error: {ex.Message}";
+                return RedirectToAction("Dashboard");
             }
         }
     }
