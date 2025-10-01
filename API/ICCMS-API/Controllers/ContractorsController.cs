@@ -21,7 +21,7 @@ namespace ICCMS_API.Controllers
             _firebaseService = firebaseService;
         }
 
-        [HttpGet("project/tasks")]
+        [HttpGet("Project/Tasks")]
         public async Task<ActionResult<List<ProjectTask>>> GetProjectTasks()
         {
             try

@@ -31,5 +31,37 @@ namespace ICCMS_API.Models
 
         [FirestoreProperty("readAt")]
         public DateTime? ReadAt { get; set; }
+
+        // Threading fields
+        [FirestoreProperty("threadId")]
+        public string ThreadId { get; set; } = string.Empty;
+
+        [FirestoreProperty("parentMessageId")]
+        public string? ParentMessageId { get; set; }
+
+        [FirestoreProperty("isThreadStarter")]
+        public bool IsThreadStarter { get; set; } = false;
+
+        [FirestoreProperty("threadDepth")]
+        public int ThreadDepth { get; set; } = 0;
+
+        [FirestoreProperty("replyCount")]
+        public int ReplyCount { get; set; } = 0;
+
+        [FirestoreProperty("lastReplyAt")]
+        public DateTime? LastReplyAt { get; set; }
+
+        [FirestoreProperty("threadParticipants")]
+        public List<string> ThreadParticipants { get; set; } = new List<string>();
+
+        [FirestoreProperty("messageType")]
+        public string MessageType { get; set; } = "direct"; // "direct", "thread", "broadcast"
+
+        // File attachment fields
+        [FirestoreProperty("attachments")]
+        public List<MessageAttachment> Attachments { get; set; } = new List<MessageAttachment>();
+
+        [FirestoreProperty("hasAttachments")]
+        public bool HasAttachments { get; set; } = false;
     }
 }
