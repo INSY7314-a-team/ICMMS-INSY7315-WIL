@@ -1,5 +1,5 @@
-using ICCMS_API.Models;
 using System.Linq;
+using ICCMS_API.Models;
 
 namespace ICCMS_API.Helpers
 {
@@ -40,15 +40,29 @@ namespace ICCMS_API.Helpers
             // Calculate subtotal
             invoice.Subtotal = invoice.Items.Sum(item => item.LineTotal);
 
+            // Calculate subtotal with markup
+            invoice.SubtotalWithMarkup = invoice.Items.Sum(item => item.LineTotal * item.Markup);
+
+            // Calculate tax total with markup
+            invoice.TaxTotalWithMarkup = invoice.Items.Sum(item =>
+                item.LineTotal * item.TaxRate * item.Markup
+            );
+
             // Calculate tax total
             invoice.TaxTotal = invoice.Items.Sum(item => item.LineTotal * item.TaxRate);
 
             // Calculate total amount
             invoice.TotalAmount = invoice.Subtotal + invoice.TaxTotal;
 
+            // Calculate total amount with markup
+            invoice.TotalAmountWithMarkup = invoice.SubtotalWithMarkup + invoice.TaxTotalWithMarkup;
+
             // Sync legacy fields
             invoice.Amount = invoice.Subtotal;
             invoice.TaxAmount = invoice.TaxTotal;
+            invoice.AmountWithMarkup = invoice.SubtotalWithMarkup;
+            invoice.TaxAmountWithMarkup = invoice.TaxTotalWithMarkup;
+            invoice.TotalAmountWithMarkup = invoice.TotalAmountWithMarkup;
 
             // Update timestamp
             invoice.UpdatedAt = DateTime.UtcNow;

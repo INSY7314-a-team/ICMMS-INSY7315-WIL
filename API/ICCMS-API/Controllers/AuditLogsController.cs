@@ -35,7 +35,12 @@ namespace ICCMS_API.Controllers
             try
             {
                 if (!Types.IsValidAuditLogType(input.LogType))
-                    return BadRequest(new { error = $"Invalid logType. Allowed: {string.Join(", ", Types.GetAuditLogTypes())}" });
+                    return BadRequest(
+                        new
+                        {
+                            error = $"Invalid logType. Allowed: {string.Join(", ", Types.GetAuditLogTypes())}",
+                        }
+                    );
 
                 var log = new AuditLog
                 {
@@ -44,7 +49,7 @@ namespace ICCMS_API.Controllers
                     Description = input.Description,
                     UserId = input.UserId,
                     EntityId = input.EntityId,
-                    TimestampUtc = DateTime.UtcNow // server-set
+                    TimestampUtc = DateTime.UtcNow, // server-set
                 };
 
                 var id = await _firebaseService.AddDocumentAsync(Collection, log);
@@ -67,12 +72,11 @@ namespace ICCMS_API.Controllers
         {
             try
             {
-                if (limit <= 0 || limit > 1000) limit = 200;
+                if (limit <= 0 || limit > 1000)
+                    limit = 200;
 
                 var all = await _firebaseService.GetCollectionAsync<AuditLog>(Collection);
-                var ordered = all.OrderByDescending(a => a.TimestampUtc)
-                                 .Take(limit)
-                                 .ToList();
+                var ordered = all.OrderByDescending(a => a.TimestampUtc).Take(limit).ToList();
 
                 return Ok(ordered);
             }
@@ -89,7 +93,8 @@ namespace ICCMS_API.Controllers
             try
             {
                 var log = await _firebaseService.GetDocumentAsync<AuditLog>(Collection, id);
-                if (log == null) return NotFound(new { error = "Audit log not found" });
+                if (log == null)
+                    return NotFound(new { error = "Audit log not found" });
                 return Ok(log);
             }
             catch (Exception ex)
@@ -106,11 +111,13 @@ namespace ICCMS_API.Controllers
             [FromQuery] string? entityId,
             [FromQuery] DateTime? fromUtc,
             [FromQuery] DateTime? toUtc,
-            [FromQuery] int limit = 200)
+            [FromQuery] int limit = 200
+        )
         {
             try
             {
-                if (limit <= 0 || limit > 1000) limit = 200;
+                if (limit <= 0 || limit > 1000)
+                    limit = 200;
 
                 var all = await _firebaseService.GetCollectionAsync<AuditLog>(Collection);
                 var q = all.AsQueryable();
@@ -130,9 +137,7 @@ namespace ICCMS_API.Controllers
                 if (toUtc.HasValue)
                     q = q.Where(a => a.TimestampUtc < toUtc.Value);
 
-                var results = q.OrderByDescending(a => a.TimestampUtc)
-                               .Take(limit)
-                               .ToList();
+                var results = q.OrderByDescending(a => a.TimestampUtc).Take(limit).ToList();
 
                 return Ok(results);
             }
@@ -144,17 +149,21 @@ namespace ICCMS_API.Controllers
 
         // GET: api/auditlogs/by-entity/{entityId}
         [HttpGet("by-entity/{entityId}")]
-        public async Task<ActionResult<List<AuditLog>>> ByEntity(string entityId, [FromQuery] int limit = 200)
+        public async Task<ActionResult<List<AuditLog>>> ByEntity(
+            string entityId,
+            [FromQuery] int limit = 200
+        )
         {
             try
             {
-                if (limit <= 0 || limit > 1000) limit = 200;
+                if (limit <= 0 || limit > 1000)
+                    limit = 200;
 
                 var all = await _firebaseService.GetCollectionAsync<AuditLog>(Collection);
                 var results = all.Where(a => a.EntityId == entityId)
-                                 .OrderByDescending(a => a.TimestampUtc)
-                                 .Take(limit)
-                                 .ToList();
+                    .OrderByDescending(a => a.TimestampUtc)
+                    .Take(limit)
+                    .ToList();
 
                 return Ok(results);
             }
