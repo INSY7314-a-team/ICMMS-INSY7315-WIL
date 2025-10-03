@@ -1,0 +1,59 @@
+@model ICCMS_Web.Models.CreateDraftViewModel
+@{
+    ViewData["Title"] = "Create Draft Quotation";
+    Layout = "_Layout";
+}
+
+<div class="container my-4">
+    <h2 class="fw-bold mb-4">Create Draft Quotation</h2>
+
+    <form asp-action="CreateDraft" method="post">
+        @Html.AntiForgeryToken()
+
+        <!-- Project -->
+        <div class="mb-3">
+            <label asp-for="ProjectId" class="form-label"></label>
+            <select asp-for="ProjectId" class="form-select" required>
+                <option value="">Select project...</option>
+                @foreach (var p in Model.Projects)
+                {
+                    <option value="@p.ProjectId">@p.Name</option>
+                }
+            </select>
+            <span asp-validation-for="ProjectId" class="text-danger"></span>
+        </div>
+
+        <!-- Client -->
+        <div class="mb-3">
+            <label asp-for="ClientId" class="form-label"></label>
+            <select asp-for="ClientId" class="form-select" required>
+                <option value="">Select client...</option>
+                @foreach (var c in Model.Clients)
+                {
+                    <option value="@c.UserId">@c.FullName (@c.Email)</option>
+                }
+            </select>
+            <span asp-validation-for="ClientId" class="text-danger"></span>
+        </div>
+
+        <!-- Description -->
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label"></label>
+            <input asp-for="Description" class="form-control" placeholder="Enter quotation description" />
+            <span asp-validation-for="Description" class="text-danger"></span>
+        </div>
+
+        <!-- Valid Until -->
+        <div class="mb-3">
+            <label asp-for="ValidUntil" class="form-label"></label>
+            <input asp-for="ValidUntil" type="date" class="form-control" />
+            <span asp-validation-for="ValidUntil" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Create Draft</button>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

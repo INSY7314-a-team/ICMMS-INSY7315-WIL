@@ -1,60 +1,57 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations;
 
 namespace ICCMS_Web.Models
 {
-    // Mirrors API/ICCMS-API/Models/Quotation.cs payload
     public class QuotationDto
     {
-        [JsonPropertyName("quotationId")]
+        [Required]
         public string QuotationId { get; set; } = string.Empty;
 
-        [JsonPropertyName("projectId")]
+        [Required]
         public string ProjectId { get; set; } = string.Empty;
 
-        [JsonPropertyName("maintenanceRequestId")]
         public string MaintenanceRequestId { get; set; } = string.Empty;
 
-        [JsonPropertyName("clientId")]
+        [Required]
         public string ClientId { get; set; } = string.Empty;
 
-        [JsonPropertyName("contractorId")]
         public string ContractorId { get; set; } = string.Empty;
-
-        [JsonPropertyName("adminApproverUserId")]
         public string AdminApproverUserId { get; set; } = string.Empty;
 
-        [JsonPropertyName("description")]
+        [Required(ErrorMessage = "Description is required")]
         public string Description { get; set; } = string.Empty;
 
-        // 🔑 New: line items in this quotation
-        [JsonPropertyName("items")]
-        public List<QuotationItemDto> Items { get; set; } = new();
+        [Range(0, double.MaxValue)]
+        public double Total { get; set; }
 
-        // 🔑 Totals expected by Views
-        [JsonPropertyName("subtotal")]
-        public double Subtotal { get; set; }
-
-        [JsonPropertyName("taxTotal")]
-        public double TaxTotal { get; set; }
-
-        [JsonPropertyName("grandTotal")]
-        public double GrandTotal { get; set; }
-
-        [JsonPropertyName("status")]
         public string Status { get; set; } = string.Empty;
 
-        [JsonPropertyName("validUntil")]
         public DateTime ValidUntil { get; set; }
-
-        [JsonPropertyName("createdAt")]
         public DateTime CreatedAt { get; set; }
-
-        [JsonPropertyName("sentAt")]
         public DateTime? SentAt { get; set; }
-
-        [JsonPropertyName("approvedAt")]
         public DateTime? ApprovedAt { get; set; }
+
+        [MinLength(1, ErrorMessage = "At least one item is required")]
+        public List<QuotationItemDto> Items { get; set; } = new();
+
+        public double Subtotal { get; set; }
+        public double TaxTotal { get; set; }
+        public double GrandTotal { get; set; }
+
+        public string Currency { get; set; } = "ZAR";
+
+        public DateTime? AdminApprovedAt { get; set; }
+        public DateTime? ClientRespondedAt { get; set; }
+        public string? ClientDecisionNote { get; set; }
+        public DateTime UpdatedAt { get; set; }
+
+        public bool IsAiGenerated { get; set; } = false;
+        public string? EstimateId { get; set; }
+        public DateTime? PmEditedAt { get; set; }
+        public string? PmEditNotes { get; set; }
+        public DateTime? PmRejectedAt { get; set; }
+        public string? PmRejectReason { get; set; }
     }
 }

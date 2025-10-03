@@ -127,6 +127,7 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                
                 // IMPORTANT: quotation.ClientId must be set to the client's UserId
                 quotation.Status ??= "Draft";
                 
@@ -142,6 +143,8 @@ namespace ICCMS_API.Controllers
 
                 // Recalculate pricing
                 Pricing.Recalculate(quotation);
+
+                
 
                 var quotationId = await _firebaseService.AddDocumentAsync("quotations", quotation);
                 return Ok(quotationId);

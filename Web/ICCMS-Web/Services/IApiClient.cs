@@ -8,6 +8,8 @@ namespace ICCMS_Web.Services
         // Generic GET helper
         Task<T?> GetAsync<T>(string endpoint, ClaimsPrincipal user);
         Task<T?> PostAsync<T>(string endpoint, object data, ClaimsPrincipal user);
+        Task<T?> PutAsync<T>(string endpoint, object data, ClaimsPrincipal user);
+
 
     }
 }
