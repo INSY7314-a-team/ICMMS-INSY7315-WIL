@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 
-namespace ICCMS_Web.Models{
+namespace ICCMS_Web.Models
+{
     public class CreateProjectViewModel
     {
         public ProjectDto Project { get; set; } = new();
