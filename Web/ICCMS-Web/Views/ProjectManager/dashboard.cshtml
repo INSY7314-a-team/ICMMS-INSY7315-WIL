@@ -3,6 +3,10 @@
     ViewData["Title"] = "Project Manager Dashboard";
     Layout = "_Layout";
 }
+@await Html.PartialAsync("_EstimatePopup")
+@await Html.PartialAsync("_QuotationPopup", new ICCMS_Web.Models.EstimateViewModel())
+
+
 
 <style>
 /* ===================== GLOBAL STYLING ===================== */
@@ -180,46 +184,51 @@
                                     aria-valuenow="@avgProgress"
                                     aria-valuemin="0" aria-valuemax="100"></div>
                             </div>
+                <!-- CONTEXTUAL ACTIONS -->
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    @{
+                        bool hasEstimate = Model.ProjectEstimates != null && Model.ProjectEstimates.ContainsKey(project.ProjectId);
+                    }
 
+                    @if (project.Status == "Draft" && !hasEstimate)
+                    {
+                        <!-- Show AI Estimate button -->
+                        <button class="btn btn-sm btn-workflow"
+                                data-bs-toggle="modal"
+                                data-bs-target="#estimateModal"
+                                data-project-id="@project.ProjectId">
+                            <i class="fas fa-bolt me-1"></i> AI Estimate
+                        </button>
+                    }
+                    else if (hasEstimate)
+                    {
+                        <!-- Show Create Quote button with available metadata -->
+                        <button class="btn btn-sm btn-workflow"
+                                data-bs-toggle="modal"
+                                data-bs-target="#quotationModal"
+                                data-project-id="@project.ProjectId"
+                                data-project-name="@project.Name"
+                                data-description="@project.Description"
+                                data-client-id="@project.ClientId">
+                            <i class="fas fa-file-invoice-dollar me-1"></i> Create Quote
+                        </button>
+                    }
+                    else if (project.Status == "Active")
+                    {
+                        <a href="@Url.Action("AssignTasks", "ProjectManager", new { projectId = project.ProjectId })"
+                        class="btn btn-sm btn-workflow">
+                            <i class="fas fa-tasks me-1"></i> Assign Tasks
+                        </a>
+                    }
+                    else if (project.Status == "Completed")
+                    {
+                        <a href="@Url.Action("ActivateMaintenance", "ProjectManager", new { projectId = project.ProjectId })"
+                        class="btn btn-sm btn-workflow">
+                            <i class="fas fa-wrench me-1"></i> Activate Maintenance
+                        </a>
+                    }
+                </div>
 
-                            <!-- CONTEXTUAL ACTIONS -->
-                            <div class="d-flex flex-wrap gap-2 mt-3">
-                                @if (project.Status == "Draft")
-                                {
-                                    <a href="@Url.Action("RequestEstimate", "Quotes", new { projectId = project.ProjectId })"
-                                       class="btn btn-sm btn-workflow">
-                                        <i class="fas fa-file-signature me-1"></i> Request Estimate
-                                    </a>
-                                }
-                                else if (project.Status == "Estimate Pending")
-                                {
-                                    <a href="@Url.Action("ReviewEstimate", "Quotes", new { projectId = project.ProjectId })"
-                                       class="btn btn-sm btn-workflow">
-                                        <i class="fas fa-search me-1"></i> Review Estimate
-                                    </a>
-                                }
-                                else if (project.Status == "Estimate Approved")
-                                {
-                                    <a href="@Url.Action("CreateDraft", "Quotes", new { projectId = project.ProjectId })"
-                                       class="btn btn-sm btn-workflow">
-                                        <i class="fas fa-file-invoice-dollar me-1"></i> Create Quote
-                                    </a>
-                                }
-                                else if (project.Status == "Active")
-                                {
-                                    <a href="@Url.Action("AssignTasks", "ProjectManager", new { projectId = project.ProjectId })"
-                                       class="btn btn-sm btn-workflow">
-                                        <i class="fas fa-tasks me-1"></i> Assign Tasks
-                                    </a>
-                                }
-                                else if (project.Status == "Completed")
-                                {
-                                    <a href="@Url.Action("ActivateMaintenance", "ProjectManager", new { projectId = project.ProjectId })"
-                                       class="btn btn-sm btn-workflow">
-                                        <i class="fas fa-wrench me-1"></i> Activate Maintenance
-                                    </a>
-                                }
-                            </div>
                         </div>
                     }
                 }
@@ -263,3 +272,8 @@
         </div>
     </div>
 </div>
+@section Scripts {
+    <script src="~/js/estimate-popup.js"></script>
+    <script src="~/js/quotation-popup.js"></script>
+}
+

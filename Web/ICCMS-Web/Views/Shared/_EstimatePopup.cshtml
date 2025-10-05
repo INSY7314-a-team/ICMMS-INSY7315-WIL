@@ -1,0 +1,70 @@
+@* No @model binding — pure dynamic modal *@
+
+<!-- =========================
+     AI ESTIMATE MODAL
+========================= -->
+<div class="modal fade" id="estimateModal" tabindex="-1" aria-labelledby="estimateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg">
+            <!-- HEADER -->
+            <div class="modal-header bg-warning bg-gradient text-dark">
+                <h5 class="modal-title fw-bold" id="estimateModalLabel">
+                    <i class="fas fa-robot me-2"></i> AI Blueprint Estimate
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- BODY -->
+            <div class="modal-body p-4">
+
+                <!-- ============================= -->
+                <!-- STEP 1: BLUEPRINT OPTIONS -->
+                <!-- ============================= -->
+                <div id="step-upload">
+                    <p class="fw-semibold mb-3">📄 Select how you'd like to handle the blueprint:</p>
+
+                    <div id="blueprintOptions" class="d-flex flex-column gap-2 mb-3">
+                        <button id="btnUploadNew" class="btn btn-outline-dark fw-bold">
+                            <i class="fas fa-upload me-2"></i> Upload New Blueprint
+                        </button>
+
+                        <!-- Appears dynamically if project already has a blueprint -->
+                        <button id="btnUseExisting" class="btn btn-outline-success fw-bold d-none">
+                            <i class="fas fa-file-alt me-2"></i> Use Existing Blueprint
+                        </button>
+                        <div id="existingBlueprintInfo" class="small text-muted d-none"></div>
+
+                        <button id="btnRequestContractor" class="btn btn-outline-secondary fw-bold">
+                            <i class="fas fa-paper-plane me-2"></i> Request Blueprint from Contractor (Stubbed)
+                        </button>
+                    </div>
+
+                    <hr />
+
+                    <label class="form-label fw-bold">Blueprint URL</label>
+                    <input id="blueprintUrl" class="form-control mb-3" placeholder="https://example.com/blueprint.pdf" />
+                    <input type="hidden" id="projectId" />
+                    <input type="hidden" id="contractorId" value="@User.FindFirst("UserId")?.Value" />
+
+                    <button id="btnStartAi" class="btn btn-warning w-100 fw-bold">
+                        <i class="fas fa-brain me-2"></i> Run AI Parser (Stubbed)
+                    </button>
+                </div>
+
+                <!-- STEP 2 -->
+                <div id="step-progress" class="d-none">
+                    <h6>Processing Blueprint...</h6>
+                    <pre id="progressLog" class="bg-dark text-light p-2 rounded" style="height:150px;overflow:auto;"></pre>
+                </div>
+
+                <!-- STEP 3 -->
+                <div id="step-result" class="d-none">
+                    <div id="estimateSummary"></div>
+                    <button type="button" class="btn btn-success mt-3 w-100" data-bs-dismiss="modal">
+                        <i class="fas fa-check me-2"></i> Done
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -33,7 +33,6 @@ namespace ICCMS_Web.Controllers
             _logger.LogInformation("=== [Dashboard] ENTERED ProjectManagerController.Dashboard ===");
             _logger.LogInformation("Active User: {UserName} | Role: ProjectManager", User.Identity?.Name);
 
-            // Create dictionaries for lifecycle data (we fill these later)
             var phaseDict = new Dictionary<string, List<PhaseDto>>();     // key = ProjectId
             var taskDict = new Dictionary<string, List<ProjectTaskDto>>(); // key = PhaseId
 
@@ -42,17 +41,13 @@ namespace ICCMS_Web.Controllers
             // ===============================================================
             _logger.LogInformation("=== [Dashboard] Fetching Projects from API endpoint /api/projectmanager/projects ===");
 
-            // Call API to retrieve all projects for the logged-in Project Manager
             var allProjects = await _apiClient.GetAsync<List<ProjectDto>>("/api/projectmanager/projects", User);
-
-            // Ensure we never deal with a null list (avoid NullReferenceException)
             if (allProjects == null)
             {
                 _logger.LogWarning("⚠️ API returned null for project list — initializing empty list.");
                 allProjects = new List<ProjectDto>();
             }
 
-            // Sort projects by start date (newest first) and limit to top 5
             var recentProjects = allProjects
                 .OrderByDescending(p => p.StartDate)
                 .Take(5)
@@ -70,43 +65,20 @@ namespace ICCMS_Web.Controllers
             {
                 _logger.LogInformation("➡️ Processing Project: {ProjectName} ({ProjectId})", project.Name, project.ProjectId);
 
-                // ---- Fetch all phases for the current project ----
                 var phases = await _apiClient.GetAsync<List<PhaseDto>>(
-                    $"/api/projectmanager/project/{project.ProjectId}/phases", User);
-
-                // If API returned null, replace with empty list to keep loop safe
-                if (phases == null)
-                {
-                    _logger.LogWarning("⚠️ No phases returned for Project {ProjectId}", project.ProjectId);
-                    phases = new List<PhaseDto>();
-                }
-
-                // Store in dictionary (keyed by ProjectId)
+                    $"/api/projectmanager/project/{project.ProjectId}/phases", User) ?? new List<PhaseDto>();
                 phaseDict[project.ProjectId] = phases;
+
                 _logger.LogInformation("✅ Retrieved {Count} phases for Project {ProjectId}", phases.Count, project.ProjectId);
 
-                // ---- For each phase, fetch its tasks ----
                 foreach (var phase in phases)
                 {
                     _logger.LogInformation("🔍 Fetching tasks for Phase: {PhaseName} ({PhaseId})", phase.Name, phase.PhaseId);
 
-                    // The endpoint /project/{projectId}/tasks returns ALL project tasks,
-                    // so we filter manually for those that match this phase.
                     var allProjectTasks = await _apiClient.GetAsync<List<ProjectTaskDto>>(
-                        $"/api/projectmanager/project/{project.ProjectId}/tasks", User);
+                        $"/api/projectmanager/project/{project.ProjectId}/tasks", User) ?? new List<ProjectTaskDto>();
 
-                    if (allProjectTasks == null)
-                    {
-                        _logger.LogWarning("⚠️ No tasks returned for Project {ProjectId}", project.ProjectId);
-                        allProjectTasks = new List<ProjectTaskDto>();
-                    }
-
-                    // Filter tasks belonging to this specific phase
-                    var phaseTasks = allProjectTasks
-                        .Where(t => t.PhaseId == phase.PhaseId)
-                        .ToList();
-
-                    // Store phase’s tasks in dictionary (key = PhaseId)
+                    var phaseTasks = allProjectTasks.Where(t => t.PhaseId == phase.PhaseId).ToList();
                     taskDict[phase.PhaseId] = phaseTasks;
 
                     _logger.LogInformation("✅ Phase {PhaseName} ({PhaseId}) has {CountTasks} tasks linked",
@@ -124,10 +96,8 @@ namespace ICCMS_Web.Controllers
             // 💬 4. FETCH QUOTATIONS
             // ===============================================================
             _logger.LogInformation("=== [Dashboard] Fetching Quotations from /api/quotations ===");
-            var allQuotes = await _apiClient.GetAsync<List<QuotationDto>>("/api/quotations", User);
-            if (allQuotes == null) allQuotes = new List<QuotationDto>();
+            var allQuotes = await _apiClient.GetAsync<List<QuotationDto>>("/api/quotations", User) ?? new List<QuotationDto>();
 
-            // Filter and sort accepted quotes
             var acceptedQuotes = allQuotes
                 .Where(q => q.Status.Equals("ClientAccepted", StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(q => q.ApprovedAt ?? q.CreatedAt)
@@ -160,7 +130,6 @@ namespace ICCMS_Web.Controllers
 
             var vm = new DashboardViewModel
             {
-                // Summary Counts
                 TotalProjects = allProjects.Count,
                 RecentProjects = recentProjects,
 
@@ -174,7 +143,6 @@ namespace ICCMS_Web.Controllers
                 TotalContractors = allContractors.Count,
                 RecentContractors = recentContractors,
 
-                // Lifecycle Data
                 ProjectPhases = phaseDict,
                 PhaseTasks = taskDict
             };
@@ -184,7 +152,20 @@ namespace ICCMS_Web.Controllers
                 vm.TotalClients, vm.TotalContractors);
 
             // ===============================================================
-            // 🚀 8. RETURN FINALIZED DASHBOARD VIEW
+            // 🧮 8. FETCH ESTIMATES + MAP TO VIEWMODEL
+            // ===============================================================
+            _logger.LogInformation("=== [Dashboard] Fetching all estimates for mapping ===");
+            var allEstimates = await _apiClient.GetAsync<List<EstimateDto>>("/api/estimates", User) ?? new List<EstimateDto>();
+            var estimateDict = allEstimates
+                .Where(e => !string.IsNullOrEmpty(e.ProjectId))
+                .GroupBy(e => e.ProjectId)
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(e => e.CreatedAt).First());
+
+            vm.ProjectEstimates = estimateDict;
+            _logger.LogInformation("✅ Mapped {Count} projects with estimates", estimateDict.Count);
+
+            // ===============================================================
+            // 🚀 9. RETURN FINALIZED DASHBOARD VIEW
             // ===============================================================
             _logger.LogInformation("=== [Dashboard] Rendering Project Manager Dashboard View ===");
             _logger.LogInformation("=== [Dashboard] EXIT ===");
@@ -495,6 +476,7 @@ namespace ICCMS_Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ActivateMaintenance(string projectId)
         {
+            
             _logger.LogInformation("=== [ActivateMaintenance] ENTERED for ProjectId={ProjectId} ===", projectId);
 
             try
@@ -523,6 +505,42 @@ namespace ICCMS_Web.Controllers
                 return RedirectToAction("Dashboard");
             }
         }
+
+        /// <summary>
+        /// Called via AJAX from estimate-popup.js to run AI processing.
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateEstimate([FromBody] ProcessBlueprintRequest request)
+        {
+            _logger.LogInformation("=== [CreateEstimate] ENTERED === ProjectId={ProjectId}", request.ProjectId);
+
+            try
+            {
+                if (string.IsNullOrEmpty(request.ProjectId) || string.IsNullOrEmpty(request.BlueprintUrl))
+                {
+                    _logger.LogWarning("⚠️ Invalid payload received in CreateEstimate");
+                    return BadRequest(new { error = "Invalid project or blueprint." });
+                }
+
+                var apiResponse = await _apiClient.PostAsync<EstimateDto>(
+                    "/api/estimates/process-blueprint", request, User);
+
+                if (apiResponse == null)
+                {
+                    _logger.LogError("❌ API returned null for AI estimate generation.");
+                    return StatusCode(500, new { error = "AI processing failed." });
+                }
+
+                _logger.LogInformation("✅ AI Estimate created successfully for ProjectId={ProjectId}", request.ProjectId);
+                return Json(apiResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "💥 Exception during CreateEstimate");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
     
     }
 }

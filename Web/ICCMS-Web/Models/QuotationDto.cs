@@ -37,6 +37,10 @@ namespace ICCMS_Web.Models
         public List<QuotationItemDto> Items { get; set; } = new();
 
         public double Subtotal { get; set; }
+        
+        [Range(0, 100, ErrorMessage = "Markup Rate must be between 0 and 100")]
+        public double MarkupRate { get; set; } = 0;
+
         public double TaxTotal { get; set; }
         public double GrandTotal { get; set; }
 

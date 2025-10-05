@@ -281,149 +281,6 @@ namespace ICCMS_Web.Controllers
             return View("Estimate", vm);
         }
 
-        // ============================
-        // STEP 1: ESTIMATE (POST)
-        // ============================
-        [HttpPost("estimate/{id}")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Estimate(string id, EstimateViewModel model)
-        {
-            _logger.LogInformation("➡️ ENTER POST Estimate | routeId={RouteId} | modelId={ModelId}", id, model.QuotationId);
-
-            try
-            {
-                // === Normalize ValidUntil ===
-                if (model.ValidUntil == default)
-                    model.ValidUntil = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(30), DateTimeKind.Utc);
-                else
-                    model.ValidUntil = DateTime.SpecifyKind(model.ValidUntil, DateTimeKind.Utc);
-
-                // === Validation ===
-                if (!ModelState.IsValid)
-                {
-                    _logger.LogWarning("❌ ModelState invalid for Estimate {RouteId}", id);
-
-                    // 🔍 Loop through every key and error in ModelState
-                    foreach (var state in ModelState)
-                    {
-                        if (state.Value.Errors.Count > 0)
-                        {
-                            foreach (var error in state.Value.Errors)
-                            {
-                                _logger.LogError("   • Field={Field} | AttemptedValue={Value} | Error={ErrorMessage}",
-                                    state.Key,
-                                    state.Value?.RawValue ?? "<null>",
-                                    error.ErrorMessage);
-                            }
-                        }
-                    }
-
-                    // 🔎 Possible common reasons for invalid ModelState in this workflow
-                    _logger.LogWarning("⚠️ ModelState may be invalid due to one or more of the following:");
-                    _logger.LogWarning("   • Missing required ProjectId (hidden input not bound or lost)");
-                    _logger.LogWarning("   • Missing required ClientId (hidden input not bound or lost)");
-                    _logger.LogWarning("   • QuotationId mismatch (null when routeId != 'new')");
-                    _logger.LogWarning("   • ProjectName/ClientName not bound back (display-only fields, not posted)");
-                    _logger.LogWarning("   • Description missing when marked [Required]");
-                    _logger.LogWarning("   • Items list empty (at least one line item is required)");
-                    _logger.LogWarning("   • Item fields invalid (Name, Category, Unit, Quantity, UnitPrice, Notes)");
-                    _logger.LogWarning("   • Quantity <= 0 or UnitPrice <= 0");
-                    _logger.LogWarning("   • TaxRate or MarkupRate outside 0–100");
-                    _logger.LogWarning("   • ValidUntil not after CreatedAt");
-                    _logger.LogWarning("   • JSON binding issues (e.g., Items[] index mismatch after row removal)");
-                    _logger.LogWarning("   • Hidden Status field missing or not mapped");
-                    _logger.LogWarning("   • Anti-forgery token missing/invalid");
-
-                    return View("Estimate", model);
-                }
-
-
-                // === Rebuild Items ===
-                var items = new List<QuotationItemDto>();
-                foreach (var e in model.Items)
-                {
-                    double baseTotal = e.Quantity * e.UnitPrice;
-                    double finalTotal = baseTotal * (1 + (model.MarkupRate / 100));
-
-                    items.Add(new QuotationItemDto
-                    {
-                        ItemId = e.ItemId,
-                        Name = e.Name,
-                        Description = e.Description,
-                        Quantity = e.Quantity,
-                        Unit = e.Unit,
-                        Category = e.Category,
-                        UnitPrice = e.UnitPrice,
-                        LineTotal = finalTotal,
-                        Notes = e.Notes,
-                        IsAiGenerated = e.IsAiGenerated,
-                        AiConfidence = e.AiConfidence,
-                        MaterialDatabaseId = e.MaterialDatabaseId,
-                        TaxRate = model.TaxRate / 100
-                    });
-
-                    _logger.LogInformation("Item Built → {Name} | Qty={Qty} | UnitPrice={Price} | LineTotal={LineTotal}",
-                        e.Name, e.Quantity, e.UnitPrice, finalTotal);
-                }
-
-                // === Totals ===
-                double subtotal = items.Sum(i => i.LineTotal);
-                double taxTotal = subtotal * (model.TaxRate / 100);
-                double grandTotal = subtotal + taxTotal;
-
-                // === Build DTO ===
-                var quotation = new QuotationDto
-                {
-                    QuotationId = model.QuotationId, // may be null/empty if new
-                    ProjectId = model.ProjectId,
-                    ClientId = model.ClientId,
-                    ContractorId = model.ContractorId,
-                    Description = model.Description,
-                    Items = items,
-                    Subtotal = subtotal,
-                    TaxTotal = taxTotal,
-                    GrandTotal = grandTotal,
-                    Total = grandTotal,
-                    ValidUntil = model.ValidUntil,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    Currency = "ZAR",
-                    Status = "SentToClient"
-                };
-
-                // === Decide whether to PUT or POST ===
-                if (!string.IsNullOrWhiteSpace(model.QuotationId) && model.Status == "Draft")
-                {
-                    // CASE 1: Overwrite existing Draft
-                    _logger.LogInformation("📝 Overwriting existing Draft quotation {Id} → SentToClient", model.QuotationId);
-                    await _apiClient.PutAsync<object>($"/api/quotations/{model.QuotationId}", quotation, User);
-                    return RedirectToAction("Index");
-                }
-                else
-                {
-                    // CASE 2: Prefilled / Duplicate → create new
-                    _logger.LogInformation("📄 Creating NEW quotation (duplicate or reuse case)...");
-                    var newId = await _apiClient.PostAsync<string>("/api/quotations", quotation, User);
-
-                    if (!string.IsNullOrEmpty(newId))
-                    {
-                        _logger.LogInformation("✅ New quotation created → {NewId}", newId);
-                        return RedirectToAction("Estimate", new { id = newId });
-                    }
-                    else
-                    {
-                        _logger.LogError("❌ API did not return a new ID when creating quotation.");
-                        ModelState.AddModelError("", "Failed to create quotation.");
-                        return View("Estimate", model);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "🔥 ERROR in Estimate POST for {RouteId}", id);
-                return View("Estimate", model);
-            }
-        }
 
 
         [HttpPost("process-blueprint")]
@@ -725,6 +582,183 @@ namespace ICCMS_Web.Controllers
                 return RedirectToAction("Index");
             }
         }
+
+
+        // ================================================
+        // STEP X: CREATE QUOTE FROM ESTIMATE (AUTO-PREFILL)
+        // ================================================
+        [HttpPost("create-from-estimate")]
+        public async Task<IActionResult> CreateFromEstimate([FromBody] CreateFromEstimateRequest request)
+        {
+            _logger.LogInformation("🧠 [CreateFromEstimate] Start → ProjectId={ProjectId}", request.ProjectId);
+
+            try
+            {
+                // 1️⃣ Fetch the latest estimate for the project
+                var estimates = await _apiClient.GetAsync<List<EstimateDto>>(
+                    $"/api/estimates/project/{request.ProjectId}", User);
+
+                if (estimates == null || !estimates.Any())
+                {
+                    _logger.LogWarning("⚠️ No estimates found for ProjectId={ProjectId}", request.ProjectId);
+                    return BadRequest(new { error = "No estimates found for this project." });
+                }
+
+                var latestEstimate = estimates
+                    .OrderByDescending(e => e.CreatedAt)
+                    .First();
+
+                _logger.LogInformation("📄 Latest Estimate found: Id={EstimateId}, Desc={Desc}, Total={Total}",
+                    latestEstimate.EstimateId, latestEstimate.Description, latestEstimate.TotalAmount);
+
+                // 2️⃣ Create quotation from estimate via API
+                var apiRoute = $"/api/quotations/from-estimate/{latestEstimate.EstimateId}";
+                var body = new { clientId = request.ClientId ?? string.Empty };
+
+                var quotationId = await _apiClient.PostAsync<string>(apiRoute, body, User);
+
+                if (string.IsNullOrEmpty(quotationId))
+                {
+                    _logger.LogError("❌ API failed to create quotation from EstimateId={EstimateId}", latestEstimate.EstimateId);
+                    return StatusCode(500, new { error = "Failed to create quotation." });
+                }
+
+                _logger.LogInformation("✅ Quotation created successfully → Id={QuotationId}", quotationId);
+
+                // 3️⃣ Return success response (for AJAX or redirect)
+                return Ok(new
+                {
+                    message = "Quotation created successfully.",
+                    quotationId,
+                    estimateId = latestEstimate.EstimateId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "💥 Exception during CreateFromEstimate for ProjectId={ProjectId}", request.ProjectId);
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        // Helper request model
+        public class CreateFromEstimateRequest
+        {
+            public string ProjectId { get; set; } = string.Empty;
+            public string? ClientId { get; set; }
+        }
+
+        // ================================================
+        // STEP X: SUBMIT QUOTATION (Finalize + Notify Client)
+        // ================================================
+        [HttpPost("submit-quotation")]
+        public async Task<IActionResult> SubmitQuotation([FromBody] QuotationDto model)
+        {
+            _logger.LogInformation("📨 [SubmitQuotation] Start for QuotationId={QuotationId}", model.QuotationId);
+
+            try
+            {
+                // === Validation ===
+                if (string.IsNullOrWhiteSpace(model.ProjectId) || string.IsNullOrWhiteSpace(model.ClientId))
+                {
+                    _logger.LogWarning("⚠️ Missing ProjectId or ClientId in quotation submission");
+                    return BadRequest(new { error = "Missing required project or client information." });
+                }
+
+                if (model.Items == null || !model.Items.Any())
+                {
+                    _logger.LogWarning("⚠️ Attempted submission with no line items.");
+                    return BadRequest(new { error = "Quotation must contain at least one item." });
+                }
+
+                // === Totals Calculation ===
+                double subtotal = model.Items.Sum(i => i.Quantity * i.UnitPrice);
+
+                // 🧮 Use item-level TaxRate (average if mixed)
+                double avgTaxRate = model.Items.Average(i => i.TaxRate);
+                double taxTotal = subtotal * (avgTaxRate / 100);
+
+                // 🧮 Apply markup before tax (markupRate stored as percentage)
+                double markupTotal = subtotal * (model.MarkupRate / 100);
+
+                double grandTotal = subtotal + markupTotal + taxTotal;
+
+                model.Subtotal = subtotal;
+                model.TaxTotal = taxTotal;
+                model.GrandTotal = grandTotal;
+                model.Total = grandTotal;
+                model.Status = "AwaitingClientResponse";
+                model.UpdatedAt = DateTime.UtcNow;
+
+                _logger.LogInformation("💰 Calculated Totals → Subtotal={Subtotal}, Markup={Markup}, Tax={Tax}, Grand={Grand}",
+                    subtotal, markupTotal, taxTotal, grandTotal);
+
+                // === API Push ===
+                var result = await _apiClient.PutAsync<object>(
+                    $"/api/quotations/{model.QuotationId}", model, User);
+
+                if (result == null)
+                {
+                    _logger.LogError("❌ API failed to update quotation {Id}", model.QuotationId);
+                    return StatusCode(500, new { error = "Failed to update quotation in API." });
+                }
+
+                // === Update Project Status ===
+                var projectUpdate = new { status = "Awaiting Client Response" };
+                await _apiClient.PutAsync<object>(
+                    $"/api/projects/{model.ProjectId}/status", projectUpdate, User);
+                _logger.LogInformation("📂 Project {ProjectId} status updated to 'Awaiting Client Response'", model.ProjectId);
+
+                // === Notify Client (stub) ===
+                _logger.LogInformation("📢 Simulating client notification for ClientId={ClientId}", model.ClientId);
+
+                // === Return Success Response ===
+                return Ok(new
+                {
+                    message = "Quotation submitted successfully.",
+                    quotationId = model.QuotationId,
+                    status = model.Status
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🔥 Exception during SubmitQuotation for {QuotationId}", model.QuotationId);
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        // ================================================
+        // STEP: GetEstimateItems (for Quotation Prefill)
+        // ================================================
+        [HttpGet]
+        public async Task<IActionResult> GetEstimateItems(string projectId)
+        {
+            _logger.LogInformation("📡 Fetching Estimate items for ProjectId={ProjectId}", projectId);
+
+            try
+            {
+                var estimates = await _apiClient.GetAsync<List<EstimateDto>>(
+                    $"/api/estimates/project/{projectId}", User);
+
+                if (estimates == null || !estimates.Any())
+                {
+                    _logger.LogWarning("⚠️ No estimates found for ProjectId={ProjectId}", projectId);
+                    return Ok(new List<EstimateLineItemDto>());
+                }
+
+                // ✅ Get most recent estimate and its line items
+                var latest = estimates.OrderByDescending(e => e.CreatedAt).FirstOrDefault();
+                var items = latest?.LineItems ?? new List<EstimateLineItemDto>();
+
+                _logger.LogInformation("📦 Returning {Count} items from latest estimate", items.Count);
+                return Ok(items);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🔥 Error fetching estimate items for ProjectId={ProjectId}", projectId);
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
 
 
 

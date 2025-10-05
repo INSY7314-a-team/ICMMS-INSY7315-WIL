@@ -24,5 +24,7 @@ namespace ICCMS_Web.Models
         // === Project Lifecycle ===
         public Dictionary<string, List<PhaseDto>> ProjectPhases { get; set; } = new(); // key = ProjectId
         public Dictionary<string, List<ProjectTaskDto>> PhaseTasks { get; set; } = new(); // key = PhaseId
+        public Dictionary<string, EstimateDto>? ProjectEstimates { get; set; } = new();
+
     }
 }
