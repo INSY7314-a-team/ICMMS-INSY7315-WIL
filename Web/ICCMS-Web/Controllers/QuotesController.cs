@@ -288,62 +288,64 @@ namespace ICCMS_Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Estimate(string id, EstimateViewModel model)
         {
-            _logger.LogInformation("🔥 Submitting Estimate for Quote {QuotationId}", id);
-            _logger.LogInformation("🚨 [POST] Estimate received with TaxRate={TaxRate}, MarkupRate={MarkupRate}", 
-                model.TaxRate, model.MarkupRate);
-
-            // 🔹 Check route vs model consistency first
-            if (id != model.QuotationId)
-            {
-                _logger.LogWarning("⚠️ Mismatched quotation ID: route={RouteId}, model={ModelId}", id, model.QuotationId);
-                return BadRequest("Mismatched quotation ID.");
-            }
-
-            // ✅ Force UTC for ValidUntil before building DTO
-            if (model.ValidUntil != default)
-            {
-                var original = model.ValidUntil;
-                model.ValidUntil = DateTime.SpecifyKind(model.ValidUntil, DateTimeKind.Utc);
-                _logger.LogInformation("🌍 Normalized ValidUntil from {Original} (Kind={Kind}) → {UtcValue} (UTC)",
-                    original, original.Kind, model.ValidUntil);
-            }
-
-            // 🔹 Validate BEFORE touching percentages
-            if (!ModelState.IsValid)
-            {
-                foreach (var kvp in ModelState)
-                {
-                    foreach (var error in kvp.Value.Errors)
-                    {
-                        _logger.LogWarning("⚠️ Validation error on field '{Field}': {ErrorMessage}", kvp.Key, error.ErrorMessage);
-                    }
-                }
-
-                _logger.LogWarning("❌ Validation failed for Estimate {QuotationId}", id);
-                return View("Estimate", model);
-            }
+            _logger.LogInformation("➡️ ENTER POST Estimate | routeId={RouteId} | modelId={ModelId}", id, model.QuotationId);
 
             try
             {
-                // ======================
-                // ✅ CLEANED CALCULATION
-                // ======================
+                // === Normalize ValidUntil ===
+                if (model.ValidUntil == default)
+                    model.ValidUntil = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(30), DateTimeKind.Utc);
+                else
+                    model.ValidUntil = DateTime.SpecifyKind(model.ValidUntil, DateTimeKind.Utc);
 
-                var taxRateDecimal = model.TaxRate / 100;
-                var markupRateDecimal = model.MarkupRate / 100;
-
-                // 1) Apply markup at line-item level
-                var markedUpItems = model.Items?.Select(e =>
+                // === Validation ===
+                if (!ModelState.IsValid)
                 {
-                    var baseLineTotal = e.Quantity * e.UnitPrice;
-                    var finalLineTotal = baseLineTotal * (1 + markupRateDecimal);
+                    _logger.LogWarning("❌ ModelState invalid for Estimate {RouteId}", id);
 
-                    _logger.LogInformation("💡 Item '{Name}' → Qty={Qty}, UnitPrice={Price}, BaseTotal={Base}, Markup%={MarkupRate}, FinalTotal={Final}",
-                        e.Name, e.Quantity, e.UnitPrice, baseLineTotal, model.MarkupRate, finalLineTotal);
-                    _logger.LogInformation("DEBUG TAX → Model.TaxRate={TaxRate}", model.TaxRate);
+                    // 🔍 Loop through every key and error in ModelState
+                    foreach (var state in ModelState)
+                    {
+                        if (state.Value.Errors.Count > 0)
+                        {
+                            foreach (var error in state.Value.Errors)
+                            {
+                                _logger.LogError("   • Field={Field} | AttemptedValue={Value} | Error={ErrorMessage}",
+                                    state.Key,
+                                    state.Value?.RawValue ?? "<null>",
+                                    error.ErrorMessage);
+                            }
+                        }
+                    }
+
+                    // 🔎 Possible common reasons for invalid ModelState in this workflow
+                    _logger.LogWarning("⚠️ ModelState may be invalid due to one or more of the following:");
+                    _logger.LogWarning("   • Missing required ProjectId (hidden input not bound or lost)");
+                    _logger.LogWarning("   • Missing required ClientId (hidden input not bound or lost)");
+                    _logger.LogWarning("   • QuotationId mismatch (null when routeId != 'new')");
+                    _logger.LogWarning("   • ProjectName/ClientName not bound back (display-only fields, not posted)");
+                    _logger.LogWarning("   • Description missing when marked [Required]");
+                    _logger.LogWarning("   • Items list empty (at least one line item is required)");
+                    _logger.LogWarning("   • Item fields invalid (Name, Category, Unit, Quantity, UnitPrice, Notes)");
+                    _logger.LogWarning("   • Quantity <= 0 or UnitPrice <= 0");
+                    _logger.LogWarning("   • TaxRate or MarkupRate outside 0–100");
+                    _logger.LogWarning("   • ValidUntil not after CreatedAt");
+                    _logger.LogWarning("   • JSON binding issues (e.g., Items[] index mismatch after row removal)");
+                    _logger.LogWarning("   • Hidden Status field missing or not mapped");
+                    _logger.LogWarning("   • Anti-forgery token missing/invalid");
+
+                    return View("Estimate", model);
+                }
 
 
-                    return new QuotationItemDto
+                // === Rebuild Items ===
+                var items = new List<QuotationItemDto>();
+                foreach (var e in model.Items)
+                {
+                    double baseTotal = e.Quantity * e.UnitPrice;
+                    double finalTotal = baseTotal * (1 + (model.MarkupRate / 100));
+
+                    items.Add(new QuotationItemDto
                     {
                         ItemId = e.ItemId,
                         Name = e.Name,
@@ -352,123 +354,77 @@ namespace ICCMS_Web.Controllers
                         Unit = e.Unit,
                         Category = e.Category,
                         UnitPrice = e.UnitPrice,
-                        LineTotal = finalLineTotal,   // ✅ with markup baked in
-
+                        LineTotal = finalTotal,
+                        Notes = e.Notes,
                         IsAiGenerated = e.IsAiGenerated,
                         AiConfidence = e.AiConfidence,
                         MaterialDatabaseId = e.MaterialDatabaseId,
-                        Notes = e.Notes,
+                        TaxRate = model.TaxRate / 100
+                    });
 
-                        TaxRate = model.TaxRate / 100   // ✅ FIX
-                    };
+                    _logger.LogInformation("Item Built → {Name} | Qty={Qty} | UnitPrice={Price} | LineTotal={LineTotal}",
+                        e.Name, e.Quantity, e.UnitPrice, finalTotal);
+                }
 
+                // === Totals ===
+                double subtotal = items.Sum(i => i.LineTotal);
+                double taxTotal = subtotal * (model.TaxRate / 100);
+                double grandTotal = subtotal + taxTotal;
 
-                }).ToList() ?? new List<QuotationItemDto>();
-
-
-                // 2) Subtotal = sum of marked-up items
-                var subtotal = markedUpItems.Sum(i => i.LineTotal);
-                _logger.LogInformation("📊 STEP 2 → Subtotal (markup included) = {Subtotal}", subtotal);
-
-                // 3) Tax = subtotal × tax rate
-                var taxTotal = subtotal * taxRateDecimal;
-                _logger.LogInformation("📊 STEP 3 → Tax {Rate}% on Subtotal {Subtotal} = {TaxTotal}", model.TaxRate, subtotal, taxTotal);
-
-                // 4) GrandTotal = subtotal + tax
-                var grandTotal = subtotal + taxTotal;
-                _logger.LogInformation("📊 STEP 4 → Grand Total = {Subtotal} + {TaxTotal} = {GrandTotal}", subtotal, taxTotal, grandTotal);
-
-                // === Build Quotation DTO to send to API ===
+                // === Build DTO ===
                 var quotation = new QuotationDto
                 {
-                    QuotationId   = model.QuotationId,
-
-                    // ✅ Preserve associations like CreateDraft
-                    ProjectId     = model.ProjectId,
-                    ClientId      = model.ClientId,
-                    ContractorId  = model.ContractorId,
-
-                    Description   = model.Description,
-
-                    // ✅ Items with markup baked in
-                    Items         = markedUpItems,
-
-                    // ✅ Totals
-                    Subtotal      = subtotal,
-                    TaxTotal      = taxTotal,
-                    GrandTotal    = grandTotal,
-                    Total         = grandTotal, // Firestore "total" = GrandTotal
-
-                    // ✅ Dates
-                    ValidUntil    = model.ValidUntil,
-                    CreatedAt     = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc),
-                    UpdatedAt     = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc),
-
-                    Currency      = "ZAR",
-                    Status        = "Draft"
+                    QuotationId = model.QuotationId, // may be null/empty if new
+                    ProjectId = model.ProjectId,
+                    ClientId = model.ClientId,
+                    ContractorId = model.ContractorId,
+                    Description = model.Description,
+                    Items = items,
+                    Subtotal = subtotal,
+                    TaxTotal = taxTotal,
+                    GrandTotal = grandTotal,
+                    Total = grandTotal,
+                    ValidUntil = model.ValidUntil,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    Currency = "ZAR",
+                    Status = "SentToClient"
                 };
 
-                _logger.LogInformation("📤 Sending PUT to API for Quote {QuotationId}", id);
-                _logger.LogInformation("===== 🔍 DEBUG BEFORE PUT DTO =====");
-                _logger.LogInformation("QuotationId : {QuotationId}", quotation.QuotationId);
-                _logger.LogInformation("Subtotal    : {Subtotal}", quotation.Subtotal);
-                _logger.LogInformation("TaxTotal    : {TaxTotal}", quotation.TaxTotal);
-                _logger.LogInformation("GrandTotal  : {GrandTotal}", quotation.GrandTotal);
-                _logger.LogInformation("Total       : {Total}", quotation.Total);
-                _logger.LogInformation("===== END DEBUG BEFORE PUT DTO =====");
-
-                // 🔹 1) Save/Update Quotation
-                var updated = await _apiClient.PutAsync<object>($"/api/quotations/{id}", quotation, User);
-
-                if (updated != null)
+                // === Decide whether to PUT or POST ===
+                if (!string.IsNullOrWhiteSpace(model.QuotationId) && model.Status == "Draft")
                 {
-                    _logger.LogWarning("🤔 API returned a body for PUT quotation {QuotationId}, expected 204", id);
+                    // CASE 1: Overwrite existing Draft
+                    _logger.LogInformation("📝 Overwriting existing Draft quotation {Id} → SentToClient", model.QuotationId);
+                    await _apiClient.PutAsync<object>($"/api/quotations/{model.QuotationId}", quotation, User);
+                    return RedirectToAction("Index");
                 }
-
-                _logger.LogInformation("✅ Successfully updated estimate for quotation {QuotationId}", id);
-
-                // 🔹 2) Submit for Approval
-                _logger.LogInformation("🚀 Submitting quotation {QuotationId} for PM approval...", id);
-                var submitRes = await _apiClient.PostAsync<QuotationDto>($"/api/quotations/{id}/submit-for-approval", null!, User);
-                if (submitRes != null)
+                else
                 {
-                    _logger.LogError("💥 Workflow step failed: submit-for-approval for {QuotationId}", id);
-                    ModelState.AddModelError("", "Failed at submit-for-approval step.");
-                    return View("Estimate", model);
-                }
-                _logger.LogInformation("✅ Quotation {QuotationId} moved to PendingPMApproval", id);
+                    // CASE 2: Prefilled / Duplicate → create new
+                    _logger.LogInformation("📄 Creating NEW quotation (duplicate or reuse case)...");
+                    var newId = await _apiClient.PostAsync<string>("/api/quotations", quotation, User);
 
-                // 🔹 3) PM Approve
-                _logger.LogInformation("📝 Auto-approving quotation {QuotationId} by PM...", id);
-                var approveRes = await _apiClient.PostAsync<QuotationDto>($"/api/quotations/{id}/pm-approve", null!, User);
-                if (approveRes != null)
-                {
-                    _logger.LogError("💥 Workflow step failed: pm-approve for {QuotationId}", id);
-                    ModelState.AddModelError("", "Failed at pm-approve step.");
-                    return View("Estimate", model);
+                    if (!string.IsNullOrEmpty(newId))
+                    {
+                        _logger.LogInformation("✅ New quotation created → {NewId}", newId);
+                        return RedirectToAction("Estimate", new { id = newId });
+                    }
+                    else
+                    {
+                        _logger.LogError("❌ API did not return a new ID when creating quotation.");
+                        ModelState.AddModelError("", "Failed to create quotation.");
+                        return View("Estimate", model);
+                    }
                 }
-                _logger.LogInformation("✅ Quotation {QuotationId} approved by PM", id);
-
-                // 🔹 4) Send to Client
-                _logger.LogInformation("📨 Sending quotation {QuotationId} to client...", id);
-                var sendRes = await _apiClient.PostAsync<QuotationDto>($"/api/quotations/{id}/send-to-client", null!, User);
-                if (sendRes != null)
-                {
-                    _logger.LogError("💥 Workflow step failed: send-to-client for {QuotationId}", id);
-                    ModelState.AddModelError("", "Failed at send-to-client step.");
-                    return View("Estimate", model);
-                }
-                _logger.LogInformation("✅ Quotation {QuotationId} successfully sent to client", id);
-
-                return RedirectToAction("Index");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🔥 Unexpected error during Estimate workflow for {QuotationId}", id);
-                ModelState.AddModelError("", $"Unexpected error: {ex.Message}");
+                _logger.LogError(ex, "🔥 ERROR in Estimate POST for {RouteId}", id);
                 return View("Estimate", model);
             }
         }
+
 
         [HttpPost("process-blueprint")]
         public async Task<IActionResult> ProcessBlueprint([FromBody] BlueprintRequest request)
@@ -657,12 +613,12 @@ namespace ICCMS_Web.Controllers
         }
 
         // ============================
-        // DUPLICATE QUOTE
+        // DUPLICATE QUOTE (VIEWMODEL ONLY)
         // ============================
         [HttpGet("duplicate/{id}")]
         public async Task<IActionResult> Duplicate(string id)
         {
-            _logger.LogInformation("🔄 Starting duplication of quotation {Id}...", id);
+            _logger.LogInformation("🔄 Preparing duplication of quotation {Id} (no save yet)...", id);
 
             try
             {
@@ -674,66 +630,103 @@ namespace ICCMS_Web.Controllers
                     return NotFound();
                 }
 
-                _logger.LogInformation("✅ Loaded quotation {Id} for duplication: ProjectId={ProjectId}, ClientId={ClientId}, Items={ItemCount}",
+                // 2. Fetch project + client lists so we can resolve names
+                var projects = await _apiClient.GetAsync<List<ProjectDto>>("/api/projectmanager/projects", User)
+                                ?? new List<ProjectDto>();
+                var clients = await _apiClient.GetAsync<List<UserDto>>("/api/users/clients", User)
+                                ?? new List<UserDto>();
+
+                var project = projects.FirstOrDefault(p => p.ProjectId == original.ProjectId);
+                var client  = clients.FirstOrDefault(c => c.UserId == original.ClientId);
+
+                _logger.LogInformation("✅ Loaded quotation {Id}: ProjectId={ProjectId}, ClientId={ClientId}, Items={ItemCount}",
                     id, original.ProjectId ?? "<null>", original.ClientId ?? "<null>", original.Items?.Count ?? 0);
 
-                // 2. Build a NEW quotation (no reuse of ID or timestamps!)
-                var newQuotation = new QuotationDto
+                // 3. Build prefilled EstimateViewModel
+                var vm = new EstimateViewModel
                 {
-                    ProjectId   = original.ProjectId,
-                    ClientId    = original.ClientId,
-                    ContractorId = original.ContractorId,
-                    Description = original.Description,
+                    // 🚨 Force this as a NEW quote (blank QuotationId means POST branch will fire)
+                    QuotationId   = string.Empty,
 
-                    Items       = original.Items?.Select(i => new QuotationItemDto
+                    ProjectId     = original.ProjectId ?? string.Empty,
+                    ClientId      = original.ClientId ?? string.Empty,
+                    ContractorId  = original.ContractorId ?? string.Empty,
+                    Description   = $"[DUPLICATE of {id}] {original.Description ?? string.Empty}",
+
+                    Items = original.Items?.Select(i => new EstimateLineItemDto
                     {
-                        ItemId              = null, // new Firestore will assign
-                        Name                = i.Name,
-                        Description         = i.Description,
-                        Quantity            = i.Quantity,
-                        Unit                = i.Unit,
-                        Category            = i.Category,
-                        UnitPrice           = i.UnitPrice,
-                        TaxRate            = i.TaxRate,
-                        LineTotal           = i.LineTotal,
-                        IsAiGenerated       = i.IsAiGenerated,
-                        AiConfidence        = i.AiConfidence,
-                        MaterialDatabaseId  = i.MaterialDatabaseId,
-                        Notes               = i.Notes
-                    }).ToList() ?? new List<QuotationItemDto>(),
+                        ItemId             = null, // 🚨 Force new IDs on save
+                        Name               = i.Name,
+                        Description        = i.Description,
+                        Quantity           = i.Quantity,
+                        Unit               = i.Unit,
+                        Category           = i.Category,
+                        UnitPrice          = i.UnitPrice,
+                        LineTotal          = i.LineTotal,
+                        IsAiGenerated      = i.IsAiGenerated,
+                        AiConfidence       = i.AiConfidence ?? 0.0,
+                        MaterialDatabaseId = i.MaterialDatabaseId,
+                        Notes              = i.Notes
+                    }).ToList() ?? new List<EstimateLineItemDto>(),
 
-                    Status      = "Draft",
-                    Currency    = original.Currency ?? "ZAR",
+                    // ✅ Default to Draft setup
+                    TaxRate    = original.Items?.FirstOrDefault()?.TaxRate ?? 15, 
+                    MarkupRate = 20,
+                    ValidUntil = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(30), DateTimeKind.Utc),
 
-                    // 🔑 New timestamps
-                    CreatedAt   = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc),
-                    UpdatedAt   = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc),
-
-                    // Reset validity
-                    ValidUntil  = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(30), DateTimeKind.Utc)
+                    // ✅ Real names pulled from associations
+                    ProjectName = project?.Name ?? "Unknown Project",
+                    ClientName  = client?.FullName ?? "Unknown Client"
                 };
 
-                // 3. Save the NEW quotation via API
-                var createdId = await _apiClient.PostAsync<string>("/api/quotations", newQuotation, User);
+                // Force recalculation for duplicate
+                vm.RecalculateTotals();
 
-                if (string.IsNullOrWhiteSpace(createdId))
+                _logger.LogInformation("📦 Prefilled EstimateViewModel ready for DUPLICATE: {ProjectName}, {ClientName}, {Count} items",
+                    vm.ProjectName, vm.ClientName, vm.Items.Count);
+
+                _logger.LogInformation("===== 🧾 DUPLICATE VIEWMODEL DUMP =====");
+                _logger.LogInformation("QuotationId   : {QuotationId}", vm.QuotationId);
+                _logger.LogInformation("ProjectId     : {ProjectId}", vm.ProjectId);
+                _logger.LogInformation("ClientId      : {ClientId}", vm.ClientId);
+                _logger.LogInformation("ContractorId  : {ContractorId}", vm.ContractorId);
+                _logger.LogInformation("Description   : {Description}", vm.Description);
+                _logger.LogInformation("ValidUntil    : {ValidUntil} (Kind={Kind})", vm.ValidUntil, vm.ValidUntil.Kind);
+                _logger.LogInformation("TaxRate       : {TaxRate}", vm.TaxRate);
+                _logger.LogInformation("MarkupRate    : {MarkupRate}", vm.MarkupRate);
+                _logger.LogInformation("Subtotal      : {Subtotal}", vm.Subtotal);
+                _logger.LogInformation("TaxAmount     : {TaxAmount}", vm.TaxAmount);
+                _logger.LogInformation("GrandTotal    : {GrandTotal}", vm.GrandTotal);
+
+                if (vm.Items.Count == 0)
                 {
-                    _logger.LogError("💥 Failed to create duplicated quotation from {Id}", id);
-                    return RedirectToAction("Index");
+                    _logger.LogInformation("Line Items    : NONE");
                 }
+                else
+                {
+                    int idx = 1;
+                    foreach (var item in vm.Items)
+                    {
+                        _logger.LogInformation(
+                            "   #{Index} → Name={Name}, Desc={Desc}, Qty={Qty}, Unit={Unit}, Category={Category}, " +
+                            "UnitPrice={UnitPrice}, LineTotal={LineTotal}, Notes={Notes}, TaxRate={TaxRate}",
+                            idx++, item.Name, item.Description, item.Quantity, item.Unit,
+                            item.Category, item.UnitPrice, item.LineTotal, item.Notes, vm.TaxRate
+                        );
+                    }
+                }
+                _logger.LogInformation("===== END DUPLICATE VIEWMODEL DUMP =====");
 
-                newQuotation.QuotationId = createdId;
-                _logger.LogInformation("🎉 Successfully duplicated quotation {OldId} → NewId={NewId}", id, createdId);
-
-                // 4. Redirect straight to Estimate for the NEW quotation
-                return RedirectToAction("Estimate", new { id = createdId });
+                return View("Estimate", vm);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🔥 Exception while duplicating quotation {Id}", id);
+                _logger.LogError(ex, "🔥 Exception while preparing duplication {Id}", id);
                 return RedirectToAction("Index");
             }
         }
+
+
 
 
 

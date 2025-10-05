@@ -2,25 +2,27 @@ using System.Collections.Generic;
 
 namespace ICCMS_Web.Models
 {
-    // Data passed from controller → dashboard view
     public class DashboardViewModel
     {
-        // === Projects ===
+        // === Project Summary ===
         public int TotalProjects { get; set; }
         public List<ProjectDto> RecentProjects { get; set; } = new();
 
-        // === Quotes ===
+        // === Quote Summary ===
         public int TotalQuotes { get; set; }
-        public List<QuotationDto> RecentAcceptedQuotes  { get; set; } = new();
+        public List<QuotationDto> RecentAcceptedQuotes { get; set; } = new();
         public List<QuotationDto> AllQuotes { get; set; } = new();
 
-
-        // === Clients ===
+        // === Client Summary ===
         public int TotalClients { get; set; }
         public List<UserDto> RecentClients { get; set; } = new();
 
-        // === Contractors ===
+        // === Contractor Summary ===
         public int TotalContractors { get; set; }
         public List<UserDto> RecentContractors { get; set; } = new();
+
+        // === Project Lifecycle ===
+        public Dictionary<string, List<PhaseDto>> ProjectPhases { get; set; } = new(); // key = ProjectId
+        public Dictionary<string, List<ProjectTaskDto>> PhaseTasks { get; set; } = new(); // key = PhaseId
     }
 }

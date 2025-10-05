@@ -29,6 +29,7 @@
     box-shadow: 0 4px 20px rgba(0,198,255,0.3);
 }
 
+
 /* Status badges */
 .status-badge {
     padding: 0.25rem 0.75rem;
@@ -56,21 +57,6 @@
     box-shadow: 0 8px 25px rgba(0,0,0,0.2);
 }
 
-.btn-workflow-white {
-    background: #FFEB3B;
-    color: white;
-    border: 2px solid #FFD54F; /* golden outline */
-    border-radius: 25px;
-    font-weight: 600;
-    padding: 0.75rem 2rem;
-    transition: all 0.3s ease;
-}
-.btn-workflow-white:hover {
-    background: #fff;
-    color: #333;
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
-    transform: translateY(-2px);
-}
 
 .btn-workflow-gold {
     background: linear-gradient(135deg, #FFB300, #FFD54F);
@@ -118,7 +104,7 @@
             <h2 class="fw-bold mb-0">Quotations Dashboard</h2>
             <p class="mb-0">Manage all quotations with project and client details</p>
         </div>
-        <a href="@Url.Action("CreateDraft", "Quotes")" class="btn btn-light btn-workflow-white">
+        <a href="@Url.Action("CreateDraft", "Quotes")" class="btn btn-light btn-main-style ">
             <i class="fas fa-plus-circle me-2"></i> New Quotation
         </a>
     </div>
@@ -143,6 +129,9 @@
                     <option value="PMRejected">PM Rejected</option>
                 </select>
             </div>
+
+
+
 
             <!-- Date Range -->
             <div class="col-md-4">
@@ -215,17 +204,35 @@
                             <span class="fw-bold text-dark">R @q.GrandTotal.ToString("N2")</span>
                         </div>
 
-                        <!-- Actions -->
-                        <div class="d-flex justify-content-between mt-3">
-                            <a href="@Url.Action("Preview", "Quotes", new { id = q.QuotationId })"
-                               class="btn btn-outline-dark btn-sm btn-workflow-dark">
-                                <i class="fas fa-eye"></i> Download PDF
-                            </a>
-                            <a href="@Url.Action("Duplicate", "Quotes", new { id = q.QuotationId })"
-                               class="btn btn-info btn-sm btn-workflow">
-                                <i class="fas fa-edit"></i> New Quote
-                            </a>
-                        </div>
+                <!-- Actions -->
+                <div class="d-flex justify-content-between mt-3">
+                    <a href="@Url.Action("Preview", "Quotes", new { id = q.QuotationId })"
+                    class="btn btn-outline-dark btn-sm btn-workflow-dark">
+                        <i class="fas fa-eye"></i> Download PDF
+                    </a>
+
+                    @if (q.Status == "Draft")
+                    {
+                        <!-- Drafts just continue -->
+                        <a href="@Url.Action("Estimate", "Quotes", new { id = q.QuotationId })"
+                        class="btn btn-warning btn-sm btn-workflow">
+                            <i class="fas fa-edit"></i> Continue Draft
+                        </a>
+                    }
+                    else if (q.Status == "SentToClient" || q.Status == "ClientRejected")
+                    {
+                        <!-- Rejected/Sent → new quote -->
+                        <a href="@Url.Action("Duplicate", "Quotes", new { id = q.QuotationId })"
+                        class="btn btn-info btn-sm btn-workflow">
+                            <i class="fas fa-edit"></i> New Quote for this project
+                        </a>
+                    }
+                    else if (q.Status == "ClientAccepted")
+                    {
+                        <!-- Accepted → hide / optional message -->
+                    }
+                </div>
+
                     </div>
                 </div>
             }

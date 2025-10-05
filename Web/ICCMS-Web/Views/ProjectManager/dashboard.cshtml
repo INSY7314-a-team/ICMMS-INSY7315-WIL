@@ -4,158 +4,262 @@
     Layout = "_Layout";
 }
 
-<div class="container my-4">
-    <h1 class="fw-bold mb-3">Project Manager Dashboard</h1>
-    <p class="text-muted">Track and manage projects, quotations, clients, and contractors.</p>
+<style>
+/* ===================== GLOBAL STYLING ===================== */
+.bg-gradient-brand {
+    background: linear-gradient(135deg, #FFD54F 0%, #FFEB3B 100%);
+    color: #333;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+.project-card {
+    border-radius: 12px;
+    border: 2px solid #eee;
+    background: white;
+    padding: 1.5rem;
+    margin-right: 1.25rem;
+    flex: 0 0 350px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+.project-card:hover {
+    border-color: #FFD54F;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+    transform: translateY(-3px);
+}
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.status-draft { background: #fff3cd; color: #856404; }
+.status-estimate { background: #cce5ff; color: #004085; }
+.status-quote { background: #d1ecf1; color: #0c5460; }
+.status-active { background: #d4edda; color: #155724; }
+.status-complete { background: #e2e3e5; color: #383d41; }
+.status-maintenance { background: #ffeeba; color: #856404; }
+.btn-workflow {
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 0.5rem 1.25rem;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #FFB300, #FFD54F);
+    color: white;
+    border: none;
+    font-size: 0.85rem;
+}
+.btn-workflow:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 179, 0, 0.4);
+}
+/* Scrollable project list container */
+/* === PROJECT CARD GRID (Vertical Layout) === */
+.project-scroll {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); /* 3 per row, responsive */
+    gap: 1.5rem; /* spacing between cards */
+    max-height: 80vh; /* limits height so it doesn’t stretch the page */
+    overflow-y: auto; /* vertical scroll only */
+    padding-right: 10px; /* prevents scrollbar overlap */
+}
 
-    <div class="row g-4">
+/* Optional – hide ugly scrollbar on Chrome/Edge */
+.project-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+.project-scroll::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 8px;
+}
+.project-scroll::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}
 
-        <!-- Projects Card -->
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Projects (@Model.TotalProjects)</h5>
-                    <div class="input-group input-group-sm" style="width: 200px;">
-                        <input type="text" class="form-control" placeholder="Search..." id="search-projects" />
-                        <button class="btn btn-outline-secondary btn-sm">Go</button>
-                    </div>
+/* Project card refinement for grid layout */
+.project-card {
+    flex: none;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 12px;
+    padding: 1.5rem;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+.project-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 20px rgba(255,179,0,0.3);
+}
+
+
+/* Sidebar 30% split */
+.sidebar-card {
+    border-radius: 12px;
+    background: white;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.25rem;
+}
+.sidebar-header {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+.stat-number {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #FFB300;
+}
+</style>
+
+<div class="container-fluid my-4">
+    <!-- ============================================================= -->
+    <!-- MAIN FLEX LAYOUT (70/30 Split) -->
+    <!-- ============================================================= -->
+    <div class="row">
+        <!-- ================= LEFT COLUMN (70%) ================= -->
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4 bg-gradient-brand p-3">
+                <div>
+                    <h2 class="fw-bold mb-0">Project Overview</h2>
+                    <p class="mb-0">All active projects with lifecycle progress</p>
                 </div>
-                <div class="card-body p-0">
-                    <table class="table table-hover table-sm mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Name</th>
-                                <th>Status</th>
-                                <th>Start</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var p in Model.RecentProjects)
-                            {
-                                <tr>
-                                    <td>@p.Name</td>
-                                    <td>@p.Status</td>
-                                    <td>@p.StartDate.ToString("yyyy-MM-dd")</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-                <div class="card-footer text-end">
-                    <a asp-controller="ProjectManager" asp-action="CreateProject" class="btn btn-sm btn-primary">+ New Project</a>
-                    <a asp-controller="ProjectManager" asp-action="Dashboard" class="btn btn-sm btn-outline-secondary">View All</a>
-                </div>
+                <a href="@Url.Action("CreateProject", "ProjectManager")"
+                   class="btn btn-dark btn-workflow">
+                    <i class="fas fa-plus-circle me-2"></i> New Project
+                </a>
+            </div>
+
+            <!-- === SCROLLABLE PROJECT CARDS === -->
+            <div class="project-scroll">
+                @if (Model.RecentProjects.Any())
+                {
+                    @foreach (var project in Model.RecentProjects)
+                    {
+                        var badgeClass = project.Status switch
+                        {
+                            "Draft" => "status-badge status-draft",
+                            "Estimate Pending" => "status-badge status-estimate",
+                            "Quotation" => "status-badge status-quote",
+                            "Active" => "status-badge status-active",
+                            "Completed" => "status-badge status-complete",
+                            "Maintenance" => "status-badge status-maintenance",
+                            _ => "status-badge"
+                        };
+
+                        <div class="project-card">
+                            <!-- HEADER -->
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="fw-bold mb-0">@project.Name</h5>
+                                <span class="@badgeClass">@project.Status</span>
+                            </div>
+
+                            <!-- BASIC INFO -->
+                            <p class="small text-muted mb-2">@project.Description</p>
+                            <p class="small mb-1">
+                                <strong>Start:</strong> @project.StartDate.ToString("yyyy-MM-dd") |
+                                <strong>End:</strong> @project.EndDatePlanned.ToString("yyyy-MM-dd")
+                            </p>
+                            <p class="small mb-3">
+                                <strong>Budget:</strong> R @project.BudgetPlanned.ToString("N2")
+                            </p>
+
+                            <!-- PROGRESS BAR -->
+                            <div class="progress mb-3" style="height: 8px;">
+                                @{
+                                    double avgProgress = 0;
+                                    if (Model.ProjectPhases.TryGetValue(project.ProjectId, out var pList) && pList.Any())
+                                    {
+                                        avgProgress = pList.Average(p => p.Progress);
+                                    }
+                                }
+                                <div class="progress-bar" role="progressbar"
+                                    style="width:@avgProgress%"
+                                    aria-valuenow="@avgProgress"
+                                    aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+
+
+                            <!-- CONTEXTUAL ACTIONS -->
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                @if (project.Status == "Draft")
+                                {
+                                    <a href="@Url.Action("RequestEstimate", "Quotes", new { projectId = project.ProjectId })"
+                                       class="btn btn-sm btn-workflow">
+                                        <i class="fas fa-file-signature me-1"></i> Request Estimate
+                                    </a>
+                                }
+                                else if (project.Status == "Estimate Pending")
+                                {
+                                    <a href="@Url.Action("ReviewEstimate", "Quotes", new { projectId = project.ProjectId })"
+                                       class="btn btn-sm btn-workflow">
+                                        <i class="fas fa-search me-1"></i> Review Estimate
+                                    </a>
+                                }
+                                else if (project.Status == "Estimate Approved")
+                                {
+                                    <a href="@Url.Action("CreateDraft", "Quotes", new { projectId = project.ProjectId })"
+                                       class="btn btn-sm btn-workflow">
+                                        <i class="fas fa-file-invoice-dollar me-1"></i> Create Quote
+                                    </a>
+                                }
+                                else if (project.Status == "Active")
+                                {
+                                    <a href="@Url.Action("AssignTasks", "ProjectManager", new { projectId = project.ProjectId })"
+                                       class="btn btn-sm btn-workflow">
+                                        <i class="fas fa-tasks me-1"></i> Assign Tasks
+                                    </a>
+                                }
+                                else if (project.Status == "Completed")
+                                {
+                                    <a href="@Url.Action("ActivateMaintenance", "ProjectManager", new { projectId = project.ProjectId })"
+                                       class="btn btn-sm btn-workflow">
+                                        <i class="fas fa-wrench me-1"></i> Activate Maintenance
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="alert alert-info">No projects available.</div>
+                }
             </div>
         </div>
 
-        <!-- Quotes Card -->
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Quotations (@Model.TotalQuotes)</h5>
-                    <div class="input-group input-group-sm" style="width: 200px;">
-                        <input type="text" class="form-control" placeholder="Search..." id="search-quotes" />
-                        <button class="btn btn-outline-secondary btn-sm">Go</button>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    <table class="table table-hover table-sm mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Description</th>
-                                <th>Status</th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var q in Model.RecentAcceptedQuotes)
-                            {
-                                <tr>
-                                    <td>@q.Description</td>
-                                    <td>@q.Status</td>
-                                    <td>R @q.GrandTotal.ToString("N2")</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-                <div class="card-footer text-end">
-                    <!-- 🔑 Wire into new CreateDraft workflow -->
-                    <a asp-controller="Quotes" asp-action="CreateDraft" class="btn btn-sm btn-primary">+ New Quote</a>
-                    <a asp-controller="Quotes" asp-action="Index" class="btn btn-sm btn-outline-secondary">View All</a>
-                </div>
+        <!-- ================= RIGHT COLUMN (30%) ================= -->
+        <div class="col-lg-4">
+            <!-- QUICK STATS -->
+            <div class="sidebar-card">
+                <div class="sidebar-header"><i class="fas fa-chart-line me-1"></i> Quick Stats</div>
+                <p>Total Projects: <span class="stat-number">@Model.TotalProjects</span></p>
+                <p>Total Clients: <span class="stat-number">@Model.TotalClients</span></p>
+                <p>Total Contractors: <span class="stat-number">@Model.TotalContractors</span></p>
+            </div>
+
+            <!-- PENDING ITEMS -->
+            <div class="sidebar-card">
+                <div class="sidebar-header"><i class="fas fa-clock me-1"></i> Pending Actions</div>
+                <ul class="list-unstyled mb-0">
+                    <li>🧱 <strong>@Model.TotalProjects</strong> projects in Draft</li>
+                    <li>📄 <strong>@Model.TotalQuotes</strong> quotations in progress</li>
+                    <li>👷 <strong>@Model.TotalContractors</strong> contractors active</li>
+                </ul>
+            </div>
+
+            <!-- CLIENTS SNAPSHOT -->
+            <div class="sidebar-card">
+                <div class="sidebar-header"><i class="fas fa-users me-1"></i> Recent Clients</div>
+                <ul class="list-unstyled mb-0">
+                    @foreach (var c in Model.RecentClients.Take(3))
+                    {
+                        <li><strong>@c.FullName</strong> (<small class="text-muted">@c.Email</small>)</li>
+                    }
+                </ul>
             </div>
         </div>
-
-        <!-- Clients Card -->
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Clients (@Model.TotalClients)</h5>
-                    <div class="input-group input-group-sm" style="width: 200px;">
-                        <input type="text" class="form-control" placeholder="Search..." id="search-clients" />
-                        <button class="btn btn-outline-secondary btn-sm">Go</button>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    <table class="table table-hover table-sm mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var c in Model.RecentClients)
-                            {
-                                <tr>
-                                    <td>@c.FullName</td>
-                                    <td>@c.Email</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-                <div class="card-footer text-end">
-                    <a asp-controller="Users" asp-action="Clients" class="btn btn-sm btn-outline-secondary">View All</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Contractors Card -->
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Contractors (@Model.TotalContractors)</h5>
-                    <div class="input-group input-group-sm" style="width: 200px;">
-                        <input type="text" class="form-control" placeholder="Search..." id="search-contractors" />
-                        <button class="btn btn-outline-secondary btn-sm">Go</button>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    <table class="table table-hover table-sm mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var co in Model.RecentContractors)
-                            {
-                                <tr>
-                                    <td>@co.FullName</td>
-                                    <td>@co.Email</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-                <div class="card-footer text-end">
-                    <a asp-controller="Users" asp-action="Contractors" class="btn btn-sm btn-outline-secondary">View All</a>
-                </div>
-            </div>
-        </div>
-
     </div>
 </div>

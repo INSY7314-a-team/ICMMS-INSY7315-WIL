@@ -20,15 +20,20 @@
     <!-- Validation summary -->
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
-    <form asp-controller="Quotes" asp-action="Estimate" asp-route-id="@Model.QuotationId" method="post" onsubmit="return validateEstimateForm();">
+    <form asp-controller="Quotes" asp-action="Estimate" asp-route-id="@(string.IsNullOrEmpty(Model.QuotationId) ? "new" : Model.QuotationId)" method="post">
+
+
         @Html.AntiForgeryToken()
         
         <!-- Hidden IDs -->
-        <input type="hidden" name="ProjectId" value="@Model.ProjectId" />
+        <input type="hidden" asp-for="ProjectId" />
+        <input type="hidden" asp-for="ClientId" />
+        <input type="hidden" asp-for="Status" />
         <input type="hidden" name="QuotationId" value="@Model.QuotationId" />
-        <input type="hidden" name="ClientId" value="@Model.ClientId" />
+        <input type="hidden" name="OriginalQuotationId" value="@ViewBag.OriginalQuotationId" />
         <input type="hidden" name="ContractorId" value="@Model.ContractorId" />
         <input type="hidden" asp-for="Description" />
+
 
 
         <!-- AI Blueprint Section -->

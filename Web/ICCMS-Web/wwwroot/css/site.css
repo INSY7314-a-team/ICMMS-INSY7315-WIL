@@ -21,3 +21,245 @@ body {
   margin-bottom: 60px;
 }
 
+.btn-workflow-white {
+    background: #FFC748;
+    color: white;
+    border: 2px solid #FFD54F; /* golden outline */
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+}
+.btn-workflow-white:hover {
+    background: #fff;
+    color: #333;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+.main-btn-style {
+  background: linear-gradient(270deg, #FFD54F, #FFEB3B, #FFD54F);
+  background-size: 400% 400%;
+  color: #12103F;
+  border: 2px solid #FFD54F;
+  border-radius: 25px;
+  font-weight: 600;
+  padding: 0.75rem 2rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  /* ✅ multiple animations combined */
+  animation: gradientShift 8s ease infinite;
+}
+
+/* Subtle shimmer */
+.main-btn-style::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 70%
+  );
+  transform: skewX(-20deg);
+  animation: subtleSheen 6s infinite;
+  z-index: 0;
+}
+
+/* Ripple effect */
+.main-btn-style:after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.5);
+  display: block;
+  transform: scale(0);
+  opacity: 0;
+  pointer-events: none;
+}
+.main-btn-style:active:after {
+  transform: scale(30);
+  opacity: 0;
+  transition: transform 0.6s ease, opacity 1s ease;
+}
+
+/* Hover state */
+.main-btn-style:hover {
+  background: #fff;
+  color: #12103F;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+/* === Animations === */
+@keyframes subtleSheen {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.main-bounce{
+  background: linear-gradient(135deg, #FFD54F 0%, #FFEB3B 100%);
+  color: #12103F;
+  border: 2px solid #FFD54F;
+  border-radius: 25px;
+  font-weight: 600;
+  padding: 0.75rem 2rem;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 10;
+  animation: buttonPulse 1s infinite ease-in-out;
+}
+
+@keyframes buttonPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 255, 255, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.5); }
+}
+
+
+/* === MAIN CTA BUTTON (Primary) === */
+/* Big, bold gradient — used for the most important actions like "Request Quote" */
+.btn-main-style {
+  background: linear-gradient(135deg, #FFD54F 0%, #FFEB3B 100%);
+  color: #12103F; /* navy text */
+  border: transparent; 
+  border-radius: 25px;
+  font-weight: 700;
+  padding: 0.75rem 2rem;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.btn-main-style:hover {
+  background: #fff;
+  color: #12103F;
+  box-shadow: 0 8px 20px rgba(255, 199, 72, 0.5);
+  transform: translateY(-2px);
+}
+
+/* === SECONDARY BUTTON === */
+/* Solid dark button, contrasts against the main gold, good for "Contact Us" */
+.btn-secondary-style {
+  background: #12103F; /* navy */
+  color: #fff;
+  border: transparent;
+  border-radius: 25px;
+  font-weight: 600;
+  padding: 0.75rem 2rem;
+  transition: all 0.3s ease;
+}
+.btn-secondary-style:hover {
+  background: #FFD54F; /* flip to gold */
+  color: #12103F;
+  box-shadow: 0 6px 15px rgba(18,16,63,0.4);
+  transform: translateY(-2px);
+}
+
+/* === TERTIARY BUTTON === */
+/* White/outline style — light, less dominant, used for "Learn More", "See Details" */
+.btn-tertiary-style {
+  background: #fff;
+  color: #12103F;
+  border: transparent;
+  border-radius: 25px;
+  font-weight: 600;
+  padding: 0.75rem 2rem;
+  transition: all 0.3s ease;
+}
+.btn-tertiary-style:hover {
+  background: #FFEB3B;
+  color: #12103F;
+  box-shadow: 0 6px 15px rgba(255, 199, 72, 0.4);
+  transform: translateY(-2px);
+}
+
+/* === ACCENT BUTTON (4th style) === */
+/* Minimal link-style CTA with subtle underline — for less important actions */
+.btn-accent-style {
+  background: transparent;
+  color: #12103F;
+  border: none;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  position: relative;
+  transition: color 0.3s ease;
+}
+.btn-accent-style::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 2px;
+  background: #FFD54F;
+  transition: width 0.3s ease;
+}
+.btn-accent-style:hover {
+  color: #FFD54F;
+}
+.btn-accent-style:hover::after {
+  width: 100%;
+}
+
+
+.ai-btn {
+  background: linear-gradient(135deg, #6A00FF, #00E5FF); /* purple → neon cyan */
+  color: #fff;
+  border: none;
+  border-radius: 30px;
+  font-weight: 700;
+  padding: 0.85rem 2.5rem;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  box-shadow: 0 0 20px rgba(106, 0, 255, 0.6), 0 0 30px rgba(0, 229, 255, 0.6);
+}
+
+/* Glow animation effect */
+.ai-btn::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    from 0deg,
+    #6A00FF,
+    #00E5FF,
+    #6A00FF,
+    #00E5FF
+  );
+  animation: rotateGlow 10s linear infinite;
+  z-index: -1;
+  opacity: 0.5;
+}
+
+.ai-btn:hover {
+  color: #12103F;
+  background: #fff;
+  box-shadow: 0 0 25px rgba(0, 229, 255, 0.8), 0 0 35px rgba(106, 0, 255, 0.8);
+  transform: translateY(-3px);
+}
+
+@keyframes rotateGlow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

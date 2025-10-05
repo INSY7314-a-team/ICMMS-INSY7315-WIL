@@ -1,16 +1,30 @@
 using ICCMS_Web.Services;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Register services
-builder.Services.AddScoped<IApiClient, ApiClient>();
+// ===================================================
+// 🔧 SERVICE REGISTRATION
+// ===================================================
+
+// HTTP + API
 builder.Services.AddHttpClient();
+builder.Services.AddScoped<IApiClient, ApiClient>();
+
+// Access HttpContext and TempData inside services (needed for Auth redirect handling)
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<ITempDataDictionaryFactory, TempDataDictionaryFactory>();
+
+// Login attempt tracking
 builder.Services.AddSingleton<ILoginAttemptService, LoginAttemptService>();
 
-// Add MVC
+// MVC / Razor Views
 builder.Services.AddControllersWithViews();
 
-// Add session support
+// ===================================================
+// 💾 SESSION MANAGEMENT
+// ===================================================
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -19,7 +33,9 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-// Cookie authentication
+// ===================================================
+// 🔒 AUTHENTICATION CONFIGURATION
+// ===================================================
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = "Cookies";
@@ -28,13 +44,19 @@ builder.Services.AddAuthentication(options =>
 })
 .AddCookie("Cookies", options =>
 {
+    // NOTE: redirect paths must align with actual controllers
     options.LoginPath = "/Auth/Login";
     options.LogoutPath = "/Auth/Logout";
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.SlidingExpiration = true;
+
+    // Optional: friendly redirect if unauthorized
+    options.AccessDeniedPath = "/Auth/AccessDenied";
 });
 
-// Authorization policies
+// ===================================================
+// 🧩 AUTHORIZATION POLICIES
+// ===================================================
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
@@ -43,9 +65,14 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("ClientOnly", policy => policy.RequireRole("Client"));
 });
 
+// ===================================================
+// 🚀 BUILD APP
+// ===================================================
 var app = builder.Build();
 
-// Middleware
+// ===================================================
+// 🌍 MIDDLEWARE PIPELINE
+// ===================================================
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -54,15 +81,22 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
 app.UseRouting();
 
+// Order matters: Session before Auth
 app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Default route
+// ===================================================
+// 🏠 ROUTING
+// ===================================================
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
+// ===================================================
+// 🏁 RUN
+// ===================================================
 app.Run();

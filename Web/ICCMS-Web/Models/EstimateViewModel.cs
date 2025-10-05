@@ -21,6 +21,10 @@ namespace ICCMS_Web.Models
         // 🔗 Client association (was missing before!)
         [Required(ErrorMessage = "Client is required")]
         public string ClientId { get; set; } = string.Empty;
+        
+        // 🏷️ Current workflow status of the quotation (Draft, SentToClient, Declined, etc.)
+        public string Status { get; set; } = "Draft";
+
 
         // 🔗 Contractor assigned to this quotation (optional / may be set later)
         public string ContractorId { get; set; } = string.Empty;

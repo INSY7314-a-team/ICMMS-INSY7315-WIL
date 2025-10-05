@@ -116,19 +116,34 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                // 🔐 Assign the Project Manager ID from the logged-in user
                 project.ProjectManagerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                await _firebaseService.AddDocumentWithIdAsync(
-                    "projects",
-                    project.ProjectId,
-                    project
-                );
+
+                // 🕒 Normalize all DateTime fields to UTC
+                project.StartDate = DateTime.SpecifyKind(project.StartDate, DateTimeKind.Utc);
+                project.EndDatePlanned = DateTime.SpecifyKind(project.EndDatePlanned, DateTimeKind.Utc);
+
+                if (project.EndDateActual.HasValue)
+                    project.EndDateActual = DateTime.SpecifyKind(project.EndDateActual.Value, DateTimeKind.Utc);
+
+                // 🧾 Log the normalized values (optional)
+                Console.WriteLine($"[CreateProject] StartDate.Kind = {project.StartDate.Kind}");
+                Console.WriteLine($"[CreateProject] EndDatePlanned.Kind = {project.EndDatePlanned.Kind}");
+                Console.WriteLine($"[CreateProject] EndDateActual.Kind = {project.EndDateActual?.Kind.ToString() ?? "null"}");
+
+                // 💾 Add to Firestore
+                await _firebaseService.AddDocumentWithIdAsync("projects", project.ProjectId, project);
+
+                Console.WriteLine($"[CreateProject] Added project {project.Name} successfully.");
                 return Ok(project);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[CreateProject] Error: {ex.Message}");
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
 
         [HttpPost("create/project/{projectId}/phase")]
         public async Task<ActionResult<Phase>> CreatePhase(string projectId, [FromBody] Phase phase)

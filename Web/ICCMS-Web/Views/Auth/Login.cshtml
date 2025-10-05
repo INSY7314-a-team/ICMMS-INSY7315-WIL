@@ -7,11 +7,21 @@
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="text-center">Login to ICMMS</h3>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white text-center">
+                    <h3 class="mb-0">Login to ICMMS</h3>
                 </div>
                 <div class="card-body">
+
+                    <!-- 🔔 SESSION EXPIRED / AUTH ERROR -->
+                    @if (TempData["AuthErrorMessage"] != null)
+                    {
+                        <div class="alert alert-warning text-center fw-bold mb-3">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            @TempData["AuthErrorMessage"]
+                        </div>
+                    }
+
                     <!-- Lockout Message -->
                     <div id="lockoutMessage" class="alert alert-warning" style="display: none;">
                         <h5>Account Temporarily Locked</h5>
@@ -32,7 +42,7 @@
                         
                         <div class="mb-3">
                             <label asp-for="Password" class="form-label"></label>
-                            <input asp-for="Password" class="form-control" id="passwordInput" />
+                            <input asp-for="Password" class="form-control" id="passwordInput" type="password" />
                             <span asp-validation-for="Password" class="text-danger"></span>
                         </div>
                         
@@ -63,25 +73,21 @@
         const originalText = submitBtn.textContent;
 
         try {
-            // Show loading state
             submitBtn.textContent = 'Logging in...';
             submitBtn.disabled = true;
 
-            // Firebase sign-in
             console.log('[Login] Attempting Firebase sign-in for', email);
             const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
             const user = userCredential.user;
             console.log('[Login] Firebase sign-in successful:', user.email);
 
-            // Get ID token
             const idToken = await user.getIdToken();
             console.log('[Login] Got Firebase ID token');
 
-            // Send token to Web AuthController
             const response = await fetch('/Auth/VerifyToken', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken }) // 👈 only send token now
+                body: JSON.stringify({ idToken })
             });
 
             console.log('[Login] API response status:', response.status);
@@ -89,7 +95,6 @@
             console.log('[Login] API response:', result);
 
             if (result.success) {
-                // Redirect based on role
                 const role = result.user?.role?.toLowerCase();
                 console.log('[Login] Verified user role:', role);
                 if (role === 'client') window.location.href = '/Clients';
@@ -108,4 +113,3 @@
     });
 </script>
 }
-
