@@ -16,11 +16,14 @@ namespace ICCMS_API.Helpers
             // Calculate subtotal
             quotation.Subtotal = quotation.Items.Sum(item => item.LineTotal);
 
-            // Calculate tax total
-            quotation.TaxTotal = quotation.Items.Sum(item => item.LineTotal * item.TaxRate);
+            // Apply markup to subtotal first
+            var subtotalWithMarkup = quotation.Subtotal * quotation.MarkupRate;
+
+            // Calculate tax total on the marked-up subtotal
+            quotation.TaxTotal = quotation.Items.Sum(item => (item.LineTotal * quotation.MarkupRate) * item.TaxRate);
 
             // Calculate grand total
-            quotation.GrandTotal = quotation.Subtotal + quotation.TaxTotal;
+            quotation.GrandTotal = subtotalWithMarkup + quotation.TaxTotal;
 
             // Sync legacy Total field
             quotation.Total = quotation.GrandTotal;
@@ -40,11 +43,14 @@ namespace ICCMS_API.Helpers
             // Calculate subtotal
             invoice.Subtotal = invoice.Items.Sum(item => item.LineTotal);
 
-            // Calculate tax total
-            invoice.TaxTotal = invoice.Items.Sum(item => item.LineTotal * item.TaxRate);
+            // Apply markup to subtotal first
+            var subtotalWithMarkup = invoice.Subtotal * invoice.MarkupRate;
+
+            // Calculate tax total on the marked-up subtotal
+            invoice.TaxTotal = invoice.Items.Sum(item => (item.LineTotal * invoice.MarkupRate) * item.TaxRate);
 
             // Calculate total amount
-            invoice.TotalAmount = invoice.Subtotal + invoice.TaxTotal;
+            invoice.TotalAmount = subtotalWithMarkup + invoice.TaxTotal;
 
             // Sync legacy fields
             invoice.Amount = invoice.Subtotal;

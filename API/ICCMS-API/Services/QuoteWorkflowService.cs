@@ -193,6 +193,7 @@ namespace ICCMS_API.Services
                 Description = quotation.Description,
                 QuotationId = quotation.QuotationId,
                 Currency = quotation.Currency,
+                MarkupRate = quotation.MarkupRate, // Copy markup rate from quotation
                 Items = quotation.Items.Select(i => new InvoiceItem
                 {
                     Name = i.Name,
