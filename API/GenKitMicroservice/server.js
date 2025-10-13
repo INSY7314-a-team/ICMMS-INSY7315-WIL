@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 3001;
 // Configure GenKit with development UI
 const ai = genkit({
   plugins: [googleAI()],
-  model: "gemini-2.5-flash",
+  model: googleAI.model("gemini-2.0-flash"),
   enableDevUI: true,
 });
 

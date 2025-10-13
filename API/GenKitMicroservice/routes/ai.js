@@ -5,13 +5,14 @@ const {
   generateResponse,
 } = require("../services/genkitService");
 const { validateRequest } = require("../middleware/validation");
+const { googleAI } = require("@genkit-ai/googleai");
 
 const router = express.Router();
 
 // Text processing endpoint
 router.post("/text", validateRequest, async (req, res) => {
   try {
-    const { prompt, model = "gemini-pro" } = req.body;
+    const { prompt, model = googleAI.model("gemini-2.0-flash") } = req.body;
 
     if (!prompt) {
       return res.status(400).json({
@@ -43,7 +44,11 @@ router.post("/text", validateRequest, async (req, res) => {
 // Image processing endpoint
 router.post("/image", validateRequest, async (req, res) => {
   try {
-    const { prompt, imageData, model = "gemini-pro-vision" } = req.body;
+    const {
+      prompt,
+      imageData,
+      model = googleAI.model("gemini-2.0-flash"),
+    } = req.body;
 
     if (!prompt || !imageData) {
       return res.status(400).json({
@@ -75,7 +80,11 @@ router.post("/image", validateRequest, async (req, res) => {
 // Generate structured response
 router.post("/generate", validateRequest, async (req, res) => {
   try {
-    const { prompt, schema, model = "gemini-pro" } = req.body;
+    const {
+      prompt,
+      schema,
+      model = googleAI.model("gemini-2.0-flash"),
+    } = req.body;
 
     if (!prompt) {
       return res.status(400).json({

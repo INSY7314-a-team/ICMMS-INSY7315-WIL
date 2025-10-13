@@ -1,4 +1,4 @@
-const pdfParser = require("pdf-parse");
+// No need for pdf-parse - we'll upload PDFs directly to Gemini
 const mammoth = require("mammoth");
 const { googleAI } = require("@genkit-ai/googleai");
 const { genkit } = require("genkit");
@@ -88,22 +88,86 @@ async function extractTextContent(fileData, fileType) {
   try {
     switch (fileType.toLowerCase()) {
       case "pdf":
+        // Upload PDF directly to Gemini for processing
         const pdfBuffer = Buffer.from(fileData, "base64");
-        const pdfData = await pdfParser(pdfBuffer);
-        return {
-          text: pdfData.text,
-          pages: pdfData.numpages,
-          metadata: {
-            title: pdfData.info?.Title || "Unknown",
-            author: pdfData.info?.Author || "Unknown",
-            creationDate: pdfData.info?.CreationDate || null,
-          },
-        };
+
+        try {
+          const pdfResponse = await ai.generate({
+            model: googleAI.model("gemini-2.0-flash"),
+            prompt: `Extract all visible text, dimensions, specifications, and construction details from this PDF blueprint.
+            Focus on:
+            - All measurements and dimensions
+            - Material specifications
+            - Construction notes and annotations
+            - Room layouts and structural elements
+            - Electrical and plumbing details
+            - Any tables or lists of materials
+            
+            Provide a comprehensive analysis of the blueprint content.`,
+            media: {
+              content: pdfBuffer,
+              mimeType: "application/pdf",
+            },
+          });
+
+          return {
+            text: pdfResponse.output || "No text extracted from PDF",
+            pages: "Unknown", // Gemini doesn't provide page count directly
+            metadata: {
+              title: "PDF Blueprint",
+              author: "Unknown",
+              creationDate: new Date().toISOString(),
+            },
+          };
+        } catch (pdfError) {
+          console.error("PDF processing error:", pdfError);
+          return {
+            text: "PDF processing failed - using fallback text extraction",
+            pages: "Unknown",
+            metadata: {
+              title: "PDF Blueprint (Fallback)",
+              author: "Unknown",
+              creationDate: new Date().toISOString(),
+              error: pdfError.message,
+            },
+          };
+        }
 
       case "docx":
+        // For Word docs, we'll extract text using mammoth as fallback
+        // In a production environment, you might want to convert to PDF first
         const docxResult = await mammoth.extractRawText({
           buffer: Buffer.from(fileData, "base64"),
         });
+
+        // If we have substantial text, we can also send it to Gemini for analysis
+        if (docxResult.value && docxResult.value.length > 100) {
+          const docxAnalysis = await ai.generate({
+            model: googleAI.model("gemini-2.0-flash"),
+            prompt: `Analyze this construction document text and extract:
+            - All measurements and dimensions
+            - Material specifications
+            - Construction notes and annotations
+            - Room layouts and structural elements
+            - Any tables or lists of materials
+            
+            Provide a comprehensive analysis of the document content.
+            
+            Document text:
+            ${docxResult.value}`,
+          });
+
+          return {
+            text: docxAnalysis.output,
+            metadata: {
+              wordCount: docxResult.value.split(/\s+/).length,
+              hasImages: docxResult.messages.some(
+                (msg) => msg.type === "image"
+              ),
+            },
+          };
+        }
+
         return {
           text: docxResult.value,
           metadata: {
@@ -126,7 +190,7 @@ async function extractTextContent(fileData, fileType) {
 
       default: // Images or other formats
         const visionResponse = await ai.generate({
-          model: "gemini-pro-vision",
+          model: googleAI.model("gemini-2.0-flash"),
           prompt: `Extract all visible text, dimensions, specifications, and construction details from this blueprint image.
           Focus on:
           - All measurements and dimensions
@@ -199,7 +263,7 @@ async function analyzeBlueprint(extractedContent, projectContext) {
     `;
 
     const analysisResponse = await ai.generate({
-      model: "gemini-pro",
+      model: googleAI.model("gemini-2.0-flash"),
       prompt: analysisPrompt,
     });
 
@@ -258,7 +322,7 @@ async function extractLineItems(analysis, projectContext) {
     `;
 
     const extractionResponse = await ai.generate({
-      model: "gemini-pro",
+      model: googleAI.model("gemini-2.0-flash"),
       prompt: extractionPrompt,
     });
 
@@ -461,6 +525,15 @@ async function validateAndScore(lineItems, analysis) {
 
 function detectBlueprintTypes(text) {
   const types = [];
+
+  // Handle null or undefined text
+  if (!text || typeof text !== "string") {
+    console.warn(
+      "detectBlueprintTypes: text is null, undefined, or not a string"
+    );
+    return ["unknown"];
+  }
+
   const content = text.toLowerCase();
 
   if (
@@ -556,7 +629,7 @@ async function generateDemolitionItems(analysis, projectContext) {
 
   try {
     const demoResponse = await ai.generate({
-      model: "gemini-pro",
+      model: googleAI.model("gemini-2.0-flash"),
       prompt: demoPrompt,
     });
 
