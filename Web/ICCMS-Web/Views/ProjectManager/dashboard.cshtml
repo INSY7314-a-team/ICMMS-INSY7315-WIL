@@ -3,277 +3,80 @@
     ViewData["Title"] = "Project Manager Dashboard";
     Layout = "_Layout";
 }
-@await Html.PartialAsync("_EstimatePopup")
-@await Html.PartialAsync("_QuotationPopup", new ICCMS_Web.Models.EstimateViewModel())
 
+@await Html.PartialAsync("_QuoteBuilder")
 
+<div class="container mt-4">
+    <h2 class="fw-bold mb-3">🧱 Project Manager Dashboard (Simplified)</h2>
+    <p class="text-muted mb-4">Basic view for development and Quote Builder testing.</p>
 
-<style>
-/* ===================== GLOBAL STYLING ===================== */
-.bg-gradient-brand {
-    background: linear-gradient(135deg, #FFD54F 0%, #FFEB3B 100%);
-    color: #333;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-}
-.project-card {
-    border-radius: 12px;
-    border: 2px solid #eee;
-    background: white;
-    padding: 1.5rem;
-    margin-right: 1.25rem;
-    flex: 0 0 350px;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-.project-card:hover {
-    border-color: #FFD54F;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
-    transform: translateY(-3px);
-}
-.status-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 15px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-.status-draft { background: #fff3cd; color: #856404; }
-.status-estimate { background: #cce5ff; color: #004085; }
-.status-quote { background: #d1ecf1; color: #0c5460; }
-.status-active { background: #d4edda; color: #155724; }
-.status-complete { background: #e2e3e5; color: #383d41; }
-.status-maintenance { background: #ffeeba; color: #856404; }
-.btn-workflow {
-    border-radius: 25px;
-    font-weight: 600;
-    padding: 0.5rem 1.25rem;
-    transition: all 0.3s ease;
-    background: linear-gradient(135deg, #FFB300, #FFD54F);
-    color: white;
-    border: none;
-    font-size: 0.85rem;
-}
-.btn-workflow:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 179, 0, 0.4);
-}
-/* Scrollable project list container */
-/* === PROJECT CARD GRID (Vertical Layout) === */
-.project-scroll {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); /* 3 per row, responsive */
-    gap: 1.5rem; /* spacing between cards */
-    max-height: 80vh; /* limits height so it doesn’t stretch the page */
-    overflow-y: auto; /* vertical scroll only */
-    padding-right: 10px; /* prevents scrollbar overlap */
-}
+    <a href="@Url.Action("CreateProject", "ProjectManager")" class="btn btn-dark mb-3">
+        <i class="fas fa-plus-circle me-1"></i> New Project
+    </a>
 
-/* Optional – hide ugly scrollbar on Chrome/Edge */
-.project-scroll::-webkit-scrollbar {
-    width: 8px;
-}
-.project-scroll::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 8px;
-}
-.project-scroll::-webkit-scrollbar-thumb:hover {
-    background: #999;
-}
-
-/* Project card refinement for grid layout */
-.project-card {
-    flex: none;
-    width: 100%;
-    max-width: 400px;
-    border-radius: 12px;
-    padding: 1.5rem;
-    background: white;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
-}
-.project-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 20px rgba(255,179,0,0.3);
-}
-
-
-/* Sidebar 30% split */
-.sidebar-card {
-    border-radius: 12px;
-    background: white;
-    padding: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 1.25rem;
-}
-.sidebar-header {
-    font-weight: 700;
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
-}
-.stat-number {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #FFB300;
-}
-</style>
-
-<div class="container-fluid my-4">
-    <!-- ============================================================= -->
-    <!-- MAIN FLEX LAYOUT (70/30 Split) -->
-    <!-- ============================================================= -->
-    <div class="row">
-        <!-- ================= LEFT COLUMN (70%) ================= -->
-        <div class="col-lg-8">
-            <div class="d-flex justify-content-between align-items-center mb-4 bg-gradient-brand p-3">
-                <div>
-                    <h2 class="fw-bold mb-0">Project Overview</h2>
-                    <p class="mb-0">All active projects with lifecycle progress</p>
-                </div>
-                <a href="@Url.Action("CreateProject", "ProjectManager")"
-                   class="btn btn-dark btn-workflow">
-                    <i class="fas fa-plus-circle me-2"></i> New Project
-                </a>
-            </div>
-
-            <!-- === SCROLLABLE PROJECT CARDS === -->
-            <div class="project-scroll">
-                @if (Model.RecentProjects.Any())
+    @if (Model.RecentProjects != null && Model.RecentProjects.Any())
+    {
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Project Name</th>
+                    <th>Status</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Budget (R)</th>
+                    <th>Client</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var project in Model.RecentProjects)
                 {
-                    @foreach (var project in Model.RecentProjects)
-                    {
-                        var badgeClass = project.Status switch
-                        {
-                            "Draft" => "status-badge status-draft",
-                            "Estimate Pending" => "status-badge status-estimate",
-                            "Quotation" => "status-badge status-quote",
-                            "Active" => "status-badge status-active",
-                            "Completed" => "status-badge status-complete",
-                            "Maintenance" => "status-badge status-maintenance",
-                            _ => "status-badge"
-                        };
-
-                        <div class="project-card">
-                            <!-- HEADER -->
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h5 class="fw-bold mb-0">@project.Name</h5>
-                                <span class="@badgeClass">@project.Status</span>
-                            </div>
-
-                            <!-- BASIC INFO -->
-                            <p class="small text-muted mb-2">@project.Description</p>
-                            <p class="small mb-1">
-                                <strong>Start:</strong> @project.StartDate.ToString("yyyy-MM-dd") |
-                                <strong>End:</strong> @project.EndDatePlanned.ToString("yyyy-MM-dd")
-                            </p>
-                            <p class="small mb-3">
-                                <strong>Budget:</strong> R @project.BudgetPlanned.ToString("N2")
-                            </p>
-
-                            <!-- PROGRESS BAR -->
-                            <div class="progress mb-3" style="height: 8px;">
-                                @{
-                                    double avgProgress = 0;
-                                    if (Model.ProjectPhases.TryGetValue(project.ProjectId, out var pList) && pList.Any())
-                                    {
-                                        avgProgress = pList.Average(p => p.Progress);
-                                    }
-                                }
-                                <div class="progress-bar" role="progressbar"
-                                    style="width:@avgProgress%"
-                                    aria-valuenow="@avgProgress"
-                                    aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
-                <!-- CONTEXTUAL ACTIONS -->
-                <div class="d-flex flex-wrap gap-2 mt-3">
-                    @{
-                        bool hasEstimate = Model.ProjectEstimates != null && Model.ProjectEstimates.ContainsKey(project.ProjectId);
-                    }
-
-                    @if (project.Status == "Draft" && !hasEstimate)
-                    {
-                        <!-- Show AI Estimate button -->
-                        <button class="btn btn-sm btn-workflow"
-                                data-bs-toggle="modal"
-                                data-bs-target="#estimateModal"
-                                data-project-id="@project.ProjectId">
-                            <i class="fas fa-bolt me-1"></i> AI Estimate
-                        </button>
-                    }
-                    else if (hasEstimate)
-                    {
-                        <!-- Show Create Quote button with available metadata -->
-                        <button class="btn btn-sm btn-workflow"
-                                data-bs-toggle="modal"
-                                data-bs-target="#quotationModal"
-                                data-project-id="@project.ProjectId"
-                                data-project-name="@project.Name"
-                                data-description="@project.Description"
-                                data-client-id="@project.ClientId">
-                            <i class="fas fa-file-invoice-dollar me-1"></i> Create Quote
-                        </button>
-                    }
-                    else if (project.Status == "Active")
-                    {
-                        <a href="@Url.Action("AssignTasks", "ProjectManager", new { projectId = project.ProjectId })"
-                        class="btn btn-sm btn-workflow">
-                            <i class="fas fa-tasks me-1"></i> Assign Tasks
-                        </a>
-                    }
-                    else if (project.Status == "Completed")
-                    {
-                        <a href="@Url.Action("ActivateMaintenance", "ProjectManager", new { projectId = project.ProjectId })"
-                        class="btn btn-sm btn-workflow">
-                            <i class="fas fa-wrench me-1"></i> Activate Maintenance
-                        </a>
-                    }
-                </div>
-
-                        </div>
-                    }
+                    <tr>
+                        <td>@project.Name</td>
+                        <td>@project.Status</td>
+                        <td>@project.StartDate.ToString("yyyy-MM-dd")</td>
+                        <td>@project.EndDatePlanned.ToString("yyyy-MM-dd")</td>
+                        <td>@project.BudgetPlanned.ToString("N2")</td>
+                        <td>@project.ClientId</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning fw-bold"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#quoteBuilderModal"
+                                    data-project-id="@project.ProjectId"
+                                    data-project-name="@project.Name"
+                                    data-description="@project.Description"
+                                    data-client-id="@project.ClientId"
+                                    data-contractor-id="@User.FindFirst("UserId")?.Value">
+                                <i class="fas fa-file-invoice-dollar me-1"></i> Build Quote
+                            </button>
+                        </td>
+                    </tr>
                 }
-                else
-                {
-                    <div class="alert alert-info">No projects available.</div>
-                }
-            </div>
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            No projects available yet. Create one to begin testing.
         </div>
-
-        <!-- ================= RIGHT COLUMN (30%) ================= -->
-        <div class="col-lg-4">
-            <!-- QUICK STATS -->
-            <div class="sidebar-card">
-                <div class="sidebar-header"><i class="fas fa-chart-line me-1"></i> Quick Stats</div>
-                <p>Total Projects: <span class="stat-number">@Model.TotalProjects</span></p>
-                <p>Total Clients: <span class="stat-number">@Model.TotalClients</span></p>
-                <p>Total Contractors: <span class="stat-number">@Model.TotalContractors</span></p>
-            </div>
-
-            <!-- PENDING ITEMS -->
-            <div class="sidebar-card">
-                <div class="sidebar-header"><i class="fas fa-clock me-1"></i> Pending Actions</div>
-                <ul class="list-unstyled mb-0">
-                    <li>🧱 <strong>@Model.TotalProjects</strong> projects in Draft</li>
-                    <li>📄 <strong>@Model.TotalQuotes</strong> quotations in progress</li>
-                    <li>👷 <strong>@Model.TotalContractors</strong> contractors active</li>
-                </ul>
-            </div>
-
-            <!-- CLIENTS SNAPSHOT -->
-            <div class="sidebar-card">
-                <div class="sidebar-header"><i class="fas fa-users me-1"></i> Recent Clients</div>
-                <ul class="list-unstyled mb-0">
-                    @foreach (var c in Model.RecentClients.Take(3))
-                    {
-                        <li><strong>@c.FullName</strong> (<small class="text-muted">@c.Email</small>)</li>
-                    }
-                </ul>
-            </div>
-        </div>
-    </div>
+    }
 </div>
-@section Scripts {
-    <script src="~/js/estimate-popup.js"></script>
-    <script src="~/js/quotation-popup.js"></script>
-}
 
+@section Scripts {
+    <script src="~/js/quote-builder.js"></script>
+
+    <script>
+        // Autofill modal fields when Build Quote button is clicked
+        document.getElementById("quoteBuilderModal").addEventListener("show.bs.modal", function (event) {
+            const button = event.relatedTarget;
+            if (!button) return;
+
+            document.getElementById("qb-projectId").value = button.dataset.projectId || "";
+            document.getElementById("qb-clientId").value = button.dataset.clientId || "";
+            document.getElementById("qb-contractorId").value = button.dataset.contractorId || "";
+
+            console.log("🟢 Opening Quote Builder for:", button.dataset.projectName);
+        });
+    </script>
+}

@@ -1,82 +1,104 @@
 @model ICCMS_Web.Models.CreateProjectViewModel
-
 @{
-    ViewData["Title"] = "Create Project";
+    ViewData["Title"] = "Create New Project";
     Layout = "_Layout";
 }
 
-<div class="container my-4">
-    <h3 class="fw-bold mb-3">Create New Project</h3>
-
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
-    }
+<div class="container py-5">
+    <!-- 🔔 TEMP MESSAGES -->
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+        <div class="alert alert-success alert-dismissible fade show text-center shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show text-center shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     }
 
-    <form asp-action="CreateProject" asp-controller="ProjectManager" method="post">
-        @Html.AntiForgeryToken()
-
-        <!-- Project Name -->
-        <div class="mb-3">
-            <label asp-for="Project.Name" class="form-label"></label>
-            <input asp-for="Project.Name" class="form-control" placeholder="Enter project name" required />
-            <span asp-validation-for="Project.Name" class="text-danger"></span>
+    <div class="card shadow-lg border-0 rounded-4">
+        <div class="card-header bg-warning text-dark text-center py-3 rounded-top-4">
+            <h3 class="fw-bold mb-0"><i class="bi bi-folder-plus"></i> Create New Project</h3>
         </div>
 
-        <!-- Description -->
-        <div class="mb-3">
-            <label asp-for="Project.Description" class="form-label"></label>
-            <textarea asp-for="Project.Description" class="form-control" rows="3" placeholder="Enter description"></textarea>
-            <span asp-validation-for="Project.Description" class="text-danger"></span>
-        </div>
+        <div class="card-body px-4 py-5">
+            <form asp-action="CreateProject" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                @Html.AntiForgeryToken()
 
-        <!-- Client -->
-        <div class="mb-3">
-            <label asp-for="Project.ClientId" class="form-label"></label>
-            <select asp-for="Project.ClientId" class="form-select" required>
-                <option value="">Select client...</option>
-                @foreach (var c in Model.Clients)
-                {
-                    <option value="@c.UserId">@c.FullName (@c.Email)</option>
-                }
-            </select>
-            <span asp-validation-for="Project.ClientId" class="text-danger"></span>
-        </div>
+                <div class="row g-4">
+                    <!-- PROJECT NAME -->
+                    <div class="col-md-6">
+                        <label asp-for="Project.Name" class="form-label fw-semibold">Project Name</label>
+                        <input asp-for="Project.Name" class="form-control form-control-lg rounded-3" placeholder="Enter project title" required />
+                        <span asp-validation-for="Project.Name" class="text-danger"></span>
+                    </div>
 
-        <!-- Budgets + Status -->
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label asp-for="Project.BudgetPlanned" class="form-label"></label>
-                <input asp-for="Project.BudgetPlanned" type="number" class="form-control" required />
-                <span asp-validation-for="Project.BudgetPlanned" class="text-danger"></span>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label asp-for="Project.Status" class="form-label"></label>
-                <input asp-for="Project.Status" class="form-control" value="Draft" readonly />
-                <span asp-validation-for="Project.Status" class="text-danger"></span>
-            </div>
-        </div>
+                    <!-- CLIENT -->
+                    <div class="col-md-6">
+                        <label asp-for="Project.ClientId" class="form-label fw-semibold">Client</label>
+                        <select asp-for="Project.ClientId" class="form-select form-select-lg rounded-3" required>
+                            <option value="">Select a client...</option>
+                            @foreach (var client in Model.Clients)
+                            {
+                                <option value="@client.UserId">@client.FullName (@client.Email)</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Project.ClientId" class="text-danger"></span>
+                    </div>
 
-        <!-- Dates -->
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label asp-for="Project.StartDate" class="form-label"></label>
-                <input asp-for="Project.StartDate" type="date" class="form-control" required />
-                <span asp-validation-for="Project.StartDate" class="text-danger"></span>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label asp-for="Project.EndDatePlanned" class="form-label"></label>
-                <input asp-for="Project.EndDatePlanned" type="date" class="form-control" required />
-                <span asp-validation-for="Project.EndDatePlanned" class="text-danger"></span>
-            </div>
-        </div>
+                    <!-- BUDGET -->
+                    <div class="col-md-6">
+                        <label asp-for="Project.BudgetPlanned" class="form-label fw-semibold">Planned Budget (R)</label>
+                        <input asp-for="Project.BudgetPlanned" type="number" min="0" step="0.01" class="form-control form-control-lg rounded-3" placeholder="e.g. 150000.00" required />
+                        <span asp-validation-for="Project.BudgetPlanned" class="text-danger"></span>
+                    </div>
 
-        <button type="submit" class="btn btn-primary w-100">Create Project</button>
-    </form>
+                    <!-- STATUS -->
+                    <div class="col-md-6">
+                        <label asp-for="Project.Status" class="form-label fw-semibold">Status</label>
+                        <input asp-for="Project.Status" class="form-control form-control-lg rounded-3" readonly />
+                    </div>
+
+                    <!-- START DATE -->
+                    <div class="col-md-6">
+                        <label asp-for="Project.StartDate" class="form-label fw-semibold">Start Date</label>
+                        <input asp-for="Project.StartDate" type="date" class="form-control form-control-lg rounded-3" required />
+                        <span asp-validation-for="Project.StartDate" class="text-danger"></span>
+                    </div>
+
+                    <!-- END DATE -->
+                    <div class="col-md-6">
+                        <label asp-for="Project.EndDatePlanned" class="form-label fw-semibold">Planned End Date</label>
+                        <input asp-for="Project.EndDatePlanned" type="date" class="form-control form-control-lg rounded-3" required />
+                        <span asp-validation-for="Project.EndDatePlanned" class="text-danger"></span>
+                    </div>
+
+                    <!-- DESCRIPTION -->
+                    <div class="col-12">
+                        <label asp-for="Project.Description" class="form-label fw-semibold">Description</label>
+                        <textarea asp-for="Project.Description" class="form-control form-control-lg rounded-3" rows="4" placeholder="Briefly describe the project goals, scope, and deliverables..."></textarea>
+                        <span asp-validation-for="Project.Description" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- ACTION BUTTONS -->
+                <div class="text-center mt-5">
+                    <a asp-action="Dashboard" class="btn btn-outline-secondary btn-lg px-5 me-3 rounded-3">
+                        <i class="bi bi-arrow-left-circle"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-warning btn-lg text-dark px-5 fw-bold rounded-3 shadow-sm">
+                        <i class="bi bi-check2-circle"></i> Create Project
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 @section Scripts {

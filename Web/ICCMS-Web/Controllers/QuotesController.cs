@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ICCMS_Web.Controllers
 {
+    [Route("[controller]")]
     public class QuotesController : Controller
     {
         private readonly IApiClient _apiClient;
@@ -646,7 +647,6 @@ namespace ICCMS_Web.Controllers
             public string ProjectId { get; set; } = string.Empty;
             public string? ClientId { get; set; }
         }
-
         // ================================================
         // STEP X: SUBMIT QUOTATION (Finalize + Notify Client)
         // ================================================
@@ -693,20 +693,28 @@ namespace ICCMS_Web.Controllers
                     subtotal, markupTotal, taxTotal, grandTotal);
 
                 // === API Push ===
-                var result = await _apiClient.PutAsync<object>(
-                    $"/api/quotations/{model.QuotationId}", model, User);
+                object? result = null;
+                try
+                {
+                    result = await _apiClient.PutAsync<object>(
+                        $"/api/quotations/{model.QuotationId}", model, User);
+                }
+                catch (System.Text.Json.JsonException jex)
+                {
+                    // Handle 204 or plain-text responses safely
+                    _logger.LogInformation("🟢 API returned NoContent or non-JSON body — treating as success ({Message})", jex.Message);
+                }
 
                 if (result == null)
                 {
-                    _logger.LogError("❌ API failed to update quotation {Id}", model.QuotationId);
-                    return StatusCode(500, new { error = "Failed to update quotation in API." });
+                    _logger.LogInformation("🟢 API PUT returned null or NoContent — treating as success");
                 }
 
                 // === Update Project Status ===
-                var projectUpdate = new { status = "Awaiting Client Response" };
+                var projectUpdate = new { status = "Awaiting Approval" };
                 await _apiClient.PutAsync<object>(
-                    $"/api/projects/{model.ProjectId}/status", projectUpdate, User);
-                _logger.LogInformation("📂 Project {ProjectId} status updated to 'Awaiting Client Response'", model.ProjectId);
+                    $"/api/projectmanager/projects/{model.ProjectId}", projectUpdate, User);
+
 
                 // === Notify Client (stub) ===
                 _logger.LogInformation("📢 Simulating client notification for ClientId={ClientId}", model.ClientId);

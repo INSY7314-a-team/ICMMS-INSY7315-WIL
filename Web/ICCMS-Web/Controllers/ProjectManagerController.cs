@@ -50,7 +50,7 @@ namespace ICCMS_Web.Controllers
 
             var recentProjects = allProjects
                 .OrderByDescending(p => p.StartDate)
-                .Take(5)
+                .Take(50)
                 .ToList();
 
             _logger.LogInformation("✅ [Dashboard] Projects loaded successfully. Total: {CountTotal}, Recent: {CountRecent}",
