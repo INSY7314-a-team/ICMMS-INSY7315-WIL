@@ -7,8 +7,10 @@
 @await Html.PartialAsync("_QuoteBuilder")
 
 <div class="container mt-4">
-    <h2 class="fw-bold mb-3">🧱 Project Manager Dashboard (Simplified)</h2>
-    <p class="text-muted mb-4">Basic view for development and Quote Builder testing.</p>
+    <h2 class="fw-bold mb-3">🧱 Project Manager Dashboard</h2>
+    <p class="text-muted mb-4">
+        Manage projects, build quotations, and track client responses.
+    </p>
 
     <a href="@Url.Action("CreateProject", "ProjectManager")" class="btn btn-dark mb-3">
         <i class="fas fa-plus-circle me-1"></i> New Project
@@ -16,66 +18,143 @@
 
     @if (Model.RecentProjects != null && Model.RecentProjects.Any())
     {
-        <table class="table table-bordered table-hover align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Project Name</th>
-                    <th>Status</th>
-                    <th>Start</th>
-                    <th>End</th>
-                    <th>Budget (R)</th>
-                    <th>Client</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var project in Model.RecentProjects)
-                {
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="table-light">
                     <tr>
-                        <td>@project.Name</td>
-                        <td>@project.Status</td>
-                        <td>@project.StartDate.ToString("yyyy-MM-dd")</td>
-                        <td>@project.EndDatePlanned.ToString("yyyy-MM-dd")</td>
-                        <td>@project.BudgetPlanned.ToString("N2")</td>
-                        <td>@project.ClientId</td>
-                        <td>
-                            <button class="btn btn-sm btn-warning fw-bold"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#quoteBuilderModal"
-                                    data-project-id="@project.ProjectId"
-                                    data-project-name="@project.Name"
-                                    data-description="@project.Description"
-                                    data-client-id="@project.ClientId"
-                                    data-contractor-id="@User.FindFirst("UserId")?.Value">
-                                <i class="fas fa-file-invoice-dollar me-1"></i> Build Quote
-                            </button>
-                        </td>
+                        <th>Project</th>
+                        <th>Status</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Budget (R)</th>
+                        <th>Client</th>
+                        <th>Quotes</th>
+                        <th class="text-center">Actions</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var project in Model.RecentProjects)
+                    {
+                        // 🔍 Match client for this project
+                        var client = Model.Clients.FirstOrDefault(c => c.UserId == project.ClientId);
+                        var clientName = client?.FullName ?? "Unknown Client";
+
+                        // 🔍 Find all quotes linked to this project
+                        var projectQuotes = Model.AllQuotes
+                            .Where(q => q.ProjectId == project.ProjectId)
+                            .OrderByDescending(q => q.CreatedAt)
+                            .ToList();
+
+                        var quoteCount = projectQuotes.Count;
+                        var statuses = quoteCount > 0
+                            ? string.Join(", ", projectQuotes.Select(q => q.Status))
+                            : "None";
+
+                        var latestQuote = projectQuotes.FirstOrDefault();
+                        var latestStatus = latestQuote?.Status ?? "None";
+
+                        <tr>
+                            <td class="fw-semibold">@project.Name</td>
+
+                            <!-- Status badge -->
+                            <td>
+                                @if (project.Status == "Draft")
+                                {
+                                    <span class="badge bg-secondary">Draft</span>
+                                }
+                                else if (project.Status == "AwaitingClientResponse")
+                                {
+                                    <span class="badge bg-warning text-dark">Quote Sent</span>
+                                }
+                                else if (project.Status == "QuoteAccepted")
+                                {
+                                    <span class="badge bg-success">Accepted</span>
+                                }
+                                else if (project.Status == "Active")
+                                {
+                                    <span class="badge bg-primary">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-light text-dark">@project.Status</span>
+                                }
+                            </td>
+
+                            <td>@project.StartDate.ToString("yyyy-MM-dd")</td>
+                            <td>@project.EndDatePlanned.ToString("yyyy-MM-dd")</td>
+                            <td>@project.BudgetPlanned.ToString("N2")</td>
+
+                            <!-- Client -->
+                            <td>
+                                <span class="fw-semibold">@clientName</span><br />
+                                <small class="text-muted">(@project.ClientId)</small>
+                            </td>
+
+                            <!-- Quotes -->
+                            <td>
+                                <span class="fw-semibold">Quotes (@quoteCount)</span><br />
+                                <small class="text-muted">@statuses</small>
+
+                                @if (latestStatus == "AwaitingClientResponse")
+                                {
+                                    <div class="text-muted fst-italic mt-1">Latest: Sent to Client</div>
+                                }
+                                else if (latestStatus == "ClientAccepted" || latestStatus == "QuoteAccepted")
+                                {
+                                    <div class="text-success fst-italic mt-1">Latest: Accepted</div>
+                                }
+                                else if (latestStatus == "Draft")
+                                {
+                                    <div class="text-secondary fst-italic mt-1">Latest: Draft</div>
+                                }
+                            </td>
+
+                            <!-- Actions -->
+                            <td class="text-center">
+                                @if (latestStatus == "ClientAccepted" || latestStatus == "QuoteAccepted")
+                                {
+                                    <a href="@Url.Action("SetupProject", "ProjectManager", new { id = project.ProjectId })"
+                                       class="btn btn-success btn-sm fw-bold">
+                                        <i class="fas fa-diagram-project me-1"></i> Set Up Project
+                                    </a>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-sm btn-warning fw-bold"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#quoteBuilderModal"
+                                            data-project-id="@project.ProjectId"
+                                            data-project-name="@project.Name"
+                                            data-description="@project.Description"
+                                            data-client-id="@project.ClientId"
+                                            data-contractor-id="@User.FindFirst("UserId")?.Value">
+                                        <i class="fas fa-file-invoice-dollar me-1"></i> Build Quote
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     }
     else
     {
         <div class="alert alert-info">
-            No projects available yet. Create one to begin testing.
+            No projects found. Create one to begin.
         </div>
     }
 </div>
 
 @section Scripts {
     <script src="~/js/quote-builder.js"></script>
-
     <script>
-        // Autofill modal fields when Build Quote button is clicked
         document.getElementById("quoteBuilderModal").addEventListener("show.bs.modal", function (event) {
             const button = event.relatedTarget;
             if (!button) return;
-
             document.getElementById("qb-projectId").value = button.dataset.projectId || "";
             document.getElementById("qb-clientId").value = button.dataset.clientId || "";
             document.getElementById("qb-contractorId").value = button.dataset.contractorId || "";
-
             console.log("🟢 Opening Quote Builder for:", button.dataset.projectName);
         });
     </script>

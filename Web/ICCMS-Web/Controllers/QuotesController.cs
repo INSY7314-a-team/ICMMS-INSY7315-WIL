@@ -1,6 +1,10 @@
 using ICCMS_Web.Models;
 using ICCMS_Web.Services;
 using Microsoft.AspNetCore.Mvc;
+using DinkToPdf;
+using DinkToPdf.Contracts;
+using System.Text;
+
 
 namespace ICCMS_Web.Controllers
 {
@@ -14,6 +18,12 @@ namespace ICCMS_Web.Controllers
         {
             _apiClient = apiClient;
             _logger = logger;
+        }
+        private readonly IConverter _pdfConverter;
+        public QuotesController(IWebHostEnvironment env, IConverter pdfConverter)
+        {
+            _env = env;
+            _pdfConverter = pdfConverter;
         }
 
         // ============================
@@ -648,93 +658,94 @@ namespace ICCMS_Web.Controllers
             public string? ClientId { get; set; }
         }
         // ================================================
-        // STEP X: SUBMIT QUOTATION (Finalize + Notify Client)
+        // STEP X: SUBMIT QUOTATION (Create + Approve + Send)
         // ================================================
         [HttpPost("submit-quotation")]
         public async Task<IActionResult> SubmitQuotation([FromBody] QuotationDto model)
         {
-            _logger.LogInformation("📨 [SubmitQuotation] Start for QuotationId={QuotationId}", model.QuotationId);
+            _logger.LogInformation("📨 [SubmitQuotation] Start | ProjectId={ProjectId} | ClientId={ClientId}",
+                model.ProjectId, model.ClientId);
 
             try
             {
-                // === Validation ===
+                // === VALIDATION ===
                 if (string.IsNullOrWhiteSpace(model.ProjectId) || string.IsNullOrWhiteSpace(model.ClientId))
-                {
-                    _logger.LogWarning("⚠️ Missing ProjectId or ClientId in quotation submission");
                     return BadRequest(new { error = "Missing required project or client information." });
-                }
 
                 if (model.Items == null || !model.Items.Any())
-                {
-                    _logger.LogWarning("⚠️ Attempted submission with no line items.");
                     return BadRequest(new { error = "Quotation must contain at least one item." });
+
+                // === SANITIZATION ===
+                model.Description ??= "AI-generated estimate from blueprint";
+                model.ContractorId ??= User.FindFirst("UserId")?.Value ?? "unknown";
+                model.IsAiGenerated = true;
+                model.ValidUntil = DateTime.UtcNow.AddDays(30);
+
+                // === NORMALIZE RATES ===
+                double markupRate = model.MarkupRate / 100.0;
+
+                // === CALCULATIONS ===
+                double subtotal = 0, taxTotal = 0;
+                foreach (var item in model.Items)
+                {
+                    item.LineTotal = item.Quantity * item.UnitPrice;
+                    subtotal += item.LineTotal;
+                    double itemTaxRate = item.TaxRate / 100.0;
+                    taxTotal += (item.LineTotal * markupRate) * itemTaxRate;
                 }
 
-                // === Totals Calculation ===
-                double subtotal = model.Items.Sum(i => i.Quantity * i.UnitPrice);
-
-                // 🧮 Use item-level TaxRate (average if mixed)
-                double avgTaxRate = model.Items.Average(i => i.TaxRate);
-                double taxTotal = subtotal * (avgTaxRate / 100);
-
-                // 🧮 Apply markup before tax (markupRate stored as percentage)
-                double markupTotal = subtotal * (model.MarkupRate / 100);
-
+                double markupTotal = subtotal * markupRate;
                 double grandTotal = subtotal + markupTotal + taxTotal;
 
                 model.Subtotal = subtotal;
                 model.TaxTotal = taxTotal;
                 model.GrandTotal = grandTotal;
                 model.Total = grandTotal;
-                model.Status = "AwaitingClientResponse";
+                model.Status = "Draft";
+                model.CreatedAt = DateTime.UtcNow;
                 model.UpdatedAt = DateTime.UtcNow;
 
-                _logger.LogInformation("💰 Calculated Totals → Subtotal={Subtotal}, Markup={Markup}, Tax={Tax}, Grand={Grand}",
+                _logger.LogInformation("💰 Totals Calculated | Subtotal={Subtotal}, Markup={MarkupTotal}, Tax={TaxTotal}, Grand={GrandTotal}",
                     subtotal, markupTotal, taxTotal, grandTotal);
 
-                // === API Push ===
-                object? result = null;
-                try
-                {
-                    result = await _apiClient.PutAsync<object>(
-                        $"/api/quotations/{model.QuotationId}", model, User);
-                }
-                catch (System.Text.Json.JsonException jex)
-                {
-                    // Handle 204 or plain-text responses safely
-                    _logger.LogInformation("🟢 API returned NoContent or non-JSON body — treating as success ({Message})", jex.Message);
-                }
+                // === CREATE IN FIRESTORE ===
+                string? quotationId = await _apiClient.PostAsync<string>("/api/quotations", model, User);
+                if (string.IsNullOrWhiteSpace(quotationId))
+                    return StatusCode(500, new { error = "Quotation creation failed. No ID returned." });
 
-                if (result == null)
-                {
-                    _logger.LogInformation("🟢 API PUT returned null or NoContent — treating as success");
-                }
+                _logger.LogInformation("✅ Created quotation ID={QuotationId}", quotationId);
 
-                // === Update Project Status ===
-                var projectUpdate = new { status = "Awaiting Approval" };
-                await _apiClient.PutAsync<object>(
-                    $"/api/projectmanager/projects/{model.ProjectId}", projectUpdate, User);
+                // === STEP 1: SUBMIT FOR APPROVAL ===
+                _logger.LogInformation("📤 Submitting quotation {Id} for approval...", quotationId);
+                await _apiClient.PostAsync<object>($"/api/quotations/{quotationId}/submit-for-approval", null, User);
 
+                // === STEP 2: PM APPROVAL ===
+                _logger.LogInformation("🧾 Approving quotation {Id}...", quotationId);
+                await _apiClient.PostAsync<object>($"/api/quotations/{quotationId}/pm-approve", null, User);
 
-                // === Notify Client (stub) ===
-                _logger.LogInformation("📢 Simulating client notification for ClientId={ClientId}", model.ClientId);
+                // === STEP 3: SEND TO CLIENT ===
+                _logger.LogInformation("📩 Sending quotation {Id} to client...", quotationId);
+                await _apiClient.PostAsync<object>($"/api/quotations/{quotationId}/send-to-client", null, User);
+                model.Status = "SentToClient";
 
-                // === Return Success Response ===
+                _logger.LogInformation("✅ Quotation {Id} fully processed: Draft → Approval → SentToClient", quotationId);
+
                 return Ok(new
                 {
-                    message = "Quotation submitted successfully.",
-                    quotationId = model.QuotationId,
+                    message = "Quotation created, approved, and sent to client successfully.",
+                    quotationId,
                     status = model.Status
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🔥 Exception during SubmitQuotation for {QuotationId}", model.QuotationId);
+                _logger.LogError(ex, "🔥 Exception during SubmitQuotation for ProjectId={ProjectId}", model.ProjectId);
                 return StatusCode(500, new { error = ex.Message });
             }
         }
 
-        // ================================================
+
+       // ================================================
         // STEP: GetEstimateItems (for Quotation Prefill)
         // ================================================
         [HttpGet]

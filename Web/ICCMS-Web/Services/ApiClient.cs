@@ -51,7 +51,7 @@ namespace ICCMS_Web.Services
             var tempData = _tempDataFactory.GetTempData(context);
             tempData["AuthErrorMessage"] = "Your session has expired. Please sign in again.";
 
-            context.Response.Redirect("/Account/Login");
+            context.Response.Redirect("/Auth/Login");
         }
 
         // ===========================================================

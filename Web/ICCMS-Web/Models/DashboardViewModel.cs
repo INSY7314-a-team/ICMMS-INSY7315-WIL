@@ -26,5 +26,8 @@ namespace ICCMS_Web.Models
         public Dictionary<string, List<ProjectTaskDto>> PhaseTasks { get; set; } = new(); // key = PhaseId
         public Dictionary<string, EstimateDto>? ProjectEstimates { get; set; } = new();
 
+                // 🆕 Added for consistent client access (like CreateProject)
+        public List<UserDto> Clients { get; set; } = new();
+
     }
 }

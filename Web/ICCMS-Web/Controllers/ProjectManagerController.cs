@@ -33,71 +33,23 @@ namespace ICCMS_Web.Controllers
             _logger.LogInformation("=== [Dashboard] ENTERED ProjectManagerController.Dashboard ===");
             _logger.LogInformation("Active User: {UserName} | Role: ProjectManager", User.Identity?.Name);
 
-            var phaseDict = new Dictionary<string, List<PhaseDto>>();     // key = ProjectId
-            var taskDict = new Dictionary<string, List<ProjectTaskDto>>(); // key = PhaseId
+            var vm = new DashboardViewModel(); // ✅ Initialize early
+
+            var phaseDict = new Dictionary<string, List<PhaseDto>>();
+            var taskDict = new Dictionary<string, List<ProjectTaskDto>>();
 
             // ===============================================================
             // 📦 2. FETCH PROJECTS
             // ===============================================================
-            _logger.LogInformation("=== [Dashboard] Fetching Projects from API endpoint /api/projectmanager/projects ===");
+            var allProjects = await _apiClient.GetAsync<List<ProjectDto>>("/api/projectmanager/projects", User) ?? new();
+            var recentProjects = allProjects.OrderByDescending(p => p.StartDate).Take(50).ToList();
 
-            var allProjects = await _apiClient.GetAsync<List<ProjectDto>>("/api/projectmanager/projects", User);
-            if (allProjects == null)
-            {
-                _logger.LogWarning("⚠️ API returned null for project list — initializing empty list.");
-                allProjects = new List<ProjectDto>();
-            }
-
-            var recentProjects = allProjects
-                .OrderByDescending(p => p.StartDate)
-                .Take(50)
-                .ToList();
-
-            _logger.LogInformation("✅ [Dashboard] Projects loaded successfully. Total: {CountTotal}, Recent: {CountRecent}",
-                allProjects.Count, recentProjects.Count);
+            _logger.LogInformation("✅ [Dashboard] Projects loaded: {Count}", allProjects.Count);
 
             // ===============================================================
-            // 🧩 3. FETCH PHASES AND TASKS FOR EACH PROJECT
+            // 💬 3. FETCH QUOTATIONS
             // ===============================================================
-            _logger.LogInformation("=== [Dashboard] Fetching phases and tasks for each project ===");
-
-            foreach (var project in allProjects)
-            {
-                _logger.LogInformation("➡️ Processing Project: {ProjectName} ({ProjectId})", project.Name, project.ProjectId);
-
-                var phases = await _apiClient.GetAsync<List<PhaseDto>>(
-                    $"/api/projectmanager/project/{project.ProjectId}/phases", User) ?? new List<PhaseDto>();
-                phaseDict[project.ProjectId] = phases;
-
-                _logger.LogInformation("✅ Retrieved {Count} phases for Project {ProjectId}", phases.Count, project.ProjectId);
-
-                foreach (var phase in phases)
-                {
-                    _logger.LogInformation("🔍 Fetching tasks for Phase: {PhaseName} ({PhaseId})", phase.Name, phase.PhaseId);
-
-                    var allProjectTasks = await _apiClient.GetAsync<List<ProjectTaskDto>>(
-                        $"/api/projectmanager/project/{project.ProjectId}/tasks", User) ?? new List<ProjectTaskDto>();
-
-                    var phaseTasks = allProjectTasks.Where(t => t.PhaseId == phase.PhaseId).ToList();
-                    taskDict[phase.PhaseId] = phaseTasks;
-
-                    _logger.LogInformation("✅ Phase {PhaseName} ({PhaseId}) has {CountTasks} tasks linked",
-                        phase.Name, phase.PhaseId, phaseTasks.Count);
-                }
-            }
-
-            _logger.LogInformation("=== [Dashboard] Completed fetching lifecycle data ===");
-            _logger.LogInformation("Summary → Projects: {ProjCount}, Total Phases: {PhaseCount}, Total Tasks: {TaskCount}",
-                allProjects.Count,
-                phaseDict.Values.Sum(list => list.Count),
-                taskDict.Values.Sum(list => list.Count));
-
-            // ===============================================================
-            // 💬 4. FETCH QUOTATIONS
-            // ===============================================================
-            _logger.LogInformation("=== [Dashboard] Fetching Quotations from /api/quotations ===");
-            var allQuotes = await _apiClient.GetAsync<List<QuotationDto>>("/api/quotations", User) ?? new List<QuotationDto>();
-
+            var allQuotes = await _apiClient.GetAsync<List<QuotationDto>>("/api/quotations", User) ?? new();
             var acceptedQuotes = allQuotes
                 .Where(q => q.Status.Equals("ClientAccepted", StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(q => q.ApprovedAt ?? q.CreatedAt)
@@ -108,69 +60,77 @@ namespace ICCMS_Web.Controllers
                 allQuotes.Count, acceptedQuotes.Count);
 
             // ===============================================================
-            // 👥 5. FETCH CLIENTS
+            // 👥 4. FETCH CLIENTS
             // ===============================================================
             _logger.LogInformation("=== [Dashboard] Fetching Clients from /api/users/clients ===");
-            var allClients = await _apiClient.GetAsync<List<UserDto>>("/api/users/clients", User) ?? new List<UserDto>();
-            var recentClients = allClients.Take(5).ToList();
+
+            var allClients = await _apiClient.GetAsync<List<UserDto>>("/api/users/clients", User) ?? new();
+            vm.Clients = allClients; // ✅ Now this works because vm exists
+            vm.TotalClients = allClients.Count;
+            vm.RecentClients = allClients.Take(5).ToList();
+
             _logger.LogInformation("✅ Clients loaded. Total: {Count}", allClients.Count);
 
             // ===============================================================
-            // 🧰 6. FETCH CONTRACTORS
+            // 🧰 5. FETCH CONTRACTORS
             // ===============================================================
-            _logger.LogInformation("=== [Dashboard] Fetching Contractors from /api/users/contractors ===");
-            var allContractors = await _apiClient.GetAsync<List<UserDto>>("/api/users/contractors", User) ?? new List<UserDto>();
+            var allContractors = await _apiClient.GetAsync<List<UserDto>>("/api/users/contractors", User) ?? new();
             var recentContractors = allContractors.Take(5).ToList();
+
             _logger.LogInformation("✅ Contractors loaded. Total: {Count}", allContractors.Count);
 
             // ===============================================================
-            // 🧠 7. BUILD FINAL VIEW MODEL
+            // 🧩 6. FETCH PHASES + TASKS
             // ===============================================================
-            _logger.LogInformation("=== [Dashboard] Constructing DashboardViewModel ===");
-
-            var vm = new DashboardViewModel
+            foreach (var project in allProjects)
             {
-                TotalProjects = allProjects.Count,
-                RecentProjects = recentProjects,
+                var phases = await _apiClient.GetAsync<List<PhaseDto>>(
+                    $"/api/projectmanager/project/{project.ProjectId}/phases", User) ?? new();
 
-                TotalQuotes = allQuotes.Count,
-                RecentAcceptedQuotes = acceptedQuotes,
-                AllQuotes = allQuotes,
+                phaseDict[project.ProjectId] = phases;
 
-                TotalClients = allClients.Count,
-                RecentClients = recentClients,
+                foreach (var phase in phases)
+                {
+                    var allTasks = await _apiClient.GetAsync<List<ProjectTaskDto>>(
+                        $"/api/projectmanager/project/{project.ProjectId}/tasks", User) ?? new();
 
-                TotalContractors = allContractors.Count,
-                RecentContractors = recentContractors,
-
-                ProjectPhases = phaseDict,
-                PhaseTasks = taskDict
-            };
-
-            _logger.LogInformation("✅ DashboardViewModel ready: Projects={P}, Phases={Ph}, Tasks={T}, Clients={C}, Contractors={Co}",
-                vm.TotalProjects, vm.ProjectPhases.Values.Sum(x => x.Count), vm.PhaseTasks.Values.Sum(x => x.Count),
-                vm.TotalClients, vm.TotalContractors);
+                    var phaseTasks = allTasks.Where(t => t.PhaseId == phase.PhaseId).ToList();
+                    taskDict[phase.PhaseId] = phaseTasks;
+                }
+            }
 
             // ===============================================================
-            // 🧮 8. FETCH ESTIMATES + MAP TO VIEWMODEL
+            // 🧠 7. POPULATE VM
             // ===============================================================
-            _logger.LogInformation("=== [Dashboard] Fetching all estimates for mapping ===");
-            var allEstimates = await _apiClient.GetAsync<List<EstimateDto>>("/api/estimates", User) ?? new List<EstimateDto>();
+            vm.TotalProjects = allProjects.Count;
+            vm.RecentProjects = recentProjects;
+            vm.TotalQuotes = allQuotes.Count;
+            vm.RecentAcceptedQuotes = acceptedQuotes;
+            vm.AllQuotes = allQuotes;
+            vm.TotalContractors = allContractors.Count;
+            vm.RecentContractors = recentContractors;
+            vm.ProjectPhases = phaseDict;
+            vm.PhaseTasks = taskDict;
+
+            // ===============================================================
+            // 🧮 8. FETCH ESTIMATES
+            // ===============================================================
+            var allEstimates = await _apiClient.GetAsync<List<EstimateDto>>("/api/estimates", User) ?? new();
             var estimateDict = allEstimates
                 .Where(e => !string.IsNullOrEmpty(e.ProjectId))
                 .GroupBy(e => e.ProjectId)
                 .ToDictionary(g => g.Key, g => g.OrderByDescending(e => e.CreatedAt).First());
-
             vm.ProjectEstimates = estimateDict;
-            _logger.LogInformation("✅ Mapped {Count} projects with estimates", estimateDict.Count);
 
             // ===============================================================
-            // 🚀 9. RETURN FINALIZED DASHBOARD VIEW
+            // 🚀 9. RETURN
             // ===============================================================
-            _logger.LogInformation("=== [Dashboard] Rendering Project Manager Dashboard View ===");
-            _logger.LogInformation("=== [Dashboard] EXIT ===");
+            _logger.LogInformation("✅ DashboardViewModel ready: Projects={P}, Clients={C}, Contractors={Co}",
+                vm.TotalProjects, vm.TotalClients, vm.TotalContractors);
+
             return View(vm);
         }
+
 
         /// <summary>
         /// Displays form for creating a new project.

@@ -32,7 +32,9 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("🧠 Running AI Parser...");
       const projectId = document.getElementById("qb-projectId").value;
       const blueprintUrl = document.getElementById("qb-blueprintUrl").value;
-      if (!projectId || !blueprintUrl) return alert("Please provide a valid blueprint URL.");
+
+      if (!projectId || !blueprintUrl)
+        return alert("Please provide a valid blueprint URL.");
 
       document.getElementById("qb-aiProgress").classList.remove("d-none");
 
@@ -42,11 +44,22 @@ document.addEventListener("DOMContentLoaded", () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ projectId, blueprintUrl })
         });
+
         const data = await res.json();
         document.getElementById("qb-aiProgress").classList.add("d-none");
 
         if (!res.ok) throw new Error(data.error || "AI processing failed");
+
         console.log("✅ AI Estimate complete:", data);
+
+        // ✅ Store the estimateId globally for later use during quote submission
+        if (data.estimateId) {
+          window.latestEstimateId = data.estimateId;
+          console.log("📎 Saved estimateId for quote submission:", window.latestEstimateId);
+        } else {
+          console.warn("⚠️ No estimateId returned from CreateEstimate endpoint!");
+        }
+
         document.getElementById("qb-aiResult").classList.remove("d-none");
         renderItems(data.lineItems || []);
       } catch (err) {
@@ -61,16 +74,25 @@ document.addEventListener("DOMContentLoaded", () => {
     submitBtn.addEventListener("click", async () => {
       console.log("🚀 Submitting quotation...");
 
+      // Ensure we have an estimateId saved globally after AI parser
+      const estimateId = window.latestEstimateId || null;
+      if (!estimateId) {
+        console.warn("⚠️ No estimateId found. Make sure CreateEstimate completed before submitting quote.");
+      }
+
       const quote = {
         projectId: document.getElementById("qb-projectId").value,
         clientId: document.getElementById("qb-clientId").value,
         contractorId: document.getElementById("qb-contractorId").value,
-        markupRate: parseFloat(document.getElementById("qb-markupRate").value) || 0,
-        taxRate: parseFloat(document.getElementById("qb-taxRate").value) || 0,
-        items: collectItems()
+        estimateId: estimateId,
+        markupRate: (parseFloat(document.getElementById("qb-markupRate").value) || 0)/100,
+        taxRate: (parseFloat(document.getElementById("qb-taxRate").value) || 0),
+        items: collectItems(),
+        isAiGenerated: true,
+        description: "AI-generated estimate from blueprint"
       };
 
-      console.log("🧾 Payload:", quote);
+      console.log("🧾 Payload being submitted:", quote);
 
       try {
         const res = await fetch("/Quotes/submit-quotation", {
@@ -81,18 +103,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
         let data;
         try {
-        data = await res.json();
+          data = await res.json();
         } catch {
-        // Handle No Content or plain text
-        console.warn("⚠️ Empty or non-JSON response, treating as success.");
-        data = {};
+          console.warn("⚠️ Empty or non-JSON response, treating as success.");
+          data = {};
         }
 
         if (!res.ok) throw new Error(data.error || "Failed to submit quotation.");
 
-
         showToast("✅ Quotation submitted successfully!");
         console.log("✅ Quotation submitted:", data);
+
+        // Auto refresh to update dashboard
         setTimeout(() => window.location.reload(), 1200);
       } catch (err) {
         console.error("🔥 Submission error:", err);
@@ -135,9 +157,11 @@ function renderItems(items) {
   recalcTotals();
 }
 
-// Collect all rows into array of items
+/// ✅ Fixed Version
 function collectItems() {
   const rows = document.querySelectorAll("#qb-itemsTable tbody tr");
+  const taxRate = (parseFloat(document.getElementById("qb-taxRate").value) || 0) / 100;
+
   return Array.from(rows).map(r => ({
     name: r.querySelector('[data-field="name"]').value,
     description: r.querySelector('[data-field="description"]').value,
@@ -145,9 +169,11 @@ function collectItems() {
     unit: r.querySelector('[data-field="unit"]').value,
     quantity: parseFloat(r.querySelector(".qty-input").value) || 0,
     unitPrice: parseFloat(r.querySelector(".price-input").value) || 0,
-    lineTotal: parseFloat(r.querySelector(".line-total").value) || 0
+    lineTotal: parseFloat(r.querySelector(".line-total").value) || 0,
+    taxRate: taxRate // ✅ add normalized tax rate for each item
   }));
 }
+
 
 // Add listeners for recalculation and deletion
 function bindRecalc() {
