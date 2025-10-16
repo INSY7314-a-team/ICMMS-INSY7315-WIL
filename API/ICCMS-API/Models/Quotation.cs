@@ -29,6 +29,9 @@ namespace ICCMS_API.Models
         [FirestoreProperty("total")]
         public double Total { get; set; }
 
+        [FirestoreProperty("totalWithMarkup")]
+        public double TotalWithMarkup { get; set; }
+
         [FirestoreProperty("status")]
         public string Status { get; set; } = string.Empty;
 
@@ -53,6 +56,9 @@ namespace ICCMS_API.Models
 
         [FirestoreProperty("taxTotal")]
         public double TaxTotal { get; set; }
+
+        [FirestoreProperty("taxTotalWithMarkup")]
+        public double TaxTotalWithMarkup { get; set; }
 
         [FirestoreProperty("grandTotal")]
         public double GrandTotal { get; set; }

@@ -1,10 +1,10 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using ICCMS_API.Auth;
+using ICCMS_API.Helpers;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
-using ICCMS_API.Helpers;
-using ICCMS_API.Auth;
-using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ICCMS_API.Controllers
 {
@@ -16,7 +16,10 @@ namespace ICCMS_API.Controllers
         private readonly IFirebaseService _firebaseService;
         private readonly IQuoteWorkflowService _quoteWorkflow;
 
-        public QuotationsController(IFirebaseService firebaseService, IQuoteWorkflowService quoteWorkflow)
+        public QuotationsController(
+            IFirebaseService firebaseService,
+            IQuoteWorkflowService quoteWorkflow
+        )
         {
             _firebaseService = firebaseService;
             _quoteWorkflow = quoteWorkflow;
@@ -43,7 +46,10 @@ namespace ICCMS_API.Controllers
         {
             try
             {
-                var quotation = await _firebaseService.GetDocumentAsync<Quotation>("quotations", id);
+                var quotation = await _firebaseService.GetDocumentAsync<Quotation>(
+                    "quotations",
+                    id
+                );
                 if (quotation == null)
                     return NotFound();
                 return Ok(quotation);
@@ -72,12 +78,16 @@ namespace ICCMS_API.Controllers
 
         [HttpGet("maintenance/{maintenanceRequestId}")]
         [Authorize(Roles = "Project Manager,Admin,Tester")]
-        public async Task<ActionResult<List<Quotation>>> GetQuotationsByMaintenanceRequest(string maintenanceRequestId)
+        public async Task<ActionResult<List<Quotation>>> GetQuotationsByMaintenanceRequest(
+            string maintenanceRequestId
+        )
         {
             try
             {
                 var quotations = await _firebaseService.GetCollectionAsync<Quotation>("quotations");
-                var maintenanceQuotations = quotations.Where(q => q.MaintenanceRequestId == maintenanceRequestId).ToList();
+                var maintenanceQuotations = quotations
+                    .Where(q => q.MaintenanceRequestId == maintenanceRequestId)
+                    .ToList();
                 return Ok(maintenanceQuotations);
             }
             catch (Exception ex)
@@ -130,11 +140,11 @@ namespace ICCMS_API.Controllers
                 
                 // IMPORTANT: quotation.ClientId must be set to the client's UserId
                 quotation.Status ??= "Draft";
-                
+
                 // Set timestamps and defaults
                 quotation.CreatedAt = DateTime.UtcNow;
                 quotation.UpdatedAt = DateTime.UtcNow;
-                
+
                 // Validate ValidUntil
                 if (quotation.ValidUntil <= quotation.CreatedAt)
                 {
@@ -157,29 +167,38 @@ namespace ICCMS_API.Controllers
 
         [HttpPost("from-estimate/{estimateId}")]
         [Authorize(Roles = "Project Manager,Tester")]
-        public async Task<ActionResult<string>> CreateQuotationFromEstimate(string estimateId, [FromBody] CreateQuotationFromEstimateRequest request)
+        public async Task<ActionResult<string>> CreateQuotationFromEstimate(
+            string estimateId,
+            [FromBody] CreateQuotationFromEstimateRequest request
+        )
         {
             try
             {
-                var estimate = await _firebaseService.GetDocumentAsync<Estimate>("estimates", estimateId);
+                var estimate = await _firebaseService.GetDocumentAsync<Estimate>(
+                    "estimates",
+                    estimateId
+                );
                 if (estimate == null)
                     return NotFound("Estimate not found");
 
                 // Convert EstimateLineItems to QuotationItems
-                var quotationItems = estimate.LineItems.Select(item => new QuotationItem
-                {
-                    Name = item.Name,
-                    Quantity = item.Quantity,
-                    UnitPrice = item.UnitPrice,
-                    TaxRate = 0.15, // Default 15% VAT
-                    LineTotal = item.LineTotal
-                }).ToList();
+                var quotationItems = estimate
+                    .LineItems.Select(item => new QuotationItem
+                    {
+                        Name = item.Name,
+                        Quantity = item.Quantity,
+                        UnitPrice = item.UnitPrice,
+                        TaxRate = 0.15, // Default 15% VAT
+                        LineTotal = item.LineTotal,
+                    })
+                    .ToList();
 
                 // For testing purposes, use current user as client if in testing mode
                 var currentUserId = User.UserId();
-                var clientId = !string.IsNullOrEmpty(currentUserId) && currentUserId.Contains("tester") 
-                    ? currentUserId 
-                    : request.ClientId;
+                var clientId =
+                    !string.IsNullOrEmpty(currentUserId) && currentUserId.Contains("tester")
+                        ? currentUserId
+                        : request.ClientId;
 
                 var quotation = new Quotation
                 {
@@ -193,7 +212,7 @@ namespace ICCMS_API.Controllers
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                     Currency = estimate.Currency,
-                    IsAiGenerated = estimate.IsAiGenerated
+                    IsAiGenerated = estimate.IsAiGenerated,
                 };
 
                 // Calculate quotation totals
@@ -249,7 +268,8 @@ namespace ICCMS_API.Controllers
             try
             {
                 var quotation = await _quoteWorkflow.SubmitForApprovalAsync(id);
-                if (quotation == null) return NotFound();
+                if (quotation == null)
+                    return NotFound();
                 return Ok();
             }
             catch (InvalidOperationException ex)
@@ -270,7 +290,8 @@ namespace ICCMS_API.Controllers
             try
             {
                 var quotation = await _quoteWorkflow.PmApproveAsync(id);
-                if (quotation == null) return NotFound();
+                if (quotation == null)
+                    return NotFound();
                 return Ok();
             }
             catch (InvalidOperationException ex)
@@ -291,7 +312,8 @@ namespace ICCMS_API.Controllers
             try
             {
                 var quotation = await _quoteWorkflow.PmRejectAsync(id, request.Reason);
-                if (quotation == null) return NotFound();
+                if (quotation == null)
+                    return NotFound();
                 return Ok();
             }
             catch (InvalidOperationException ex)
@@ -312,7 +334,8 @@ namespace ICCMS_API.Controllers
             try
             {
                 var quotation = await _quoteWorkflow.SendToClientAsync(id);
-                if (quotation == null) return NotFound();
+                if (quotation == null)
+                    return NotFound();
                 return Ok();
             }
             catch (InvalidOperationException ex)
@@ -328,46 +351,56 @@ namespace ICCMS_API.Controllers
         // Client decision — Client only + ownership (ClientId == UserId)
         [HttpPost("{id}/client-decision")]
         [Authorize(Roles = "Client,Tester")]
-        public async Task<IActionResult> ClientDecision(string id, [FromBody] ClientDecisionBody body)
+        public async Task<IActionResult> ClientDecision(
+            string id,
+            [FromBody] ClientDecisionBody body
+        )
         {
             try
             {
                 // First check ownership
-                var quotation = await _firebaseService.GetDocumentAsync<Quotation>("quotations", id);
-                if (quotation == null) return NotFound();
+                var quotation = await _firebaseService.GetDocumentAsync<Quotation>(
+                    "quotations",
+                    id
+                );
+                if (quotation == null)
+                    return NotFound();
 
                 var myId = User.UserId();
-                
+
                 // Debug all claims
                 Console.WriteLine($"Client Decision - All Claims:");
                 foreach (var claim in User.Claims)
                 {
                     Console.WriteLine($"  {claim.Type}: {claim.Value}");
                 }
-                
+
                 Console.WriteLine($"Client Decision - Current User ID: {myId}");
                 Console.WriteLine($"Client Decision - Quotation Client ID: {quotation.ClientId}");
-                
+
                 // Bypass ownership check for tester users during testing
                 var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
                 Console.WriteLine($"Client Decision - User Email: {userEmail}");
                 var isTester = !string.IsNullOrEmpty(userEmail) && userEmail.Contains("tester");
-                var isOwner = !string.IsNullOrEmpty(myId) && string.Equals(quotation.ClientId, myId, StringComparison.OrdinalIgnoreCase);
-                
+                var isOwner =
+                    !string.IsNullOrEmpty(myId)
+                    && string.Equals(quotation.ClientId, myId, StringComparison.OrdinalIgnoreCase);
+
                 Console.WriteLine($"Client Decision - Is Tester: {isTester}");
                 Console.WriteLine($"Client Decision - Is Owner: {isOwner}");
-                
+
                 if (!isTester && !isOwner)
                 {
                     Console.WriteLine("Client Decision - Access denied: Not tester and not owner");
                     return Forbid();
                 }
-                
+
                 Console.WriteLine("Client Decision - Access granted");
 
                 // Use workflow service for the decision
                 var result = await _quoteWorkflow.ClientDecisionAsync(id, body.Accept, body.Note);
-                if (result == null) return NotFound();
+                if (result == null)
+                    return NotFound();
                 return Ok();
             }
             catch (InvalidOperationException ex)
@@ -387,7 +420,8 @@ namespace ICCMS_API.Controllers
             try
             {
                 var result = await _quoteWorkflow.ConvertToInvoiceAsync(id);
-                if (result == null) return NotFound();
+                if (result == null)
+                    return NotFound();
                 return Ok(result.Value.invoiceId);
             }
             catch (InvalidOperationException ex)
@@ -404,7 +438,10 @@ namespace ICCMS_API.Controllers
         [HttpPost("{id}/submit-for-admin")]
         public IActionResult SubmitForAdminDeprecated(string id)
         {
-            return StatusCode(410, "This endpoint has been deprecated. Use /submit-for-approval instead.");
+            return StatusCode(
+                410,
+                "This endpoint has been deprecated. Use /submit-for-approval instead."
+            );
         }
 
         [HttpPost("{id}/admin-approve")]
