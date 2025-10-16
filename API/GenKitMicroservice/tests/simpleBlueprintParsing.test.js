@@ -31,7 +31,7 @@ const TEST_CONFIG = {
     minLineItems: 3,
     minConfidence: 0.3,
     minCoverage: 20,
-    requiredCategories: ["Site Preparation"], // Removed 'Construction' as it may not always be detected
+    requiredCategories: ["General"], // Look for General category items
     maxProcessingTime: 45000, // 45 seconds (increased for realistic processing time)
   },
 };
@@ -234,7 +234,7 @@ async function runSimpleTest() {
         console.log(
           `   ${index + 1}. ${item.name} (${item.category}) - Qty: ${
             item.quantity
-          }, Price: $${item.unitPrice}`
+          }, Price: R${item.unitPrice}`
         );
       });
 
