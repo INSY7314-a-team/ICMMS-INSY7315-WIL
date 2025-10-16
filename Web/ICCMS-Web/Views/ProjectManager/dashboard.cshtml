@@ -7,155 +7,162 @@
 @await Html.PartialAsync("_QuoteBuilder")
 
 <div class="container mt-4">
-    <h2 class="fw-bold mb-3">🧱 Project Manager Dashboard</h2>
-    <p class="text-muted mb-4">
-        Manage projects, build quotations, and track client responses.
-    </p>
+    <h2 class="fw-bold mb-2">🧱 Project Manager Dashboard</h2>
+    <p class="text-muted mb-4">Manage projects, build quotations, and track client responses.</p>
 
-    <a href="@Url.Action("CreateProject", "ProjectManager")" class="btn btn-dark mb-3">
+    <a href="@Url.Action("CreateProject", "ProjectManager")" class="btn btn-dark mb-4">
         <i class="fas fa-plus-circle me-1"></i> New Project
     </a>
 
-    @if (Model.RecentProjects != null && Model.RecentProjects.Any())
+    @if (Model.RecentProjects?.Any() == true)
     {
-        <div class="table-responsive">
-            <table class="table table-bordered table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>Project</th>
-                        <th>Status</th>
-                        <th>Start</th>
-                        <th>End</th>
-                        <th>Budget (R)</th>
-                        <th>Client</th>
-                        <th>Quotes</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var project in Model.RecentProjects)
-                    {
-                        // 🔍 Match client for this project
-                        var client = Model.Clients.FirstOrDefault(c => c.UserId == project.ClientId);
-                        var clientName = client?.FullName ?? "Unknown Client";
+        <div class="d-flex flex-column gap-3">
+            @foreach (var project in Model.RecentProjects)
+            {
+                var client = Model.Clients.FirstOrDefault(c => c.UserId == project.ClientId);
+                var clientName = client?.FullName ?? "Unknown Client";
 
-                        // 🔍 Find all quotes linked to this project
-                        var projectQuotes = Model.AllQuotes
-                            .Where(q => q.ProjectId == project.ProjectId)
-                            .OrderByDescending(q => q.CreatedAt)
-                            .ToList();
+                var projectQuotes = Model.AllQuotes
+                    .Where(q => q.ProjectId == project.ProjectId)
+                    .OrderByDescending(q => q.CreatedAt)
+                    .ToList();
 
-                        var quoteCount = projectQuotes.Count;
-                        var statuses = quoteCount > 0
-                            ? string.Join(", ", projectQuotes.Select(q => q.Status))
-                            : "None";
+                var quoteCount = projectQuotes.Count;
+                var latestQuote = projectQuotes.FirstOrDefault();
+                var latestStatus = latestQuote?.Status ?? "None";
+                var latestQuoteId = latestQuote?.QuotationId ?? string.Empty;
 
-                        var latestQuote = projectQuotes.FirstOrDefault();
-                        var latestStatus = latestQuote?.Status ?? "None";
+                <div class="p-3 rounded shadow-sm bg-white border-start border-4 border-primary">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="fw-bold mb-0">@project.Name</h5>
+                        <span class="badge bg-secondary">@project.Status</span>
+                    </div>
 
-                        <tr>
-                            <td class="fw-semibold">@project.Name</td>
+                    <p class="text-muted small mb-2">
+                        Client: <strong>@clientName</strong> &nbsp; • &nbsp;
+                        Start: @project.StartDate.ToString("yyyy-MM-dd") &nbsp; • &nbsp;
+                        End: @project.EndDatePlanned.ToString("yyyy-MM-dd") &nbsp; • &nbsp;
+                        Budget: R @project.BudgetPlanned.ToString("N0")
+                    </p>
 
-                            <!-- Status badge -->
-                            <td>
-                                @if (project.Status == "Draft")
-                                {
-                                    <span class="badge bg-secondary">Draft</span>
-                                }
-                                else if (project.Status == "AwaitingClientResponse")
-                                {
-                                    <span class="badge bg-warning text-dark">Quote Sent</span>
-                                }
-                                else if (project.Status == "QuoteAccepted")
-                                {
-                                    <span class="badge bg-success">Accepted</span>
-                                }
-                                else if (project.Status == "Active")
-                                {
-                                    <span class="badge bg-primary">Active</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-light text-dark">@project.Status</span>
-                                }
-                            </td>
+                    <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
+                        <span class="badge bg-info text-dark">
+                            Quotes: @quoteCount
+                        </span>
 
-                            <td>@project.StartDate.ToString("yyyy-MM-dd")</td>
-                            <td>@project.EndDatePlanned.ToString("yyyy-MM-dd")</td>
-                            <td>@project.BudgetPlanned.ToString("N2")</td>
+                        @if (quoteCount > 0)
+                        {
+                            var firstQuote = projectQuotes.First();
 
-                            <!-- Client -->
-                            <td>
-                                <span class="fw-semibold">@clientName</span><br />
-                                <small class="text-muted">(@project.ClientId)</small>
-                            </td>
+                            if (!string.IsNullOrEmpty(firstQuote.QuotationId))
+                            {
+                                <a href="@Url.Action("DownloadQuote", "Quotes", new { id = firstQuote.QuotationId })"
+                                   target="_blank"
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-file-earmark-pdf me-1"></i> Download Quote
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">(Quote ID missing)</span>
+                            }
 
-                            <!-- Quotes -->
-                            <td>
-                                <span class="fw-semibold">Quotes (@quoteCount)</span><br />
-                                <small class="text-muted">@statuses</small>
+                            <!-- Always show dev-only Simulate button -->
+                            <button type="button"
+                                    class="btn btn-outline-warning btn-sm"
+                                    onclick="simulateClientApproval('@(firstQuote.QuotationId ?? project.ProjectId)')">
+                                <i class="bi bi-person-check-fill me-1"></i> Simulate Client Approval
+                            </button>
+                        }
+                    </div>
 
-                                @if (latestStatus == "AwaitingClientResponse")
-                                {
-                                    <div class="text-muted fst-italic mt-1">Latest: Sent to Client</div>
-                                }
-                                else if (latestStatus == "ClientAccepted" || latestStatus == "QuoteAccepted")
-                                {
-                                    <div class="text-success fst-italic mt-1">Latest: Accepted</div>
-                                }
-                                else if (latestStatus == "Draft")
-                                {
-                                    <div class="text-secondary fst-italic mt-1">Latest: Draft</div>
-                                }
-                            </td>
-
-                            <!-- Actions -->
-                            <td class="text-center">
-                                @if (latestStatus == "ClientAccepted" || latestStatus == "QuoteAccepted")
-                                {
-                                    <a href="@Url.Action("SetupProject", "ProjectManager", new { id = project.ProjectId })"
-                                       class="btn btn-success btn-sm fw-bold">
-                                        <i class="fas fa-diagram-project me-1"></i> Set Up Project
-                                    </a>
-                                }
-                                else
-                                {
-                                    <button class="btn btn-sm btn-warning fw-bold"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#quoteBuilderModal"
-                                            data-project-id="@project.ProjectId"
-                                            data-project-name="@project.Name"
-                                            data-description="@project.Description"
-                                            data-client-id="@project.ClientId"
-                                            data-contractor-id="@User.FindFirst("UserId")?.Value">
-                                        <i class="fas fa-file-invoice-dollar me-1"></i> Build Quote
-                                    </button>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                    <div class="mt-2">
+                        @if (latestStatus == "ClientAccepted" || latestStatus == "QuoteAccepted")
+                        {
+                            <a href="@Url.Action("SetupProject", "ProjectManager", new { id = project.ProjectId })"
+                               class="btn btn-success btn-sm fw-bold">
+                                <i class="fas fa-diagram-project me-1"></i> Set Up Project
+                            </a>
+                        }
+                        else
+                        {
+                            <button class="btn btn-warning btn-sm fw-bold"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#quoteBuilderModal"
+                                    data-project-id="@project.ProjectId"
+                                    data-project-name="@project.Name"
+                                    data-description="@project.Description"
+                                    data-client-id="@project.ClientId"
+                                    data-contractor-id="@User.FindFirst("UserId")?.Value">
+                                <i class="fas fa-file-invoice-dollar me-1"></i> Build Quote
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
         </div>
     }
     else
     {
-        <div class="alert alert-info">
-            No projects found. Create one to begin.
-        </div>
+        <div class="alert alert-info">No projects found. Create one to begin.</div>
     }
 </div>
 
 @section Scripts {
     <script src="~/js/quote-builder.js"></script>
+
     <script>
-        document.getElementById("quoteBuilderModal").addEventListener("show.bs.modal", function (event) {
-            const button = event.relatedTarget;
-            if (!button) return;
-            document.getElementById("qb-projectId").value = button.dataset.projectId || "";
-            document.getElementById("qb-clientId").value = button.dataset.clientId || "";
-            document.getElementById("qb-contractorId").value = button.dataset.contractorId || "";
-            console.log("🟢 Opening Quote Builder for:", button.dataset.projectName);
-        });
+        // Inject project data into Quote Builder modal
+        document.getElementById("quoteBuilderModal")
+            .addEventListener("show.bs.modal", function (event) {
+                const btn = event.relatedTarget;
+                if (!btn) return;
+                document.getElementById("qb-projectId").value = btn.dataset.projectId || "";
+                document.getElementById("qb-clientId").value = btn.dataset.clientId || "";
+                document.getElementById("qb-contractorId").value = btn.dataset.contractorId || "";
+                console.log("🟢 Opening Quote Builder for:", btn.dataset.projectName);
+            });
+
+        // DEV-ONLY: simulate client approval
+        async function simulateClientApproval(quoteId) {
+        if (!quoteId) return alert("No quote ID found.");
+        if (!confirm("Simulate client approval for this quote?")) return;
+
+        try {
+            const res = await fetch(`/Quotes/simulate-client-approval/${quoteId}`, { method: "POST" });
+            if (!res.ok) throw new Error(`API error ${res.status}`);
+            showToast("✅ Simulated client approval successfully!");
+            setTimeout(() => window.location.reload(), 1000);
+        } catch (err) {
+            console.error("🔥 Simulate approval failed:", err);
+            showToast("❌ Failed to simulate approval.");
+        }
+        }
+
     </script>
 }
+
+<style>
+    /* === Dashboard Styling Improvements === */
+    body {
+        background-color: #f9fafc;
+    }
+
+    .card, .shadow-sm {
+        transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    .shadow-sm:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .badge {
+        font-size: 0.8rem;
+    }
+
+    .btn-sm {
+        font-size: 0.82rem;
+    }
+</style>
+

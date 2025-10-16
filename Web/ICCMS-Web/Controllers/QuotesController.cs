@@ -4,6 +4,13 @@ using Microsoft.AspNetCore.Mvc;
 using DinkToPdf;
 using DinkToPdf.Contracts;
 using System.Text;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+
+
+
 
 
 namespace ICCMS_Web.Controllers
@@ -13,20 +20,24 @@ namespace ICCMS_Web.Controllers
     {
         private readonly IApiClient _apiClient;
         private readonly ILogger<QuotesController> _logger;
+        private readonly IWebHostEnvironment _env;
+        private readonly IConverter _pdfConverter;
+        private readonly ICompositeViewEngine _viewEngine;
 
-        public QuotesController(IApiClient apiClient, ILogger<QuotesController> logger)
+        public QuotesController(
+            IApiClient apiClient,
+            ILogger<QuotesController> logger,
+            IWebHostEnvironment env,
+            IConverter pdfConverter,
+            ICompositeViewEngine viewEngine)
         {
             _apiClient = apiClient;
             _logger = logger;
-        }
-        private readonly IConverter _pdfConverter;
-        public QuotesController(IWebHostEnvironment env, IConverter pdfConverter)
-        {
             _env = env;
             _pdfConverter = pdfConverter;
+            _viewEngine = viewEngine;
         }
-
-        // ============================
+                // ============================
         // STEP 0: CREATE DRAFT
         // ============================
 
@@ -594,6 +605,35 @@ namespace ICCMS_Web.Controllers
             }
         }
 
+        // ============================
+        // STEP X: Download PDF (GET)
+        // ============================
+        [HttpGet("download/{id}")]
+        [Authorize(Roles = "Project Manager,Admin,Tester")]
+        public async Task<IActionResult> DownloadQuote(string id)
+        {
+            // 1️⃣ Get the quotation from API
+            var quote = await _apiClient.GetAsync<QuotationDto>($"/api/quotations/{id}", User);
+            if (quote == null) return NotFound("Quotation not found");
+
+            // 2️⃣ Render the Razor view to HTML
+            var html = await this.RenderViewAsync("~/Views/Quotes/QuotePdf.cshtml", quote, true);
+
+            // 3️⃣ Convert to PDF
+            var doc = new HtmlToPdfDocument()
+            {
+                GlobalSettings = new GlobalSettings
+                {
+                    PaperSize = PaperKind.A4,
+                    Orientation = Orientation.Portrait
+                },
+                Objects = { new ObjectSettings { HtmlContent = html } }
+            };
+            var pdf = _pdfConverter.Convert(doc);
+
+            // 4️⃣ Return as file
+            return File(pdf, "application/pdf", $"Quotation_{id}.pdf");
+        }
 
         // ================================================
         // STEP X: CREATE QUOTE FROM ESTIMATE (AUTO-PREFILL)
@@ -780,7 +820,33 @@ namespace ICCMS_Web.Controllers
 
 
 
+        private async Task<string> RenderViewAsync<T>(string viewName, T model, bool partial = false)
+        {
+            ViewData.Model = model;
+            using var sw = new StringWriter();
+            var viewResult = _viewEngine.FindView(ControllerContext, viewName, !partial);
+            if (viewResult.View == null)
+                throw new ArgumentNullException($"{viewName} not found");
+            var viewContext = new ViewContext(ControllerContext, viewResult.View, ViewData, TempData, sw, new HtmlHelperOptions());
+            await viewResult.View.RenderAsync(viewContext);
+            return sw.ToString();
+        }
 
+        [HttpPost("simulate-client-approval/{id}")]
+        [Authorize(Roles = "Project Manager,Tester")]
+        public async Task<IActionResult> SimulateClientApproval(string id)
+        {
+            try
+            {
+                var body = new { accept = true, note = "Simulated approval by tester" };
+                await _apiClient.PostAsync<object>($"/api/quotations/{id}/client-decision", body, User);
+                return Ok(new { message = "Simulated approval successful" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
 
 
 

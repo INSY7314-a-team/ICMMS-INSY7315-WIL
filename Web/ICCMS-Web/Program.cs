@@ -1,5 +1,8 @@
 using ICCMS_Web.Services;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using DinkToPdf;
+using DinkToPdf.Contracts;
+
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,6 +21,9 @@ builder.Services.AddSingleton<ITempDataDictionaryFactory, TempDataDictionaryFact
 
 // Login attempt tracking
 builder.Services.AddSingleton<ILoginAttemptService, LoginAttemptService>();
+
+//Register Dink To PDF for pdf
+builder.Services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));
 
 // MVC / Razor Views
 builder.Services.AddControllersWithViews();
