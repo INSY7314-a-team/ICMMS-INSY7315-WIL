@@ -1,158 +1,207 @@
-﻿<!DOCTYPE html>
+﻿@* ================================================
+   _Layout.cshtml — Protend-Style Responsive Shell
+   For ICCMS Web (Project Manager / Admin / Tester)
+   ================================================ *@
+<!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - ICCMS</title>
+
+    <!-- Core Styles -->
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/ICCMS_Web.styles.css" asp-append-version="true" />
-
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <style>
+        /* === BASIC LAYOUT === */
+        body {
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+            background: #f5f6fa;
+            transition: margin-left 0.3s ease;
+        }
+
+        /* === SIDEBAR === */
+        #sidebar {
+            width: 250px;
+            background: #212529;
+            color: #fff;
+            position: fixed;
+            top: 0; left: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s ease;
+            z-index: 200;
+        }
+        #sidebar.collapsed { width: 70px; }
+        #sidebar .brand {
+            font-weight: 700;
+            font-size: 1.3rem;
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        #sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex-grow: 1;
+        }
+        #sidebar ul li a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #ccc;
+            padding: 0.9rem 1rem;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        #sidebar ul li a:hover,
+        #sidebar ul li a.active {
+            background: #343a40;
+            color: #fff;
+        }
+        #sidebar ul li a i {
+            min-width: 20px;
+            text-align: center;
+        }
+
+        /* === TOGGLE ARROW === */
+        #sidebar-toggle {
+            background: none;
+            border: none;
+            color: #fff;
+            padding: 0.75rem;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: transform 0.3s ease;
+        }
+        #sidebar-toggle:hover { color: #ffc107; }
+        #sidebar.collapsed #sidebar-toggle i {
+            transform: rotate(180deg);
+        }
+
+        /* === HEADER === */
+        #main-header {
+            position: fixed;
+            top: 0; left: 250px;
+            right: 0;
+            height: 60px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            z-index: 100;
+            transition: left 0.3s ease;
+        }
+        #sidebar.collapsed + #main-header {
+            left: 70px;
+        }
+
+        /* === MAIN CONTENT === */
+        #content-area {
+            margin-left: 250px;
+            padding: 90px 2rem 2rem;
+            flex: 1;
+            transition: margin-left 0.3s ease;
+        }
+        #sidebar.collapsed ~ #content-area {
+            margin-left: 70px;
+        }
+
+        .alert {
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+    </style>
 </head>
 
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">ICCMS</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
-                    aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        @if (User.Identity.IsAuthenticated && User.IsInRole("Tester"))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Testing"
-                                    asp-action="Index">Testing</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="MessagesTest" asp-action="Index">
-                                    <i class="fas fa-comments"></i> Message Testing
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Testing"
-                                    asp-action="WorkflowTest">
-                                    <i class="fas fa-robot"></i> AI Workflow
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="AuditLogs" asp-action="Index">
-                                    <i class="fas fa-clipboard-list"></i> Audit Logs
-                                </a>
-                            </li>
-                        }
-                        @if (User.Identity.IsAuthenticated && User.IsInRole("Admin"))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Users"
-                                    asp-action="Index">Users</a>
-                            </li>
-                        }
-
-                        @if (User.Identity.IsAuthenticated && User.IsInRole("Project Manager") ||
-                                                User.IsInRole("Tester"))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="ProjectManager"
-                                    asp-action="Dashboard">Dashboard</a>
-                            </li>
-                        }
-                    </ul>
-                    <ul class="navbar-nav">
-                        @if (User.Identity.IsAuthenticated)
-                        {
-                            <li class="nav-item">
-                                <span class="nav-link text-dark">Welcome, @User.Identity.Name!</span>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Auth"
-                                    asp-action="Logout">Logout</a>
-                            </li>
-                        }
-                        else
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Auth" asp-action="Login">Login</a>
-                            </li>
-                        }
-                    </ul>
-                </div>
-            </div>
-        </nav>
-        @if (User.Identity.IsAuthenticated)
-        {
-            <div class="text-muted small">
-                Debug Info:
-                User: @User.Identity.Name |
-                Roles: @string.Join(", ", User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c
-                            => c.Value)) |
-            IsAdmin: @User.IsInRole("Admin") |
-            IsTester: @User.IsInRole("Tester")
-        </div>
+    <!-- ===== SIDEBAR ===== -->
+    <aside id="sidebar">
+        <div class="brand">ICCMS</div>
+        <ul>
+            @if (User.Identity.IsAuthenticated)
+            {
+                if (User.IsInRole("ProjectManager") || User.IsInRole("Tester"))
+                {
+                    <li><a asp-controller="ProjectManager" asp-action="Dashboard"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a></li>
                 }
+                if (User.IsInRole("Admin"))
+                {
+                    <li><a asp-controller="Users" asp-action="Index"><i class="fa-solid fa-users"></i><span>Users</span></a></li>
+                }
+                if (User.IsInRole("Tester"))
+                {
+                    <li><a asp-controller="Testing" asp-action="Index"><i class="fa-solid fa-flask"></i><span>Testing</span></a></li>
+                    <li><a asp-controller="MessagesTest" asp-action="Index"><i class="fa-solid fa-comments"></i><span>Message Test</span></a></li>
+                }
+            }
+        </ul>
+        <button id="sidebar-toggle"><i class="fa-solid fa-chevron-left"></i></button>
+    </aside>
+
+    <!-- ===== HEADER ===== -->
+    <header id="main-header">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-layer-group text-warning"></i>
+            <h5 class="m-0 fw-bold">@ViewData["Title"]</h5>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+            @if (User.Identity.IsAuthenticated)
+            {
+                <span class="text-muted small">Welcome, @User.Identity.Name!</span>
+                <a class="btn btn-sm btn-outline-dark" asp-controller="Auth" asp-action="Logout">Logout</a>
+            }
+            else
+            {
+                <a class="btn btn-sm btn-warning" asp-controller="Auth" asp-action="Login">Login</a>
+            }
+        </div>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @if (TempData["SuccessMessage"] != null)
-            {
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    @TempData["SuccessMessage"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            }
-            @if (TempData["ErrorMessage"] != null)
-            {
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    @TempData["ErrorMessage"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            }
-            @RenderBody()
-        </main>
-    </div>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main id="content-area">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+        }
+
+        @RenderBody()
+    </main>
+
+    <!-- ===== SCRIPTS ===== -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
 
-    <!-- Firebase Configuration -->
     <script>
-        // Your Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyC0JDtGyh7sL_doZobuoQwg7LDrIE4BQN0",
-            authDomain: "icmms-ecba6.firebaseapp.com",
-            projectId: "icmms-ecba6",
-            storageBucket: "icmms-ecba6.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef123456"
-        };
+        const sidebar = document.getElementById('sidebar');
+        const toggleBtn = document.getElementById('sidebar-toggle');
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-
-        // Global Firebase auth instance
-        const auth = firebase.auth();
-
-        // Listen for auth state changes
-        auth.onAuthStateChanged(function (user) {
-            if (user) {
-                console.log('User is signed in:', user.email);
-            } else {
-                console.log('User is signed out');
-            }
+        toggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
         });
+
+        // restore collapse state
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+            sidebar.classList.add('collapsed');
+        }
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>
-
 </html>

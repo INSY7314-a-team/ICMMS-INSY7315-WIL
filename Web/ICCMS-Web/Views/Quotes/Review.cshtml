@@ -1,0 +1,100 @@
+@model ICCMS_Web.Models.QuotationDto
+@{
+    ViewData["Title"] = "Quote Preview";
+}
+
+<div class="container mt-4">
+    <h2>Quotation Preview</h2>
+    <hr />
+
+    <!-- ================= HEADER / METADATA ================= -->
+    <div class="mb-3">
+        <h4>@Model.Description</h4>
+        <p class="text-muted">Client ID: @Model.ClientId</p>
+        <p>Status: <span class="badge bg-info">@Model.Status</span></p>
+        <p>Created: @Model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</p>
+        <p>Valid Until: @Model.ValidUntil.ToString("yyyy-MM-dd")</p>
+    </div>
+
+    <!-- ================= QUOTE ITEMS ================= -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-sm">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th class="text-end">Qty</th>
+                    <th class="text-end">Unit Price</th>
+                    <th class="text-end">Line Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Items != null && Model.Items.Any())
+                {
+                    foreach (var it in Model.Items)
+                    {
+                        <tr>
+                            <td>@it.Name</td>
+                            <td class="text-end">@it.Quantity</td>
+                            <td class="text-end">R @it.UnitPrice.ToString("N2")</td>
+                            <td class="text-end">R @it.LineTotal.ToString("N2")</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="4" class="text-muted">No items found</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ================= TOTALS ================= -->
+    <div class="mt-3">
+        <p>Subtotal: <strong>R @Model.Subtotal.ToString("N2")</strong></p>
+        <p>Tax: <strong>R @Model.TaxTotal.ToString("N2")</strong></p>
+        <p class="fw-bold">Grand Total: R @Model.GrandTotal.ToString("N2")</p>
+    </div>
+
+    <!-- ================= WORKFLOW ACTIONS ================= -->
+    <div class="mt-4">
+        <h5>Next Actions</h5>
+        <div class="d-flex flex-wrap gap-2">
+
+            @* Draft → Submit *@
+            @if (Model.Status.Equals("Draft", StringComparison.OrdinalIgnoreCase))
+            {
+                <a asp-action="SubmitForApproval" asp-route-id="@Model.QuotationId"
+                   class="btn btn-primary">Submit for Approval</a>
+            }
+
+            @* PendingPMApproval → Approve or Reject *@
+            @if (Model.Status.Equals("PendingPMApproval", StringComparison.OrdinalIgnoreCase))
+            {
+                <a asp-action="PmApprove" asp-route-id="@Model.QuotationId"
+                   class="btn btn-success">Approve</a>
+                <a asp-action="PmReject" asp-route-id="@Model.QuotationId"
+                   class="btn btn-danger">Reject</a>
+            }
+
+            @* SentToClient → Client Decision *@
+            @if (Model.Status.Equals("SentToClient", StringComparison.OrdinalIgnoreCase))
+            {
+                <a asp-action="ClientDecision" asp-route-id="@Model.QuotationId"
+                   class="btn btn-info">Client Decision</a>
+            }
+
+            @* ClientAccepted → Convert to Invoice *@
+            @if (Model.Status.Equals("ClientAccepted", StringComparison.OrdinalIgnoreCase))
+            {
+                <a asp-action="ConvertToInvoice" asp-route-id="@Model.QuotationId"
+                   class="btn btn-warning">Convert to Invoice</a>
+            }
+        </div>
+    </div>
+
+    <!-- ================= NAVIGATION ================= -->
+    <div class="mt-4">
+        <a asp-controller="ProjectManager" asp-action="Dashboard" class="btn btn-secondary">Back to Dashboard</a>
+        <a asp-action="Index" class="btn btn-outline-info">All Quotes</a>
+    </div>
+</div>

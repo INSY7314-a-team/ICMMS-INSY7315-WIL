@@ -34,6 +34,7 @@ namespace ICCMS_API.Authentication
 
                 // Verify Firebase token
                 var firebaseToken = await authService.VerifyTokenAsync(token);
+                
 
                 // Get user data from Firestore
                 var user = await firebaseService.GetDocumentAsync<Models.User>(

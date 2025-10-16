@@ -1,4 +1,4 @@
-@model ICCMS_Web.Models.Quotation
+@model ICCMS_Web.Models.QuotationDto
 
 @{
     ViewData["Title"] = "Quotation Details";
@@ -120,7 +120,8 @@
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
                                         <label class="form-label text-muted small mb-1">Total Amount</label>
-                                        <h3 class="mb-0 text-success">R @Model.Total.ToString("N2")</h3>
+                                        <h3 class="mb-0 text-success">R @Model.GrandTotal.ToString("N2")</h3>
+
                                     </div>
                                     <div class="financial-icon">
                                         <i class="fas fa-dollar-sign text-success"></i>

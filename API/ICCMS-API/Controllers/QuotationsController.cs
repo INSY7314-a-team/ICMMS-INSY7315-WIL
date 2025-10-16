@@ -137,6 +137,7 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                
                 // IMPORTANT: quotation.ClientId must be set to the client's UserId
                 quotation.Status ??= "Draft";
 
@@ -152,6 +153,8 @@ namespace ICCMS_API.Controllers
 
                 // Recalculate pricing
                 Pricing.Recalculate(quotation);
+
+                
 
                 var quotationId = await _firebaseService.AddDocumentAsync("quotations", quotation);
                 return Ok(quotationId);
@@ -446,7 +449,17 @@ namespace ICCMS_API.Controllers
         {
             return StatusCode(410, "This endpoint has been deprecated. Use /pm-approve instead.");
         }
+
+        [HttpGet("debug-claims")]
+        [AllowAnonymous]
+        public IActionResult DebugClaims()
+        {
+            return Ok(User.Claims.Select(c => new { c.Type, c.Value }));
+        }
+
     }
+
+
 
     public class ClientDecisionBody
     {

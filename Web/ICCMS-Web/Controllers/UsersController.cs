@@ -42,13 +42,13 @@ namespace ICCMS_Web.Controllers
                 if (response.IsSuccessStatusCode && responseDeactivated.IsSuccessStatusCode)
                 {
                     var responseBody = await response.Content.ReadAsStringAsync();
-                    var users = JsonSerializer.Deserialize<List<User>>(
+                    var users = JsonSerializer.Deserialize<List<UserDto>>(
                         responseBody,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
                     var responseBodyDeactivated =
                         await responseDeactivated.Content.ReadAsStringAsync();
-                    var usersDeactivated = JsonSerializer.Deserialize<List<User>>(
+                    var usersDeactivated = JsonSerializer.Deserialize<List<UserDto>>(
                         responseBodyDeactivated,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
@@ -58,13 +58,13 @@ namespace ICCMS_Web.Controllers
                 else
                 {
                     TempData["ErrorMessage"] = "Failed to fetch users from the server.";
-                    return View(new List<User>());
+                    return View(new List<UserDto>());
                 }
             }
             catch (Exception ex)
             {
                 TempData["ErrorMessage"] = $"Error: {ex.Message}";
-                return View(new List<User>());
+                return View(new List<UserDto>());
             }
         }
 
@@ -145,13 +145,13 @@ namespace ICCMS_Web.Controllers
                 if (response.IsSuccessStatusCode)
                 {
                     var responseBody = await response.Content.ReadAsStringAsync();
-                    var user = JsonSerializer.Deserialize<User>(
+                    var user = JsonSerializer.Deserialize<UserDto>(
                         responseBody,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
 
                     // Convert to User
-                    var editModel = new User
+                    var editModel = new UserDto
                     {
                         UserId = user.UserId,
                         Email = user.Email,
@@ -179,7 +179,7 @@ namespace ICCMS_Web.Controllers
 
         [HttpPost("update/user/{id}")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditConfirmed(string id, User model)
+        public async Task<IActionResult> EditConfirmed(string id, UserDto model)
         {
             if (!ModelState.IsValid)
             {

@@ -1,146 +1,112 @@
 using System.Security.Claims;
 using System.Text.Json;
 using ICCMS_Web.Models;
-using ICCMS_Web.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace ICCMS_Web.Controllers
 {
     public class AuthController : Controller
     {
+        private readonly ILogger<AuthController> _logger;
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
-        private readonly ILoginAttemptService _loginAttemptService;
         private readonly string _apiBaseUrl;
 
-        public AuthController(HttpClient httpClient, IConfiguration configuration, ILoginAttemptService loginAttemptService)
+        public AuthController(ILogger<AuthController> logger, HttpClient httpClient, IConfiguration configuration)
         {
+            _logger = logger;
             _httpClient = httpClient;
             _configuration = configuration;
-            _loginAttemptService = loginAttemptService;
+
             _apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7136";
+            _logger.LogInformation("AuthController initialized. API base URL: {Url}", _apiBaseUrl);
         }
 
+        // Show login form
         [HttpGet]
         public IActionResult Login()
         {
-            if (User.Identity.IsAuthenticated)
-            {
-                return RedirectToAction("Index", "Home");
-            }
-            return View();
+            _logger.LogInformation("Rendering login page.");
+            return View(new LoginViewModel());
         }
 
+        // Called by JS (Login.cshtml) after Firebase sign-in
         [HttpPost]
-        public async Task<IActionResult> VerifyToken([FromBody] TokenVerificationRequest request)
+        public async Task<IActionResult> VerifyToken([FromBody] VerifyTokenRequest request)
         {
+            if (string.IsNullOrEmpty(request.IdToken))
+            {
+                _logger.LogWarning("VerifyToken: Missing token for {Email}", request.Email);
+                return Json(new { success = false, message = "Token missing." });
+            }
+
             try
             {
-                // Check if account is locked
-                if (_loginAttemptService.IsAccountLocked(request.Email))
-                {
-                    var lockoutEndTime = _loginAttemptService.GetLockoutEndTime(request.Email);
-                    var remainingTime = lockoutEndTime?.Subtract(DateTime.UtcNow) ?? TimeSpan.Zero;
-                    
-                    return Json(new { 
-                        success = false, 
-                        message = "Account is temporarily locked due to too many failed attempts.",
-                        isLocked = true,
-                        lockoutEndTime = lockoutEndTime?.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-                        remainingSeconds = (int)remainingTime.TotalSeconds
-                    });
-                }
+                _logger.LogInformation("VerifyToken: Sending token to API for {Email}", request.Email);
 
-                // Send the Firebase ID token to your API for verification
+                // Call API /api/auth/verify-token
                 var response = await _httpClient.PostAsJsonAsync(
                     $"{_apiBaseUrl}/api/auth/verify-token",
-                    new { idToken = request.IdToken }
+                    new { IdToken = request.IdToken }
                 );
 
-                if (response.IsSuccessStatusCode)
+                if (!response.IsSuccessStatusCode)
                 {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    var result = JsonSerializer.Deserialize<TokenVerificationResponse>(
-                        responseContent,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    if (result?.Success == true)
-                    {
-                        // Record successful login
-                        _loginAttemptService.RecordSuccessfulAttempt(request.Email);
-
-                        // Create ASP.NET Identity claims
-                        var claims = new List<Claim>
-                        {
-                            new Claim(ClaimTypes.NameIdentifier, result.User.UserId),
-                            new Claim(ClaimTypes.Name, result.User.FullName),
-                            new Claim(ClaimTypes.Email, result.User.Email),
-                            new Claim(ClaimTypes.Role, result.User.Role),
-                            new Claim("FirebaseToken", request.IdToken),
-                        };
-
-                        var identity = new ClaimsIdentity(claims, "Cookies");
-                        var principal = new ClaimsPrincipal(identity);
-
-                        // Sign in the user
-                        await HttpContext.SignInAsync(
-                            "Cookies",
-                            principal,
-                            new AuthenticationProperties
-                            {
-                                IsPersistent = request.RememberMe,
-                                ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8),
-                            }
-                        );
-
-                        // Log successful login
-                        await LogSuccessfulLoginAsync(result.User.Email, result.User.UserId, request.IdToken);
-
-                        return Json(new { success = true });
-                    }
-                    else
-                    {
-                        // Record failed attempt
-                        _loginAttemptService.RecordFailedAttempt(request.Email);
-                        
-                        var remainingAttempts = _loginAttemptService.GetRemainingAttempts(request.Email);
-                        var message = remainingAttempts > 0 
-                            ? $"Login failed. {remainingAttempts} attempts remaining."
-                            : "Account locked due to too many failed attempts. Please wait 5 minutes.";
-
-                        return Json(new { 
-                            success = false, 
-                            message = message,
-                            remainingAttempts = remainingAttempts
-                        });
-                    }
+                    var body = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("VerifyToken: API returned {Status}. Body: {Body}", response.StatusCode, body);
+                    return Json(new { success = false, message = "API verification failed" });
                 }
-                else
+
+                var content = await response.Content.ReadAsStringAsync();
+                var verificationResponse = JsonSerializer.Deserialize<TokenVerificationResponse>(
+                    content,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
+
+                if (verificationResponse == null || !verificationResponse.Success)
                 {
-                    // Record failed attempt
-                    _loginAttemptService.RecordFailedAttempt(request.Email);
-                    
-                    var remainingAttempts = _loginAttemptService.GetRemainingAttempts(request.Email);
-                    return Json(new { 
-                        success = false, 
-                        message = "API verification failed",
-                        remainingAttempts = remainingAttempts
-                    });
+                    _logger.LogWarning("VerifyToken: API rejected token for {Email}", request.Email);
+                    return Json(new { success = false, message = verificationResponse?.Message ?? "Verification failed" });
                 }
+
+                var user = verificationResponse.User;
+                _logger.LogInformation("VerifyToken: API verified {Email} as {Role}", user.Email, user.Role);
+
+                // Build claims (now includes role!)
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, user.UserId ?? request.Email ?? "unknown"),
+                    new Claim(ClaimTypes.Name, user.FullName ?? user.Email ?? "User"),
+                    new Claim(ClaimTypes.Email, user.Email ?? ""),
+                    new Claim(ClaimTypes.Role, user.Role ?? "User"),
+                    new Claim("FirebaseToken", request.IdToken) // Save raw token for ApiClient
+                };
+
+                var identity = new ClaimsIdentity(claims, "Cookies");
+                var principal = new ClaimsPrincipal(identity);
+
+                await HttpContext.SignInAsync(
+                    "Cookies",
+                    principal,
+                    new AuthenticationProperties
+                    {
+                        IsPersistent = request.RememberMe,
+                        ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
+                    }
+                );
+
+                return Json(new
+                {
+                    success = true,
+                    user = new { user.FullName, user.Email, user.Role }
+                });
             }
             catch (Exception ex)
             {
-                // Record failed attempt
-                _loginAttemptService.RecordFailedAttempt(request.Email);
-                
-                var remainingAttempts = _loginAttemptService.GetRemainingAttempts(request.Email);
-                return Json(new { 
-                    success = false, 
-                    message = $"Error: {ex.Message}",
-                    remainingAttempts = remainingAttempts
-                });
+                _logger.LogError(ex, "VerifyToken: Exception while verifying {Email}", request.Email);
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
         }
 
@@ -148,65 +114,21 @@ namespace ICCMS_Web.Controllers
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync("Cookies");
+            _logger.LogInformation("User logged out.");
             TempData["SuccessMessage"] = "You have been logged out successfully.";
             return RedirectToAction("Login");
         }
-
-        private async Task LogSuccessfulLoginAsync(string email, string userId, string firebaseToken)
-        {
-            try
-            {
-                var auditLogRequest = new
-                {
-                    LogType = "Login Attempt",
-                    Title = "Login Successful",
-                    Description = "Login successful",
-                    UserId = userId,
-                    EntityId = email
-                };
-
-                // Clear any existing headers to avoid conflicts
-                _httpClient.DefaultRequestHeaders.Clear();
-                
-                // Add authentication header
-                _httpClient.DefaultRequestHeaders.Authorization = 
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", firebaseToken);
-                
-                var json = JsonSerializer.Serialize(auditLogRequest);
-                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-
-                // Debug logging
-                Console.WriteLine($"Audit Log Request: {json}");
-                Console.WriteLine($"Audit Log URL: {_apiBaseUrl}/api/auditlogs");
-                Console.WriteLine($"Auth Header: Bearer {firebaseToken.Substring(0, Math.Min(20, firebaseToken.Length))}...");
-
-                // Send to audit logs API
-                var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/auditlogs", content);
-                
-                // Debug logging
-                Console.WriteLine($"Audit Log Response: {response.StatusCode}");
-                if (!response.IsSuccessStatusCode)
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Audit Log Error: {errorContent}");
-                }
-            }
-            catch (Exception ex)
-            {
-                // Log the exception for debugging
-                Console.WriteLine($"Audit Log Exception: {ex.Message}");
-                Console.WriteLine($"Audit Log Stack Trace: {ex.StackTrace}");
-            }
-        }
     }
 
-    public class TokenVerificationRequest
+    // Request from Login.cshtml JS
+    public class VerifyTokenRequest
     {
         public string IdToken { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public bool RememberMe { get; set; }
     }
 
+    // Mirror of API response
     public class TokenVerificationResponse
     {
         public bool Success { get; set; }

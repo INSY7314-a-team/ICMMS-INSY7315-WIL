@@ -1,11 +1,30 @@
 using ICCMS_Web.Services;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// ===================================================
+// 🔧 SERVICE REGISTRATION
+// ===================================================
+
+// HTTP + API
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IApiClient, ApiClient>();
+
+// Access HttpContext and TempData inside services (needed for Auth redirect handling)
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<ITempDataDictionaryFactory, TempDataDictionaryFactory>();
+
+// Login attempt tracking
+builder.Services.AddSingleton<ILoginAttemptService, LoginAttemptService>();
+
+// MVC / Razor Views
 builder.Services.AddControllersWithViews();
 
-// Add session support
+// ===================================================
+// 💾 SESSION MANAGEMENT
+// ===================================================
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -14,42 +33,46 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-// Add HttpClient
-builder.Services.AddHttpClient();
+// ===================================================
+// 🔒 AUTHENTICATION CONFIGURATION
+// ===================================================
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = "Cookies";
+    options.DefaultSignInScheme = "Cookies";
+    options.DefaultChallengeScheme = "Cookies";
+})
+.AddCookie("Cookies", options =>
+{
+    // NOTE: redirect paths must align with actual controllers
+    options.LoginPath = "/Auth/Login";
+    options.LogoutPath = "/Auth/Logout";
+    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+    options.SlidingExpiration = true;
 
-// Add Login Attempt Service
-builder.Services.AddSingleton<ILoginAttemptService, LoginAttemptService>();
+    // Optional: friendly redirect if unauthorized
+    options.AccessDeniedPath = "/Auth/AccessDenied";
+});
 
-// Add Authentication with Cookies
-builder
-    .Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = "Cookies";
-        options.DefaultSignInScheme = "Cookies";
-        options.DefaultChallengeScheme = "Cookies";
-    })
-    .AddCookie(
-        "Cookies",
-        options =>
-        {
-            options.LoginPath = "/Auth/Login";
-            options.LogoutPath = "/Auth/Logout";
-            options.ExpireTimeSpan = TimeSpan.FromHours(8);
-            options.SlidingExpiration = true;
-        }
-    );
-
+// ===================================================
+// 🧩 AUTHORIZATION POLICIES
+// ===================================================
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("ProjectManagerOnly", policy => policy.RequireRole("ProjectManager"));
+    options.AddPolicy("ProjectManagerOnly", policy => policy.RequireRole("Project Manager", "Tester"));
     options.AddPolicy("ContractorOnly", policy => policy.RequireRole("Contractor"));
     options.AddPolicy("ClientOnly", policy => policy.RequireRole("Client"));
 });
 
+// ===================================================
+// 🚀 BUILD APP
+// ===================================================
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ===================================================
+// 🌍 MIDDLEWARE PIPELINE
+// ===================================================
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -61,12 +84,19 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-// Add session middleware
+// Order matters: Session before Auth
 app.UseSession();
-
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
+// ===================================================
+// 🏠 ROUTING
+// ===================================================
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
+// ===================================================
+// 🏁 RUN
+// ===================================================
 app.Run();
