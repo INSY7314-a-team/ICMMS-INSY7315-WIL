@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "P4oOEqt8kX4=",
+  "dgSpecHash": "V6mzOTVev60=",
   "success": true,
   "projectFilePath": "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7314-WIL-\\Web\\ICCMS-Web\\ICCMS-Web.csproj",
   "expectedPackageFiles": [
@@ -51,6 +51,7 @@
     "C:\\Users\\brayd\\.nuget\\packages\\microsoft.win32.registry\\4.5.0\\microsoft.win32.registry.4.5.0.nupkg.sha512",
     "C:\\Users\\brayd\\.nuget\\packages\\netstandard.library\\1.6.0\\netstandard.library.1.6.0.nupkg.sha512",
     "C:\\Users\\brayd\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512",
+    "C:\\Users\\brayd\\.nuget\\packages\\questpdf\\2025.7.3\\questpdf.2025.7.3.nupkg.sha512",
     "C:\\Users\\brayd\\.nuget\\packages\\runtime.native.system\\4.0.0\\runtime.native.system.4.0.0.nupkg.sha512",
     "C:\\Users\\brayd\\.nuget\\packages\\runtime.native.system.io.compression\\4.1.0\\runtime.native.system.io.compression.4.1.0.nupkg.sha512",
     "C:\\Users\\brayd\\.nuget\\packages\\runtime.native.system.net.http\\4.0.1\\runtime.native.system.net.http.4.0.1.nupkg.sha512",

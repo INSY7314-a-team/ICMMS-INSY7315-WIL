@@ -1,17 +1,14 @@
 using ICCMS_Web.Models;
 using ICCMS_Web.Services;
 using Microsoft.AspNetCore.Mvc;
-using DinkToPdf;
-using DinkToPdf.Contracts;
 using System.Text;
 using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
-
-
-
-
+using QuestPDF.Fluent;
+using QuestPDF.Infrastructure;
+using QuestPDF.Helpers;
 
 namespace ICCMS_Web.Controllers
 {
@@ -21,22 +18,23 @@ namespace ICCMS_Web.Controllers
         private readonly IApiClient _apiClient;
         private readonly ILogger<QuotesController> _logger;
         private readonly IWebHostEnvironment _env;
-        private readonly IConverter _pdfConverter;
         private readonly ICompositeViewEngine _viewEngine;
 
         public QuotesController(
             IApiClient apiClient,
             ILogger<QuotesController> logger,
             IWebHostEnvironment env,
-            IConverter pdfConverter,
             ICompositeViewEngine viewEngine)
         {
             _apiClient = apiClient;
             _logger = logger;
             _env = env;
-            _pdfConverter = pdfConverter;
             _viewEngine = viewEngine;
+
+            // 🧹 Removed DinkToPdf dependency — QuestPDF does not need DI or initialization
+            _logger.LogInformation("✅ QuotesController initialized (QuestPDF active, no native converter required).");
         }
+
                 // ============================
         // STEP 0: CREATE DRAFT
         // ============================
@@ -605,35 +603,117 @@ namespace ICCMS_Web.Controllers
             }
         }
 
-        // ============================
-        // STEP X: Download PDF (GET)
-        // ============================
         [HttpGet("download/{id}")]
         [Authorize(Roles = "Project Manager,Admin,Tester")]
         public async Task<IActionResult> DownloadQuote(string id)
         {
-            // 1️⃣ Get the quotation from API
-            var quote = await _apiClient.GetAsync<QuotationDto>($"/api/quotations/{id}", User);
-            if (quote == null) return NotFound("Quotation not found");
+            _logger.LogInformation("📄 [DownloadQuote] Start | QuoteId={Id}", id);
 
-            // 2️⃣ Render the Razor view to HTML
-            var html = await this.RenderViewAsync("~/Views/Quotes/QuotePdf.cshtml", quote, true);
-
-            // 3️⃣ Convert to PDF
-            var doc = new HtmlToPdfDocument()
+            try
             {
-                GlobalSettings = new GlobalSettings
+                var quote = await _apiClient.GetAsync<QuotationDto>($"/api/quotations/{id}", User);
+                if (quote == null)
                 {
-                    PaperSize = PaperKind.A4,
-                    Orientation = Orientation.Portrait
-                },
-                Objects = { new ObjectSettings { HtmlContent = html } }
-            };
-            var pdf = _pdfConverter.Convert(doc);
+                    _logger.LogWarning("⚠️ Quotation not found for Id={Id}", id);
+                    return NotFound("Quotation not found");
+                }
 
-            // 4️⃣ Return as file
-            return File(pdf, "application/pdf", $"Quotation_{id}.pdf");
+                var pdfBytes = QuestPDF.Fluent.Document.Create(container =>
+                {
+                    container.Page(page =>
+                    {
+                        page.Size(595, 842); // A4
+                        page.Margin(40);
+                        page.DefaultTextStyle(x => x.FontSize(12));
+                        page.PageColor("#FFFFFF");
+
+                        // HEADER
+                        page.Header().Row(row =>
+                        {
+                            row.ConstantItem(100)
+                            .Container()
+                            .Height(60)
+                            .Image("wwwroot/images/TaskIt2.png")
+                            .FitHeight();
+                            row.RelativeItem().Column(col =>
+                            {
+                                col.Item().Text("Official Quotation")
+                                    .FontSize(18)
+                                    .Bold()
+                                    .FontColor("#2B547E"); // ✅ brand blue
+                                col.Item().Text($"Project: {quote.ProjectId}");
+                                col.Item().Text($"Created: {quote.CreatedAt:yyyy-MM-dd HH:mm}");
+                            });
+                        });
+
+                        // CONTENT
+                        page.Content().Column(col =>
+                        {
+                            col.Spacing(8);
+                            col.Item().Text($"Client ID: {quote.ClientId}");
+                            col.Item().Text($"Description: {quote.Description}");
+                            col.Item().Text($"Valid Until: {quote.ValidUntil:yyyy-MM-dd}");
+                            col.Item().LineHorizontal(1).LineColor("#2B547E");
+
+                            if (quote.Items != null && quote.Items.Any())
+                            {
+                                col.Item().Table(table =>
+                                {
+                                    table.ColumnsDefinition(columns =>
+                                    {
+                                        columns.RelativeColumn(3);
+                                        columns.RelativeColumn(1);
+                                        columns.RelativeColumn(2);
+                                        columns.RelativeColumn(2);
+                                    });
+
+                                    table.Header(header =>
+                                    {
+                                        header.Cell().Text("Item").Bold();
+                                        header.Cell().Text("Qty").Bold();
+                                        header.Cell().Text("Unit (R)").Bold();
+                                        header.Cell().Text("Total (R)").Bold();
+                                    });
+
+                                    foreach (var item in quote.Items)
+                                    {
+                                        table.Cell().Text(item.Name ?? "-");
+                                        table.Cell().Text(item.Quantity.ToString());
+                                        table.Cell().Text($"{item.UnitPrice:N2}");
+                                        table.Cell().Text($"{item.LineTotal:N2}");
+                                    }
+                                });
+                            }
+                            else
+                            {
+                                col.Item().Text("No items in this quotation.").Italic();
+                            }
+
+                            col.Item().PaddingTop(10).AlignRight().Column(totals =>
+                            {
+                                totals.Item().Text($"Subtotal: R {quote.Subtotal:N2}");
+                                totals.Item().Text($"Tax: R {quote.TaxTotal:N2}");
+                                totals.Item().Text($"Grand Total: R {quote.GrandTotal:N2}").Bold();
+                            });
+                        });
+
+                        // FOOTER
+                        page.Footer().AlignCenter().Text(
+                            $"Generated by ICCMS • {DateTime.Now:yyyy-MM-dd HH:mm}"
+                        );
+                    });
+                }).GeneratePdf();
+
+                return File(pdfBytes, "application/pdf", $"Quotation_{id}.pdf");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🔥 [DownloadQuote] Failed for QuoteId={Id}: {Message}", id, ex.Message);
+                return StatusCode(500, $"Error generating PDF: {ex.Message}");
+            }
         }
+
+
 
         // ================================================
         // STEP X: CREATE QUOTE FROM ESTIMATE (AUTO-PREFILL)

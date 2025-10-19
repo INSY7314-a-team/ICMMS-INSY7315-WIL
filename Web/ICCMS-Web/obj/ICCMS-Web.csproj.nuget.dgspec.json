@@ -61,6 +61,10 @@
             "Microsoft.AspNetCore.Authentication.Cookies": {
               "target": "Package",
               "version": "[2.2.0, )"
+            },
+            "QuestPDF": {
+              "target": "Package",
+              "version": "[2025.7.3, )"
             }
           },
           "imports": [

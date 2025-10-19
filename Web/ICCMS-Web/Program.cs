@@ -22,8 +22,6 @@ builder.Services.AddSingleton<ITempDataDictionaryFactory, TempDataDictionaryFact
 // Login attempt tracking
 builder.Services.AddSingleton<ILoginAttemptService, LoginAttemptService>();
 
-//Register Dink To PDF for pdf
-builder.Services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));
 
 // MVC / Razor Views
 builder.Services.AddControllersWithViews();
@@ -75,6 +73,9 @@ builder.Services.AddAuthorization(options =>
 // 🚀 BUILD APP
 // ===================================================
 var app = builder.Build();
+
+// Set QuestPDF license (required since 2024)
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 // ===================================================
 // 🌍 MIDDLEWARE PIPELINE
