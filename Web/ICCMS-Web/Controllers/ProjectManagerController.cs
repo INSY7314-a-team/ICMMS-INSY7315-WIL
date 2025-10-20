@@ -1,9 +1,13 @@
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ICCMS_Web.Models;
 using ICCMS_Web.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 
 namespace ICCMS_Web.Controllers
 {
@@ -14,16 +18,31 @@ namespace ICCMS_Web.Controllers
         private readonly IApiClient _apiClient;
         private readonly ILogger<ProjectManagerController> _logger;
         private readonly IProjectIndexService _projectIndexService;
+        private readonly IEstimatesService _estimatesService;
+        private readonly IDocumentsService _documentsService;
+        private readonly IQuotationsService _quotationsService;
+        private readonly IConfiguration _config;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public ProjectManagerController(
             IApiClient apiClient,
             ILogger<ProjectManagerController> logger,
-            IProjectIndexService projectIndexService
+            IProjectIndexService projectIndexService,
+            IEstimatesService estimatesService,
+            IDocumentsService documentsService,
+            IQuotationsService quotationsService,
+            IConfiguration config,
+            IHttpClientFactory httpClientFactory
         )
         {
             _apiClient = apiClient;
             _logger = logger;
             _projectIndexService = projectIndexService;
+            _estimatesService = estimatesService;
+            _documentsService = documentsService;
+            _quotationsService = quotationsService;
+            _config = config;
+            _httpClientFactory = httpClientFactory;
         }
 
         /// <summary>
@@ -718,10 +737,7 @@ namespace ICCMS_Web.Controllers
 
             try
             {
-                var estimate = await _apiClient.GetAsync<EstimateDto>(
-                    $"/api/estimates/project/{projectId}",
-                    User
-                );
+                var estimate = await _estimatesService.GetByProjectAsync(projectId, User);
                 if (estimate == null)
                 {
                     _logger.LogWarning("⚠️ No estimate found for Project {ProjectId}", projectId);
@@ -751,6 +767,143 @@ namespace ICCMS_Web.Controllers
                 TempData["ErrorMessage"] = $"Error reviewing estimate: {ex.Message}";
                 return RedirectToAction("Dashboard");
             }
+        }
+
+        // ===================== BLUEPRINT PICKER + PROCESS =====================
+        [HttpGet]
+        public async Task<IActionResult> ProjectBlueprints(string projectId)
+        {
+            if (string.IsNullOrWhiteSpace(projectId))
+                return BadRequest(new { error = "Missing project id" });
+
+            var docs =
+                await _documentsService.GetProjectDocumentsAsync(projectId, User)
+                ?? new List<DocumentDto>();
+            return Json(docs);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ProcessBlueprint(
+            [FromBody] ProcessBlueprintRequest request
+        )
+        {
+            _logger.LogInformation(
+                "[ProcessBlueprint] Received request for ProjectId={ProjectId}, Url={Url}",
+                request?.ProjectId,
+                request?.BlueprintUrl
+            );
+            if (
+                request == null
+                || string.IsNullOrWhiteSpace(request.ProjectId)
+                || string.IsNullOrWhiteSpace(request.BlueprintUrl)
+            )
+            {
+                _logger.LogWarning("[ProcessBlueprint] Invalid request payload");
+                return BadRequest(new { error = "Invalid request" });
+            }
+
+            // Normalize URL (some API docs store under different properties)
+            request.BlueprintUrl = request.BlueprintUrl.Trim();
+            if (request.BlueprintUrl.StartsWith("/"))
+            {
+                // best-effort absolute URL
+                var origin = $"{Request.Scheme}://{Request.Host}";
+                request.BlueprintUrl = origin + request.BlueprintUrl;
+            }
+
+            var estimate = await _estimatesService.ProcessBlueprintAsync(request, User);
+            if (estimate == null)
+            {
+                _logger.LogError("[ProcessBlueprint] Estimate service returned null");
+                return StatusCode(500, new { error = "Processing failed" });
+            }
+
+            return Json(new { estimateId = estimate.EstimateId, total = estimate.TotalAmount });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UploadBlueprint(
+            string projectId,
+            IFormFile file,
+            string? description
+        )
+        {
+            if (string.IsNullOrWhiteSpace(projectId) || file == null || file.Length == 0)
+                return BadRequest(new { error = "Missing project or file" });
+
+            var token = User.FindFirst("FirebaseToken")?.Value;
+            if (string.IsNullOrWhiteSpace(token))
+                return Unauthorized();
+
+            var baseUrl = _config["ApiSettings:BaseUrl"] ?? "https://localhost:7136";
+            var client = _httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            using var content = new MultipartFormDataContent();
+            await using var stream = file.OpenReadStream();
+            var fileContent = new StreamContent(stream);
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
+                file.ContentType ?? "application/octet-stream"
+            );
+            content.Add(fileContent, "file", file.FileName);
+            content.Add(new StringContent(projectId), "projectId");
+            if (!string.IsNullOrWhiteSpace(description))
+                content.Add(new StringContent(description), "description");
+
+            var response = await client.PostAsync($"{baseUrl}/api/documents/upload", content);
+            var text = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Upload failed ({Code}): {Body}", response.StatusCode, text);
+                return StatusCode((int)response.StatusCode, new { error = "Upload failed" });
+            }
+            return Content(text, "application/json");
+        }
+
+        // ===================== ESTIMATE CRUD (modal) =====================
+        [HttpGet]
+        public async Task<IActionResult> GetEstimate(string projectId)
+        {
+            var estimate = await _estimatesService.GetByProjectAsync(projectId, User);
+            return Json(estimate ?? new EstimateDto { ProjectId = projectId });
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> SaveEstimate(
+            string estimateId,
+            [FromBody] EstimateDto estimate
+        )
+        {
+            if (string.IsNullOrWhiteSpace(estimateId))
+                return BadRequest(new { error = "Missing estimate id" });
+            var saved = await _estimatesService.SaveAsync(estimateId, estimate, User);
+            if (saved == null)
+                return StatusCode(500, new { error = "Save failed" });
+            return Json(saved);
+        }
+
+        // ===================== QUOTATION ACTIONS =====================
+        [HttpPost]
+        public async Task<IActionResult> CreateQuoteFromEstimate(string estimateId)
+        {
+            if (string.IsNullOrWhiteSpace(estimateId))
+                return BadRequest(new { error = "Missing estimate id" });
+            var quote = await _quotationsService.CreateFromEstimateAsync(estimateId, User);
+            if (quote == null)
+                return StatusCode(500, new { error = "Create quotation failed" });
+            return Json(new { quotationId = quote.QuotationId });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SendQuoteToClient(string quotationId)
+        {
+            if (string.IsNullOrWhiteSpace(quotationId))
+                return BadRequest(new { error = "Missing quotation id" });
+            var sent = await _quotationsService.SendToClientAsync(quotationId, User);
+            if (sent == null)
+                return StatusCode(500, new { error = "Send to client failed" });
+            return Json(new { success = true });
         }
 
         /// <summary>

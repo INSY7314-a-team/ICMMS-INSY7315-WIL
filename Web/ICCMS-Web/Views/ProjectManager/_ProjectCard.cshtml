@@ -211,7 +211,7 @@
                 <!-- Assign Tasks Button -->
                 <button type="button" class="btn-action btn-assign-tasks"
                     onclick="openPlanEditor('@Model.ProjectId','tasks')" title="Assign Tasks">
-                    <i class="fa-solid fa-tasks"></i> Add Phases & Tasks
+                    <i class="fa-solid fa-tasks"></i> Assign Tasks
                 </button>
             }
             else
@@ -225,15 +225,23 @@
                     onclick="openPlanEditor('@Model.ProjectId','tasks')" title="Assign Tasks">
                     <i class="fa-solid fa-tasks"></i> Assign Tasks
                 </button>
-                <button type="button" class="btn-action btn-generate-quotation"
-                    onclick="generateQuotation('@Model.ProjectId')" title="Generate Quotation">
-                    <i class="fa-solid fa-file-invoice"></i> Generate Quotation
-                </button>
-                @if (estimate != null)
+                @if (estimate == null)
                 {
-                    <button type="button" class="btn-action btn-edit-line-items" onclick="editLineItems('@Model.ProjectId')"
-                        title="Edit Line Items">
+                    <button type="button" class="btn-action btn-outline-primary"
+                        onclick="openBlueprintPicker('@Model.ProjectId', function(url){ processBlueprintAndOpen('@Model.ProjectId', url); })"
+                        title="Process Blueprint">
+                        <i class="fa-solid fa-file"></i> Process Blueprint
+                    </button>
+                }
+                else
+                {
+                    <button type="button" class="btn-action btn-edit-line-items"
+                        onclick="openEstimateEditor('@Model.ProjectId')" title="Edit Line Items">
                         <i class="fa-solid fa-edit"></i> Edit Line Items
+                    </button>
+                    <button type="button" class="btn-action btn-generate-quotation"
+                        onclick="openEstimateEditor('@Model.ProjectId')" title="Send Quote">
+                        <i class="fa-solid fa-paper-plane"></i> Send Quote
                     </button>
                 }
             }

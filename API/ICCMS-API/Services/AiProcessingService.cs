@@ -7,7 +7,10 @@ namespace ICCMS_API.Services
         private readonly IMaterialDatabaseService _materialDatabaseService;
         private readonly SupabaseBlueprintService _supabaseBlueprintService;
 
-        public AiProcessingService(IMaterialDatabaseService materialDatabaseService, SupabaseBlueprintService supabaseBlueprintService)
+        public AiProcessingService(
+            IMaterialDatabaseService materialDatabaseService,
+            SupabaseBlueprintService supabaseBlueprintService
+        )
         {
             _materialDatabaseService = materialDatabaseService;
             _supabaseBlueprintService = supabaseBlueprintService;
@@ -72,7 +75,16 @@ namespace ICCMS_API.Services
                 Console.WriteLine($"📄 Converting blueprint URL to base64: {blueprintUrl}");
                 var fileData = await ConvertUrlToBase64Async(blueprintUrl);
                 var fileType = GetFileTypeFromUrl(blueprintUrl);
-                Console.WriteLine($"📄 File type: {fileType}, Base64 data length: {fileData?.Length ?? 0} characters");
+                Console.WriteLine(
+                    $"📄 File type: {fileType}, Base64 data length: {fileData?.Length ?? 0} characters"
+                );
+
+                if (string.IsNullOrEmpty(fileData))
+                {
+                    throw new Exception(
+                        $"Failed to download blueprint from URL: {blueprintUrl}. The file may not exist or the URL is invalid."
+                    );
+                }
 
                 // Call GenKitMicroservice
                 using var httpClient = new HttpClient();
@@ -87,24 +99,35 @@ namespace ICCMS_API.Services
                         projectType = "residential",
                         buildingType = "single_family_home",
                         location = "South Africa",
-                        squareFootage = 2500
-                    }
+                        squareFootage = 2500,
+                    },
                 };
 
                 var json = System.Text.Json.JsonSerializer.Serialize(requestBody);
-                Console.WriteLine($"📦 Request body preview: {json.Substring(0, Math.Min(200, json.Length))}...");
-                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                Console.WriteLine(
+                    $"📦 Request body preview: {json.Substring(0, Math.Min(200, json.Length))}..."
+                );
+                var content = new StringContent(
+                    json,
+                    System.Text.Encoding.UTF8,
+                    "application/json"
+                );
 
                 // Assuming GenKitMicroservice runs on localhost:3001
                 Console.WriteLine($"🚀 Making HTTP request to GenKitMicroservice...");
                 Console.WriteLine($"📡 URL: http://localhost:3001/api/ai/extract-line-items");
                 Console.WriteLine($"📦 Request body size: {json.Length} characters");
-                
-                var response = await httpClient.PostAsync("http://localhost:3001/api/ai/extract-line-items", content);
-                
+
+                var response = await httpClient.PostAsync(
+                    "http://localhost:3001/api/ai/extract-line-items",
+                    content
+                );
+
                 Console.WriteLine($"📡 HTTP Response Status: {response.StatusCode}");
-                Console.WriteLine($"📡 HTTP Response Headers: {string.Join(", ", response.Headers.Select(h => $"{h.Key}={string.Join(",", h.Value)}"))}");
-                
+                Console.WriteLine(
+                    $"📡 HTTP Response Headers: {string.Join(", ", response.Headers.Select(h => $"{h.Key}={string.Join(",", h.Value)}"))}"
+                );
+
                 if (!response.IsSuccessStatusCode)
                 {
                     Console.WriteLine($"❌ GenKitMicroservice error: {response.StatusCode}");
@@ -114,14 +137,22 @@ namespace ICCMS_API.Services
                 }
 
                 var responseContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"✅ GenKitMicroservice response length: {responseContent.Length} characters");
-                Console.WriteLine($"✅ GenKitMicroservice response preview: {responseContent.Substring(0, Math.Min(500, responseContent.Length))}...");
-                
+                Console.WriteLine(
+                    $"✅ GenKitMicroservice response length: {responseContent.Length} characters"
+                );
+                Console.WriteLine(
+                    $"✅ GenKitMicroservice response preview: {responseContent.Substring(0, Math.Min(500, responseContent.Length))}..."
+                );
+
                 GenKitResponse result;
                 try
                 {
-                    result = System.Text.Json.JsonSerializer.Deserialize<GenKitResponse>(responseContent);
-                    Console.WriteLine($"🔍 Deserialized result - Success: {result?.Success}, LineItems count: {result?.LineItems?.Count}");
+                    result = System.Text.Json.JsonSerializer.Deserialize<GenKitResponse>(
+                        responseContent
+                    );
+                    Console.WriteLine(
+                        $"🔍 Deserialized result - Success: {result?.Success}, LineItems count: {result?.LineItems?.Count}"
+                    );
                 }
                 catch (Exception jsonEx)
                 {
@@ -130,32 +161,42 @@ namespace ICCMS_API.Services
                     return await GetFallbackLineItems();
                 }
 
-                if (result?.Success == true && result.LineItems != null && result.LineItems.Count > 0)
+                if (
+                    result?.Success == true
+                    && result.LineItems != null
+                    && result.LineItems.Count > 0
+                )
                 {
-                    Console.WriteLine($"Successfully extracted {result.LineItems.Count} line items from GenKitMicroservice");
-                    
+                    Console.WriteLine(
+                        $"Successfully extracted {result.LineItems.Count} line items from GenKitMicroservice"
+                    );
+
                     // Convert GenKit response to EstimateLineItem format
-                    var lineItems = result.LineItems.Select(item => new EstimateLineItem
-                    {
-                        ItemId = item.ItemId,
-                        Name = item.Name,
-                        Description = item.Description,
-                        Quantity = item.Quantity,
-                        Unit = item.Unit,
-                        Category = item.Category,
-                        UnitPrice = item.UnitPrice,
-                        LineTotal = item.LineTotal,
-                        IsAiGenerated = item.IsAiGenerated,
-                        AiConfidence = item.AiConfidence,
-                        Notes = item.Notes,
-                        MaterialDatabaseId = item.MaterialDatabaseId
-                    }).ToList();
+                    var lineItems = result
+                        .LineItems.Select(item => new EstimateLineItem
+                        {
+                            ItemId = item.ItemId,
+                            Name = item.Name,
+                            Description = item.Description,
+                            Quantity = item.Quantity,
+                            Unit = item.Unit,
+                            Category = item.Category,
+                            UnitPrice = item.UnitPrice,
+                            LineTotal = item.LineTotal,
+                            IsAiGenerated = item.IsAiGenerated,
+                            AiConfidence = item.AiConfidence,
+                            Notes = item.Notes,
+                            MaterialDatabaseId = item.MaterialDatabaseId,
+                        })
+                        .ToList();
 
                     return lineItems;
                 }
                 else
                 {
-                    Console.WriteLine($"GenKitMicroservice returned unsuccessful response - Success: {result?.Success}, LineItems: {result?.LineItems?.Count ?? 0}");
+                    Console.WriteLine(
+                        $"GenKitMicroservice returned unsuccessful response - Success: {result?.Success}, LineItems: {result?.LineItems?.Count ?? 0}"
+                    );
                     Console.WriteLine($"Full response: {responseContent}");
                     return await GetFallbackLineItems();
                 }
@@ -177,34 +218,41 @@ namespace ICCMS_API.Services
                     var fileBytes = await File.ReadAllBytesAsync(blueprintUrl);
                     return Convert.ToBase64String(fileBytes);
                 }
-                
+
                 // Check if it's a Supabase URL
                 if (_supabaseBlueprintService.IsValidSupabaseUrl(blueprintUrl))
                 {
-                    return await _supabaseBlueprintService.DownloadBlueprintAsBase64Async(blueprintUrl);
+                    return await _supabaseBlueprintService.DownloadBlueprintAsBase64Async(
+                        blueprintUrl
+                    );
                 }
-                
+
                 // Check if it's a regular URL (http/https)
                 if (blueprintUrl.StartsWith("http://") || blueprintUrl.StartsWith("https://"))
                 {
                     Console.WriteLine($"Downloading blueprint from URL: {blueprintUrl}");
-                    
+
                     using var httpClient = new HttpClient();
                     var response = await httpClient.GetAsync(blueprintUrl);
-                    
+
                     if (response.IsSuccessStatusCode)
                     {
                         var fileBytes = await response.Content.ReadAsByteArrayAsync();
-                        Console.WriteLine($"Successfully downloaded {fileBytes.Length} bytes from URL");
+                        Console.WriteLine(
+                            $"Successfully downloaded {fileBytes.Length} bytes from URL"
+                        );
                         return Convert.ToBase64String(fileBytes);
                     }
                     else
                     {
-                        Console.WriteLine($"Failed to download from URL: {response.StatusCode}");
+                        var errorContent = await response.Content.ReadAsStringAsync();
+                        Console.WriteLine(
+                            $"Failed to download from URL: {response.StatusCode} - {errorContent}"
+                        );
                         return "";
                     }
                 }
-                
+
                 // Fallback: return empty string for unknown file types
                 Console.WriteLine($"Unknown file type or path: {blueprintUrl}");
                 return "";
@@ -223,11 +271,11 @@ namespace ICCMS_API.Services
             {
                 return _supabaseBlueprintService.GetFileTypeFromSupabaseUrl(blueprintUrl);
             }
-            
+
             // Fallback for other URLs
             var urlWithoutQuery = blueprintUrl.Split('?')[0];
             var extension = Path.GetExtension(urlWithoutQuery).ToLower();
-            
+
             return extension switch
             {
                 ".pdf" => "pdf",
@@ -235,30 +283,38 @@ namespace ICCMS_API.Services
                 ".png" => "image",
                 ".dwg" => "dwg",
                 ".dxf" => "dxf",
-                _ => "pdf" // Default to PDF
+                _ => "pdf", // Default to PDF
             };
         }
 
         private async Task<List<EstimateLineItem>> GetFallbackLineItems()
         {
-            Console.WriteLine("⚠️ CRITICAL: Using fallback line items - GenKitMicroservice is unavailable!");
-            Console.WriteLine("This should only happen when the GenKitMicroservice is completely down.");
-            
-            return await Task.FromResult(new List<EstimateLineItem>
-            {
-                new EstimateLineItem
+            Console.WriteLine(
+                "⚠️ CRITICAL: Using fallback line items - GenKitMicroservice is unavailable!"
+            );
+            Console.WriteLine(
+                "This should only happen when the GenKitMicroservice is completely down."
+            );
+
+            return await Task.FromResult(
+                new List<EstimateLineItem>
                 {
-                    ItemId = Guid.NewGuid().ToString(),
-                    Name = "⚠️ FALLBACK - GenKitMicroservice Unavailable",
-                    Description = "The AI service is not responding. Please check if GenKitMicroservice is running.",
-                    Quantity = 0,
-                    Unit = "N/A",
-                    Category = "Error",
-                    IsAiGenerated = false,
-                    AiConfidence = 0.0,
-                    Notes = "CRITICAL: GenKitMicroservice is not responding - check service status",
+                    new EstimateLineItem
+                    {
+                        ItemId = Guid.NewGuid().ToString(),
+                        Name = "⚠️ FALLBACK - GenKitMicroservice Unavailable",
+                        Description =
+                            "The AI service is not responding. Please check if GenKitMicroservice is running.",
+                        Quantity = 0,
+                        Unit = "N/A",
+                        Category = "Error",
+                        IsAiGenerated = false,
+                        AiConfidence = 0.0,
+                        Notes =
+                            "CRITICAL: GenKitMicroservice is not responding - check service status",
+                    },
                 }
-            });
+            );
         }
 
         // Response classes for GenKitMicroservice
@@ -266,10 +322,10 @@ namespace ICCMS_API.Services
         {
             [System.Text.Json.Serialization.JsonPropertyName("success")]
             public bool Success { get; set; }
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("lineItems")]
             public List<GenKitLineItem> LineItems { get; set; } = new();
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("metadata")]
             public GenKitMetadata Metadata { get; set; } = new();
         }
@@ -278,40 +334,40 @@ namespace ICCMS_API.Services
         {
             [System.Text.Json.Serialization.JsonPropertyName("itemId")]
             public string ItemId { get; set; } = "";
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("name")]
             public string Name { get; set; } = "";
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("description")]
             public string Description { get; set; } = "";
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("quantity")]
             public double Quantity { get; set; }
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("unit")]
             public string Unit { get; set; } = "";
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("category")]
             public string Category { get; set; } = "";
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("unitPrice")]
             public double UnitPrice { get; set; }
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("lineTotal")]
             public double LineTotal { get; set; }
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("isAiGenerated")]
             public bool IsAiGenerated { get; set; }
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("aiConfidence")]
             public double AiConfidence { get; set; }
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("notes")]
             public string Notes { get; set; } = "";
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("materialDatabaseId")]
             public string? MaterialDatabaseId { get; set; }
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("unitOfQuantity")]
             public string UnitOfQuantity { get; set; } = "";
         }
@@ -320,16 +376,16 @@ namespace ICCMS_API.Services
         {
             [System.Text.Json.Serialization.JsonPropertyName("totalItems")]
             public int TotalItems { get; set; }
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("processingTime")]
             public long ProcessingTime { get; set; }
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("confidence")]
             public double Confidence { get; set; }
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("blueprintTypes")]
             public List<string> BlueprintTypes { get; set; } = new();
-            
+
             [System.Text.Json.Serialization.JsonPropertyName("timestamp")]
             public string Timestamp { get; set; } = "";
         }
@@ -343,33 +399,38 @@ namespace ICCMS_API.Services
             foreach (var item in lineItems)
             {
                 // Check if this is a General work item (should NOT be priced from database)
-                bool isGeneralWorkItem = item.Category?.ToLower() == "general" || 
-                                       (item.Name?.ToLower().Contains("preparation") == true) ||
-                                       (item.Name?.ToLower().Contains("management") == true) ||
-                                       (item.Name?.ToLower().Contains("supervision") == true) ||
-                                       (item.Name?.ToLower().Contains("utilities") == true) ||
-                                       (item.Name?.ToLower().Contains("equipment") == true) ||
-                                       (item.Name?.ToLower().Contains("safety") == true) ||
-                                       (item.Name?.ToLower().Contains("permits") == true);
+                bool isGeneralWorkItem =
+                    item.Category?.ToLower() == "general"
+                    || (item.Name?.ToLower().Contains("preparation") == true)
+                    || (item.Name?.ToLower().Contains("management") == true)
+                    || (item.Name?.ToLower().Contains("supervision") == true)
+                    || (item.Name?.ToLower().Contains("utilities") == true)
+                    || (item.Name?.ToLower().Contains("equipment") == true)
+                    || (item.Name?.ToLower().Contains("safety") == true)
+                    || (item.Name?.ToLower().Contains("permits") == true);
 
                 if (isGeneralWorkItem)
                 {
                     // General work items keep their AI-generated pricing
-                    Console.WriteLine($"General work item '{item.Name}' - keeping AI-generated pricing: R{item.UnitPrice}");
+                    Console.WriteLine(
+                        $"General work item '{item.Name}' - keeping AI-generated pricing: R{item.UnitPrice}"
+                    );
                     item.Notes += " [GENERAL WORK ITEM - AI PRICING]";
                 }
                 else
                 {
                     // Material items - try to find pricing in database
-                var material = await _materialDatabaseService.GetMaterialByNameAsync(item.Name);
+                    var material = await _materialDatabaseService.GetMaterialByNameAsync(item.Name);
 
-                if (material != null)
-                {
-                    item.UnitPrice = material.UnitPrice;
-                    item.MaterialDatabaseId = material.Id;
-                    item.Description = material.Description;
+                    if (material != null)
+                    {
+                        item.UnitPrice = material.UnitPrice;
+                        item.MaterialDatabaseId = material.Id;
+                        item.Description = material.Description;
                         item.Unit = material.Unit; // Use the unit from the database
-                        Console.WriteLine($"Found pricing for {item.Name}: R{material.UnitPrice} per {material.Unit}");
+                        Console.WriteLine(
+                            $"Found pricing for {item.Name}: R{material.UnitPrice} per {material.Unit}"
+                        );
                     }
                     else
                     {
@@ -382,10 +443,12 @@ namespace ICCMS_API.Services
                             item.Description = fuzzyMatch.Description;
                             item.Unit = fuzzyMatch.Unit;
                             item.Notes += $" [FUZZY MATCH: {fuzzyMatch.Name}]";
-                            Console.WriteLine($"Fuzzy match found for {item.Name}: {fuzzyMatch.Name} - R{fuzzyMatch.UnitPrice} per {fuzzyMatch.Unit}");
-                }
-                else
-                {
+                            Console.WriteLine(
+                                $"Fuzzy match found for {item.Name}: {fuzzyMatch.Name} - R{fuzzyMatch.UnitPrice} per {fuzzyMatch.Unit}"
+                            );
+                        }
+                        else
+                        {
                             // If not found, set price to 0 (as per requirements)
                             item.UnitPrice = 0.0;
                             item.Notes += " [NO PRICING FOUND - SET TO 0]";
@@ -406,38 +469,52 @@ namespace ICCMS_API.Services
         {
             // Get all materials from database
             var allMaterials = await _materialDatabaseService.GetAllMaterialsAsync();
-            
+
             // Simple fuzzy matching - look for partial matches
             var normalizedItemName = itemName.ToLower().Trim();
-            
+
             foreach (var material in allMaterials)
             {
                 var normalizedMaterialName = material.Name.ToLower().Trim();
-                
+
                 // Check if item name contains material name or vice versa
-                if (normalizedItemName.Contains(normalizedMaterialName) || 
-                    normalizedMaterialName.Contains(normalizedItemName))
+                if (
+                    normalizedItemName.Contains(normalizedMaterialName)
+                    || normalizedMaterialName.Contains(normalizedItemName)
+                )
                 {
                     return material;
                 }
-                
+
                 // Check for common variations
-                if (normalizedItemName.Contains("brick") && normalizedMaterialName.Contains("brick"))
+                if (
+                    normalizedItemName.Contains("brick") && normalizedMaterialName.Contains("brick")
+                )
                     return material;
-                if (normalizedItemName.Contains("concrete") && normalizedMaterialName.Contains("concrete"))
+                if (
+                    normalizedItemName.Contains("concrete")
+                    && normalizedMaterialName.Contains("concrete")
+                )
                     return material;
-                if (normalizedItemName.Contains("paint") && normalizedMaterialName.Contains("paint"))
+                if (
+                    normalizedItemName.Contains("paint") && normalizedMaterialName.Contains("paint")
+                )
                     return material;
-                if (normalizedItemName.Contains("steel") && normalizedMaterialName.Contains("steel"))
+                if (
+                    normalizedItemName.Contains("steel") && normalizedMaterialName.Contains("steel")
+                )
                     return material;
                 if (normalizedItemName.Contains("tile") && normalizedMaterialName.Contains("tile"))
                     return material;
                 if (normalizedItemName.Contains("door") && normalizedMaterialName.Contains("door"))
                     return material;
-                if (normalizedItemName.Contains("window") && normalizedMaterialName.Contains("window"))
+                if (
+                    normalizedItemName.Contains("window")
+                    && normalizedMaterialName.Contains("window")
+                )
                     return material;
             }
-            
+
             return null;
         }
 

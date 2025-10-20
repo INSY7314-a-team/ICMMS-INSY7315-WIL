@@ -1,0 +1,452 @@
+@* Modal to edit estimate line items for a project *@
+<div class="modal fade" id="estimateEditorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content"
+            style="background-color: var(--secondary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);">
+            <div class="modal-header"
+                style="background-color: var(--primary-bg); border-bottom: 1px solid var(--accent-yellow);">
+                <h5 class="modal-title" style="color: var(--text-light);">Edit Line Items</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <span class="badge bg-info text-dark" id="ee-projectBadge"></span>
+                    </div>
+                    <div class="btn-group">
+
+                        <button class="btn btn-outline-warning" id="ee-btnRegenerate"><i class="fa-solid fa-robot"></i>
+                            Regenerate from Blueprint</button>
+                    </div>
+                </div>
+
+                <table class="table table-sm table-striped align-middle" id="ee-table"
+                    style="background-color: var(--primary-bg); color: var(--text-light);">
+                    <thead style="background-color: var(--primary-bg); border-bottom: 1px solid var(--accent-yellow);">
+                        <tr>
+                            <th style="color: var(--text-light); border-color: var(--accent-yellow);">Name</th>
+                            <th style="color: var(--text-light); border-color: var(--accent-yellow);">Description</th>
+                            <th style="color: var(--text-light); border-color: var(--accent-yellow);">Category</th>
+                            <th style="color: var(--text-light); border-color: var(--accent-yellow);">Unit</th>
+                            <th class="text-end" style="color: var(--text-light); border-color: var(--accent-yellow);">
+                                Qty</th>
+                            <th class="text-end" style="color: var(--text-light); border-color: var(--accent-yellow);">
+                                Unit Price</th>
+                            <th class="text-end" style="color: var(--text-light); border-color: var(--accent-yellow);">
+                                Line Total</th>
+                            <th style="color: var(--text-light); border-color: var(--accent-yellow);"></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div class="d-flex justify-content-between">
+                    <button class="btn btn-outline-primary" id="ee-btnAdd"><i class="fa-solid fa-plus"></i> Add
+                        Item</button>
+                    <div class="text-end" style="color: var(--text-light);">
+                        <div>Subtotal: <strong id="ee-subtotal" style="color: var(--accent-yellow);">0</strong></div>
+                        <div>Tax: <strong id="ee-tax" style="color: var(--accent-yellow);">0</strong></div>
+                        <div>Total: <strong id="ee-total" style="color: var(--accent-green);">0</strong></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"
+                style="background-color: var(--primary-bg); border-top: 1px solid var(--accent-yellow);">
+                <button class="btn btn-secondary" data-bs-dismiss="modal"
+                    style="background-color: var(--text-muted); color: var(--text-light); border: 1px solid var(--text-muted);">Close</button>
+                <button class="btn btn-primary" id="ee-btnSave"
+                    style="background-color: var(--accent-yellow); color: var(--text-dark); border: 1px solid var(--accent-yellow);">Save</button>
+                <button class="btn btn-success" id="ee-btnSendQuote"
+                    style="background-color: var(--accent-green); color: var(--text-light); border: 1px solid var(--accent-green);">Send
+                    Quote</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        let projectId = null;
+        let estimate = null;
+
+        function open(project) {
+            projectId = project;
+            document.getElementById('ee-projectBadge').textContent = `Project: ${project}`;
+
+            // Restore original modal content
+            const modalBody = document.querySelector('#estimateEditorModal .modal-body');
+            modalBody.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <span class="badge bg-info text-dark" id="ee-projectBadge">Project: ${project}</span>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-outline-primary" id="ee-btnPickBlueprint"><i
+                                class="fa-solid fa-file"></i> Process Blueprint</button>
+                        <button class="btn btn-outline-warning" id="ee-btnRegenerate"><i class="fa-solid fa-robot"></i>
+                            Regenerate from Blueprint</button>
+                    </div>
+                </div>
+
+                <table class="table table-sm table-striped align-middle" id="ee-table" style="background-color: var(--primary-bg); color: var(--text-light);">
+                    <thead style="background-color: var(--primary-bg); border-bottom: 1px solid var(--accent-yellow);">
+                        <tr>
+                            <th style="color: var(--text-light); border-color: var(--accent-yellow);">Name</th>
+                            <th style="color: var(--text-light); border-color: var(--accent-yellow);">Description</th>
+                            <th style="color: var(--text-light); border-color: var(--accent-yellow);">Category</th>
+                            <th style="color: var(--text-light); border-color: var(--accent-yellow);">Unit</th>
+                            <th class="text-end" style="color: var(--text-light); border-color: var(--accent-yellow);">Qty</th>
+                            <th class="text-end" style="color: var(--text-light); border-color: var(--accent-yellow);">Unit Price</th>
+                            <th class="text-end" style="color: var(--text-light); border-color: var(--accent-yellow);">Line Total</th>
+                            <th style="color: var(--text-light); border-color: var(--accent-yellow);"></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div class="d-flex justify-content-between">
+                    <button class="btn btn-outline-primary" id="ee-btnAdd"><i class="fa-solid fa-plus"></i> Add
+                        Item</button>
+                    <div class="text-end" style="color: var(--text-light);">
+                        <div>Subtotal: <strong id="ee-subtotal" style="color: var(--accent-yellow);">0</strong></div>
+                        <div>Tax: <strong id="ee-tax" style="color: var(--accent-yellow);">0</strong></div>
+                        <div>Total: <strong id="ee-total" style="color: var(--accent-green);">0</strong></div>
+                    </div>
+                </div>
+            `;
+
+            const modal = new bootstrap.Modal(document.getElementById('estimateEditorModal'));
+            modal.show();
+            setTimeout(() => {
+                loadEstimate();
+                reattachEventListeners();
+            }, 150);
+        }
+
+        function reattachEventListeners() {
+            // Reattach all event listeners for dynamically created elements
+            const addBtn = document.getElementById('ee-btnAdd');
+            const pickBlueprintBtn = document.getElementById('ee-btnPickBlueprint');
+            const regenerateBtn = document.getElementById('ee-btnRegenerate');
+            const saveBtn = document.getElementById('ee-btnSave');
+            const sendQuoteBtn = document.getElementById('ee-btnSendQuote');
+            const table = document.getElementById('ee-table');
+
+            if (addBtn) {
+                addBtn.removeEventListener('click', handleAddItem);
+                addBtn.addEventListener('click', handleAddItem);
+            }
+
+            if (pickBlueprintBtn) {
+                pickBlueprintBtn.removeEventListener('click', handlePickBlueprint);
+                pickBlueprintBtn.addEventListener('click', handlePickBlueprint);
+            }
+
+            if (regenerateBtn) {
+                regenerateBtn.removeEventListener('click', handleRegenerate);
+                regenerateBtn.addEventListener('click', handleRegenerate);
+            }
+
+            if (saveBtn) {
+                saveBtn.removeEventListener('click', handleSave);
+                saveBtn.addEventListener('click', handleSave);
+            }
+
+            if (sendQuoteBtn) {
+                sendQuoteBtn.removeEventListener('click', handleSendQuote);
+                sendQuoteBtn.addEventListener('click', handleSendQuote);
+            }
+
+            if (table) {
+                table.removeEventListener('input', handleTableInput);
+                table.removeEventListener('click', handleTableClick);
+                table.addEventListener('input', handleTableInput);
+                table.addEventListener('click', handleTableClick);
+            }
+        }
+
+        function handleAddItem() {
+            if (!estimate.lineItems) estimate.lineItems = [];
+            estimate.lineItems.push({ name: '', description: '', category: '', unit: '', quantity: 0, unitPrice: 0, lineTotal: 0 });
+            render();
+        }
+
+        function handlePickBlueprint() {
+            openBlueprintPicker(projectId, async function (url) {
+                await processBlueprint(url);
+            });
+        }
+
+        async function handleRegenerate() {
+            if (!confirm('Regenerate from blueprint? This may overwrite your edits.')) return;
+            if (!estimate.blueprintUrl) { alert('Pick a blueprint first.'); return; }
+
+            const btn = document.getElementById('ee-btnRegenerate');
+            const originalText = btn.innerHTML;
+
+            try {
+                // Show loading state
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Regenerating...';
+
+                await processBlueprint(estimate.blueprintUrl);
+            } finally {
+                // Restore button state
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        async function handleSave() {
+            collect();
+            if (!estimate.estimateId) { alert('No estimate to save. Try processing a blueprint first.'); return; }
+            const res = await fetch(`/ProjectManager/SaveEstimate?estimateId=${encodeURIComponent(estimate.estimateId)}`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(estimate)
+            });
+            if (!res.ok) { alert('Save failed'); return; }
+            alert('Saved');
+        }
+
+        async function handleSendQuote() {
+            if (!estimate || !estimate.estimateId) { alert('No estimate available'); return; }
+            const q = await (await fetch(`/ProjectManager/CreateQuoteFromEstimate?estimateId=${encodeURIComponent(estimate.estimateId)}`, { method: 'POST' })).json();
+            if (!q || !q.quotationId) { alert('Failed to create quotation'); return; }
+            const sent = await fetch(`/ProjectManager/SendQuoteToClient?quotationId=${encodeURIComponent(q.quotationId)}`, { method: 'POST' });
+            if (!sent.ok) { alert('Failed to send quote'); return; }
+            alert('Quote sent to client');
+        }
+
+        function handleTableInput(e) {
+            if (e.target && e.target.matches('[data-f]')) {
+                collect();
+                render();
+            }
+        }
+
+        function handleTableClick(e) {
+            const el = e.target.closest('[data-action="del"]');
+            if (el) {
+                const i = Number(el.getAttribute('data-i'));
+                estimate.lineItems.splice(i, 1);
+                render();
+            }
+        }
+
+        async function loadEstimate() {
+            try {
+                console.log('Loading estimate for project:', projectId);
+                const url = `/ProjectManager/GetEstimate?projectId=${encodeURIComponent(projectId)}`;
+                console.log('Fetching from URL:', url);
+
+                const res = await fetch(url);
+                console.log('GetEstimate response status:', res.status);
+                console.log('GetEstimate response headers:', res.headers);
+
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    console.error('Failed to load estimate:', res.status, res.statusText, errorText);
+                    throw new Error(`Failed to load estimate: ${res.status} ${res.statusText}`);
+                }
+
+                estimate = await res.json();
+                console.log('Estimate loaded successfully:', estimate);
+                console.log('Estimate line items count:', estimate.lineItems?.length || 0);
+                render();
+            } catch (error) {
+                console.error('Error loading estimate:', error);
+                // Don't throw the error, just log it and show empty state
+                estimate = { lineItems: [] };
+                render();
+            }
+        }
+
+        function render() {
+            const tbody = document.querySelector('#ee-table tbody');
+            tbody.innerHTML = '';
+            (estimate.lineItems || []).forEach((it, idx) => tbody.appendChild(rowFor(it, idx)));
+            recomputeTotals();
+        }
+
+        function rowFor(item, idx) {
+            const tr = document.createElement('tr');
+            tr.style.cssText = 'background-color: var(--primary-bg); color: var(--text-light); border-color: var(--accent-yellow);';
+            tr.innerHTML = `
+        <td style="border-color: var(--accent-yellow);"><input class="form-control form-control-sm" value="${escapeHtml(item.name || '')}" data-f="name" data-i="${idx}" style="background-color: var(--secondary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);"></td>
+        <td style="border-color: var(--accent-yellow);"><input class="form-control form-control-sm" value="${escapeHtml(item.description || '')}" data-f="description" data-i="${idx}" style="background-color: var(--secondary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);"></td>
+        <td style="border-color: var(--accent-yellow);"><input class="form-control form-control-sm" value="${escapeHtml(item.category || '')}" data-f="category" data-i="${idx}" style="background-color: var(--secondary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);"></td>
+        <td style="border-color: var(--accent-yellow);"><input class="form-control form-control-sm" value="${escapeHtml(item.unit || '')}" data-f="unit" data-i="${idx}" style="background-color: var(--secondary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);"></td>
+        <td class="text-end" style="border-color: var(--accent-yellow);"><input type="number" step="0.01" class="form-control form-control-sm text-end" value="${Number(item.quantity || 0)}" data-f="quantity" data-i="${idx}" style="background-color: var(--secondary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);"></td>
+        <td class="text-end" style="border-color: var(--accent-yellow);"><input type="number" step="0.01" class="form-control form-control-sm text-end" value="${Number(item.unitPrice || 0)}" data-f="unitPrice" data-i="${idx}" style="background-color: var(--secondary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);"></td>
+        <td class="text-end" style="border-color: var(--accent-yellow); color: var(--text-light);">${formatCurrency((item.quantity || 0) * (item.unitPrice || 0))}</td>
+        <td style="border-color: var(--accent-yellow);"><button class="btn btn-sm btn-outline-danger" data-action="del" data-i="${idx}" style="background-color: var(--accent-red); color: var(--text-light); border: 1px solid var(--accent-red);"><i class="fa-solid fa-trash"></i></button></td>`;
+            return tr;
+        }
+
+        function recomputeTotals() {
+            let subtotal = 0;
+            (estimate.lineItems || []).forEach(it => subtotal += (Number(it.quantity || 0) * Number(it.unitPrice || 0)));
+            const tax = Number(estimate.taxTotal || 0);
+            const total = subtotal + tax;
+            estimate.subtotal = subtotal;
+            estimate.totalAmount = total;
+            document.getElementById('ee-subtotal').textContent = formatCurrency(subtotal);
+            document.getElementById('ee-tax').textContent = formatCurrency(tax);
+            document.getElementById('ee-total').textContent = formatCurrency(total);
+        }
+
+        function collect() {
+            const inputs = document.querySelectorAll('#ee-table [data-f]');
+            inputs.forEach(inp => {
+                const field = inp.getAttribute('data-f');
+                const i = Number(inp.getAttribute('data-i'));
+                if (!estimate.lineItems) estimate.lineItems = [];
+                const target = estimate.lineItems[i] || (estimate.lineItems[i] = {});
+                let v = inp.value;
+                if (field === 'quantity' || field === 'unitPrice') v = Number(v);
+                target[field] = v;
+                target.lineTotal = Number(target.quantity || 0) * Number(target.unitPrice || 0);
+            });
+            recomputeTotals();
+        }
+
+        // Event listeners are now handled by reattachEventListeners function
+
+        window.processBlueprintAndOpen = async function (projectIdParam, url) {
+            projectId = projectIdParam;
+
+            // Show loading state in the estimate editor modal
+            const modal = new bootstrap.Modal(document.getElementById('estimateEditorModal'));
+            modal.show();
+
+            // Show loading content
+            const modalBody = document.querySelector('#estimateEditorModal .modal-body');
+            const originalContent = modalBody.innerHTML;
+            modalBody.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="mb-3">
+                        <i class="fa-solid fa-spinner fa-spin fa-3x" style="color: var(--accent-yellow);"></i>
+                    </div>
+                    <h5 style="color: var(--text-light);">Processing Blueprint...</h5>
+                    <p style="color: var(--text-muted);">Please wait while we analyze your blueprint and extract line items.</p>
+                </div>
+            `;
+
+            try {
+                console.log('Starting blueprint processing...');
+                const ok = await processBlueprint(url);
+                console.log('Blueprint processing completed:', ok);
+
+                if (ok !== false) {
+                    // Add a small delay to ensure loading indicator is visible
+                    await new Promise(resolve => setTimeout(resolve, 500));
+
+                    // Restore original content and load estimate
+                    modalBody.innerHTML = originalContent;
+                    reattachEventListeners();
+                    await loadEstimate();
+                } else {
+                    // Restore original content on failure
+                    modalBody.innerHTML = originalContent;
+                    reattachEventListeners();
+                    alert('Failed to process blueprint. Please try again.');
+                    modal.hide();
+                }
+            } catch (error) {
+                console.error('Error processing blueprint:', error);
+                modalBody.innerHTML = originalContent;
+                reattachEventListeners();
+                alert('Failed to process blueprint. Please try again.');
+                modal.hide();
+            }
+        }
+
+        // Regenerate event listener is now handled by reattachEventListeners function
+
+        async function processBlueprint(url) {
+            const btn = document.getElementById('ee-btnPickBlueprint');
+            let originalText = '';
+
+            // Only update button if it exists (not in loading screen mode)
+            if (btn) {
+                originalText = btn.innerHTML;
+                try {
+                    // Show loading state
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing Blueprint...';
+                } catch (e) {
+                    console.log('Button not available for loading state update');
+                }
+            }
+
+            try {
+                let res = await fetch('/ProjectManager/ProcessBlueprint', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectId, blueprintUrl: url })
+                });
+                if (!res.ok && res.status === 404) {
+                    // fallback to absolute path in case of base path issues
+                    res = await fetch(`${window.location.origin}/ProjectManager/ProcessBlueprint`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ projectId, blueprintUrl: url })
+                    });
+                }
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error('ProcessBlueprint failed', res.status, text);
+                    alert(`Failed to process blueprint (status ${res.status}).`);
+                    return false;
+                }
+
+                // Get the response data which contains estimateId
+                const responseData = await res.json();
+                console.log('ProcessBlueprint response:', responseData);
+                console.log('Response status:', res.status);
+                console.log('Response headers:', res.headers);
+
+                // Set the estimateId from the response
+                if (responseData.estimateId) {
+                    // Initialize estimate object if it's null
+                    if (!estimate) {
+                        estimate = {};
+                    }
+                    estimate.estimateId = responseData.estimateId;
+                    console.log('Estimate ID set:', responseData.estimateId);
+                } else {
+                    console.warn('No estimateId in response:', responseData);
+                }
+
+                // Add a small delay to ensure the estimate is saved before trying to load it
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                await loadEstimate();
+                return true;
+            } catch (e) {
+                console.error('ProcessBlueprint exception', e);
+                // More specific error message based on the error type
+                if (e.message && e.message.includes('Failed to load estimate')) {
+                    alert('Blueprint processed successfully, but failed to load the results. Please refresh the page.');
+                } else {
+                    alert('Failed to process blueprint (network error).');
+                }
+                return false;
+            } finally {
+                // Restore button state only if button exists
+                if (btn && originalText) {
+                    try {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                    } catch (e) {
+                        console.log('Button not available for state restoration');
+                    }
+                }
+            }
+        }
+
+        // Save and Send Quote event listeners are now handled by reattachEventListeners function
+
+        window.openEstimateEditor = open;
+
+        function formatCurrency(n) { return `R ${Number(n || 0).toFixed(2)}`; }
+        function escapeHtml(str) { return (str || '').replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c])); }
+    })();
+</script>

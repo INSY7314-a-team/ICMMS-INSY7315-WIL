@@ -6,6 +6,8 @@
 }
 
 @await Html.PartialAsync("_QuoteBuilder")
+@await Html.PartialAsync("_BlueprintPickerModal")
+@await Html.PartialAsync("_EstimateEditorModal")
 @await Html.PartialAsync("_ProjectCreationWizard", Model)
 @await Html.PartialAsync("_PlanEditorModal")
 

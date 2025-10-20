@@ -40,7 +40,7 @@ public class SupabaseService : ISupabaseService
         try
         {
             Console.WriteLine(
-                $"SupabaseService.UploadFileAsync called with bucket: Uploads, fileName: {fileName}, contentType: {contentType}"
+                $"SupabaseService.UploadFileAsync called with bucket: {bucketName}, fileName: {fileName}, contentType: {contentType}"
             );
 
             // Convert stream to byte array
@@ -50,7 +50,7 @@ public class SupabaseService : ISupabaseService
 
             Console.WriteLine($"File converted to byte array. Size: {fileBytes.Length} bytes");
 
-            var bucket = SupabaseClient.Storage.From("upload");
+            var bucket = SupabaseClient.Storage.From(bucketName);
             Console.WriteLine($"Got bucket reference for: {bucketName}");
 
             await bucket.Upload(
@@ -119,6 +119,49 @@ public class SupabaseService : ISupabaseService
         catch (Exception ex)
         {
             throw new Exception($"Error listing files from Supabase: {ex.Message}", ex);
+        }
+    }
+
+    public async Task<bool> EnsureBucketExistsAsync(string bucketName)
+    {
+        try
+        {
+            Console.WriteLine($"Checking if bucket '{bucketName}' exists...");
+
+            // Try to list files in the bucket to see if it exists
+            var bucket = SupabaseClient.Storage.From(bucketName);
+            await bucket.List("");
+
+            Console.WriteLine($"Bucket '{bucketName}' exists and is accessible");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(
+                $"Bucket '{bucketName}' does not exist or is not accessible: {ex.Message}"
+            );
+            return false;
+        }
+    }
+
+    public async Task<bool> CreateBucketAsync(string bucketName, bool isPublic = true)
+    {
+        try
+        {
+            Console.WriteLine($"Creating bucket '{bucketName}' with public access: {isPublic}");
+
+            // Note: The Supabase .NET client doesn't have a direct method to create buckets
+            // This would typically be done through the Supabase dashboard or REST API
+            // For now, we'll return false and suggest manual creation
+            Console.WriteLine(
+                $"Bucket creation not supported via .NET client. Please create bucket '{bucketName}' manually in Supabase dashboard."
+            );
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating bucket '{bucketName}': {ex.Message}");
+            return false;
         }
     }
 }

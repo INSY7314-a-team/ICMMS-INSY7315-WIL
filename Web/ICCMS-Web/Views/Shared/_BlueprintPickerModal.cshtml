@@ -1,0 +1,210 @@
+@* Simple modal to pick an existing blueprint document for a project *@
+<div class="modal fade" id="blueprintPickerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content"
+            style="background-color: var(--secondary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);">
+            <div class="modal-header"
+                style="background-color: var(--primary-bg); border-bottom: 1px solid var(--accent-yellow);">
+                <h5 class="modal-title" style="color: var(--text-light);">Select Blueprint</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" style="color: var(--text-light);">Upload New Blueprint</label>
+                    <form id="bp-upload-form">
+                        <div class="input-group">
+                            <input type="file" class="form-control" id="bp-file" accept=".pdf,.dwg,.png,.jpg,.jpeg"
+                                style="background-color: var(--primary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);" />
+                            <input type="text" class="form-control" id="bp-desc" placeholder="Description (optional)"
+                                style="background-color: var(--primary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);" />
+                            <button class="btn btn-primary" type="submit"
+                                style="background-color: var(--accent-yellow); color: var(--text-dark); border: 1px solid var(--accent-yellow);"><i
+                                    class="fa-solid fa-upload"></i>
+                                Upload</button>
+                        </div>
+                    </form>
+                    <div id="bp-upload-msg" class="small mt-1" style="color: var(--text-muted);"></div>
+                </div>
+                <hr style="border-color: var(--accent-yellow);" />
+                <div id="bp-list" class="list-group small">
+                    <div style="color: var(--text-muted);">Loading...</div>
+                </div>
+            </div>
+            <div class="modal-footer"
+                style="background-color: var(--primary-bg); border-top: 1px solid var(--accent-yellow);">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                    style="background-color: var(--text-muted); color: var(--text-light); border: 1px solid var(--text-muted);">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        let currentProjectId = null;
+        let onPick = null;
+        const uploadedMap = {}; // fileName -> publicUrl (from immediate upload response)
+
+        async function loadBlueprints(projectId) {
+            const list = document.getElementById('bp-list');
+            list.innerHTML = '<div style="color: var(--text-muted);">Loading...</div>';
+            try {
+                const res = await fetch(`/ProjectManager/ProjectBlueprints?projectId=${encodeURIComponent(projectId)}`);
+                const docs = await res.json();
+                if (!Array.isArray(docs) || docs.length === 0) {
+                    list.innerHTML = '<div style="color: var(--text-muted);">No blueprints found for this project.</div>';
+                    return;
+                }
+                list.innerHTML = '';
+                docs.forEach(d => {
+                    const a = document.createElement('a');
+                    a.href = '#';
+                    a.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                    a.style.cssText = 'background-color: var(--primary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow); border-radius: 5px; margin-bottom: 5px;';
+                    const when = d.uploadedAt || d.createdAt || Date.now();
+                    a.innerHTML = `<span><i class='fa-solid fa-file me-2'></i>${escapeHtml(d.fileName || d.url || d.publicUrl || d.downloadUrl || d.fileUrl || 'Document')}</span><small style='color: var(--text-muted);'>${new Date(when).toLocaleString()}</small>`;
+                    a.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        const pickedUrl = d.url || uploadedMap[d.fileName] || d.publicUrl || d.downloadUrl || d.fileUrl || d.path || '';
+                        if (!pickedUrl) {
+                            console.error('No URL on document', d);
+                            alert('Selected document has no URL. Please upload again.');
+                            return;
+                        }
+
+                        // Show loading state in the modal
+                        const modalBody = document.querySelector('#blueprintPickerModal .modal-body');
+                        const originalContent = modalBody.innerHTML;
+                        modalBody.innerHTML = `
+                            <div class="text-center py-5">
+                                <div class="mb-3">
+                                    <i class="fa-solid fa-spinner fa-spin fa-3x" style="color: var(--accent-yellow);"></i>
+                                </div>
+                                <h5 style="color: var(--text-light);">Processing Blueprint...</h5>
+                                <p style="color: var(--text-muted);">Please wait while we analyze your blueprint and extract line items.</p>
+                            </div>
+                        `;
+
+                        try {
+                            if (typeof onPick === 'function') {
+                                await onPick(pickedUrl);
+                            }
+                        } catch (error) {
+                            console.error('Error processing blueprint:', error);
+                            modalBody.innerHTML = originalContent;
+                            alert('Failed to process blueprint. Please try again.');
+                            return;
+                        }
+
+                        // Close modal after successful processing
+                        bootstrap.Modal.getInstance(document.getElementById('blueprintPickerModal'))?.hide();
+                    });
+                    a.addEventListener('mouseenter', function () {
+                        this.style.backgroundColor = 'var(--accent-yellow)';
+                        this.style.color = 'var(--text-dark)';
+                    });
+                    a.addEventListener('mouseleave', function () {
+                        this.style.backgroundColor = 'var(--primary-bg)';
+                        this.style.color = 'var(--text-light)';
+                    });
+                    list.appendChild(a);
+                });
+            } catch (e) {
+                list.innerHTML = '<div style="color: var(--accent-red);">Failed to load blueprints.</div>';
+            }
+        }
+
+        window.openBlueprintPicker = function (projectId, callback) {
+            currentProjectId = projectId;
+            onPick = callback;
+
+            // Restore original modal content
+            const modalBody = document.querySelector('#blueprintPickerModal .modal-body');
+            modalBody.innerHTML = `
+                <div class="mb-3">
+                    <label class="form-label" style="color: var(--text-light);">Upload New Blueprint</label>
+                    <form id="bp-upload-form">
+                        <div class="input-group">
+                            <input type="file" class="form-control" id="bp-file" accept=".pdf,.dwg,.png,.jpg,.jpeg" style="background-color: var(--primary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);" />
+                            <input type="text" class="form-control" id="bp-desc" placeholder="Description (optional)" style="background-color: var(--primary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);" />
+                            <button class="btn btn-primary" type="submit" style="background-color: var(--accent-yellow); color: var(--text-dark); border: 1px solid var(--accent-yellow);"><i class="fa-solid fa-upload"></i>
+                                Upload</button>
+                        </div>
+                    </form>
+                    <div id="bp-upload-msg" class="small mt-1" style="color: var(--text-muted);"></div>
+                </div>
+                <hr style="border-color: var(--accent-yellow);" />
+                <div id="bp-list" class="list-group small">
+                    <div style="color: var(--text-muted);">Loading...</div>
+                </div>
+            `;
+
+            const modal = new bootstrap.Modal(document.getElementById('blueprintPickerModal'));
+            modal.show();
+            setTimeout(() => {
+                loadBlueprints(projectId);
+                // Reattach event listeners for the dynamically created form
+                attachUploadFormListener();
+            }, 150);
+        }
+
+        function attachUploadFormListener() {
+            const form = document.getElementById('bp-upload-form');
+            if (form) {
+                form.removeEventListener('submit', handleUploadSubmit);
+                form.addEventListener('submit', handleUploadSubmit);
+            }
+        }
+
+        async function handleUploadSubmit(e) {
+            e.preventDefault();
+            const file = document.getElementById('bp-file').files[0];
+            const desc = document.getElementById('bp-desc').value;
+            const msg = document.getElementById('bp-upload-msg');
+            const submitBtn = document.querySelector('#bp-upload-form button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+
+            if (!file) { msg.textContent = 'Please choose a file.'; return; }
+
+            const form = new FormData();
+            form.append('projectId', currentProjectId || '');
+            form.append('file', file);
+            if (desc) form.append('description', desc);
+
+            try {
+                // Show loading state
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Uploading...';
+                submitBtn.style.opacity = '0.7';
+                msg.textContent = 'Uploading...';
+
+                const res = await fetch('/ProjectManager/UploadBlueprint', { method: 'POST', body: form });
+                if (!res.ok) {
+                    msg.textContent = 'Upload failed';
+                    return;
+                }
+                const json = await res.json().catch(() => null);
+                if (json && (json.url || json.publicUrl) && (json.fileName || json.name)) {
+                    const name = json.fileName || json.name;
+                    uploadedMap[name] = json.url || json.publicUrl;
+                }
+                msg.textContent = 'Uploaded successfully';
+                document.getElementById('bp-file').value = '';
+                document.getElementById('bp-desc').value = '';
+                await loadBlueprints(currentProjectId);
+            } catch (err) {
+                msg.textContent = 'Upload failed';
+            } finally {
+                // Restore button state
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+                submitBtn.style.opacity = '1';
+            }
+        }
+
+        function escapeHtml(str) {
+            return (str || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        }
+    })();
+</script>
