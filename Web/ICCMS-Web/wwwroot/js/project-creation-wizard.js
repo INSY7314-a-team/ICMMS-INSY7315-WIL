@@ -314,6 +314,47 @@ class ProjectCreationWizard {
     document.getElementById("reviewClient").textContent = client
       ? client.fullName
       : "-";
+
+    // Grouped Phases -> Tasks view
+    const phases = this.collectPhases();
+    const tasks = this.collectTasks();
+    const groupsContainer = document.getElementById("reviewPhaseTaskGroups");
+    if (groupsContainer) {
+      groupsContainer.innerHTML = "";
+      if (phases.length === 0) {
+        groupsContainer.innerHTML =
+          '<div class="text-muted">No phases added</div>';
+      } else {
+        const tasksByPhase = tasks.reduce((acc, t) => {
+          const key = t.phaseId || "";
+          acc[key] = acc[key] || [];
+          acc[key].push(t);
+          return acc;
+        }, {});
+
+        phases.forEach((p, idx) => {
+          const card = document.createElement("div");
+          card.className = "card mb-2";
+          const listItems = (tasksByPhase[p.phaseId] || []).map((t, i) => {
+            return `<li class=\"list-group-item\">${i + 1}. ${
+              t.name || "Untitled"
+            }</li>`;
+          });
+          const emptyText =
+            listItems.length === 0
+              ? '<li class="list-group-item text-muted">No tasks</li>'
+              : "";
+          card.innerHTML = `
+            <div class="card-header">
+              <strong>${idx + 1}. ${p.name || "Untitled Phase"}</strong>
+            </div>
+            <ul class="list-group list-group-flush">
+              ${listItems.join("") || emptyText}
+            </ul>`;
+          groupsContainer.appendChild(card);
+        });
+      }
+    }
   }
 
   async ensureDraft() {
@@ -417,7 +458,15 @@ class ProjectCreationWizard {
       </div>`;
     wrapper.querySelector(".remove-phase").addEventListener("click", () => {
       wrapper.remove();
+      this.refreshTaskPhaseOptions();
     });
+    // Refresh options when user types phase name (for better labels), and when added
+    const phaseNameInput = wrapper.querySelector(".phase-name");
+    phaseNameInput?.addEventListener("input", () =>
+      this.refreshTaskPhaseOptions()
+    );
+    // Initial refresh to reflect new phase
+    setTimeout(() => this.refreshTaskPhaseOptions(), 0);
     return wrapper;
   }
 
@@ -431,6 +480,7 @@ class ProjectCreationWizard {
         (c) => `<option value="${c.userId}">${c.fullName} (${c.email})</option>`
       ),
     ].join("");
+    const phaseOptions = this.buildPhaseOptionsHtml(task.phaseId);
     wrapper.innerHTML = `
       <div class="card-body">
         <div class="row g-2 align-items-end">
@@ -442,9 +492,7 @@ class ProjectCreationWizard {
           </div>
           <div class="col-md-3">
             <label class="form-label">Phase</label>
-            <input type="text" class="form-control task-phase" placeholder="PhaseId" value="${
-              task.phaseId || ""
-            }" />
+            <select class="form-select task-phase-select">${phaseOptions}</select>
           </div>
           <div class="col-md-3">
             <label class="form-label">Contractor</label>
@@ -463,6 +511,41 @@ class ProjectCreationWizard {
       wrapper.remove();
     });
     return wrapper;
+  }
+
+  buildPhaseOptionsHtml(selectedPhaseId) {
+    const phases = this.getCurrentPhases();
+    const opts = [
+      '<option value="">Select phase...</option>',
+      ...phases.map(
+        (p) =>
+          `<option value="${p.phaseId}" ${
+            p.phaseId === (selectedPhaseId || "") ? "selected" : ""
+          }>${p.name || p.phaseId}</option>`
+      ),
+    ];
+    return opts.join("");
+  }
+
+  getCurrentPhases() {
+    const container = document.getElementById("phasesContainer");
+    if (!container) return [];
+    return Array.from(container.querySelectorAll(".card")).map((card) => {
+      const id = card.querySelector(".phase-name")?.dataset.id || "";
+      const name = card.querySelector(".phase-name")?.value || "";
+      return { phaseId: id, name };
+    });
+  }
+
+  refreshTaskPhaseOptions() {
+    const tasksContainer = document.getElementById("tasksContainer");
+    if (!tasksContainer) return;
+    const selects = tasksContainer.querySelectorAll(".task-phase-select");
+    const currentPhases = this.getCurrentPhases();
+    selects.forEach((sel) => {
+      const current = sel.value;
+      sel.innerHTML = this.buildPhaseOptionsHtml(current);
+    });
   }
 
   bindEvents() {
@@ -544,7 +627,7 @@ class ProjectCreationWizard {
         taskId: card.querySelector(".task-name")?.dataset.id || "",
         projectId: this.projectId,
         name: card.querySelector(".task-name")?.value || "",
-        phaseId: card.querySelector(".task-phase")?.value || "",
+        phaseId: card.querySelector(".task-phase-select")?.value || "",
         assignedTo: card.querySelector(".task-contractor")?.value || "",
         dueDate: this.parseDateInput(card.querySelector(".task-due")?.value),
       };
@@ -648,17 +731,42 @@ class ProjectCreationWizard {
   }
 
   showSuccess(message) {
-    // You can implement a toast notification here
-    console.log("Success:", message);
-    // For now, just show an alert
-    alert(message);
+    this.toast(message, "success");
   }
 
   showError(message) {
-    // You can implement a toast notification here
-    console.error("Error:", message);
-    // For now, just show an alert
-    alert("Error: " + message);
+    this.toast(message, "danger");
+  }
+
+  toast(message, type = "info") {
+    try {
+      const containerId = "toast-container";
+      let container = document.getElementById(containerId);
+      if (!container) {
+        container = document.createElement("div");
+        container.id = containerId;
+        container.className = "toast-container position-fixed top-0 end-0 p-3";
+        document.body.appendChild(container);
+      }
+
+      const toastEl = document.createElement("div");
+      toastEl.className = `toast align-items-center text-bg-${type} border-0`;
+      toastEl.setAttribute("role", "alert");
+      toastEl.setAttribute("aria-live", "assertive");
+      toastEl.setAttribute("aria-atomic", "true");
+      toastEl.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body">${message}</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>`;
+      container.appendChild(toastEl);
+      const bsToast = new bootstrap.Toast(toastEl, { delay: 2500 });
+      bsToast.show();
+      toastEl.addEventListener("hidden.bs.toast", () => toastEl.remove());
+    } catch (e) {
+      // fallback
+      console.log(message);
+    }
   }
 }
 

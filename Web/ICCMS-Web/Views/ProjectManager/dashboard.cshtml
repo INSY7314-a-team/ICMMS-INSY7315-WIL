@@ -55,16 +55,27 @@
                             <h6 class="mb-0">Project Status</h6>
                         </div>
                         <div class="status-filters">
-                            @foreach (var status in Model.AvailableStatuses)
+                            @{
+                                var statuses = (Model.AvailableStatuses ?? new List<string>());
+                            }
+                            @{
+                                if (!statuses.Contains("Planning"))
+                                {
+                                    statuses =
+                                    statuses.Concat(new[] { "Planning" }).ToList();
+                                }
+                            }
+                            @foreach (var status in statuses)
                             {
+                                var icon = status == "Draft" ? "fa-file-lines"
+                                : status == "Planning" ? "fa-project-diagram"
+                                : status == "Active" ? "fa-play"
+                                : status == "Completed" ? "fa-check-circle"
+                                : status == "Maintenance" ? "fa-wrench" : "fa-list";
                                 <a href="@Url.Action("Dashboard")" class="status-filter-btn" data-status="@status">
-                                    <i
-                                        class="fa-solid @(status == "Draft" ? "fa-file-lines" : status == "Active" ? "fa-play" : status == "Completed" ? "fa-check-circle" : status == "Maintenance" ? "fa-wrench" : "fa-list") me-2"></i>
+                                    <i class="fa-solid @icon me-2"></i>
                                     @status
-                                    @if (status == "Draft" && Model.DraftProjects.Any())
-                                    {
-                                        <span class="status-count">@Model.DraftProjects.Count</span>
-                                    }
+
                                 </a>
                             }
                         </div>

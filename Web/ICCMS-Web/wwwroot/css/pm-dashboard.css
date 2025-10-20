@@ -582,6 +582,108 @@
     text-align: center;
 }
 
+/* ==========================
+   Project Creation Wizard
+   Theme alignment with dashboard
+   ========================== */
+#projectCreationWizardModal .modal-content {
+    border: 2px solid #F7EC59;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+
+#projectCreationWizardModal .modal-header {
+    background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);
+    color: #FFFFFF;
+    border-bottom: 1px solid rgba(247, 236, 89, 0.4);
+}
+
+#projectCreationWizardModal .modal-title i {
+    color: #F7EC59;
+}
+
+#projectCreationWizardModal .modal-body {
+    background: #0D1821;
+    color: #FFFFFF;
+}
+
+#projectCreationWizardModal .wizard-progress .progress {
+    background: rgba(247, 236, 89, 0.15);
+    height: 10px;
+    border-radius: 8px;
+}
+
+#projectCreationWizardModal .wizard-progress .progress-bar {
+    background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+}
+
+#projectCreationWizardModal .wizard-step h6,
+#projectCreationWizardModal .wizard-step .form-label {
+    color: #F7EC59;
+}
+
+#projectCreationWizardModal .form-control,
+#projectCreationWizardModal .form-select,
+#projectCreationWizardModal textarea {
+    background: #0D1821;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    color: #FFFFFF;
+    border-radius: 10px;
+}
+
+#projectCreationWizardModal .form-control:focus,
+#projectCreationWizardModal .form-select:focus,
+#projectCreationWizardModal textarea:focus {
+    outline: none;
+    border-color: #F7EC59;
+    background: #a79b01;
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.15);
+}
+
+#projectCreationWizardModal .form-select option {
+    background: #0D1821;
+    color: #FFFFFF;
+}
+
+#projectCreationWizardModal .card {
+    background: #1A1B25;
+    color: #FFFFFF;
+    border: 1px solid rgba(247, 236, 89, 0.2);
+}
+
+#projectCreationWizardModal .btn-primary {
+    background: linear-gradient(135deg, #F7EC59 0%, #f4d03f 100%);
+    border: none;
+    color: #1A1B25;
+    font-weight: 600;
+}
+
+#projectCreationWizardModal .btn-outline-primary {
+    border: 2px solid #F7EC59;
+    color: #F7EC59;
+}
+
+#projectCreationWizardModal .btn-outline-primary:hover {
+    background: rgba(247, 236, 89, 0.15);
+}
+
+#projectCreationWizardModal .btn-outline-secondary {
+    border: 2px solid rgba(255,255,255,0.3);
+    color: #FFFFFF;
+}
+
+#projectCreationWizardModal .btn-success {
+    background: #6BF178;
+    border: none;
+    color: #1A1B25;
+    font-weight: 600;
+}
+
+#projectCreationWizardModal .modal-footer {
+    background: #0D1821;
+    border-top: 1px solid rgba(247, 236, 89, 0.2);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .dashboard-title {

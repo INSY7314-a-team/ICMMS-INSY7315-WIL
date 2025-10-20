@@ -132,37 +132,49 @@
                 <!-- Continue Setup Button (opens wizard at draft) -->
                 <button type="button" class="btn-action btn-primary" onclick="continueProjectSetup('@Model.ProjectId')"
                     title="Continue project setup">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Continue Setup
+                    <i class="fa-solid fa-project-diagram"></i> Continue Project Setup
                 </button>
             }
-            else
+            else if (string.Equals(Model.Status, "Active", StringComparison.OrdinalIgnoreCase))
             {
+                <!-- View Progress -->
+                <button type="button" class="btn-action" onclick="viewProjectDetails('@Model.ProjectId')"
+                    title="View Progress">
+                    <i class="fa-solid fa-chart-line"></i> View Progress
+                </button>
                 <!-- Add Phases Button -->
                 <button type="button" class="btn-action btn-add-phases" onclick="addPhases('@Model.ProjectId')"
                     title="Add Phases">
                     <i class="fa-solid fa-layer-group"></i> Add Phases
                 </button>
-
                 <!-- Assign Tasks Button -->
                 <button type="button" class="btn-action btn-assign-tasks" onclick="assignTasks('@Model.ProjectId')"
                     title="Assign Tasks">
                     <i class="fa-solid fa-tasks"></i> Assign Tasks
                 </button>
             }
-
-            <!-- Generate Quotation Button -->
-            <button type="button" class="btn-action btn-generate-quotation"
-                onclick="generateQuotation('@Model.ProjectId')" title="Generate Quotation">
-                <i class="fa-solid fa-file-invoice"></i> Generate Quotation
-            </button>
-
-            <!-- Edit Line Items Button (conditional) -->
-            @if (estimate != null)
+            else
             {
-                <button type="button" class="btn-action btn-edit-line-items" onclick="editLineItems('@Model.ProjectId')"
-                    title="Edit Line Items">
-                    <i class="fa-solid fa-edit"></i> Edit Line Items
+                <!-- Default actions for other statuses (e.g., Planning) -->
+                <button type="button" class="btn-action btn-add-phases" onclick="addPhases('@Model.ProjectId')"
+                    title="Add Phases">
+                    <i class="fa-solid fa-layer-group"></i> Add Phases
                 </button>
+                <button type="button" class="btn-action btn-assign-tasks" onclick="assignTasks('@Model.ProjectId')"
+                    title="Assign Tasks">
+                    <i class="fa-solid fa-tasks"></i> Assign Tasks
+                </button>
+                <button type="button" class="btn-action btn-generate-quotation"
+                    onclick="generateQuotation('@Model.ProjectId')" title="Generate Quotation">
+                    <i class="fa-solid fa-file-invoice"></i> Generate Quotation
+                </button>
+                @if (estimate != null)
+                {
+                    <button type="button" class="btn-action btn-edit-line-items" onclick="editLineItems('@Model.ProjectId')"
+                        title="Edit Line Items">
+                        <i class="fa-solid fa-edit"></i> Edit Line Items
+                    </button>
+                }
             }
         </div>
     </div>

@@ -3,15 +3,15 @@
 <!-- Project Creation Wizard Modal -->
 <div class="modal fade" id="projectCreationWizardModal" tabindex="-1" aria-labelledby="projectCreationWizardModalLabel"
     aria-hidden="true">
-    <div class="modal-dialog modal-xl">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="projectCreationWizardModalLabel">
-                    <i class="fa-solid fa-wand-magic-sparkles me-2"></i>
-                    Project Creation Wizard
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+            <div class="modal-header">
+                <div class="d-flex align-items-center gap-2">
+                    <h5 class="modal-title mb-0" id="projectCreationWizardModalLabel">
+                        Create Project
+                    </h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <!-- Wizard Progress Indicator -->
@@ -20,7 +20,7 @@
                         <div class="progress-bar" role="progressbar" style="width: 0%" id="wizardProgress"></div>
                     </div>
                     <div class="d-flex justify-content-between mt-2">
-                        <small class="text-muted">Step <span id="currentStep">1</span> of 4</small>
+                        <small class="text-muted">Step <span id="currentStep">1</span> of 5</small>
                         <small class="text-muted" id="stepTitle">Basic Information</small>
                     </div>
                 </div>
@@ -29,10 +29,10 @@
                 <form id="projectCreationForm">
                     <!-- Step 1: Basic Information -->
                     <div class="wizard-step" id="step1">
-                        <h6 class="mb-3">
+                        <div class="d-flex align-items-center mb-3">
                             <i class="fa-solid fa-info-circle text-primary me-2"></i>
-                            Basic Project Information
-                        </h6>
+                            <h6 class="mb-0">Basic Project Information</h6>
+                        </div>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="projectName" class="form-label">Project Name <span
@@ -58,27 +58,18 @@
 
                     <!-- Step 2: Budget & Timeline -->
                     <div class="wizard-step d-none" id="step2">
-                        <h6 class="mb-3">
-                            <i class="fa-solid fa-dollar-sign text-success me-2"></i>
-                            Budget & Timeline
-                        </h6>
+                        <div class="d-flex align-items-center mb-3">
+                            <h6 class="mb-0">Budget & Timeline</h6>
+                        </div>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="budgetPlanned" class="form-label">Planned Budget <span
                                         class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text">R</span>
                                     <input type="number" class="form-control" id="budgetPlanned" name="BudgetPlanned"
                                         min="0" step="0.01" required>
                                 </div>
                                 <div class="invalid-feedback">Please enter a valid budget amount.</div>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="projectStatus" class="form-label">Initial Status</label>
-                                <select class="form-select" id="projectStatus" name="Status">
-                                    <option value="Draft">Draft</option>
-                                    <option value="Active">Active</option>
-                                </select>
                             </div>
                             <div class="col-md-6">
                                 <label for="startDate" class="form-label">Start Date <span
@@ -98,34 +89,34 @@
 
                     <!-- Step 3: Phases -->
                     <div class="wizard-step d-none" id="step3">
-                        <h6 class="mb-3">
+                        <div class="d-flex align-items-center mb-3">
                             <i class="fa-solid fa-layer-group text-warning me-2"></i>
-                            Phases
-                        </h6>
+                            <h6 class="mb-0">Phases</h6>
+                        </div>
                         <div id="phasesContainer" class="mb-3"></div>
-                        <button type="button" class="btn btn-outline-secondary" id="addPhaseBtn">
+                        <button type="button" class="btn btn-outline-primary" id="addPhaseBtn">
                             <i class="fa-solid fa-plus me-1"></i>Add Phase
                         </button>
                     </div>
 
                     <!-- Step 4: Tasks & Contractors -->
                     <div class="wizard-step d-none" id="step4">
-                        <h6 class="mb-3">
+                        <div class="d-flex align-items-center mb-3">
                             <i class="fa-solid fa-tasks text-info me-2"></i>
-                            Tasks & Contractors
-                        </h6>
+                            <h6 class="mb-0">Tasks & Contractors</h6>
+                        </div>
                         <div id="tasksContainer" class="mb-3"></div>
-                        <button type="button" class="btn btn-outline-secondary" id="addTaskBtn">
+                        <button type="button" class="btn btn-outline-primary" id="addTaskBtn">
                             <i class="fa-solid fa-plus me-1"></i>Add Task
                         </button>
                     </div>
 
                     <!-- Step 5: Review & Finalize -->
                     <div class="wizard-step d-none" id="step5">
-                        <h6 class="mb-3">
+                        <div class="d-flex align-items-center mb-3">
                             <i class="fa-solid fa-check-circle text-success me-2"></i>
-                            Review & Create
-                        </h6>
+                            <h6 class="mb-0">Review & Finalize</h6>
+                        </div>
                         <div class="card">
                             <div class="card-body">
                                 <h6 class="card-title">Project Summary</h6>
@@ -145,6 +136,13 @@
                                     <p><strong>Description:</strong></p>
                                     <p class="text-muted" id="reviewDescription">-</p>
                                 </div>
+                                <div class="mt-4">
+                                    <h6 class="mb-2">
+                                        <i class="fa-solid fa-diagram-project me-2 text-warning"></i>
+                                        Phases & Tasks
+                                    </h6>
+                                    <div id="reviewPhaseTaskGroups"></div>
+                                </div>
                             </div>
                         </div>
 
@@ -158,8 +156,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-outline-primary" id="prevStepBtn" style="display: none;">
+                <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-secondary" id="prevStepBtn" style="display: none;">
                     <i class="fa-solid fa-arrow-left me-1"></i>Previous
                 </button>
                 <button type="button" class="btn btn-primary" id="nextStepBtn">
