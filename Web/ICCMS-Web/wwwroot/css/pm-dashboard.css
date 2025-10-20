@@ -473,6 +473,11 @@
     margin-bottom: 30px;
 }
 
+/* When a single project card is expanded, let it span full grid width to avoid pushing siblings */
+.project-card.expanded {
+    grid-column: 1 / -1;
+}
+
 .project-card {
     background: #FFFFFF;
     border-radius: 15px;
@@ -591,8 +596,18 @@
     border-radius: 15px;
     box-shadow: 0 8px 25px rgba(0,0,0,0.3);
 }
+#planEditorModal .modal-content {
+    border: 2px solid #F7EC59;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
 
 #projectCreationWizardModal .modal-header {
+    background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);
+    color: #FFFFFF;
+    border-bottom: 1px solid rgba(247, 236, 89, 0.4);
+}
+#planEditorModal .modal-header {
     background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);
     color: #FFFFFF;
     border-bottom: 1px solid rgba(247, 236, 89, 0.4);
@@ -601,8 +616,15 @@
 #projectCreationWizardModal .modal-title i {
     color: #F7EC59;
 }
+#planEditorModal .modal-title i {
+    color: #F7EC59;
+}
 
 #projectCreationWizardModal .modal-body {
+    background: #0D1821;
+    color: #FFFFFF;
+}
+#planEditorModal .modal-body {
     background: #0D1821;
     color: #FFFFFF;
 }
@@ -621,10 +643,22 @@
 #projectCreationWizardModal .wizard-step .form-label {
     color: #F7EC59;
 }
+#planEditorModal h6,
+#planEditorModal .form-label {
+    color: #F7EC59;
+}
 
 #projectCreationWizardModal .form-control,
 #projectCreationWizardModal .form-select,
 #projectCreationWizardModal textarea {
+    background: #0D1821;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    color: #FFFFFF;
+    border-radius: 10px;
+}
+#planEditorModal .form-control,
+#planEditorModal .form-select,
+#planEditorModal textarea {
     background: #0D1821;
     border: 2px solid rgba(255, 255, 255, 0.15);
     color: #FFFFFF;
@@ -639,13 +673,30 @@
     background: #a79b01;
     box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.15);
 }
+#planEditorModal .form-control:focus,
+#planEditorModal .form-select:focus,
+#planEditorModal textarea:focus {
+    outline: none;
+    border-color: #F7EC59;
+    background: #a79b01;
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.15);
+}
 
 #projectCreationWizardModal .form-select option {
     background: #0D1821;
     color: #FFFFFF;
 }
+#planEditorModal .form-select option {
+    background: #0D1821;
+    color: #FFFFFF;
+}
 
 #projectCreationWizardModal .card {
+    background: #1A1B25;
+    color: #FFFFFF;
+    border: 1px solid rgba(247, 236, 89, 0.2);
+}
+#planEditorModal .card {
     background: #1A1B25;
     color: #FFFFFF;
     border: 1px solid rgba(247, 236, 89, 0.2);
@@ -657,8 +708,18 @@
     color: #1A1B25;
     font-weight: 600;
 }
+#planEditorModal .btn-primary {
+    background: linear-gradient(135deg, #F7EC59 0%, #f4d03f 100%);
+    border: none;
+    color: #1A1B25;
+    font-weight: 600;
+}
 
 #projectCreationWizardModal .btn-outline-primary {
+    border: 2px solid #F7EC59;
+    color: #F7EC59;
+}
+#planEditorModal .btn-outline-primary {
     border: 2px solid #F7EC59;
     color: #F7EC59;
 }
@@ -666,8 +727,15 @@
 #projectCreationWizardModal .btn-outline-primary:hover {
     background: rgba(247, 236, 89, 0.15);
 }
+#planEditorModal .btn-outline-primary:hover {
+    background: rgba(247, 236, 89, 0.15);
+}
 
 #projectCreationWizardModal .btn-outline-secondary {
+    border: 2px solid rgba(255,255,255,0.3);
+    color: #FFFFFF;
+}
+#planEditorModal .btn-outline-secondary {
     border: 2px solid rgba(255,255,255,0.3);
     color: #FFFFFF;
 }
@@ -678,8 +746,18 @@
     color: #1A1B25;
     font-weight: 600;
 }
+#planEditorModal .btn-success {
+    background: #6BF178;
+    border: none;
+    color: #1A1B25;
+    font-weight: 600;
+}
 
 #projectCreationWizardModal .modal-footer {
+    background: #0D1821;
+    border-top: 1px solid rgba(247, 236, 89, 0.2);
+}
+#planEditorModal .modal-footer {
     background: #0D1821;
     border-top: 1px solid rgba(247, 236, 89, 0.2);
 }

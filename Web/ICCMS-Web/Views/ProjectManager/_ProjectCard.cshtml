@@ -39,6 +39,13 @@
                 </p>
             </div>
             <div class="text-end d-flex align-items-center gap-2">
+                @if (!string.Equals(Model.Status, "Draft", StringComparison.OrdinalIgnoreCase))
+                {
+                    <button type="button" class="btn btn-sm btn-outline-secondary" title="Expand details"
+                        onclick="toggleProjectDetails('@Model.ProjectId')">
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                }
                 <span class="status-badge">@Model.Status</span>
             </div>
         </div>
@@ -117,6 +124,55 @@
             </div>
         }
 
+        @if (!string.Equals(Model.Status, "Draft", StringComparison.OrdinalIgnoreCase))
+        {
+            <!-- Expandable phases/tasks details (hidden by default) -->
+            <div id="proj-details-@Model.ProjectId" class="mt-3" style="display:none;">
+                <div class="accordion" id="proj-acc-@Model.ProjectId">
+                    @if (phases.Any())
+                    {
+                        var grouped = phases.Select(p => new
+                        {
+                            Phase = p,
+                            PhaseTasks = tasks.Where(t => t.PhaseId == p.PhaseId).ToList()
+                        }).ToList();
+                        foreach (var grp in grouped)
+                        {
+                            <div class="card mb-2">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span><i class="fa-solid fa-layer-group me-2 text-warning"></i>@grp.Phase.Name</span>
+                                    <small class="text-muted">@grp.PhaseTasks.Count task(s)</small>
+                                </div>
+                                <ul class="list-group list-group-flush">
+                                    @if (grp.PhaseTasks.Any())
+                                    {
+                                        foreach (var t in grp.PhaseTasks)
+                                        {
+                                            var status = (t.Status ?? "").ToLowerInvariant();
+                                            var badge = status == "done" || status == "completed" ? "success" : status == "doing" || status
+                                            == "inprogress" ? "warning" : "secondary";
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                <span>@t.Name</span>
+                                                <span class="badge bg-@badge text-dark">@t.Status</span>
+                                            </li>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <li class="list-group-item text-muted">No tasks</li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-muted">No phases yet</div>
+                    }
+                </div>
+            </div>
+        }
+
         <!-- Estimate Info -->
         @if (estimate != null)
         {
@@ -148,25 +204,25 @@
                     <i class="fa-solid fa-chart-line"></i> View Progress
                 </button>
                 <!-- Add Phases Button -->
-                <button type="button" class="btn-action btn-add-phases" onclick="addPhases('@Model.ProjectId')"
-                    title="Add Phases">
+                <button type="button" class="btn-action btn-add-phases"
+                    onclick="openPlanEditor('@Model.ProjectId','phases')" title="Add Phases">
                     <i class="fa-solid fa-layer-group"></i> Add Phases
                 </button>
                 <!-- Assign Tasks Button -->
-                <button type="button" class="btn-action btn-assign-tasks" onclick="assignTasks('@Model.ProjectId')"
-                    title="Assign Tasks">
-                    <i class="fa-solid fa-tasks"></i> Assign Tasks
+                <button type="button" class="btn-action btn-assign-tasks"
+                    onclick="openPlanEditor('@Model.ProjectId','tasks')" title="Assign Tasks">
+                    <i class="fa-solid fa-tasks"></i> Add Phases & Tasks
                 </button>
             }
             else
             {
                 <!-- Default actions for other statuses (e.g., Planning) -->
-                <button type="button" class="btn-action btn-add-phases" onclick="addPhases('@Model.ProjectId')"
-                    title="Add Phases">
+                <button type="button" class="btn-action btn-add-phases"
+                    onclick="openPlanEditor('@Model.ProjectId','phases')" title="Add Phases">
                     <i class="fa-solid fa-layer-group"></i> Add Phases
                 </button>
-                <button type="button" class="btn-action btn-assign-tasks" onclick="assignTasks('@Model.ProjectId')"
-                    title="Assign Tasks">
+                <button type="button" class="btn-action btn-assign-tasks"
+                    onclick="openPlanEditor('@Model.ProjectId','tasks')" title="Assign Tasks">
                     <i class="fa-solid fa-tasks"></i> Assign Tasks
                 </button>
                 <button type="button" class="btn-action btn-generate-quotation"
@@ -227,6 +283,66 @@
         window.location.href = `/ProjectManager/AddPhases?projectId=${projectId}`;
     }
 
+    function toggleProjectDetails(projectId) {
+        const el = document.getElementById(`proj-details-${projectId}`);
+        if (!el) return;
+        const isShown = el.style.display !== 'none';
+        el.style.display = isShown ? 'none' : 'block';
+        // Toggle expanded class on the card container to let CSS span the full row
+        const card = document.getElementById(`project-${projectId}`);
+        if (card) {
+            if (isShown) {
+                card.classList.remove('expanded');
+            } else {
+                card.classList.add('expanded');
+            }
+        }
+        if (!isShown) {
+            // If container is empty (lazy), fetch latest and render
+            if (!el.dataset.loaded && el.querySelectorAll('.card').length === 0) {
+                (async () => {
+                    try {
+                        const [phasesRes, tasksRes] = await Promise.all([
+                            fetch(`/ProjectManager/GetProjectPhases?id=${encodeURIComponent(projectId)}`),
+                            fetch(`/ProjectManager/GetProjectTasks?id=${encodeURIComponent(projectId)}`)
+                        ]);
+                        const phases = await phasesRes.json();
+                        const tasks = await tasksRes.json();
+                        el.innerHTML = renderPhaseTaskDetails(phases, tasks);
+                        el.dataset.loaded = 'true';
+                    } catch (e) { console.warn('Failed to load details', e); }
+                })();
+            }
+        }
+    }
+
+    function renderPhaseTaskDetails(phases, tasks) {
+        if (!Array.isArray(phases) || phases.length === 0) {
+            return '<div class="text-muted">No phases yet</div>';
+        }
+        const byPhase = phases.map(p => {
+            const pts = (tasks || []).filter(t => t.phaseId === p.phaseId);
+            const items = pts.length
+                ? pts.map(t => {
+                    const s = (t.status || '').toLowerCase();
+                    const badge = (s === 'done' || s === 'completed') ? 'success' : (s === 'doing' || s === 'inprogress') ? 'warning' : 'secondary';
+                    return `<li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>${escapeHtml(t.name || '')}</span>
+                                <span class="badge bg-${badge} text-dark">${escapeHtml(t.status || 'Pending')}</span>
+                            </li>`;
+                }).join('')
+                : '<li class="list-group-item text-muted">No tasks</li>';
+            return `<div class="card mb-2">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span><i class="fa-solid fa-layer-group me-2 text-warning"></i>${escapeHtml(p.name || 'Phase')}</span>
+                            <small class="text-muted">${pts.length} task(s)</small>
+                        </div>
+                        <ul class="list-group list-group-flush">${items}</ul>
+                    </div>`;
+        }).join('');
+        return `<div class="accordion">${byPhase}</div>`;
+    }
+
     function generateQuotation(projectId) {
         // Navigate to generate quotation page
         window.location.href = `/ProjectManager/GenerateQuotation?projectId=${projectId}`;
@@ -240,6 +356,16 @@
     function assignTasks(projectId) {
         // Navigate to task assignment page
         window.location.href = `/ProjectManager/AssignTasks?projectId=${projectId}`;
+    }
+
+    function openPlanEditor(projectId, mode) {
+        // Only for Planning or Active projects — handled by server rendering of actions
+        const modal = new bootstrap.Modal(document.getElementById('planEditorModal'));
+        modal.show();
+        setTimeout(async () => {
+            if (!window.__planEditor) return;
+            await window.__planEditor.init(projectId, mode);
+        }, 100);
     }
 
     function continueProjectSetup(projectId) {

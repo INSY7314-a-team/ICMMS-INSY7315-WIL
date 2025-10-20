@@ -7,6 +7,7 @@
 
 @await Html.PartialAsync("_QuoteBuilder")
 @await Html.PartialAsync("_ProjectCreationWizard", Model)
+@await Html.PartialAsync("_PlanEditorModal")
 
 <div class="pm-dashboard-container">
     <!-- Header Section -->
@@ -294,6 +295,7 @@
     <script src="~/js/quote-builder.js"></script>
     <script src="~/js/project-creation-wizard.js"></script>
     <script src="~/js/pm-dashboard.js"></script>
+    <script src="~/js/plan-editor.js"></script>
 
     <script>
         // Initialize dashboard
