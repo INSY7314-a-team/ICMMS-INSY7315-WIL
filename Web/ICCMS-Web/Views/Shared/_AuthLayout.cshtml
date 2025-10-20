@@ -6,6 +6,7 @@
 *@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -18,14 +19,14 @@
     <style>
         /* ===== AUTH LAYOUT STYLING ===== */
         body {
-            background: linear-gradient(145deg, #FFD43B 0%, #FF9900 100%);
+            background: linear-gradient(145deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0;
             font-family: 'Roboto', sans-serif;
-            color: #222;
+            color: var(--text-light);
         }
 
         .auth-wrapper {
@@ -37,7 +38,7 @@
         }
 
         .auth-container {
-            background: #fff;
+            background: var(--text-light);
             border-radius: 18px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
             width: 480px;
@@ -45,133 +46,143 @@
             padding: 3rem 2.5rem;
             text-align: center;
             animation: fadeInUp 0.4s ease-out;
+            border: 2px solid var(--accent-yellow);
         }
 
-        @@keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @@keyframes fadeInUp
+        {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
 
-        .auth-logo img {
-            width: 100px;
-            height: auto;
-            margin-bottom: 1rem;
-        }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
 
-        .auth-logo h2 {
-            font-size: 2rem;
-            font-weight: 800;
-            margin: 0.3rem 0 0.5rem;
-            color: #FFA500;
-        }
-
-        .auth-tagline {
-            font-size: 0.95rem;
-            color: #555;
-            margin-bottom: 2rem;
-        }
-
-        form {
-            text-align: left;
-        }
-
-        label.form-label {
-            font-weight: 600;
-            font-size: 0.95rem;
-            color: #333;
-        }
-
-        .form-control {
-            border-radius: 10px;
-            padding: 0.75rem 1rem;
-            font-size: 1rem;
-        }
-
-        .form-control:focus {
-            border-color: #ffb300;
-            box-shadow: 0 0 8px rgba(255, 179, 0, 0.4);
-        }
-
-        button.btn-primary {
-            background-color: #FFC000;
-            border-color: #FFC000;
-            color: black;
-            font-weight: 600;
-            border-radius: 10px;
-            padding: 0.75rem;
-            margin-top: 0.5rem;
-        }
-
-        button.btn-primary:hover {
-            background-color: #ffb300;
-            border-color: #ffb300;
-            box-shadow: 0 0 12px rgba(255, 179, 0, 0.5);
-        }
-
-        .alert {
-            border-radius: 10px;
-            font-weight: 500;
-            text-align: center;
-        }
-
-        .auth-footer {
-            text-align: center;
-            font-size: 0.85rem;
-            color: #333;
-            margin-top: 2rem;
-            opacity: 0.8;
-        }
-
-        @@media (max-width: 576px) {
-            .auth-container {
-                padding: 2rem 1.5rem;
-                width: 95%;
+            .auth-logo img {
+                width: 100px;
+                height: auto;
+                margin-bottom: 1rem;
             }
 
             .auth-logo h2 {
-                font-size: 1.6rem;
+                font-size: 2rem;
+                font-weight: 800;
+                margin: 0.3rem 0 0.5rem;
+                color: #FFA500;
             }
-        }
-    </style>
-</head>
 
-<body>
-    <div class="auth-wrapper">
-        <div class="auth-container">
-            <div class="auth-logo">
-                <img src="~/images/TaskIt2.png" alt="TaskIt Logo" />
-                <h2>TASKIT</h2>
-                <div class="auth-tagline">
-                    Integrated Construction & Maintenance Management System
+            .auth-tagline {
+                font-size: 0.95rem;
+                color: #555;
+                margin-bottom: 2rem;
+            }
+
+            form {
+                text-align: left;
+            }
+
+            label.form-label {
+                font-weight: 600;
+                font-size: 0.95rem;
+                color: #333;
+            }
+
+            .form-control {
+                border-radius: 10px;
+                padding: 0.75rem 1rem;
+                font-size: 1rem;
+            }
+
+            .form-control:focus {
+                border-color: var(--accent-yellow);
+                box-shadow: 0 0 8px rgba(247, 236, 89, 0.4);
+            }
+
+            button.btn-primary {
+                background-color: var(--accent-yellow);
+                border-color: var(--accent-yellow);
+                color: var(--text-dark);
+                font-weight: 600;
+                border-radius: 10px;
+                padding: 0.75rem;
+                margin-top: 0.5rem;
+            }
+
+            button.btn-primary:hover {
+                background-color: #E6D547;
+                border-color: #E6D547;
+                box-shadow: 0 0 12px rgba(247, 236, 89, 0.5);
+            }
+
+            .alert {
+                border-radius: 10px;
+                font-weight: 500;
+                text-align: center;
+            }
+
+            .auth-footer {
+                text-align: center;
+                font-size: 0.85rem;
+                color: #333;
+                margin-top: 2rem;
+                opacity: 0.8;
+            }
+
+            @@media (max-width: 576px) {
+                    .auth-container {
+                        padding: 2rem 1.5rem;
+                        width: 95%;
+                    }
+
+                    .auth-logo h2 {
+                        font-size: 1.6rem;
+                    }
+                }
+            </style>
+        </head>
+
+        <body>
+            <div class="auth-wrapper">
+                <div class="auth-container">
+                    <div class="auth-logo">
+                        <img src="~/images/TaskIt2.png" alt="TaskIt Logo" />
+                        <h2>TASKIT</h2>
+                        <div class="auth-tagline">
+                            Integrated Construction & Maintenance Management System
+                        </div>
+                    </div>
+
+                    @RenderBody()
+
+                    <div class="auth-footer">
+                        &copy; @DateTime.Now.Year TaskIt — All Rights Reserved
+                    </div>
                 </div>
             </div>
 
-            @RenderBody()
+            <script src="~/lib/jquery/dist/jquery.min.js"></script>
+            <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+            <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+            <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
-            <div class="auth-footer">
-                &copy; @DateTime.Now.Year TaskIt — All Rights Reserved
-            </div>
-        </div>
-    </div>
+            <script>
+                // Firebase Config
+                const firebaseConfig = {
+                    apiKey: "AIzaSyC0JDtGyh7sL_doZobuoQwg7LDrIE4BQN0",
+                    authDomain: "icmms-ecba6.firebaseapp.com",
+                    projectId: "icmms-ecba6",
+                    storageBucket: "icmms-ecba6.appspot.com",
+                    messagingSenderId: "123456789",
+                    appId: "1:123456789:web:abcdef123456"
+                };
+                firebase.initializeApp(firebaseConfig);
+            </script>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+            @await RenderSectionAsync("Scripts", required: false)
+        </body>
 
-    <script>
-        // Firebase Config
-        const firebaseConfig = {
-            apiKey: "AIzaSyC0JDtGyh7sL_doZobuoQwg7LDrIE4BQN0",
-            authDomain: "icmms-ecba6.firebaseapp.com",
-            projectId: "icmms-ecba6",
-            storageBucket: "icmms-ecba6.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef123456"
-        };
-        firebase.initializeApp(firebaseConfig);
-    </script>
-
-    @await RenderSectionAsync("Scripts", required: false)
-</body>
-</html>
+        </html>

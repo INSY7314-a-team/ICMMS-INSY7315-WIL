@@ -11,6 +11,15 @@ namespace ICCMS_API.Services
             where T : class;
         Task<List<T>> GetCollectionAsync<T>(string collection)
             where T : class;
+        Task<List<T>> GetCollectionWithFiltersAsync<T>(
+            string collection,
+            Dictionary<string, object> filters,
+            int page = 1,
+            int pageSize = 20
+        )
+            where T : class;
+        Task<int> GetCollectionCountAsync<T>(string collection, Dictionary<string, object> filters)
+            where T : class;
         Task<string> AddDocumentAsync<T>(string collection, T document)
             where T : class;
         Task AddDocumentWithIdAsync<T>(string collection, string documentId, T document)
@@ -183,6 +192,209 @@ namespace ICCMS_API.Services
             {
                 Console.WriteLine($"Error deleting document {documentId}: {ex.Message}");
                 throw;
+            }
+        }
+
+        public async Task<List<T>> GetCollectionWithFiltersAsync<T>(
+            string collection,
+            Dictionary<string, object> filters,
+            int page = 1,
+            int pageSize = 20
+        )
+            where T : class
+        {
+            try
+            {
+                Console.WriteLine(
+                    $"Getting filtered collection: {collection} with {filters.Count} filters, page {page}, size {pageSize}"
+                );
+
+                Query query = _firestoreDb.Collection(collection);
+
+                // Apply filters
+                foreach (var filter in filters)
+                {
+                    if (filter.Value != null && !string.IsNullOrEmpty(filter.Value.ToString()))
+                    {
+                        switch (filter.Key.ToLower())
+                        {
+                            case "status":
+                                query = query.WhereEqualTo("status", filter.Value);
+                                break;
+                            case "projectmanagerid":
+                                query = query.WhereEqualTo("projectManagerId", filter.Value);
+                                break;
+                            case "clientid":
+                                query = query.WhereEqualTo("clientId", filter.Value);
+                                break;
+                            case "budgetmin":
+                                query = query.WhereGreaterThanOrEqualTo(
+                                    "budgetPlanned",
+                                    Convert.ToDouble(filter.Value)
+                                );
+                                break;
+                            case "budgetmax":
+                                query = query.WhereLessThanOrEqualTo(
+                                    "budgetPlanned",
+                                    Convert.ToDouble(filter.Value)
+                                );
+                                break;
+                            case "startdatefrom":
+                                query = query.WhereGreaterThanOrEqualTo(
+                                    "startDatePlanned",
+                                    filter.Value
+                                );
+                                break;
+                            case "startdateto":
+                                query = query.WhereLessThanOrEqualTo(
+                                    "startDatePlanned",
+                                    filter.Value
+                                );
+                                break;
+                            case "searchquery":
+                                // For text search, we'll need to implement a different approach
+                                // Firestore doesn't support full-text search natively
+                                // For now, we'll skip this filter and handle it in memory
+                                break;
+                        }
+                    }
+                }
+
+                // Apply ordering and pagination
+                query = query.OrderByDescending("StartDate");
+
+                // Get all results first (Firestore limitation - no direct offset support)
+                var snapshot = await query.GetSnapshotAsync();
+                var allResults = snapshot.Documents.Select(doc => doc.ConvertTo<T>()).ToList();
+
+                // Apply pagination in memory
+                var result = allResults.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+                // Apply text search filter in memory if provided
+                if (
+                    filters.ContainsKey("searchquery")
+                    && !string.IsNullOrEmpty(filters["searchquery"]?.ToString())
+                )
+                {
+                    var searchTerm = filters["searchquery"].ToString().ToLower();
+                    result = result
+                        .Where(item =>
+                        {
+                            var name = GetPropertyValue(item, "Name")?.ToString()?.ToLower() ?? "";
+                            var description =
+                                GetPropertyValue(item, "Description")?.ToString()?.ToLower() ?? "";
+                            return name.Contains(searchTerm) || description.Contains(searchTerm);
+                        })
+                        .ToList();
+                }
+
+                Console.WriteLine($"Retrieved {result.Count} filtered documents from {collection}");
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting filtered collection {collection}: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<int> GetCollectionCountAsync<T>(
+            string collection,
+            Dictionary<string, object> filters
+        )
+            where T : class
+        {
+            try
+            {
+                Console.WriteLine(
+                    $"Getting count for collection: {collection} with {filters.Count} filters"
+                );
+
+                Query query = _firestoreDb.Collection(collection);
+
+                // Apply filters (same logic as GetCollectionWithFiltersAsync)
+                foreach (var filter in filters)
+                {
+                    if (filter.Value != null && !string.IsNullOrEmpty(filter.Value.ToString()))
+                    {
+                        switch (filter.Key.ToLower())
+                        {
+                            case "status":
+                                query = query.WhereEqualTo("status", filter.Value);
+                                break;
+                            case "projectmanagerid":
+                                query = query.WhereEqualTo("projectManagerId", filter.Value);
+                                break;
+                            case "clientid":
+                                query = query.WhereEqualTo("clientId", filter.Value);
+                                break;
+                            case "budgetmin":
+                                query = query.WhereGreaterThanOrEqualTo(
+                                    "budgetPlanned",
+                                    Convert.ToDouble(filter.Value)
+                                );
+                                break;
+                            case "budgetmax":
+                                query = query.WhereLessThanOrEqualTo(
+                                    "budgetPlanned",
+                                    Convert.ToDouble(filter.Value)
+                                );
+                                break;
+                            case "startdatefrom":
+                                query = query.WhereGreaterThanOrEqualTo(
+                                    "startDatePlanned",
+                                    filter.Value
+                                );
+                                break;
+                            case "startdateto":
+                                query = query.WhereLessThanOrEqualTo(
+                                    "startDatePlanned",
+                                    filter.Value
+                                );
+                                break;
+                        }
+                    }
+                }
+
+                var snapshot = await query.GetSnapshotAsync();
+                var count = snapshot.Count;
+
+                // Apply text search filter in memory if provided
+                if (
+                    filters.ContainsKey("searchquery")
+                    && !string.IsNullOrEmpty(filters["searchquery"]?.ToString())
+                )
+                {
+                    var searchTerm = filters["searchquery"].ToString().ToLower();
+                    var allItems = snapshot.Documents.Select(doc => doc.ConvertTo<T>()).ToList();
+                    count = allItems.Count(item =>
+                    {
+                        var name = GetPropertyValue(item, "Name")?.ToString()?.ToLower() ?? "";
+                        var description =
+                            GetPropertyValue(item, "Description")?.ToString()?.ToLower() ?? "";
+                        return name.Contains(searchTerm) || description.Contains(searchTerm);
+                    });
+                }
+
+                Console.WriteLine($"Count for {collection}: {count}");
+                return count;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting count for collection {collection}: {ex.Message}");
+                throw;
+            }
+        }
+
+        private object GetPropertyValue(object obj, string propertyName)
+        {
+            try
+            {
+                return obj.GetType().GetProperty(propertyName)?.GetValue(obj);
+            }
+            catch
+            {
+                return null;
             }
         }
     }
