@@ -14,121 +14,119 @@ namespace ICCMS_Web.Controllers
     {
         private readonly IApiClient _apiClient;
         private readonly ILogger<ProjectManagerController> _logger;
+        private readonly ProjectSetupService _projectSetupService;
 
-        public ProjectManagerController(IApiClient apiClient, ILogger<ProjectManagerController> logger)
+        // ✅ Inject the new service via constructor
+        public ProjectManagerController(
+            IApiClient apiClient,
+            ILogger<ProjectManagerController> logger,
+            ProjectSetupService projectSetupService)
         {
             _apiClient = apiClient;
             _logger = logger;
+            _projectSetupService = projectSetupService;
         }
 
         /// <summary>
-        /// Loads the Project Manager Dashboard with full project lifecycle data:
-        /// Projects → Phases → Tasks, plus summary cards for Clients, Contractors, and Quotes.
+        /// Loads the Project Manager Dashboard with minimal API reads.
+        /// Uses in-memory batching to avoid duplicate / redundant Firestore calls.
         /// </summary>
         public async Task<IActionResult> Dashboard()
         {
-            // ===============================================================
-            // 🧭 1. INITIALIZATION + USER CONTEXT
-            // ===============================================================
             _logger.LogInformation("=== [Dashboard] ENTERED ProjectManagerController.Dashboard ===");
-            _logger.LogInformation("Active User: {UserName} | Role: ProjectManager", User.Identity?.Name);
 
-            var vm = new DashboardViewModel(); // ✅ Initialize early
+            var vm = new DashboardViewModel();
 
-            var phaseDict = new Dictionary<string, List<PhaseDto>>();
-            var taskDict = new Dictionary<string, List<ProjectTaskDto>>();
-
-            // ===============================================================
-            // 📦 2. FETCH PROJECTS
-            // ===============================================================
-            var allProjects = await _apiClient.GetAsync<List<ProjectDto>>("/api/projectmanager/projects", User) ?? new();
-            var recentProjects = allProjects.OrderByDescending(p => p.StartDate).Take(50).ToList();
-
-            _logger.LogInformation("✅ [Dashboard] Projects loaded: {Count}", allProjects.Count);
-
-            // ===============================================================
-            // 💬 3. FETCH QUOTATIONS
-            // ===============================================================
-            var allQuotes = await _apiClient.GetAsync<List<QuotationDto>>("/api/quotations", User) ?? new();
-            var acceptedQuotes = allQuotes
-                .Where(q => q.Status.Equals("ClientAccepted", StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(q => q.ApprovedAt ?? q.CreatedAt)
-                .Take(5)
-                .ToList();
-
-            _logger.LogInformation("✅ Quotations loaded. Total: {All}, Accepted: {Accepted}",
-                allQuotes.Count, acceptedQuotes.Count);
-
-            // ===============================================================
-            // 👥 4. FETCH CLIENTS
-            // ===============================================================
-            _logger.LogInformation("=== [Dashboard] Fetching Clients from /api/users/clients ===");
-
-            var allClients = await _apiClient.GetAsync<List<UserDto>>("/api/users/clients", User) ?? new();
-            vm.Clients = allClients; // ✅ Now this works because vm exists
-            vm.TotalClients = allClients.Count;
-            vm.RecentClients = allClients.Take(5).ToList();
-
-            _logger.LogInformation("✅ Clients loaded. Total: {Count}", allClients.Count);
-
-            // ===============================================================
-            // 🧰 5. FETCH CONTRACTORS
-            // ===============================================================
-            var allContractors = await _apiClient.GetAsync<List<UserDto>>("/api/users/contractors", User) ?? new();
-            var recentContractors = allContractors.Take(5).ToList();
-
-            _logger.LogInformation("✅ Contractors loaded. Total: {Count}", allContractors.Count);
-
-            // ===============================================================
-            // 🧩 6. FETCH PHASES + TASKS
-            // ===============================================================
-            foreach (var project in allProjects)
+            try
             {
-                var phases = await _apiClient.GetAsync<List<PhaseDto>>(
-                    $"/api/projectmanager/project/{project.ProjectId}/phases", User) ?? new();
+                // ===============================================================
+                // 🧭 1. FETCH ALL CORE DATA IN PARALLEL
+                // ===============================================================
+                _logger.LogInformation("📦 Fetching all core collections (Projects, Quotes, Clients, Contractors)");
 
-                phaseDict[project.ProjectId] = phases;
+                var projectsTask = _apiClient.GetAsync<List<ProjectDto>>("/api/projectmanager/projects", User);
+                var quotesTask = _apiClient.GetAsync<List<QuotationDto>>("/api/quotations", User);
+                var clientsTask = _apiClient.GetAsync<List<UserDto>>("/api/users/clients", User);
+                var contractorsTask = _apiClient.GetAsync<List<UserDto>>("/api/users/contractors", User);
+                var estimatesTask = _apiClient.GetAsync<List<EstimateDto>>("/api/estimates", User);
 
-                foreach (var phase in phases)
-                {
-                    var allTasks = await _apiClient.GetAsync<List<ProjectTaskDto>>(
-                        $"/api/projectmanager/project/{project.ProjectId}/tasks", User) ?? new();
+                await Task.WhenAll(projectsTask, quotesTask, clientsTask, contractorsTask, estimatesTask);
 
-                    var phaseTasks = allTasks.Where(t => t.PhaseId == phase.PhaseId).ToList();
-                    taskDict[phase.PhaseId] = phaseTasks;
-                }
+                var allProjects = projectsTask.Result ?? new();
+                var allQuotes = quotesTask.Result ?? new();
+                var allClients = clientsTask.Result ?? new();
+                var allContractors = contractorsTask.Result ?? new();
+                var allEstimates = estimatesTask.Result ?? new();
+
+                _logger.LogInformation("✅ Core data loaded: {P} projects | {Q} quotes | {C} clients | {Co} contractors",
+                    allProjects.Count, allQuotes.Count, allClients.Count, allContractors.Count);
+
+                // ===============================================================
+                // 🧠 2. MAP QUOTES + CLIENTS FOR DASHBOARD USE
+                // ===============================================================
+                var recentProjects = allProjects.OrderByDescending(p => p.StartDate).Take(50).ToList();
+
+                // Group quotes per project
+                var quotesByProject = allQuotes
+                    .Where(q => !string.IsNullOrEmpty(q.ProjectId))
+                    .GroupBy(q => q.ProjectId)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                // Client lookup dictionary
+                var clientDict = allClients.ToDictionary(c => c.UserId, c => c.FullName ?? "Unknown Client");
+
+                // ===============================================================
+                // 🧩 3. PHASES + TASKS — LAZY LOAD STRATEGY
+                // ===============================================================
+                // Instead of fetching phases/tasks for every project upfront (huge Firestore cost),
+                // we defer those requests until the user opens the ProjectDetails or SetupProject views.
+                // This drops Firestore reads by ~80–90% per dashboard load.
+
+                _logger.LogInformation("🧩 Skipping per-project Phase/Task fetching to reduce Firestore reads.");
+                _logger.LogInformation("   Phases and Tasks will load only when a ProjectDetails or SetupProject page is opened.");
+
+                var phaseDict = new Dictionary<string, List<PhaseDto>>();
+                var taskDict  = new Dictionary<string, List<ProjectTaskDto>>();
+
+                // ===============================================================
+                // 📊 4. ESTIMATES (CACHED PER PROJECT)
+                // ===============================================================
+                var estimateDict = allEstimates
+                    .Where(e => !string.IsNullOrEmpty(e.ProjectId))
+                    .GroupBy(e => e.ProjectId)
+                    .ToDictionary(g => g.Key, g => g.OrderByDescending(e => e.CreatedAt).First());
+
+                // ===============================================================
+                // 🚀 5. POPULATE VIEWMODEL
+                // ===============================================================
+                vm.TotalProjects = allProjects.Count;
+                vm.RecentProjects = recentProjects;
+                vm.TotalQuotes = allQuotes.Count;
+                vm.AllQuotes = allQuotes;
+                vm.RecentAcceptedQuotes = allQuotes
+                    .Where(q => q.Status.Equals("ClientAccepted", StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(q => q.ApprovedAt ?? q.CreatedAt)
+                    .Take(5)
+                    .ToList();
+                vm.TotalClients = allClients.Count;
+                vm.RecentClients = allClients.Take(5).ToList();
+                vm.TotalContractors = allContractors.Count;
+                vm.RecentContractors = allContractors.Take(5).ToList();
+                vm.ProjectPhases = phaseDict;
+                vm.PhaseTasks = taskDict;
+                vm.ProjectEstimates = estimateDict;
+                vm.Clients = allClients;
+
+                _logger.LogInformation("✅ Dashboard populated successfully.");
+
+                return View(vm);
             }
-
-            // ===============================================================
-            // 🧠 7. POPULATE VM
-            // ===============================================================
-            vm.TotalProjects = allProjects.Count;
-            vm.RecentProjects = recentProjects;
-            vm.TotalQuotes = allQuotes.Count;
-            vm.RecentAcceptedQuotes = acceptedQuotes;
-            vm.AllQuotes = allQuotes;
-            vm.TotalContractors = allContractors.Count;
-            vm.RecentContractors = recentContractors;
-            vm.ProjectPhases = phaseDict;
-            vm.PhaseTasks = taskDict;
-
-            // ===============================================================
-            // 🧮 8. FETCH ESTIMATES
-            // ===============================================================
-            var allEstimates = await _apiClient.GetAsync<List<EstimateDto>>("/api/estimates", User) ?? new();
-            var estimateDict = allEstimates
-                .Where(e => !string.IsNullOrEmpty(e.ProjectId))
-                .GroupBy(e => e.ProjectId)
-                .ToDictionary(g => g.Key, g => g.OrderByDescending(e => e.CreatedAt).First());
-            vm.ProjectEstimates = estimateDict;
-
-            // ===============================================================
-            // 🚀 9. RETURN
-            // ===============================================================
-            _logger.LogInformation("✅ DashboardViewModel ready: Projects={P}, Clients={C}, Contractors={Co}",
-                vm.TotalProjects, vm.TotalClients, vm.TotalContractors);
-
-            return View(vm);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "💥 Error loading dashboard data.");
+                TempData["ErrorMessage"] = $"Error loading dashboard: {ex.Message}";
+                return RedirectToAction("Error", "Home");
+            }
         }
 
 
@@ -140,7 +138,8 @@ namespace ICCMS_Web.Controllers
         {
             _logger.LogInformation("=== Displaying Create Project form ===");
 
-            // Fetch Clients via API (the ProjectManager only needs clients)
+            // === Fetch required data ===
+            // Fetch Clients via API (ProjectManager only needs clients)
             var clients = await _apiClient.GetAsync<List<UserDto>>("/api/users/clients", User)
                         ?? new List<UserDto>();
 
@@ -148,15 +147,26 @@ namespace ICCMS_Web.Controllers
             var projects = await _apiClient.GetAsync<List<ProjectDto>>("/api/projectmanager/projects", User)
                         ?? new List<ProjectDto>();
 
-            // Build ViewModel
+            // === Initialize defaults ===
+            var nowUtc = DateTime.UtcNow;
+            var defaultEnd = nowUtc.AddMonths(1);
+
+            // === Build ViewModel with safe defaults ===
             var vm = new CreateProjectViewModel
             {
-                Project = new ProjectDto(),
+                Project = new ProjectDto
+                {
+                    StartDate = nowUtc,                     // Prevent 0001-01-01 UTC issue
+                    EndDatePlanned = defaultEnd,            // Give at least 1-month buffer
+                    Status = "Draft"                        // Default project status
+                },
                 Clients = clients
             };
 
-            _logger.LogInformation("Loaded {C} clients and {P} existing projects for CreateProject form",
+            _logger.LogInformation("📦 Loaded {C} clients and {P} existing projects for CreateProject form",
                 clients.Count, projects.Count);
+            _logger.LogInformation("🕓 Default StartDate={Start}, EndDatePlanned={End}",
+                vm.Project.StartDate, vm.Project.EndDatePlanned);
 
             return View(vm);
         }
@@ -164,6 +174,7 @@ namespace ICCMS_Web.Controllers
 
         /// <summary>
         /// Submits a new project to the API.
+        /// Ensures all dates are valid and UTC-normalized before sending to Firestore.
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -179,21 +190,19 @@ namespace ICCMS_Web.Controllers
             _logger.LogInformation("BudgetPlanned: {BudgetPlanned}", project.BudgetPlanned);
             _logger.LogInformation("Status: {Status}", project.Status);
 
-            _logger.LogInformation("StartDate: {StartDate} | Kind: {Kind}", 
-                project.StartDate, project.StartDate.Kind);
-            _logger.LogInformation("EndDatePlanned: {EndDatePlanned} | Kind: {Kind}", 
-                project.EndDatePlanned, project.EndDatePlanned.Kind);
-            _logger.LogInformation("EndDateActual: {EndDateActual} | Kind: {Kind}", 
-                project.EndDateActual, project.EndDateActual?.Kind.ToString() ?? "null");
-
+            _logger.LogInformation("StartDate: {StartDate} | Kind: {Kind}", project.StartDate, project.StartDate.Kind);
+            _logger.LogInformation("EndDatePlanned: {EndDatePlanned} | Kind: {Kind}", project.EndDatePlanned, project.EndDatePlanned.Kind);
+            _logger.LogInformation("EndDateActual: {EndDateActual} | Kind: {Kind}", project.EndDateActual, project.EndDateActual?.Kind.ToString() ?? "null");
             _logger.LogInformation("########## END OF PROJECT INPUT DATA ##########");
 
+            // === Model validation ===
             if (!ModelState.IsValid)
             {
                 _logger.LogWarning("❌ Invalid project model submitted by {User}", User.Identity?.Name);
                 return View(project);
             }
 
+            // === Ensure ID exists ===
             if (string.IsNullOrEmpty(project.ProjectId))
             {
                 project.ProjectId = Guid.NewGuid().ToString();
@@ -202,30 +211,42 @@ namespace ICCMS_Web.Controllers
 
             try
             {
-                // === Normalize to UTC ===
+                // === STEP 1: Sanitize invalid or MinValue dates ===
+                if (project.StartDate == DateTime.MinValue || project.StartDate.Year < 1900)
+                {
+                    _logger.LogWarning("⚠️ StartDate invalid (MinValue/<1900) — auto-setting to UtcNow");
+                    project.StartDate = DateTime.UtcNow;
+                }
+
+                if (project.EndDatePlanned == DateTime.MinValue || project.EndDatePlanned.Year < 1900)
+                {
+                    _logger.LogWarning("⚠️ EndDatePlanned invalid — auto-setting to +1 month from now");
+                    project.EndDatePlanned = DateTime.UtcNow.AddMonths(1);
+                }
+
+                // === STEP 2: Explicitly mark all dates as UTC ===
+                // SpecifyKind does not shift time, only tags it with Kind = Utc
                 project.StartDate = DateTime.SpecifyKind(project.StartDate, DateTimeKind.Utc);
                 project.EndDatePlanned = DateTime.SpecifyKind(project.EndDatePlanned, DateTimeKind.Utc);
+
                 if (project.EndDateActual.HasValue)
                     project.EndDateActual = DateTime.SpecifyKind(project.EndDateActual.Value, DateTimeKind.Utc);
 
-                _logger.LogInformation("========= NORMALIZED DATES TO UTC =========");
-                _logger.LogInformation("StartDate.Kind: {Kind}", project.StartDate.Kind);
-                _logger.LogInformation("EndDatePlanned.Kind: {Kind}", project.EndDatePlanned.Kind);
-                _logger.LogInformation("EndDateActual.Kind: {Kind}", project.EndDateActual?.Kind.ToString() ?? "null");
+                _logger.LogInformation("🕒 Dates sanitized + normalized to UTC");
+                _logger.LogInformation("StartDate={StartDate} (Kind={Kind})", project.StartDate, project.StartDate.Kind);
+                _logger.LogInformation("EndDatePlanned={EndDatePlanned} (Kind={Kind})", project.EndDatePlanned, project.EndDatePlanned.Kind);
 
-                _logger.LogInformation("========= SERIALIZING PAYLOAD FOR API =========");
-                var tempOptions = new JsonSerializerOptions
+                // === STEP 3: Preview JSON payload for verification ===
+                var jsonPreview = JsonSerializer.Serialize(project, new JsonSerializerOptions
                 {
                     WriteIndented = true,
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                };
-                var jsonPreview = JsonSerializer.Serialize(project, tempOptions);
+                });
                 _logger.LogInformation("++++++++++ RAW JSON PAYLOAD ++++++++++\n{Json}\n++++++++++ END OF PAYLOAD ++++++++++", jsonPreview);
 
-                // === API Call ===
-                _logger.LogInformation("Sending new project {Name} to API...", project.Name);
-                var created = await _apiClient.PostAsync<ProjectDto>(
-                    "/api/projectmanager/create/project", project, User);
+                // === STEP 4: API Call ===
+                _logger.LogInformation("📤 Sending new project {Name} to API...", project.Name);
+                var created = await _apiClient.PostAsync<ProjectDto>("/api/projectmanager/create/project", project, User);
 
                 if (created == null)
                 {
@@ -500,6 +521,217 @@ namespace ICCMS_Web.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
+        
+        /// <summary>
+        /// Step 5: Opens the Project Setup page for a given project.
+        /// Allows adding Phases & Tasks before activation.
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> SetupProject(string id)
+        {
+            _logger.LogInformation("=== [SetupProject] ENTERED for ProjectId={ProjectId} ===", id);
+
+            if (string.IsNullOrEmpty(id))
+            {
+                TempData["ErrorMessage"] = "Invalid project ID.";
+                return RedirectToAction("Dashboard");
+            }
+
+            try
+            {
+                var project = await _apiClient.GetAsync<ProjectDto>($"/api/projectmanager/project/{id}", User);
+                if (project == null)
+                {
+                    TempData["ErrorMessage"] = "Project not found.";
+                    return RedirectToAction("Dashboard");
+                }
+
+                var phases = await _apiClient.GetAsync<List<PhaseDto>>($"/api/projectmanager/project/{id}/phases", User) ?? new();
+                var tasks  = await _apiClient.GetAsync<List<ProjectTaskDto>>($"/api/projectmanager/project/{id}/tasks", User) ?? new();
+
+                ViewBag.Project = project;
+                ViewBag.Phases  = phases;
+                ViewBag.Tasks   = tasks;
+
+                return View("SetupProject");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "💥 Error loading project setup for {ProjectId}", id);
+                TempData["ErrorMessage"] = $"Error loading setup: {ex.Message}";
+                return RedirectToAction("Dashboard");
+            }
+        }
+
+
+            // ================================================================
+        // 🧩 ADD PHASE
+        // ================================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddPhase(string id, PhaseDto phase)
+        {
+            _logger.LogInformation("🧩 [AddPhase] Adding Phase '{Name}' to Project {ProjectId}", phase.Name, id);
+
+            if (string.IsNullOrEmpty(phase.Name))
+            {
+                TempData["ErrorMessage"] = "Phase name is required.";
+                return RedirectToAction("SetupProject", new { id });
+            }
+
+            var result = await _projectSetupService.CreatePhaseAsync(id, phase, User);
+            TempData[result.Success ? "SuccessMessage" : "ErrorMessage"] = result.Message;
+
+            return RedirectToAction("SetupProject", new { id });
+        }
+
+        // ================================================================
+        // 🧱 ADD TASK
+        // ================================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddTask(string id, ProjectTaskDto task)
+        {
+            _logger.LogInformation("🧱 [AddTask] Adding Task '{Name}' to Project {ProjectId}", task.Name, id);
+
+            if (string.IsNullOrEmpty(task.Name))
+            {
+                TempData["ErrorMessage"] = "Task name is required.";
+                return RedirectToAction("SetupProject", new { id });
+            }
+
+            var result = await _projectSetupService.CreateTaskAsync(id, task, User);
+            TempData[result.Success ? "SuccessMessage" : "ErrorMessage"] = result.Message;
+
+            return RedirectToAction("SetupProject", new { id });
+        }
+
+        // ================================================================
+        // 🚀 FINALIZE PROJECT (Status must be 'SetUp')
+        // ================================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> FinalizeProject(string id)
+        {
+            _logger.LogInformation("🚀 [FinalizeProject] Triggered for ProjectId={ProjectId}", id);
+
+            if (string.IsNullOrEmpty(id))
+                return Json(new { success = false, message = "Invalid project ID." });
+
+            try
+            {
+                var project = await _apiClient.GetAsync<ProjectDto>($"/api/projectmanager/project/{id}", User);
+                if (project == null)
+                    return Json(new { success = false, message = "Project not found." });
+
+                if (!project.Status.Equals("SetUp", StringComparison.OrdinalIgnoreCase))
+                    return Json(new { success = false, message = $"Project must be in 'SetUp' state before finalizing. (Current: {project.Status})" });
+
+                var result = await _projectSetupService.FinalizeProjectAsync(project, User);
+
+                if (!result.Success)
+                    return Json(new { success = false, message = result.Message });
+
+                _logger.LogInformation("✅ Project {Id} successfully finalized (status → Active)", id);
+                return Json(new { success = true, message = result.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🔥 Exception during FinalizeProject for {Id}", id);
+                return Json(new { success = false, message = $"Unexpected error: {ex.Message}" });
+            }
+        }
+
+        // ================================================================
+        // 🏁 COMPLETE PROJECT (Status must be 'Active')
+        // ================================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CompleteProject(string id)
+        {
+            _logger.LogInformation("🏁 [CompleteProject] Triggered for ProjectId={ProjectId}", id);
+
+            if (string.IsNullOrEmpty(id))
+                return Json(new { success = false, message = "Invalid project ID." });
+
+            try
+            {
+                var project = await _apiClient.GetAsync<ProjectDto>($"/api/projectmanager/project/{id}", User);
+                if (project == null)
+                    return Json(new { success = false, message = "Project not found." });
+
+                if (!project.Status.Equals("Active", StringComparison.OrdinalIgnoreCase))
+                    return Json(new { success = false, message = $"Project must be 'Active' before marking as completed. (Current: {project.Status})" });
+
+                var result = await _projectSetupService.CompleteProjectAsync(project, User);
+
+                if (!result.Success)
+                    return Json(new { success = false, message = result.Message });
+
+                _logger.LogInformation("✅ Project {Id} successfully marked as Completed.", id);
+                return Json(new { success = true, message = result.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🔥 Exception during CompleteProject for {Id}", id);
+                return Json(new { success = false, message = $"Unexpected error: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Centralized Project Details Hub (replaces SetupProject)
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> ProjectDetails(string id)
+        {
+            _logger.LogInformation("📁 [ProjectDetails] Loading details for ProjectId={ProjectId}", id);
+
+            if (string.IsNullOrEmpty(id))
+            {
+                TempData["ErrorMessage"] = "Invalid project ID.";
+                return RedirectToAction("Dashboard");
+            }
+
+            try
+            {
+                // 🔹 Fetch main project
+                var project = await _apiClient.GetAsync<ProjectDto>($"/api/projectmanager/project/{id}", User);
+                if (project == null)
+                {
+                    TempData["ErrorMessage"] = "Project not found.";
+                    return RedirectToAction("Dashboard");
+                }
+
+                // 🔹 Fetch related data
+                var phases  = await _apiClient.GetAsync<List<PhaseDto>>($"/api/projectmanager/project/{id}/phases", User) ?? new();
+                var tasks   = await _apiClient.GetAsync<List<ProjectTaskDto>>($"/api/projectmanager/project/{id}/tasks", User) ?? new();
+                var quotes  = await _apiClient.GetAsync<List<QuotationDto>>($"/api/quotations", User) ?? new();
+
+                // 🔹 Group data for view
+                var projectQuotes = quotes.Where(q => q.ProjectId == id).ToList();
+
+                // 🔹 Build ViewModel
+                var vm = new ProjectDetailsViewModel
+                {
+                    Project = project,
+                    Phases = phases,
+                    Tasks = tasks,
+                    Quotes = projectQuotes
+                };
+
+                _logger.LogInformation("✅ [ProjectDetails] Data prepared successfully for {ProjectName}", project.Name);
+                return View("ProjectDetails", vm);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🔥 Error loading ProjectDetails for {ProjectId}", id);
+                TempData["ErrorMessage"] = $"Error loading project details: {ex.Message}";
+                return RedirectToAction("Dashboard");
+            }
+        }
+
+
 
     
     }

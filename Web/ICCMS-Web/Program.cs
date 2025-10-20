@@ -1,7 +1,5 @@
 using ICCMS_Web.Services;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using DinkToPdf;
-using DinkToPdf.Contracts;
 
 
 
@@ -21,6 +19,10 @@ builder.Services.AddSingleton<ITempDataDictionaryFactory, TempDataDictionaryFact
 
 // Login attempt tracking
 builder.Services.AddSingleton<ILoginAttemptService, LoginAttemptService>();
+
+// Project Setup operations
+builder.Services.AddScoped<ProjectSetupService>();
+
 
 
 // MVC / Razor Views

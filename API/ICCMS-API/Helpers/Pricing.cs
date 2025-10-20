@@ -17,10 +17,13 @@ namespace ICCMS_API.Helpers
             quotation.Subtotal = quotation.Items.Sum(item => item.LineTotal);
 
             // Apply markup to subtotal first
-var subtotalWithMarkup = quotation.Subtotal * (1 + quotation.MarkupRate);
-quotation.TaxTotal = quotation.Items.Sum(item => (item.LineTotal * (1 + quotation.MarkupRate)) * item.TaxRate);
-quotation.GrandTotal = subtotalWithMarkup + quotation.TaxTotal;
+            var subtotalWithMarkup = quotation.Subtotal * quotation.MarkupRate;
 
+            // Calculate tax total on the marked-up subtotal
+            quotation.TaxTotal = quotation.Items.Sum(item => (item.LineTotal * quotation.MarkupRate) * item.TaxRate);
+
+            // Calculate grand total
+            quotation.GrandTotal = subtotalWithMarkup + quotation.TaxTotal;
 
             // Sync legacy Total field
             quotation.Total = quotation.GrandTotal;

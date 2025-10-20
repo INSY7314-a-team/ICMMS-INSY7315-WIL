@@ -1,0 +1,205 @@
+@using ICCMS_Web.Models
+@{
+    ViewData["Title"] = "Project Setup";
+    var project = ViewBag.Project as ProjectDto;
+    var phases = ViewBag.Phases as List<PhaseDto> ?? new();
+    var tasks = ViewBag.Tasks as List<ProjectTaskDto> ?? new();
+}
+
+<div class="container mt-4">
+    <h2 class="fw-bold text-primary">🏗️ Project Setup: @project?.Name</h2>
+    <p class="text-muted">@project?.Description</p>
+
+    <!-- Success & Error Messages -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    <!-- ========================= -->
+    <!-- 🧩 CREATE PHASE FORM -->
+    <!-- ========================= -->
+    <div class="card mt-4 shadow-sm">
+        <div class="card-header bg-light fw-bold">Add New Phase</div>
+        <div class="card-body">
+            <form asp-action="AddPhase" method="post">
+                <input type="hidden" name="projectId" value="@project?.ProjectId" />
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <input class="form-control" type="text" name="Name" placeholder="Phase name" required />
+                    </div>
+                    <div class="col-md-4">
+                        <input class="form-control" type="text" name="Description" placeholder="Description" />
+                    </div>
+                    <div class="col-md-2">
+                        <input class="form-control" type="number" name="Budget" placeholder="Budget" step="0.01" />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-outline-primary w-100">➕ Add Phase</button>
+                    </div>
+                </div>
+                @Html.AntiForgeryToken()
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================= -->
+    <!-- 📋 PHASE LIST -->
+    <!-- ========================= -->
+    <div class="mt-4">
+        <h5 class="fw-bold">📦 Existing Phases (@phases.Count)</h5>
+        @if (phases.Count == 0)
+        {
+            <p class="text-muted">No phases yet. Add one above.</p>
+        }
+        else
+        {
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Budget</th>
+                        <th>Status</th>
+                        <th>Progress</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in phases)
+                    {
+                        <tr>
+                            <td>@p.Name</td>
+                            <td>@p.Description</td>
+                            <td>R @p.Budget.ToString("N2")</td>
+                            <td>@p.Status</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width:@p.Progress%">
+                                        @p.Progress%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    <!-- ========================= -->
+    <!-- 🧱 ADD TASK FORM -->
+    <!-- ========================= -->
+    <div class="card mt-5 shadow-sm">
+        <div class="card-header bg-light fw-bold">Add New Task</div>
+        <div class="card-body">
+            <form asp-action="AddTask" method="post">
+                <input type="hidden" name="projectId" value="@project?.ProjectId" />
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <input class="form-control" type="text" name="Name" placeholder="Task name" required />
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" name="PhaseId">
+                            <option value="">(Optional) Assign to Phase</option>
+                            @foreach (var phase in phases)
+                            {
+                                <option value="@phase.PhaseId">@phase.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input class="form-control" type="text" name="AssignedTo" placeholder="Contractor/User ID" />
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" name="Priority">
+                            <option>Low</option>
+                            <option selected>Medium</option>
+                            <option>High</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <button type="submit" class="btn btn-outline-success w-100">➕</button>
+                    </div>
+                </div>
+                @Html.AntiForgeryToken()
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================= -->
+    <!-- 📋 TASK LIST -->
+    <!-- ========================= -->
+    <div class="mt-4">
+        <h5 class="fw-bold">🗂️ Existing Tasks (@tasks.Count)</h5>
+        @if (tasks.Count == 0)
+        {
+            <p class="text-muted">No tasks yet. Add one above.</p>
+        }
+        else
+        {
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Phase</th>
+                        <th>Assigned To</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Progress</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in tasks)
+                    {
+                        var phaseName = phases.FirstOrDefault(p => p.PhaseId == t.PhaseId)?.Name ?? "-";
+                        <tr>
+                            <td>@t.Name</td>
+                            <td>@phaseName</td>
+                            <td>@t.AssignedTo</td>
+                            <td>@t.Priority</td>
+                            <td>@t.Status</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar bg-info" role="progressbar" style="width:@t.Progress%">
+                                        @t.Progress%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    <!-- ========================= -->
+    <!-- 🚀 FINALIZE + COMPLETE -->
+    <!-- ========================= -->
+    <div class="mt-5 text-center">
+        <form asp-action="FinalizeProject" method="post" class="d-inline">
+            <input type="hidden" name="projectId" value="@project?.ProjectId" />
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-lg btn-primary px-4 me-3">🚀 Finalize Project</button>
+        </form>
+
+        <form asp-action="CompleteProject" method="post" class="d-inline">
+            <input type="hidden" name="projectId" value="@project?.ProjectId" />
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-lg btn-success px-4">🏁 Mark as Completed</button>
+        </form>
+    </div>
+</div>
+
+<!-- Optional Debug Footer -->
+<div class="mt-5 text-muted small text-center">
+    <hr />
+    <p>Debug Info: ProjectId = @project?.ProjectId | Phases = @phases.Count | Tasks = @tasks.Count</p>
+</div>
+
+@section Scripts {
+    <script src="~/js/setup-project.js"></script>
+}

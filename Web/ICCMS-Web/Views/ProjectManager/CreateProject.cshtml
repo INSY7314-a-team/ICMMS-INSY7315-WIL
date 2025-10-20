@@ -68,14 +68,18 @@
                     <!-- START DATE -->
                     <div class="col-md-6">
                         <label asp-for="Project.StartDate" class="form-label fw-semibold">Start Date</label>
-                        <input asp-for="Project.StartDate" type="date" class="form-control form-control-lg rounded-3" required />
+                        <input asp-for="Project.StartDate" type="date"
+                            value="@Model.Project.StartDate.ToString("yyyy-MM-dd")"
+                            class="form-control form-control-lg rounded-3" required />
                         <span asp-validation-for="Project.StartDate" class="text-danger"></span>
                     </div>
 
                     <!-- END DATE -->
                     <div class="col-md-6">
                         <label asp-for="Project.EndDatePlanned" class="form-label fw-semibold">Planned End Date</label>
-                        <input asp-for="Project.EndDatePlanned" type="date" class="form-control form-control-lg rounded-3" required />
+                        <input asp-for="Project.EndDatePlanned" type="date"
+                            value="@Model.Project.EndDatePlanned.ToString("yyyy-MM-dd")"
+                            class="form-control form-control-lg rounded-3" required />
                         <span asp-validation-for="Project.EndDatePlanned" class="text-danger"></span>
                     </div>
 

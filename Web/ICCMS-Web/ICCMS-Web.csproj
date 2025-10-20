@@ -6,7 +6,6 @@
     <RootNamespace>ICCMS_Web</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="DinkToPdf" Version="1.0.8" />
     <PackageReference Include="Google.Cloud.Firestore" Version="3.10.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.2.0" />
     <PackageReference Include="QuestPDF" Version="2025.7.3" />

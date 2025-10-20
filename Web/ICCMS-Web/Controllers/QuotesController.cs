@@ -778,7 +778,7 @@ namespace ICCMS_Web.Controllers
             public string? ClientId { get; set; }
         }
         // ================================================
-        // STEP X: SUBMIT QUOTATION (Create + Approve + Send)
+        // STEP X: SUBMIT QUOTATION (Create + Approve)
         // ================================================
         [HttpPost("submit-quotation")]
         public async Task<IActionResult> SubmitQuotation([FromBody] QuotationDto model)
@@ -839,13 +839,9 @@ namespace ICCMS_Web.Controllers
                 _logger.LogInformation("📤 Submitting quotation {Id} for approval...", quotationId);
                 await _apiClient.PostAsync<object>($"/api/quotations/{quotationId}/submit-for-approval", null, User);
 
-                // === STEP 2: PM APPROVAL ===
-                _logger.LogInformation("🧾 Approving quotation {Id}...", quotationId);
+                // === STEP 2: PM APPROVAL (Auto-approved, sets status to SentToClient) ===
+                _logger.LogInformation("🧾 Auto-approving quotation {Id} (PM approval + send to client)...", quotationId);
                 await _apiClient.PostAsync<object>($"/api/quotations/{quotationId}/pm-approve", null, User);
-
-                // === STEP 3: SEND TO CLIENT ===
-                _logger.LogInformation("📩 Sending quotation {Id} to client...", quotationId);
-                await _apiClient.PostAsync<object>($"/api/quotations/{quotationId}/send-to-client", null, User);
                 model.Status = "SentToClient";
 
                 _logger.LogInformation("✅ Quotation {Id} fully processed: Draft → Approval → SentToClient", quotationId);
@@ -863,6 +859,7 @@ namespace ICCMS_Web.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
 
 
        // ================================================
@@ -912,19 +909,77 @@ namespace ICCMS_Web.Controllers
             return sw.ToString();
         }
 
+        // Inside QuotesController
         [HttpPost("simulate-client-approval/{id}")]
         [Authorize(Roles = "Project Manager,Tester")]
         public async Task<IActionResult> SimulateClientApproval(string id)
         {
             try
             {
+                // 1️⃣ Simulate quote approval
                 var body = new { accept = true, note = "Simulated approval by tester" };
                 await _apiClient.PostAsync<object>($"/api/quotations/{id}/client-decision", body, User);
-                return Ok(new { message = "Simulated approval successful" });
+
+                // 2️⃣ Fetch the quote to get linked ProjectId
+                var quote = await _apiClient.GetAsync<QuotationDto>($"/api/quotations/{id}", User);
+                if (quote == null)
+                    return NotFound(new { error = "Quote not found after approval." });
+
+                // 3️⃣ Update linked project status if necessary
+                await UpdateProjectStatus(quote.ProjectId, "Planning");
+
+                _logger.LogInformation("✅ Simulated client approval for Quote={QuoteId}; Project={ProjectId} moved to Planning", id, quote.ProjectId);
+                return Ok(new { message = "Simulated approval successful, project advanced to 'Planning'." });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "🔥 Error simulating client approval for Quote={QuoteId}", id);
                 return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Updates a project's status (e.g., Draft → Planning).
+        /// Ensures all DateTime fields are explicitly UTC to prevent Firestore conversion errors.
+        /// </summary>
+        private async Task UpdateProjectStatus(string projectId, string newStatus)
+        {
+            try
+            {
+                var project = await _apiClient.GetAsync<ProjectDto>(
+                    $"/api/projectmanager/project/{projectId}", User);
+
+                if (project == null)
+                {
+                    _logger.LogWarning("⚠️ Tried to update status for missing project {ProjectId}", projectId);
+                    return;
+                }
+
+                // ✅ Normalize all DateTimes to UTC safely
+                if (project.StartDate.Kind != DateTimeKind.Utc)
+                    project.StartDate = DateTime.SpecifyKind(project.StartDate.ToUniversalTime(), DateTimeKind.Utc);
+
+                if (project.EndDatePlanned.Kind != DateTimeKind.Utc)
+                    project.EndDatePlanned = DateTime.SpecifyKind(project.EndDatePlanned.ToUniversalTime(), DateTimeKind.Utc);
+
+                if (project.EndDateActual.HasValue)
+                {
+                    var actual = project.EndDateActual.Value;
+                    if (actual.Kind != DateTimeKind.Utc)
+                        project.EndDateActual = DateTime.SpecifyKind(actual.ToUniversalTime(), DateTimeKind.Utc);
+                }
+
+                // 🏗️ Apply status change
+                project.Status = newStatus;
+
+                await _apiClient.PutAsync<ProjectDto>(
+                    $"/api/projectmanager/update/project/{projectId}", project, User);
+
+                _logger.LogInformation("🔄 Project {ProjectId} updated to status '{Status}'", projectId, newStatus);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🔥 Failed to update project status for {ProjectId}", projectId);
             }
         }
 

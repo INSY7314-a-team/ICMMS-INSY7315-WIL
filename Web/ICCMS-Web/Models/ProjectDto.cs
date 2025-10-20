@@ -44,7 +44,7 @@ namespace ICCMS_Web.Models
         public string Status { get; set; } = "Draft";
 
         // Planned start date (required, user input).
-        [JsonPropertyName("startDatePlanned")]
+        [JsonPropertyName("startDate")]
         public DateTime StartDate { get; set; } = DateTime.UtcNow;
 
         // Planned end date (required, user input).

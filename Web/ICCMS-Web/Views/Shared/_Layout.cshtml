@@ -1,6 +1,6 @@
 ﻿@* ================================================
-   _Layout.cshtml — Protend-Style Responsive Shell
-   For ICCMS Web (Project Manager / Admin / Tester)
+   _Layout.cshtml — Modern Protend-Style Shell
+   Integrated for ICCMS (Dashboard / Projects / Quotes / Clients)
    ================================================ *@
 <!DOCTYPE html>
 <html lang="en">
@@ -9,19 +9,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - ICCMS</title>
 
-    <!-- Core Styles -->
+    <!-- ===== Core Styles ===== -->
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
     <style>
         /* === BASIC LAYOUT === */
         body {
             display: flex;
             min-height: 100vh;
+            font-family: 'Roboto', sans-serif;
             overflow-x: hidden;
-            background: #f5f6fa;
-            transition: margin-left 0.3s ease;
+            background-color: #f6f7fb;
         }
 
         /* === SIDEBAR === */
@@ -37,59 +38,84 @@
             transition: width 0.3s ease;
             z-index: 200;
         }
+
         #sidebar.collapsed { width: 70px; }
+
         #sidebar .brand {
             font-weight: 700;
-            font-size: 1.3rem;
+            font-size: 1.4rem;
             padding: 1rem;
             text-align: center;
+            background: #181b1f;
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
+
         #sidebar ul {
             list-style: none;
             padding: 0;
             margin: 0;
             flex-grow: 1;
         }
+
+        #sidebar ul li.nav-header {
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #aaa;
+            padding: 0.75rem 1rem 0.25rem;
+        }
+
         #sidebar ul li a {
             display: flex;
             align-items: center;
             gap: 10px;
             color: #ccc;
-            padding: 0.9rem 1rem;
+            padding: 0.8rem 1rem;
             text-decoration: none;
             font-weight: 500;
             transition: all 0.2s ease;
         }
+
         #sidebar ul li a:hover,
         #sidebar ul li a.active {
             background: #343a40;
             color: #fff;
         }
+
         #sidebar ul li a i {
             min-width: 20px;
             text-align: center;
+            font-size: 1.1rem;
         }
 
-        /* === TOGGLE ARROW === */
+        #sidebar.collapsed a span {
+            display: none;
+        }
+
+        #sidebar.collapsed a {
+            justify-content: center;
+        }
+
+        /* === TOGGLE BUTTON === */
         #sidebar-toggle {
             background: none;
             border: none;
             color: #fff;
             padding: 0.75rem;
             cursor: pointer;
-            font-size: 1.1rem;
-            transition: transform 0.3s ease;
+            font-size: 1rem;
+            transition: color 0.3s ease;
         }
-        #sidebar-toggle:hover { color: #ffc107; }
-        #sidebar.collapsed #sidebar-toggle i {
-            transform: rotate(180deg);
+
+        #sidebar-toggle:hover {
+            color: #ffc107;
         }
 
         /* === HEADER === */
         #main-header {
             position: fixed;
-            top: 0; left: 250px;
+            top: 0;
+            left: 250px;
             right: 0;
             height: 60px;
             background: #fff;
@@ -101,6 +127,7 @@
             z-index: 100;
             transition: left 0.3s ease;
         }
+
         #sidebar.collapsed + #main-header {
             left: 70px;
         }
@@ -112,10 +139,12 @@
             flex: 1;
             transition: margin-left 0.3s ease;
         }
+
         #sidebar.collapsed ~ #content-area {
             margin-left: 70px;
         }
 
+        /* === ALERTS & TOAST === */
         .alert {
             border-radius: 8px;
             margin-bottom: 1rem;
@@ -130,22 +159,31 @@
         <ul>
             @if (User.Identity.IsAuthenticated)
             {
-                if (User.IsInRole("ProjectManager") || User.IsInRole("Tester"))
+                <li class="nav-header">Main</li>
+                <li><a asp-controller="ProjectManager" asp-action="Dashboard"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a></li>
+
+                <li class="nav-header">Projects</li>
+                <li><a asp-controller="Projects" asp-action="Index"><i class="fa-solid fa-diagram-project"></i><span>All Projects</span></a></li>
+                <li><a asp-controller="Quotes" asp-action="Index"><i class="fa-solid fa-file-invoice"></i><span>Quotes</span></a></li>
+                <li><a asp-controller="Tasks" asp-action="Index"><i class="fa-solid fa-list-check"></i><span>Tasks</span></a></li>
+
+                <li class="nav-header">Clients</li>
+                <li><a asp-controller="Clients" asp-action="Index"><i class="fa-solid fa-user-tie"></i><span>Client List</span></a></li>
+
+                <li class="nav-header">Communication</li>
+                <li><a asp-controller="Messages" asp-action="Index"><i class="fa-solid fa-comments"></i><span>Messages</span></a></li>
+
+                @if (User.IsInRole("Admin"))
                 {
-                    <li><a asp-controller="ProjectManager" asp-action="Dashboard"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a></li>
-                }
-                if (User.IsInRole("Admin"))
-                {
+                    <li class="nav-header">Admin</li>
                     <li><a asp-controller="Users" asp-action="Index"><i class="fa-solid fa-users"></i><span>Users</span></a></li>
-                }
-                if (User.IsInRole("Tester"))
-                {
-                    <li><a asp-controller="Testing" asp-action="Index"><i class="fa-solid fa-flask"></i><span>Testing</span></a></li>
-                    <li><a asp-controller="MessagesTest" asp-action="Index"><i class="fa-solid fa-comments"></i><span>Message Test</span></a></li>
                 }
             }
         </ul>
-        <button id="sidebar-toggle"><i class="fa-solid fa-chevron-left"></i></button>
+
+        <div class="mt-auto text-center pb-3">
+            <button id="sidebar-toggle"><i class="fa-solid fa-chevron-left"></i></button>
+        </div>
     </aside>
 
     <!-- ===== HEADER ===== -->
@@ -170,36 +208,38 @@
 
     <!-- ===== MAIN CONTENT ===== -->
     <main id="content-area">
-        @if (TempData["SuccessMessage"] != null)
-        {
-            <div class="alert alert-success">@TempData["SuccessMessage"]</div>
-        }
-        @if (TempData["ErrorMessage"] != null)
-        {
-            <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
-        }
-
         @RenderBody()
     </main>
+
+    <!-- 🌍 Global Toast -->
+    <div id="global-toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index:1080;"></div>
 
     <!-- ===== SCRIPTS ===== -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/toast.js"></script>
 
     <script>
-        const sidebar = document.getElementById('sidebar');
-        const toggleBtn = document.getElementById('sidebar-toggle');
+        document.addEventListener("DOMContentLoaded", () => {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('sidebar-toggle');
 
-        toggleBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('collapsed');
-            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+            toggleBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('collapsed');
+                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+            });
+
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                sidebar.classList.add('collapsed');
+            }
+
+            // 🔔 Auto-trigger Toast from TempData
+            const success = '@TempData["SuccessMessage"]';
+            const error = '@TempData["ErrorMessage"]';
+            if (success) showToast(success, "success");
+            if (error) showToast(error, "error");
         });
-
-        // restore collapse state
-        if (localStorage.getItem('sidebarCollapsed') === 'true') {
-            sidebar.classList.add('collapsed');
-        }
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

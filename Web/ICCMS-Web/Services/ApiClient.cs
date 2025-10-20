@@ -5,9 +5,14 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ICCMS_Web.Services
 {
+    /// <summary>
+    /// Centralized HTTP client wrapper for communicating with the ICCMS API.
+    /// Includes short-lived (5 min) in-memory caching for GETs to reduce Firebase reads.
+    /// </summary>
     public class ApiClient : IApiClient
     {
         private readonly HttpClient _httpClient;
@@ -16,6 +21,7 @@ namespace ICCMS_Web.Services
         private readonly string _baseUrl;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ITempDataDictionaryFactory _tempDataFactory;
+        private readonly IMemoryCache _cache;
 
         public ApiClient(
             HttpClient httpClient,
@@ -29,13 +35,14 @@ namespace ICCMS_Web.Services
             _logger = logger;
             _httpContextAccessor = httpContextAccessor;
             _tempDataFactory = tempDataFactory;
+            _cache = new MemoryCache(new MemoryCacheOptions());
 
             _baseUrl = _config["ApiSettings:BaseUrl"] ?? "https://localhost:7136";
             _logger.LogInformation("ApiClient initialized with base URL: {BaseUrl}", _baseUrl);
         }
 
         // ===========================================================
-        // 🚀 UNIVERSAL UNAUTHORIZED HANDLER
+        // 🔒 Universal Unauthorized Handler
         // ===========================================================
         private void HandleUnauthorized(string endpoint)
         {
@@ -55,15 +62,20 @@ namespace ICCMS_Web.Services
         }
 
         // ===========================================================
-        // 🔹 GET ASYNC
+        // 🔹 GET ASYNC (with caching)
         // ===========================================================
-        public async Task<T?> GetAsync<T>(string endpoint, ClaimsPrincipal user)
+        public async Task<T?> GetAsync<T>(string endpoint, ClaimsPrincipal user, bool forceRefresh = false)
         {
-            _logger.LogInformation("=== [ApiClient] GET {Endpoint} ===", endpoint);
+            _logger.LogInformation("=== [ApiClient] GET {Endpoint} (forceRefresh={Force}) ===", endpoint, forceRefresh);
+
+            if (!forceRefresh && _cache.TryGetValue(endpoint, out T cachedValue))
+            {
+                _logger.LogDebug("💾 Returning cached response for {Endpoint}", endpoint);
+                return cachedValue;
+            }
 
             try
             {
-                // 1️⃣ Extract Firebase token from user claims
                 var token = user.FindFirst("FirebaseToken")?.Value;
                 if (string.IsNullOrEmpty(token))
                 {
@@ -72,23 +84,19 @@ namespace ICCMS_Web.Services
                     return default;
                 }
 
-                // 2️⃣ Build request
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
                 var url = $"{_baseUrl}{endpoint}";
                 _logger.LogDebug("🌍 GET URL → {Url}", url);
 
-                // 3️⃣ Execute request
                 var response = await _httpClient.GetAsync(url);
                 _logger.LogInformation("📬 Response: {Code}", response.StatusCode);
 
-                // 4️⃣ Handle 401 Unauthorized
                 if (response.StatusCode == HttpStatusCode.Unauthorized)
                 {
                     HandleUnauthorized(endpoint);
                     return default;
                 }
 
-                // 5️⃣ Handle non-success responses
                 if (!response.IsSuccessStatusCode)
                 {
                     var body = await response.Content.ReadAsStringAsync();
@@ -97,17 +105,17 @@ namespace ICCMS_Web.Services
                     return default;
                 }
 
-                // 6️⃣ Deserialize success payload
                 var json = await response.Content.ReadAsStringAsync();
-                _logger.LogDebug("📦 Raw JSON: {Json}", json);
-
                 var result = JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 });
 
-                if (result == null)
-                    _logger.LogWarning("⚠️ GET {Endpoint} returned null object after deserialization.", endpoint);
+                if (result != null)
+                {
+                    _cache.Set(endpoint, result, TimeSpan.FromMinutes(5));
+                    _logger.LogDebug("🧠 Cached response for {Endpoint} (TTL: 5 minutes)", endpoint);
+                }
 
                 return result;
             }
@@ -159,6 +167,9 @@ namespace ICCMS_Web.Services
                     _logger.LogError("❌ POST {Endpoint} failed ({Code}) {Reason}\n{Body}", endpoint, response.StatusCode, response.ReasonPhrase, body);
                     return default;
                 }
+
+                // Invalidate cache for related GETs (keep simple)
+                _cache.Remove(endpoint);
 
                 if (string.IsNullOrWhiteSpace(body))
                 {
@@ -224,6 +235,9 @@ namespace ICCMS_Web.Services
                     _logger.LogError("❌ PUT {Endpoint} failed ({Code}) {Reason}\n{Body}", endpoint, response.StatusCode, response.ReasonPhrase, text);
                     return default;
                 }
+
+                // Invalidate any cached GETs touching this resource
+                _cache.Remove(endpoint);
 
                 if (string.IsNullOrWhiteSpace(text))
                 {

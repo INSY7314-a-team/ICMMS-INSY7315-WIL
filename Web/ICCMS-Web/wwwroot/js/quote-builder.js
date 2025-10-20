@@ -273,17 +273,3 @@ function showToast(msg) {
 }
 
 
-async function simulateClientApproval(quoteId) {
-  if (!quoteId) return alert("No quote ID found.");
-  if (!confirm("Simulate client approval for this quote?")) return;
-
-  try {
-    const res = await fetch(`/Quotes/simulate-client-approval/${quoteId}`, { method: "POST" });
-    if (!res.ok) throw new Error(`API error ${res.status}`);
-    showToast("✅ Simulated client approval successfully!");
-    setTimeout(() => window.location.reload(), 1000);
-  } catch (err) {
-    console.error("🔥 Simulate approval failed:", err);
-    showToast("❌ Failed to simulate approval.");
-  }
-}
