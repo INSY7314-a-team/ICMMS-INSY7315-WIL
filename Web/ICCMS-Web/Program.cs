@@ -24,6 +24,9 @@ builder.Services.AddSingleton<ITempDataDictionaryFactory, TempDataDictionaryFact
 // Login attempt tracking
 builder.Services.AddSingleton<ILoginAttemptService, LoginAttemptService>();
 
+// In-memory project index service (per-user)
+builder.Services.AddSingleton<IProjectIndexService, ProjectIndexService>();
+
 //Register Dink To PDF for pdf
 builder.Services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));
 

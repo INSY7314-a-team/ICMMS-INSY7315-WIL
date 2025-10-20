@@ -14,7 +14,11 @@
     var taskProgress = totalTasks > 0 ? (int)Math.Round((double)completedTasks / totalTasks * 100) : 0;
 }
 
-<div class="project-card card h-100" data-project-id="@Model.ProjectId">
+<div id="project-@Model.ProjectId" class="project-card card h-100" data-project-id="@Model.ProjectId"
+    data-project-name="@Model.Name" data-project-status="@Model.Status" data-client-id="@Model.ClientId"
+    data-start-date="@Model.StartDate.ToString("o")" data-end-date-planned="@Model.EndDatePlanned.ToString("o")"
+    data-end-date-actual="@(Model.EndDateActual.HasValue? Model.EndDateActual.Value.ToString("o") : string.Empty)"
+    data-budget-planned="@Model.BudgetPlanned">
     <div class="card-header">
         <div class="d-flex justify-content-between align-items-start">
             <div class="flex-grow-1">
@@ -123,17 +127,28 @@
 
     <div class="card-footer">
         <div class="action-buttons">
-            <!-- Add Phases Button -->
-            <button type="button" class="btn-action btn-add-phases" onclick="addPhases('@Model.ProjectId')"
-                title="Add Phases">
-                <i class="fa-solid fa-layer-group"></i> Add Phases
-            </button>
+            @if (string.Equals(Model.Status, "Draft", StringComparison.OrdinalIgnoreCase))
+            {
+                <!-- Continue Setup Button (opens wizard at draft) -->
+                <button type="button" class="btn-action btn-primary" onclick="continueProjectSetup('@Model.ProjectId')"
+                    title="Continue project setup">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Continue Setup
+                </button>
+            }
+            else
+            {
+                <!-- Add Phases Button -->
+                <button type="button" class="btn-action btn-add-phases" onclick="addPhases('@Model.ProjectId')"
+                    title="Add Phases">
+                    <i class="fa-solid fa-layer-group"></i> Add Phases
+                </button>
 
-            <!-- Assign Tasks Button -->
-            <button type="button" class="btn-action btn-assign-tasks" onclick="assignTasks('@Model.ProjectId')"
-                title="Assign Tasks">
-                <i class="fa-solid fa-tasks"></i> Assign Tasks
-            </button>
+                <!-- Assign Tasks Button -->
+                <button type="button" class="btn-action btn-assign-tasks" onclick="assignTasks('@Model.ProjectId')"
+                    title="Assign Tasks">
+                    <i class="fa-solid fa-tasks"></i> Assign Tasks
+                </button>
+            }
 
             <!-- Generate Quotation Button -->
             <button type="button" class="btn-action btn-generate-quotation"
@@ -208,6 +223,52 @@
     function assignTasks(projectId) {
         // Navigate to task assignment page
         window.location.href = `/ProjectManager/AssignTasks?projectId=${projectId}`;
+    }
+
+    function continueProjectSetup(projectId) {
+        // Open the wizard modal and preload existing draft data
+        const modalEl = document.getElementById('projectCreationWizardModal');
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+
+        // After wizard created, set its projectId and load data
+        setTimeout(async () => {
+            if (!window.__pcwInstance) return;
+            window.__pcwInstance.projectId = projectId;
+            try {
+                // Load basic project
+                const res = await fetch(`/ProjectManager/GetDraftProject?id=${encodeURIComponent(projectId)}`);
+                const proj = await res.json();
+                if (proj && proj.projectId) {
+                    document.getElementById('projectName').value = proj.name || '';
+                    document.getElementById('projectDescription').value = proj.description || '';
+                    document.getElementById('clientSelect').value = proj.clientId || '';
+                    if (proj.startDate) document.getElementById('startDate').value = (new Date(proj.startDate)).toISOString().slice(0, 10);
+                    if (proj.endDatePlanned) document.getElementById('endDatePlanned').value = (new Date(proj.endDatePlanned)).toISOString().slice(0, 10);
+                    if (typeof proj.budgetPlanned === 'number') document.getElementById('budgetPlanned').value = proj.budgetPlanned;
+                }
+
+                // Load phases
+                const phasesRes = await fetch(`/ProjectManager/GetProjectPhases?id=${encodeURIComponent(projectId)}`);
+                const phases = await phasesRes.json();
+                const phasesContainer = document.getElementById('phasesContainer');
+                phasesContainer.innerHTML = '';
+                phases?.forEach(p => {
+                    phasesContainer.appendChild(window.__pcwInstance.buildPhaseRow(p));
+                });
+
+                // Load tasks
+                const tasksRes = await fetch(`/ProjectManager/GetProjectTasks?id=${encodeURIComponent(projectId)}`);
+                const tasks = await tasksRes.json();
+                const tasksContainer = document.getElementById('tasksContainer');
+                tasksContainer.innerHTML = '';
+                tasks?.forEach(t => {
+                    tasksContainer.appendChild(window.__pcwInstance.buildTaskRow(t));
+                });
+            } catch (e) {
+                console.warn('Failed to preload draft', e);
+            }
+        }, 300);
     }
 
     function activateMaintenance(projectId) {

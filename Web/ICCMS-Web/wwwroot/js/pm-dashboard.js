@@ -90,17 +90,71 @@ function initializeSearch() {
 
 function performSearch() {
   const searchInput = document.getElementById("searchInput");
-  const searchQuery = searchInput ? searchInput.value : "";
+  const q = searchInput ? searchInput.value.trim() : "";
 
-  // Build URL with search parameters
-  const url = new URL(window.location);
-  url.searchParams.set("searchQuery", searchQuery);
-  url.searchParams.set("page", "1");
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
 
-  window.location.href = url.toString();
+  fetch(`/ProjectManager/SearchProjects?${params.toString()}`, {
+    credentials: "same-origin",
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error("Search failed");
+      return res.json();
+    })
+    .then((data) => {
+      hideDraftsSection();
+      replaceGridHtml("projectsGrid", data.projectsHtml);
+      try {
+        showToast(`Results updated`, "success");
+      } catch {}
+    })
+    .catch((err) => {
+      console.error(err);
+      try {
+        showToast("Failed to search projects", "danger");
+      } catch {}
+    });
 }
 
 function initializeFilters() {
+  // Status filter buttons (All, Draft, Active, Completed, Maintenance)
+  const statusBtns = document.querySelectorAll(".status-filter-btn");
+  statusBtns.forEach((btn) => {
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      const status = this.getAttribute("data-status") || "";
+      const params = new URLSearchParams();
+      if (status && status !== "All") params.set("status", status);
+
+      fetch(`/ProjectManager/SearchProjects?${params.toString()}`, {
+        credentials: "same-origin",
+      })
+        .then((r) => (r.ok ? r.json() : Promise.reject("Status filter failed")))
+        .then((data) => {
+          // Behavior:
+          // - All: show both sections with their respective results
+          // - Draft: show only drafts and hide projects list
+          // - Others: hide drafts and show matching projects
+          const normalized = (status || "All").toLowerCase();
+          if (normalized === "all") {
+            showDraftsSection();
+            replaceGridHtml("projectsGrid", data.projectsHtml);
+            replaceGridHtml("draftProjectsGrid", data.draftsHtml);
+          } else if (normalized === "draft") {
+            showDraftsSection();
+            replaceGridHtml("draftProjectsGrid", data.draftsHtml);
+            // Clear projects grid to avoid mixing
+            replaceGridHtml("projectsGrid", "");
+          } else {
+            hideDraftsSection();
+            replaceGridHtml("projectsGrid", data.projectsHtml);
+          }
+        })
+        .catch((e) => console.error(e));
+    });
+  });
+
   // Filter toggle functionality is handled in the dashboard.cshtml
 }
 
@@ -135,35 +189,25 @@ function toggleFilters() {
 
 // Apply advanced filters
 function applyAdvancedFilters() {
-  const startDateFrom = document.getElementById("startDateFrom")?.value || "";
-  const startDateTo = document.getElementById("startDateTo")?.value || "";
   const clientFilter = document.getElementById("clientFilter")?.value || "";
-  const budgetMin = document.getElementById("budgetMin")?.value || "";
-  const budgetMax = document.getElementById("budgetMax")?.value || "";
+  const params = new URLSearchParams();
+  if (clientFilter) params.set("clientId", clientFilter);
 
-  const url = new URL(window.location);
-
-  // Only add parameters if they have values
-  if (startDateFrom) url.searchParams.set("startDateFrom", startDateFrom);
-  if (startDateTo) url.searchParams.set("startDateTo", startDateTo);
-  if (clientFilter) url.searchParams.set("clientFilter", clientFilter);
-  if (budgetMin) url.searchParams.set("budgetMin", budgetMin);
-  if (budgetMax) url.searchParams.set("budgetMax", budgetMax);
-
-  url.searchParams.set("page", "1"); // Reset to first page
-
-  window.location.href = url.toString();
+  fetch(`/ProjectManager/SearchProjects?${params.toString()}`, {
+    credentials: "same-origin",
+  })
+    .then((r) => (r.ok ? r.json() : Promise.reject("Filter failed")))
+    .then((data) => {
+      // Client filter: hide drafts, show only matching projects
+      hideDraftsSection();
+      replaceGridHtml("projectsGrid", data.projectsHtml);
+    })
+    .catch((e) => console.error(e));
 }
 
 // Clear advanced filters
 function clearAdvancedFilters() {
-  const inputs = [
-    "startDateFrom",
-    "startDateTo",
-    "clientFilter",
-    "budgetMin",
-    "budgetMax",
-  ];
+  const inputs = ["clientFilter"]; // keep for future if needed
   inputs.forEach((id) => {
     const element = document.getElementById(id);
     if (element) {
@@ -171,16 +215,14 @@ function clearAdvancedFilters() {
     }
   });
 
-  // Navigate to URL without advanced filter parameters
-  const url = new URL(window.location);
-  url.searchParams.delete("startDateFrom");
-  url.searchParams.delete("startDateTo");
-  url.searchParams.delete("clientFilter");
-  url.searchParams.delete("budgetMin");
-  url.searchParams.delete("budgetMax");
-  url.searchParams.set("page", "1");
-
-  window.location.href = url.toString();
+  fetch(`/ProjectManager/SearchProjects`, { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : Promise.reject("Clear filters failed")))
+    .then((data) => {
+      showDraftsSection();
+      replaceGridHtml("projectsGrid", data.projectsHtml);
+      replaceGridHtml("draftProjectsGrid", data.draftsHtml);
+    })
+    .catch((e) => console.error(e));
 }
 
 // Show all draft projects
@@ -191,8 +233,16 @@ function showAllDraftProjects() {
 
 // Clear search
 function clearSearch() {
-  window.location.href =
-    window.location.pathname + "?statusFilter=" + getCurrentStatusFilter();
+  const input = document.getElementById("searchInput");
+  if (input) input.value = "";
+  fetch(`/ProjectManager/SearchProjects`, { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : Promise.reject("Clear search failed")))
+    .then((data) => {
+      showDraftsSection();
+      replaceGridHtml("projectsGrid", data.projectsHtml);
+      replaceGridHtml("draftProjectsGrid", data.draftsHtml);
+    })
+    .catch((e) => console.error(e));
 }
 
 function getCurrentStatusFilter() {
@@ -260,4 +310,71 @@ function showToast(message, type = "info") {
       toast.parentNode.removeChild(toast);
     }
   }, 5000);
+}
+
+function renderProjectsGrid(containerId, projects) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  if (!projects || projects.length === 0) {
+    container.innerHTML = `<div class="text-center text-muted py-4">No projects.</div>`;
+    return;
+  }
+  container.innerHTML = projects.map((p) => projectCardHtml(p)).join("");
+}
+
+function projectCardHtml(p) {
+  const name = escapeHtml(p.name || "");
+  const desc = escapeHtml(p.description || "");
+  const status = escapeHtml(p.status || "");
+  const client = escapeHtml(p.clientId || "");
+  const id = escapeHtml(p.projectId || "");
+  return `
+    <div class="project-card">
+      <div class="project-card-header">
+        <h5 class="project-title">${name}</h5>
+        <span class="badge">${status}</span>
+      </div>
+      <div class="project-card-body">
+        <p class="project-desc">${desc}</p>
+        <div class="project-meta">Client: ${client}</div>
+      </div>
+      <div class="project-card-actions">
+        <button class="btn btn-sm btn-primary" onclick="viewProjectDetails('${id}')">View</button>
+      </div>
+    </div>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(
+    /[&<>"']/g,
+    (c) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[c])
+  );
+}
+
+function replaceGridHtml(containerId, html) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  // Always keep the grid container; inject only card HTML (no wrapper)
+  if (html && html.trim().length > 0) {
+    container.innerHTML = html;
+  } else {
+    container.innerHTML = `<div class="text-center text-muted py-4">No projects.</div>`;
+  }
+}
+
+function hideDraftsSection() {
+  const section = document.getElementById("draftSection");
+  if (section) section.style.display = "none";
+}
+
+function showDraftsSection() {
+  const section = document.getElementById("draftSection");
+  if (section) section.style.display = "block";
 }

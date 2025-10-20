@@ -237,6 +237,284 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        // ===============================================
+        // Draft lifecycle endpoints
+        // ===============================================
+
+        [HttpPost("save-draft")]
+        public async Task<ActionResult<Project>> SaveDraft([FromBody] Project project)
+        {
+            try
+            {
+                var currentPmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrWhiteSpace(currentPmId))
+                {
+                    return Unauthorized(new { error = "No authenticated user" });
+                }
+
+                // Initialize draft defaults
+                project.ProjectId = string.IsNullOrWhiteSpace(project.ProjectId)
+                    ? Guid.NewGuid().ToString()
+                    : project.ProjectId;
+                project.ProjectManagerId = currentPmId;
+                project.Status = "Draft";
+                project.UpdatedAt = DateTime.UtcNow;
+                project.CreatedByUserId = currentPmId;
+                project.IsDraft = true;
+
+                // Normalize dates if present
+                if (project.StartDate.Year > 1900)
+                    project.StartDate = DateTime.SpecifyKind(project.StartDate, DateTimeKind.Utc);
+                if (project.EndDatePlanned.Year > 1900)
+                    project.EndDatePlanned = DateTime.SpecifyKind(
+                        project.EndDatePlanned,
+                        DateTimeKind.Utc
+                    );
+                if (project.EndDateActual.HasValue && project.EndDateActual.Value.Year > 1900)
+                    project.EndDateActual = DateTime.SpecifyKind(
+                        project.EndDateActual.Value,
+                        DateTimeKind.Utc
+                    );
+
+                await _firebaseService.AddDocumentWithIdAsync(
+                    "projects",
+                    project.ProjectId,
+                    project
+                );
+                return Ok(project);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("update-draft/{id}")]
+        public async Task<ActionResult<Project>> UpdateDraft(string id, [FromBody] Project project)
+        {
+            try
+            {
+                var existing = await _firebaseService.GetDocumentAsync<Project>("projects", id);
+                if (existing == null)
+                {
+                    return NotFound(new { error = "Project not found" });
+                }
+
+                var currentPmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (existing.ProjectManagerId != currentPmId)
+                {
+                    return Unauthorized(new { error = "Not authorized to update this draft" });
+                }
+
+                // Preserve identifiers and draft status
+                project.ProjectId = id;
+                project.ProjectManagerId = existing.ProjectManagerId;
+                project.CreatedByUserId = existing.CreatedByUserId;
+                project.Status = "Draft";
+                project.IsDraft = true;
+                project.UpdatedAt = DateTime.UtcNow;
+
+                // Normalize dates if present
+                if (project.StartDate.Year > 1900)
+                    project.StartDate = DateTime.SpecifyKind(project.StartDate, DateTimeKind.Utc);
+                if (project.EndDatePlanned.Year > 1900)
+                    project.EndDatePlanned = DateTime.SpecifyKind(
+                        project.EndDatePlanned,
+                        DateTimeKind.Utc
+                    );
+                if (project.EndDateActual.HasValue && project.EndDateActual.Value.Year > 1900)
+                    project.EndDateActual = DateTime.SpecifyKind(
+                        project.EndDateActual.Value,
+                        DateTimeKind.Utc
+                    );
+
+                await _firebaseService.UpdateDocumentAsync("projects", id, project);
+                return Ok(project);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("projects/{id}/autosave")]
+        public async Task<ActionResult<Project>> AutosaveProject(
+            string id,
+            [FromBody] Project partial
+        )
+        {
+            try
+            {
+                var existing = await _firebaseService.GetDocumentAsync<Project>("projects", id);
+                if (existing == null)
+                {
+                    return NotFound(new { error = "Project not found" });
+                }
+                var currentPmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (existing.ProjectManagerId != currentPmId)
+                {
+                    return Unauthorized(new { error = "Not authorized to autosave" });
+                }
+
+                // Merge known basic info fields; keep as draft
+                existing.Name = string.IsNullOrWhiteSpace(partial.Name)
+                    ? existing.Name
+                    : partial.Name;
+                existing.Description = string.IsNullOrWhiteSpace(partial.Description)
+                    ? existing.Description
+                    : partial.Description;
+                existing.ClientId = string.IsNullOrWhiteSpace(partial.ClientId)
+                    ? existing.ClientId
+                    : partial.ClientId;
+                existing.BudgetPlanned =
+                    partial.BudgetPlanned != 0 ? partial.BudgetPlanned : existing.BudgetPlanned;
+                if (partial.StartDate.Year > 1900)
+                    existing.StartDate = DateTime.SpecifyKind(partial.StartDate, DateTimeKind.Utc);
+                if (partial.EndDatePlanned.Year > 1900)
+                    existing.EndDatePlanned = DateTime.SpecifyKind(
+                        partial.EndDatePlanned,
+                        DateTimeKind.Utc
+                    );
+
+                existing.IsDraft = true;
+                existing.Status = "Draft";
+                existing.UpdatedAt = DateTime.UtcNow;
+
+                await _firebaseService.UpdateDocumentAsync("projects", id, existing);
+                return Ok(existing);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("projects/{id}/phases-bulk")]
+        public async Task<ActionResult<object>> SavePhasesBulk(
+            string id,
+            [FromBody] List<Phase> phases
+        )
+        {
+            try
+            {
+                var project = await _firebaseService.GetDocumentAsync<Project>("projects", id);
+                if (project == null)
+                    return NotFound(new { error = "Project not found" });
+
+                var currentPmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (project.ProjectManagerId != currentPmId)
+                {
+                    return Unauthorized(new { error = "Not authorized" });
+                }
+
+                foreach (var phase in phases)
+                {
+                    phase.ProjectId = id;
+                    if (string.IsNullOrWhiteSpace(phase.PhaseId))
+                    {
+                        phase.PhaseId = Guid.NewGuid().ToString();
+                    }
+                    await _firebaseService.AddDocumentWithIdAsync("phases", phase.PhaseId, phase);
+                }
+                return Ok(new { saved = phases.Count });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("projects/{id}/tasks-bulk")]
+        public async Task<ActionResult<object>> SaveTasksBulk(
+            string id,
+            [FromBody] List<ProjectTask> tasks
+        )
+        {
+            try
+            {
+                var project = await _firebaseService.GetDocumentAsync<Project>("projects", id);
+                if (project == null)
+                    return NotFound(new { error = "Project not found" });
+
+                var currentPmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (project.ProjectManagerId != currentPmId)
+                {
+                    return Unauthorized(new { error = "Not authorized" });
+                }
+
+                foreach (var task in tasks)
+                {
+                    task.ProjectId = id;
+                    if (string.IsNullOrWhiteSpace(task.TaskId))
+                    {
+                        task.TaskId = Guid.NewGuid().ToString();
+                    }
+                    await _firebaseService.AddDocumentWithIdAsync("tasks", task.TaskId, task);
+                }
+                return Ok(new { saved = tasks.Count });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("projects/{id}/finalize")]
+        public async Task<ActionResult<Project>> FinalizeProject(string id)
+        {
+            try
+            {
+                var project = await _firebaseService.GetDocumentAsync<Project>("projects", id);
+                if (project == null)
+                    return NotFound(new { error = "Project not found" });
+
+                var currentPmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (project.ProjectManagerId != currentPmId)
+                {
+                    return Unauthorized(new { error = "Not authorized" });
+                }
+
+                // Validate completeness
+                if (
+                    string.IsNullOrWhiteSpace(project.Name)
+                    || string.IsNullOrWhiteSpace(project.ClientId)
+                )
+                {
+                    return BadRequest(new { error = "Basic information incomplete" });
+                }
+
+                var phases = await _firebaseService.GetCollectionAsync<Phase>("phases");
+                var projectPhases = phases.Where(p => p.ProjectId == id).ToList();
+                if (!projectPhases.Any())
+                {
+                    return BadRequest(new { error = "At least one phase is required" });
+                }
+
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var projectTasks = tasks.Where(t => t.ProjectId == id).ToList();
+                if (!projectTasks.Any())
+                {
+                    return BadRequest(new { error = "At least one task is required" });
+                }
+                if (projectTasks.Any(t => string.IsNullOrWhiteSpace(t.AssignedTo)))
+                {
+                    return BadRequest(new { error = "All tasks must have a contractor assigned" });
+                }
+
+                // Transition to Planning
+                project.IsDraft = false;
+                project.Status = "Planning";
+                project.UpdatedAt = DateTime.UtcNow;
+                await _firebaseService.UpdateDocumentAsync("projects", id, project);
+
+                return Ok(project);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
         [HttpGet("project/{id}")]
         public async Task<ActionResult<Project>> GetProject(string id)
         {

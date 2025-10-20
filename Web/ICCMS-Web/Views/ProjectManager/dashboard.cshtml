@@ -146,7 +146,7 @@
         <!-- Draft Projects Section (Collapsible) -->
         @if (Model.DraftProjects.Any())
         {
-            <div class="draft-projects-section">
+            <div id="draftSection" class="draft-projects-section">
                 <div class="section-header collapsible-header" data-target="draftProjects">
                     <h3 class="section-title">
                         <i class="fa-solid fa-file-lines"></i>
@@ -156,7 +156,7 @@
                     <i class="fa-solid fa-chevron-up toggle-icon"></i>
                 </div>
                 <div class="draft-projects-content" id="draftProjects" style="display: block;">
-                    <div class="projects-grid">
+                    <div class="projects-grid" id="draftProjectsGrid">
                         @foreach (var project in Model.DraftProjects)
                         {
                             // Get pre-processed data from ViewModel
@@ -193,7 +193,7 @@
 
             @if (Model.FilteredProjects.Any())
             {
-                <div class="projects-grid">
+                <div class="projects-grid" id="projectsGrid">
                     @foreach (var project in Model.FilteredProjects)
                     {
                         // Get pre-processed data from ViewModel

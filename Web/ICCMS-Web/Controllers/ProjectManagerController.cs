@@ -13,14 +13,17 @@ namespace ICCMS_Web.Controllers
     {
         private readonly IApiClient _apiClient;
         private readonly ILogger<ProjectManagerController> _logger;
+        private readonly IProjectIndexService _projectIndexService;
 
         public ProjectManagerController(
             IApiClient apiClient,
-            ILogger<ProjectManagerController> logger
+            ILogger<ProjectManagerController> logger,
+            IProjectIndexService projectIndexService
         )
         {
             _apiClient = apiClient;
             _logger = logger;
+            _projectIndexService = projectIndexService;
         }
 
         /// <summary>
@@ -44,6 +47,10 @@ namespace ICCMS_Web.Controllers
 
                 _logger.LogInformation("📊 Retrieved {Count} projects", allProjects.Count);
 
+                // Build/update in-memory index for fast search/filter (per user)
+                var userId = User.Identity?.Name ?? "anonymous";
+                _projectIndexService.BuildOrUpdateIndex(userId, allProjects);
+
                 // Create simple view model
                 var vm = new DashboardViewModel
                 {
@@ -60,6 +67,80 @@ namespace ICCMS_Web.Controllers
                 _logger.LogError(ex, "❌ Error loading dashboard");
                 ViewBag.ErrorMessage = "Failed to load projects. Please try again later.";
                 return View("Error");
+            }
+        }
+
+        /// <summary>
+        /// JSON endpoint for fast in-memory search and filtering of projects (AJAX-friendly).
+        /// Builds the index lazily if it doesn't exist for the current user.
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> SearchProjects(
+            string? q = null,
+            string? status = null,
+            string? clientId = null
+        )
+        {
+            try
+            {
+                var userId = User.Identity?.Name ?? "anonymous";
+
+                // Ensure index exists (lazy build) in case this endpoint is hit before Dashboard
+                var index = _projectIndexService.GetIndex(userId);
+                if (index == null)
+                {
+                    var allProjects =
+                        await _apiClient.GetAsync<List<ProjectDto>>(
+                            "/api/projectmanager/projects/all",
+                            User
+                        ) ?? new();
+                    _projectIndexService.BuildOrUpdateIndex(userId, allProjects);
+                }
+
+                var normalized = (status ?? string.Empty).Trim();
+                if (string.Equals(normalized, "All", StringComparison.OrdinalIgnoreCase))
+                {
+                    normalized = string.Empty; // treat All as no status filter
+                }
+
+                var results = _projectIndexService.Search(userId, q, normalized, clientId).ToList();
+
+                var drafts = results
+                    .Where(p =>
+                        string.Equals(p.Status, "Draft", StringComparison.OrdinalIgnoreCase)
+                    )
+                    .ToList();
+                var nonDrafts = results
+                    .Where(p =>
+                        !string.Equals(p.Status, "Draft", StringComparison.OrdinalIgnoreCase)
+                    )
+                    .ToList();
+
+                // Render server-side HTML using existing partial so the UI exactly matches initial render
+                string projectsHtml = await this.RenderViewAsync(
+                    "Views/ProjectManager/_ProjectsCards.cshtml",
+                    nonDrafts,
+                    true
+                );
+                string draftsHtml = await this.RenderViewAsync(
+                    "Views/ProjectManager/_ProjectsCards.cshtml",
+                    drafts,
+                    true
+                );
+
+                return Json(
+                    new
+                    {
+                        total = results.Count,
+                        projectsHtml,
+                        draftsHtml,
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "SearchProjects failed");
+                return StatusCode(500, new { error = ex.Message });
             }
         }
 
@@ -772,6 +853,85 @@ namespace ICCMS_Web.Controllers
             }
         }
 
+        // ========================= DRAFT + AUTOSAVE + WIZARD SUPPORT =========================
+
+        [HttpPost]
+        public async Task<IActionResult> StartDraft()
+        {
+            var draft = new ProjectDto { ProjectId = Guid.NewGuid().ToString(), Status = "Draft" };
+            var created = await _apiClient.PostAsync<ProjectDto>(
+                "/api/projectmanager/save-draft",
+                draft,
+                User
+            );
+            if (created == null)
+            {
+                return Json(new { success = false, error = "Failed to start draft" });
+            }
+            return Json(new { success = true, projectId = created.ProjectId });
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> AutosaveProject(string id, [FromBody] ProjectDto project)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return BadRequest(new { error = "Missing project id" });
+
+            project.ProjectId = id;
+            project.Status = "Draft";
+            var updated = await _apiClient.PutAsync<ProjectDto>(
+                $"/api/projectmanager/projects/{id}/autosave",
+                project,
+                User
+            );
+            if (updated == null)
+                return Json(new { success = false, error = "Autosave failed" });
+            return Json(new { success = true, projectId = updated.ProjectId });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SavePhases(string id, [FromBody] List<PhaseDto> phases)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return BadRequest(new { error = "Missing project id" });
+            var result = await _apiClient.PostAsync<object>(
+                $"/api/projectmanager/projects/{id}/phases-bulk",
+                phases,
+                User
+            );
+            return Json(result ?? new { saved = 0 });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SaveTasks(string id, [FromBody] List<ProjectTaskDto> tasks)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return BadRequest(new { error = "Missing project id" });
+            var result = await _apiClient.PostAsync<object>(
+                $"/api/projectmanager/projects/{id}/tasks-bulk",
+                tasks,
+                User
+            );
+            return Json(result ?? new { saved = 0 });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> FinalizeProject(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return BadRequest(new { error = "Missing project id" });
+            var finalized = await _apiClient.PostAsync<ProjectDto>(
+                $"/api/projectmanager/projects/{id}/finalize",
+                new { },
+                User
+            );
+            if (finalized == null)
+            {
+                return Json(new { success = false, error = "Finalize failed" });
+            }
+            return Json(new { success = true, status = finalized.Status });
+        }
+
         /// <summary>
         /// Step 4: Activate maintenance mode for a completed project.
         /// </summary>
@@ -976,8 +1136,9 @@ namespace ICCMS_Web.Controllers
 
             try
             {
+                // Use general project endpoint
                 var project = await _apiClient.GetAsync<ProjectDto>(
-                    $"/api/projectmanager/draft/{id}",
+                    $"/api/projectmanager/project/{id}",
                     User
                 );
 
@@ -998,6 +1159,48 @@ namespace ICCMS_Web.Controllers
             {
                 _logger.LogError(ex, "🔥 Error retrieving draft project {Id}", id);
                 return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get project phases (proxy to API)
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetProjectPhases(string id)
+        {
+            try
+            {
+                var phases = await _apiClient.GetAsync<List<PhaseDto>>(
+                    $"/api/projectmanager/project/{id}/phases",
+                    User
+                );
+                return Json(phases ?? new List<PhaseDto>());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving phases for project {Id}", id);
+                return Json(new List<PhaseDto>());
+            }
+        }
+
+        /// <summary>
+        /// Get project tasks (proxy to API)
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetProjectTasks(string id)
+        {
+            try
+            {
+                var tasks = await _apiClient.GetAsync<List<ProjectTaskDto>>(
+                    $"/api/projectmanager/project/{id}/tasks",
+                    User
+                );
+                return Json(tasks ?? new List<ProjectTaskDto>());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving tasks for project {Id}", id);
+                return Json(new List<ProjectTaskDto>());
             }
         }
 
@@ -1070,6 +1273,27 @@ namespace ICCMS_Web.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving clients");
+                return Json(new List<UserDto>());
+            }
+        }
+
+        /// <summary>
+        /// Get contractors for dropdowns (task assignments)
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetContractors()
+        {
+            try
+            {
+                var contractors = await _apiClient.GetAsync<List<UserDto>>(
+                    "/api/users/contractors",
+                    User
+                );
+                return Json(contractors ?? new List<UserDto>());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving contractors");
                 return Json(new List<UserDto>());
             }
         }

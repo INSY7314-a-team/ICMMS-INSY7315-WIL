@@ -96,40 +96,32 @@
                         </div>
                     </div>
 
-                    <!-- Step 3: Project Details -->
+                    <!-- Step 3: Phases -->
                     <div class="wizard-step d-none" id="step3">
                         <h6 class="mb-3">
-                            <i class="fa-solid fa-cogs text-warning me-2"></i>
-                            Project Details
+                            <i class="fa-solid fa-layer-group text-warning me-2"></i>
+                            Phases
                         </h6>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="completionPhase" class="form-label">Completion Phase</label>
-                                <select class="form-select" id="completionPhase" name="CompletionPhase">
-                                    <option value="1">Planning</option>
-                                    <option value="2">In Progress</option>
-                                    <option value="3">Completed</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="priority" class="form-label">Priority</label>
-                                <select class="form-select" id="priority" name="Priority">
-                                    <option value="Low">Low</option>
-                                    <option value="Medium" selected>Medium</option>
-                                    <option value="High">High</option>
-                                    <option value="Critical">Critical</option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <label for="notes" class="form-label">Additional Notes</label>
-                                <textarea class="form-control" id="notes" name="Notes" rows="4"
-                                    placeholder="Any additional notes or requirements..."></textarea>
-                            </div>
-                        </div>
+                        <div id="phasesContainer" class="mb-3"></div>
+                        <button type="button" class="btn btn-outline-secondary" id="addPhaseBtn">
+                            <i class="fa-solid fa-plus me-1"></i>Add Phase
+                        </button>
                     </div>
 
-                    <!-- Step 4: Review & Create -->
+                    <!-- Step 4: Tasks & Contractors -->
                     <div class="wizard-step d-none" id="step4">
+                        <h6 class="mb-3">
+                            <i class="fa-solid fa-tasks text-info me-2"></i>
+                            Tasks & Contractors
+                        </h6>
+                        <div id="tasksContainer" class="mb-3"></div>
+                        <button type="button" class="btn btn-outline-secondary" id="addTaskBtn">
+                            <i class="fa-solid fa-plus me-1"></i>Add Task
+                        </button>
+                    </div>
+
+                    <!-- Step 5: Review & Finalize -->
+                    <div class="wizard-step d-none" id="step5">
                         <h6 class="mb-3">
                             <i class="fa-solid fa-check-circle text-success me-2"></i>
                             Review & Create
@@ -174,7 +166,7 @@
                     Next <i class="fa-solid fa-arrow-right ms-1"></i>
                 </button>
                 <button type="button" class="btn btn-success" id="createProjectBtn" style="display: none;">
-                    <i class="fa-solid fa-check me-1"></i>Create Project
+                    <i class="fa-solid fa-check me-1"></i>Finalize
                 </button>
             </div>
         </div>
