@@ -262,6 +262,10 @@
 
         function render() {
             const tbody = document.querySelector('#ee-table tbody');
+            if (!tbody) {
+                console.warn('Table body not found, skipping render');
+                return;
+            }
             tbody.innerHTML = '';
             (estimate.lineItems || []).forEach((it, idx) => tbody.appendChild(rowFor(it, idx)));
             recomputeTotals();
@@ -289,9 +293,15 @@
             const total = subtotal + tax;
             estimate.subtotal = subtotal;
             estimate.totalAmount = total;
-            document.getElementById('ee-subtotal').textContent = formatCurrency(subtotal);
-            document.getElementById('ee-tax').textContent = formatCurrency(tax);
-            document.getElementById('ee-total').textContent = formatCurrency(total);
+
+            // Only update elements if they exist
+            const subtotalEl = document.getElementById('ee-subtotal');
+            const taxEl = document.getElementById('ee-tax');
+            const totalEl = document.getElementById('ee-total');
+
+            if (subtotalEl) subtotalEl.textContent = formatCurrency(subtotal);
+            if (taxEl) taxEl.textContent = formatCurrency(tax);
+            if (totalEl) totalEl.textContent = formatCurrency(total);
         }
 
         function collect() {
