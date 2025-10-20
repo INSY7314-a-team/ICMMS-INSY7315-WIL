@@ -27,8 +27,13 @@
                 </h6>
                 <p class="card-subtitle small mb-0">
                     @{
-                        // Get client name from ViewBag or use ClientId as fallback
-                        var clientName = ViewBag.ClientName as string ?? Model.ClientId;
+                        // Prefer client name if available
+                        var clientName = ViewBag.ClientName as string;
+                        if (string.IsNullOrWhiteSpace(clientName))
+                        {
+                            // clientName = Model.ClientId; // fallback
+                            clientName = "FallBack";
+                        }
                     }
                     @clientName
                 </p>

@@ -391,30 +391,54 @@
             panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
         }
 
-        function applyAdvancedFilters() {
-            const startDateFrom = document.getElementById('startDateFrom').value;
-            const startDateTo = document.getElementById('startDateTo').value;
-            const clientFilter = document.getElementById('clientFilter').value;
-            const budgetMin = document.getElementById('budgetMin').value;
-            const budgetMax = document.getElementById('budgetMax').value;
+        async function applyAdvancedFilters() {
+            try {
+                const clientId = document.getElementById('clientFilter').value;
+                // infer selected status from active quick buttons if any
+                const activeStatusBtn = document.querySelector('.status-filter-btn.active');
+                const status = activeStatusBtn ? activeStatusBtn.getAttribute('data-status') : '';
 
-            const url = new URL(window.location);
-            url.searchParams.set('startDateFrom', startDateFrom);
-            url.searchParams.set('startDateTo', startDateTo);
-            url.searchParams.set('clientFilter', clientFilter);
-            url.searchParams.set('budgetMin', budgetMin);
-            url.searchParams.set('budgetMax', budgetMax);
-            url.searchParams.set('page', '1');
+                const params = new URLSearchParams();
+                if (clientId) params.set('clientId', clientId);
+                if (status && status !== 'All') params.set('status', status);
 
-            window.location.href = url.toString();
+                const res = await fetch(`/ProjectManager/SearchProjects?${params.toString()}`);
+                if (!res.ok) throw new Error('Filter failed');
+                const data = await res.json();
+
+                // If a specific status (non-draft) is applied, hide drafts; otherwise update both
+                if (status && status.toLowerCase() !== 'draft' && status !== 'All') {
+                    document.getElementById('draftSection')?.style && (document.getElementById('draftSection').style.display = 'none');
+                    document.getElementById('projectsGrid').innerHTML = data.projectsHtml;
+                } else {
+                    document.getElementById('draftSection')?.style && (document.getElementById('draftSection').style.display = 'block');
+                    document.getElementById('projectsGrid').innerHTML = data.projectsHtml;
+                    const draftsGrid = document.getElementById('draftProjectsGrid');
+                    if (draftsGrid) draftsGrid.innerHTML = data.draftsHtml;
+                }
+            } catch (e) {
+                console.error(e);
+            }
         }
 
-        function clearAdvancedFilters() {
+        async function clearAdvancedFilters() {
+            document.getElementById('clientFilter').value = '';
             document.getElementById('startDateFrom').value = '';
             document.getElementById('startDateTo').value = '';
-            document.getElementById('clientFilter').value = '';
             document.getElementById('budgetMin').value = '';
             document.getElementById('budgetMax').value = '';
+
+            try {
+                const res = await fetch(`/ProjectManager/SearchProjects`);
+                if (!res.ok) throw new Error('Clear filters failed');
+                const data = await res.json();
+                document.getElementById('draftSection')?.style && (document.getElementById('draftSection').style.display = 'block');
+                document.getElementById('projectsGrid').innerHTML = data.projectsHtml;
+                const draftsGrid = document.getElementById('draftProjectsGrid');
+                if (draftsGrid) draftsGrid.innerHTML = data.draftsHtml;
+            } catch (e) {
+                console.error(e);
+            }
         }
     </script>
 }

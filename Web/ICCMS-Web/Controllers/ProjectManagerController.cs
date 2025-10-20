@@ -52,11 +52,25 @@ namespace ICCMS_Web.Controllers
                 _projectIndexService.BuildOrUpdateIndex(userId, allProjects);
 
                 // Create simple view model
+                // Enrich projects with client names for UI convenience
+                var clients =
+                    await _apiClient.GetAsync<List<UserDto>>("/api/users/clients", User) ?? new();
+                var clientMap = clients.ToDictionary(c => c.UserId, c => c.FullName);
+                foreach (var p in allProjects)
+                {
+                    if (clientMap.TryGetValue(p.ClientId ?? string.Empty, out var fullName))
+                    {
+                        // Store on a dynamic bag via ViewBag mapping at render time
+                        // or rely on ViewBag.ClientName when rendering each card
+                    }
+                }
+
                 var vm = new DashboardViewModel
                 {
                     DraftProjects = allProjects.Where(p => p.Status == "Draft").ToList(),
                     FilteredProjects = allProjects.Where(p => p.Status != "Draft").ToList(),
                     TotalProjects = allProjects.Count,
+                    Clients = clients,
                 };
 
                 _logger.LogInformation("✅ Dashboard ready with {Total} projects", vm.TotalProjects);

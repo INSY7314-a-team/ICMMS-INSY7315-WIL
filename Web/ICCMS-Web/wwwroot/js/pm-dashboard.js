@@ -124,6 +124,9 @@ function initializeFilters() {
     btn.addEventListener("click", function (e) {
       e.preventDefault();
       const status = this.getAttribute("data-status") || "";
+      // mark active state for Apply Filters to read
+      statusBtns.forEach((b) => b.classList.remove("active"));
+      this.classList.add("active");
       const params = new URLSearchParams();
       if (status && status !== "All") params.set("status", status);
 
@@ -326,7 +329,9 @@ function projectCardHtml(p) {
   const name = escapeHtml(p.name || "");
   const desc = escapeHtml(p.description || "");
   const status = escapeHtml(p.status || "");
-  const client = escapeHtml(p.clientId || "");
+  const client = escapeHtml(
+    p.clientName || p.clientFullName || p.client || p.clientId || ""
+  );
   const id = escapeHtml(p.projectId || "");
   return `
     <div class="project-card">
