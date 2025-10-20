@@ -256,5 +256,55 @@ namespace ICCMS_Web.Services
                 return default;
             }
         }
+
+        // ===========================================================
+        // 🔹 DELETE ASYNC
+        // ===========================================================
+        public async Task<bool> DeleteAsync(string endpoint, ClaimsPrincipal user)
+        {
+            _logger.LogInformation("=== [ApiClient] DELETE {Endpoint} ===", endpoint);
+
+            try
+            {
+                var token = user.FindFirst("FirebaseToken")?.Value;
+                if (string.IsNullOrEmpty(token))
+                {
+                    HandleUnauthorized(endpoint);
+                    return false;
+                }
+
+                var request = new HttpRequestMessage(HttpMethod.Delete, $"{_baseUrl}{endpoint}")
+                {
+                    Headers = { Authorization = new AuthenticationHeaderValue("Bearer", token) }
+                };
+
+                var response = await _httpClient.SendAsync(request);
+                _logger.LogInformation("📬 Response {StatusCode}", response.StatusCode);
+
+                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    HandleUnauthorized(endpoint);
+                    return false;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var body = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("❌ DELETE {Endpoint} failed ({Code}) {Reason}\n{Body}",
+                        endpoint, response.StatusCode, response.ReasonPhrase, body);
+                    return false;
+                }
+
+                // ✅ Success
+                _cache.Remove(endpoint);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🔥 Exception during DELETE {Endpoint}", endpoint);
+                return false;
+            }
+        }
+
     }
 }

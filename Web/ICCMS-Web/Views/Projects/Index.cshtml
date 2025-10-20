@@ -1,0 +1,242 @@
+@model ICCMS_Web.Models.DashboardViewModel
+@{
+    ViewData["Title"] = "Projects";
+    Layout = "_Layout";
+}
+
+@await Html.PartialAsync("_QuoteBuilder")
+
+<div class="container mt-4">
+    <!-- HEADER -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Projects</h2>
+            <p class="text-muted mb-0">Manage active, draft, and completed projects in one view.</p>
+        </div>
+        <a href="@Url.Action("CreateProject", "ProjectManager")" class="btn btn-primary shadow-sm">
+            <i class="fas fa-plus-circle me-1"></i> New Project
+        </a>
+    </div>
+
+    <!-- QUICK DRAFT CREATION -->
+    <div class="card border-0 rounded-4 mb-4 shadow-sm bg-light-warning border-warning">
+        <div class="card-body d-flex align-items-center justify-content-between">
+            <div>
+                <h5 class="fw-bold mb-1 text-dark"><i class="bi bi-lightning-charge-fill text-warning me-1"></i> New Project Draft</h5>
+                <p class="text-muted small mb-0">Start a draft to pre-fill project details before assigning a client.</p>
+            </div>
+            <a href="@Url.Action("CreateProject", "ProjectManager")" class="btn btn-outline-warning fw-bold">
+                <i class="bi bi-folder-plus me-1"></i> Start Draft
+            </a>
+        </div>
+    </div>
+
+    <!-- PROJECT GRID -->
+    @if (Model.RecentProjects?.Any() == true)
+    {
+        <div class="row g-4">
+            @foreach (var project in Model.RecentProjects)
+            {
+                var client = Model.Clients.FirstOrDefault(c => c.UserId == project.ClientId);
+                var clientName = client?.FullName ?? "Unknown Client";
+                var clientEmail = client?.Email ?? "No Email";
+
+                var projectQuotes = Model.AllQuotes
+                    .Where(q => q.ProjectId == project.ProjectId)
+                    .OrderByDescending(q => q.CreatedAt)
+                    .ToList();
+
+                var quoteCount = projectQuotes.Count;
+                var latestQuote = projectQuotes.FirstOrDefault();
+                var latestStatus = latestQuote?.Status ?? "None";
+                var latestQuoteId = latestQuote?.QuotationId ?? string.Empty;
+
+                // 🎨 Set dynamic styling based on project status
+                var (borderColor, bgColor, icon) = project.Status switch
+                {
+                    "Draft" => ("border-warning", "bg-light-warning", "bi-pencil-square text-warning"),
+                    "Planning" => ("border-info", "bg-light-info", "bi-gear-wide-connected text-info"),
+                    "Active" => ("border-success", "bg-light-success", "bi-rocket-takeoff text-success"),
+                    "Completed" => ("border-secondary", "bg-light", "bi-check2-circle text-secondary"),
+                    _ => ("border-secondary", "bg-light", "bi-question-circle text-muted")
+                };
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="card shadow-sm border-3 rounded-4 h-100 @borderColor @bgColor">
+                        <div class="card-body">
+                            <!-- HEADER -->
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="fw-bold mb-0 text-truncate" title="@project.Name">
+                                    <i class="bi @icon me-2"></i>@project.Name
+                                </h5>
+                                <span class="badge bg-dark text-white">@project.Status</span>
+                            </div>
+
+                            <!-- CLIENT INFO -->
+                            <p class="text-muted small mb-3">
+                                <i class="bi bi-person-fill text-primary me-1"></i>
+                                <strong>@clientName</strong> <span class="text-muted">(@clientEmail)</span><br />
+                                <i class="bi bi-calendar3 text-primary me-1"></i>
+                                @project.StartDate.ToString("yyyy-MM-dd") → @project.EndDatePlanned.ToString("yyyy-MM-dd")<br />
+                                <i class="bi bi-cash-stack text-primary me-1"></i>
+                                R @project.BudgetPlanned.ToString("N0")
+                            </p>
+
+                            <!-- QUOTES -->
+                            <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi bi-file-earmark-text me-1"></i>
+                                    @quoteCount @((quoteCount == 1) ? "Quote" : "Quotes")
+                                </span>
+
+                                @if (quoteCount > 0 && !string.IsNullOrEmpty(latestQuoteId))
+                                {
+                                    <a href="@Url.Action("DownloadQuote", "Quotes", new { id = latestQuoteId })"
+                                       target="_blank"
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-file-earmark-pdf me-1"></i> Latest Quote
+                                    </a>
+                                }
+                            </div>
+
+                            <!-- ACTIONS -->
+                            <div class="d-flex flex-wrap gap-2">
+                                @if (project.Status.Equals("Draft", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <!-- 🟡 DRAFT MODE -->
+                                    <button class="btn btn-warning btn-sm flex-grow-1"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#quoteBuilderModal"
+                                            data-project-id="@project.ProjectId"
+                                            data-project-name="@project.Name"
+                                            data-description="@project.Description"
+                                            data-client-id="@project.ClientId"
+                                            data-contractor-id="@User.FindFirst("UserId")?.Value">
+                                        <i class="fas fa-file-invoice-dollar me-1"></i> Build Quote
+                                    </button>
+
+                                    @if (quoteCount > 0 && !string.IsNullOrEmpty(latestQuoteId))
+                                    {
+                                        <button class="btn btn-outline-secondary btn-sm flex-grow-1"
+                                                onclick="simulateClientApproval('@latestQuoteId')">
+                                            <i class="bi bi-person-check-fill me-1"></i> Simulate Client Approval
+                                        </button>
+                                    }
+                                }
+                                else if (project.Status.Equals("Planning", StringComparison.OrdinalIgnoreCase) ||
+                                         project.Status.Equals("Active", StringComparison.OrdinalIgnoreCase) ||
+                                         project.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <!-- 🟢 NORMAL MODE -->
+                                    <a href="@Url.Action("ProjectDetails", "ProjectManager", new { id = project.ProjectId })"
+                                       class="btn btn-success btn-sm flex-grow-1">
+                                        <i class="fas fa-diagram-project me-1"></i> View Project
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">No actions available.</span>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- FOOTER -->
+                        <div class="card-footer bg-light border-0 d-flex justify-content-between align-items-center small text-muted">
+                            <span><i class="bi bi-clock-history me-1"></i>Start: @project.StartDate.ToString("yyyy-MM-dd")</span>
+                            <span><i class="bi bi-diagram-3-fill me-1"></i>Phases: @(Model.ProjectPhases.ContainsKey(project.ProjectId) ? Model.ProjectPhases[project.ProjectId].Count : 0)</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">No projects found. Start by creating one.</div>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/quote-builder.js"></script>
+
+    <script>
+        // 🧱 Inject project data into Quote Builder modal
+        document.getElementById("quoteBuilderModal")
+            ?.addEventListener("show.bs.modal", function (event) {
+                const btn = event.relatedTarget;
+                if (!btn) return;
+                document.getElementById("qb-projectId").value = btn.dataset.projectId || "";
+                document.getElementById("qb-clientId").value = btn.dataset.clientId || "";
+                document.getElementById("qb-contractorId").value = btn.dataset.contractorId || "";
+                console.log("🟢 Opening Quote Builder for:", btn.dataset.projectName);
+            });
+
+        // 💻 Simulate client approval
+        async function simulateClientApproval(quoteId) {
+            if (!quoteId) return alert("No quote ID found.");
+            if (!confirm("Simulate client approval for this quote?")) return;
+
+            try {
+                const res = await fetch(`/Quotes/simulate-client-approval/${quoteId}`, { method: "POST" });
+                if (!res.ok) throw new Error(`API error ${res.status}`);
+                alert("✅ Simulated client approval successfully!");
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (err) {
+                console.error("🔥 Simulate approval failed:", err);
+                alert("❌ Failed to simulate approval.");
+            }
+        }
+    </script>
+}
+
+<style>
+    body {
+        background-color: #f9fafc;
+    }
+
+    .card {
+        border-radius: 1rem;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-sm {
+        font-size: 0.82rem;
+    }
+
+    .badge {
+        font-size: 0.8rem;
+    }
+
+    .bg-light-warning {
+        background-color: #fff8e1 !important;
+    }
+
+    .bg-light-info {
+        background-color: #e3f2fd !important;
+    }
+
+    .bg-light-success {
+        background-color: #e8f5e9 !important;
+    }
+
+    .border-warning {
+        border-color: #ffc107 !important;
+    }
+
+    .border-info {
+        border-color: #17a2b8 !important;
+    }
+
+    .border-success {
+        border-color: #28a745 !important;
+    }
+
+    .border-secondary {
+        border-color: #6c757d !important;
+    }
+</style>

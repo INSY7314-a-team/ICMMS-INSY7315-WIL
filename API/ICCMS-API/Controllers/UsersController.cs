@@ -107,6 +107,15 @@ namespace ICCMS_API.Controllers
                 var activeContractors = contractors
                     .Where(u => u.IsActive && u.Role == "Contractor")
                     .ToList();
+
+                Console.WriteLine($"📦 [API] Total users fetched: {contractors.Count}");
+                foreach (var u in contractors)
+                {
+                    Console.WriteLine($"➡️ [API] {u.FullName} ({u.Role}) Active={u.IsActive}");
+                }
+                Console.WriteLine($"✅ [API] Returning {activeContractors.Count} active contractors");
+
+
                 return Ok(activeContractors);
             }
             catch (Exception ex)

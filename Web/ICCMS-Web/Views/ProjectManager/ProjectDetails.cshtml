@@ -4,94 +4,189 @@
     Layout = "_Layout";
 }
 
-<div class="container mt-4">
-    <!-- HEADER -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
+<!-- ========================================================= -->
+<!-- MAIN CONTAINER -->
+<!-- ========================================================= -->
+<div class="container mt-4" id="projectDetailsContainer" data-project-id="@Model.Project.ProjectId">
+
+    <!-- ===== HEADER ===== -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="fw-bold mb-1">@Model.Project.Name</h2>
+            <h2 class="fw-bold gradient-text mb-1">@Model.Project.Name</h2>
             <p class="text-muted mb-0">
-                <i class="bi bi-person-fill text-primary me-1"></i>
+                <i class="bi bi-person-fill me-1 text-gradient"></i>
                 Client ID: <strong>@Model.Project.ClientId</strong> &nbsp; | &nbsp;
                 Status: <strong>@Model.Project.Status</strong>
             </p>
         </div>
-        <a asp-action="Dashboard" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left-circle me-1"></i> Back to Dashboard
+        <a asp-action="Index" class="btn btn-outline-dark rounded-pill">
+            <i class="bi bi-arrow-left-circle me-1"></i> Back to Projects
         </a>
     </div>
 
-    <!-- PROJECT INFO CARD -->
+    <!-- ===== PROJECT OVERVIEW ===== -->
     <div class="card shadow-sm border-0 rounded-4 mb-4">
         <div class="card-body">
-            <h5 class="fw-bold mb-3">Project Overview</h5>
-            <p class="mb-1"><strong>Budget:</strong> R @Model.Project.BudgetPlanned.ToString("N0")</p>
-            <p class="mb-1"><strong>Start:</strong> @Model.Project.StartDate.ToString("yyyy-MM-dd")</p>
-            <p class="mb-1"><strong>End (Planned):</strong> @Model.Project.EndDatePlanned.ToString("yyyy-MM-dd")</p>
-            @if (Model.Project.EndDateActual.HasValue)
-            {
-                <p class="mb-1"><strong>End (Actual):</strong> @Model.Project.EndDateActual.Value.ToString("yyyy-MM-dd")</p>
-            }
+            <h5 class="fw-bold text-gradient mb-3">
+                <i class="bi bi-folder2-open me-1"></i> Project Overview
+            </h5>
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Budget:</strong>
+                        <span class="text-success">R @Model.Project.BudgetPlanned.ToString("N0")</span>
+                    </p>
+                    <p class="mb-1"><strong>Start:</strong> @Model.Project.StartDate.ToString("yyyy-MM-dd")</p>
+                    <p class="mb-1"><strong>End (Planned):</strong> @Model.Project.EndDatePlanned.ToString("yyyy-MM-dd")</p>
+                </div>
+                <div class="col-md-6">
+                    @if (Model.Project.EndDateActual.HasValue)
+                    {
+                        <p class="mb-1"><strong>End (Actual):</strong>
+                            <span class="text-danger">@Model.Project.EndDateActual.Value.ToString("yyyy-MM-dd")</span>
+                        </p>
+                    }
+                </div>
+            </div>
             <hr />
             <p class="text-muted">@Model.Project.Description</p>
         </div>
     </div>
 
-    <!-- NAV TABS -->
-    <ul class="nav nav-tabs mt-4" id="projectTabs" role="tablist">
-        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#overview">Overview</a></li>
-        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#setup">Phases & Tasks</a></li>
-        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#quotes">Quotes</a></li>
+    <!-- ===== NAVIGATION TABS ===== -->
+    <ul class="nav nav-tabs mb-4 gradient-tab-bg" id="projectTabs" role="tablist">
+        <li class="nav-item"><a class="nav-link active rounded-pill px-4" data-bs-toggle="tab" href="#overview">Overview</a></li>
+        <li class="nav-item"><a class="nav-link rounded-pill px-4" data-bs-toggle="tab" href="#setup">Phases & Tasks</a></li>
+        <li class="nav-item"><a class="nav-link rounded-pill px-4" data-bs-toggle="tab" href="#quotes">Quotes</a></li>
     </ul>
 
+    <!-- ========================================================= -->
+    <!-- TAB CONTENT -->
+    <!-- ========================================================= -->
     <div class="tab-content mt-3">
-        <!-- TAB 1: OVERVIEW -->
+
+        <!-- ===== OVERVIEW TAB ===== -->
         <div class="tab-pane fade show active" id="overview">
-            <h5 class="fw-bold mb-3">Project Summary</h5>
-            <p>@Model.Project.Description</p>
-            <p class="text-muted small mb-0">
-                Created on: @Model.Project.StartDate.ToString("yyyy-MM-dd") |
-                Status: <strong>@Model.Project.Status</strong>
-            </p>
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body">
+                    <h5 class="fw-bold text-gradient mb-3">
+                        <i class="bi bi-info-circle me-1"></i> Project Summary
+                    </h5>
+                    <p>@Model.Project.Description</p>
+                    <p class="text-muted small mb-0">
+                        Created on: <strong>@Model.Project.StartDate.ToString("yyyy-MM-dd")</strong> |
+                        Status: <strong>@Model.Project.Status</strong>
+                    </p>
+                </div>
+            </div>
         </div>
 
-        <!-- TAB 2: PHASES & TASKS -->
+        <!-- ===== PHASES & TASKS TAB ===== -->
         <div class="tab-pane fade" id="setup">
-            <h5 class="fw-bold mb-3">Phases & Tasks</h5>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-gradient mb-0">Phases & Tasks</h5>
+                <button class="btn btn-gradient rounded-pill btn-sm" id="btnAddPhase">
+                    <i class="bi bi-plus-circle me-1"></i> Add Phase
+                </button>
+            </div>
 
-            @if (Model.Phases.Any())
-            {
-                @foreach (var phase in Model.Phases)
+            <div id="phasesContainer">
+                @if (Model.Phases.Any())
                 {
-                    <div class="card mb-3 border-0 shadow-sm rounded-3">
-                        <div class="card-header fw-bold bg-light">@phase.Name</div>
-                        <ul class="list-group list-group-flush">
-                            @foreach (var task in Model.Tasks.Where(t => t.PhaseId == phase.PhaseId))
-                            {
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    @foreach (var phase in Model.Phases)
+                    {
+                        <div class="card mb-4 border-0 shadow-sm rounded-3 phase-card" data-phase-id="@phase.PhaseId">
+                            <div class="card-header bg-light py-3 border-0 rounded-top-3">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center">
                                     <div>
-                                        <strong>@task.Name</strong>
-                                        <div class="small text-muted">@task.Description</div>
+                                        <h6 class="fw-bold mb-1 text-dark">@phase.Name</h6>
+                                        <small class="text-muted">
+                                            Status:
+                                            <span class="badge bg-warning text-dark">@phase.Status</span>
+                                            &nbsp;|&nbsp;
+                                            Budget:
+                                            <span class="text-success">R @phase.Budget.ToString("N0")</span>
+                                        </small>
                                     </div>
-                                    <span class="badge bg-secondary">@task.Status</span>
-                                </li>
-                            }
-                        </ul>
+                                    <div class="d-flex flex-wrap gap-2 mt-2 mt-md-0">
+                                        <button class="btn btn-outline-success btn-sm rounded-pill btnAddTask" data-phase-id="@phase.PhaseId">
+                                            <i class="bi bi-plus-circle me-1"></i> Task
+                                        </button>
+                                        <button class="btn btn-outline-dark btn-sm rounded-pill btnEditPhase" data-phase-id="@phase.PhaseId">
+                                            <i class="bi bi-pencil-square me-1"></i> Edit
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm rounded-pill btnDeletePhase" data-phase-id="@phase.PhaseId">
+                                            <i class="bi bi-trash me-1"></i> Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-body p-0">
+                                @if (Model.Tasks.Any(t => t.PhaseId == phase.PhaseId))
+                                {
+                                    <ul class="list-group list-group-flush">
+                                        @foreach (var task in Model.Tasks.Where(t => t.PhaseId == phase.PhaseId))
+                                        {
+                                            <li class="list-group-item px-4 py-3 task-item border-0 border-top" 
+                                                data-task-id="@task.TaskId"
+                                                style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+
+                                                <!-- LEFT: Task info -->
+                                                <div style="flex: 1 1 65%;">
+                                                    <div class="fw-semibold text-dark fs-6 mb-1">@task.Name</div>
+                                                    <div class="small text-muted">@task.Description</div>
+                                                </div>
+
+                                                <!-- RIGHT: Status + Buttons -->
+                                                <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                                    <span class="badge rounded-pill px-3 py-2" 
+                                                        style="background: linear-gradient(90deg, #FFD43B, #FF9900); color:#000;">
+                                                        @task.Status
+                                                    </span>
+
+                                                    <button class="btn btn-outline-dark btn-sm rounded-pill btnEditTask d-flex align-items-center gap-1 px-3" 
+                                                            data-task-id="@task.TaskId">
+                                                        <i class="bi bi-pencil"></i><span>Edit</span>
+                                                    </button>
+
+                                                    <button class="btn btn-outline-danger btn-sm rounded-pill btnDeleteTask d-flex align-items-center gap-1 px-3" 
+                                                            data-task-id="@task.TaskId">
+                                                        <i class="bi bi-trash"></i><span>Delete</span>
+                                                    </button>
+                                                </div>
+                                            </li>
+
+
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <p class="text-muted fst-italic px-3 py-3 mb-0">
+                                        No tasks yet — click <strong>Add Task</strong> to begin this phase.
+                                    </p>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="alert alert-light border text-center py-4 rounded-4">
+                        <i class="bi bi-inboxes me-2 text-gradient"></i>
+                        No phases have been created yet.<br />
+                        <strong>Click “Add Phase”</strong> to start project setup.
                     </div>
                 }
-            }
-            else
-            {
-                <p class="text-muted fst-italic">No phases or tasks found.</p>
-            }
+            </div>
         </div>
 
-        <!-- TAB 3: QUOTES -->
+        <!-- ===== QUOTES TAB ===== -->
         <div class="tab-pane fade" id="quotes">
-            <h5 class="fw-bold mb-3">Linked Quotes</h5>
-
+            <h5 class="fw-bold text-gradient mb-3"><i class="bi bi-receipt"></i> Linked Quotes</h5>
             @if (Model.Quotes.Any())
             {
-                <div class="list-group">
+                <div class="list-group shadow-sm rounded-4">
                     @foreach (var q in Model.Quotes)
                     {
                         <div class="list-group-item d-flex justify-content-between align-items-center">
@@ -100,7 +195,7 @@
                                 <small class="text-muted">Status: @q.Status</small>
                             </div>
                             <a href="@Url.Action("DownloadQuote", "Quotes", new { id = q.QuotationId })"
-                               class="btn btn-outline-primary btn-sm" target="_blank">
+                               class="btn btn-gradient btn-sm rounded-pill" target="_blank">
                                 <i class="bi bi-file-earmark-pdf me-1"></i> View PDF
                             </a>
                         </div>
@@ -115,14 +210,146 @@
     </div>
 </div>
 
+<!-- ========================================================= -->
+<!-- MODALS (Add/Edit Phase + Add/Edit Task) -->
+<!-- ========================================================= -->
+<div id="modalArea">
+
+    <!-- PHASE MODAL -->
+    <div class="modal fade" id="phaseModal" tabindex="-1" aria-labelledby="phaseModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning bg-gradient">
+                    <h5 class="modal-title fw-bold text-dark" id="phaseModalLabel">Add Phase</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="phaseId" />
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Phase Name</label>
+                        <input type="text" id="phaseName" class="form-control" placeholder="Enter phase name" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Description</label>
+                        <textarea id="phaseDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Budget</label>
+                        <input type="number" id="phaseBudget" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Status</label>
+                        <select id="phaseStatus" class="form-select">
+                            <option>Draft</option>
+                            <option>In Progress</option>
+                            <option>Completed</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-gradient" id="btnSavePhase">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TASK MODAL -->
+    <div class="modal fade" id="taskModal" tabindex="-1" aria-labelledby="taskModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning bg-gradient">
+                    <h5 class="modal-title fw-bold text-dark" id="taskModalLabel">Add Task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="taskId" />
+                    <input type="hidden" id="taskPhaseId" />
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Task Name</label>
+                        <input type="text" id="taskName" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Description</label>
+                        <textarea id="taskDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Assign Contractor</label>
+                        <select id="taskAssignedTo" class="form-select"></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Status</label>
+                        <select id="taskStatus" class="form-select">
+                            <option>Pending</option>
+                            <option>In Progress</option>
+                            <option>Completed</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Priority</label>
+                        <select id="taskPriority" class="form-select">
+                            <option>Low</option>
+                            <option>Medium</option>
+                            <option>High</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-gradient" id="btnSaveTask">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- STYLES -->
+<!-- ========================================================= -->
 <style>
     body {
-        background-color: #f9fafc;
+        background-color: #fff9f1;
+        font-family: 'Roboto', sans-serif;
+    }
+
+    .gradient-text, .text-gradient {
+        background: linear-gradient(90deg, #FFD43B, #FF9900);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .btn-gradient {
+        background: linear-gradient(90deg, #FFD43B, #FF9900);
+        border: none;
+        color: #222;
+        font-weight: 600;
+    }
+
+    .btn-gradient:hover {
+        opacity: 0.9;
+        color: #000;
+        box-shadow: 0 0 10px rgba(255, 179, 0, 0.5);
+    }
+
+    .gradient-tab-bg .nav-link.active {
+        background: linear-gradient(90deg, #FFD43B, #FF9900);
+        color: #000 !important;
+        font-weight: 600;
+    }
+
+    .nav-tabs .nav-link {
+        color: #FF9900;
+        transition: all 0.2s;
+    }
+
+    .nav-tabs .nav-link:hover {
+        background-color: #fff2cc;
+        color: #000;
     }
 
     .card {
         border-radius: 1rem;
-        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
     .card:hover {
@@ -130,13 +357,16 @@
         box-shadow: 0 6px 14px rgba(0,0,0,0.07);
     }
 
-    .nav-tabs .nav-link.active {
-        font-weight: 600;
-        border-bottom: 2px solid #0d6efd;
-    }
-
     .list-group-item {
         border: none;
         border-top: 1px solid #eee;
     }
+
+    .modal-content {
+        border-radius: 1rem;
+    }
 </style>
+
+@section Scripts {
+    <script src="~/js/project-details.js"></script>
+}

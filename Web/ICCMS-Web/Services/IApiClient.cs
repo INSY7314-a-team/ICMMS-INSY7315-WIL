@@ -9,5 +9,7 @@ namespace ICCMS_Web.Services
         Task<T?> GetAsync<T>(string endpoint, ClaimsPrincipal user, bool forceRefresh = false);
         Task<T?> PostAsync<T>(string endpoint, object data, ClaimsPrincipal user);
         Task<T?> PutAsync<T>(string endpoint, object data, ClaimsPrincipal user);
+        Task<bool> DeleteAsync(string endpoint, ClaimsPrincipal user);
+
     }
 }

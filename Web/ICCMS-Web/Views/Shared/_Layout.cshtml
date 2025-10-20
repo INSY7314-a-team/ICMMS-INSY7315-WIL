@@ -159,24 +159,83 @@
         <ul>
             @if (User.Identity.IsAuthenticated)
             {
+                <!-- === MAIN === -->
                 <li class="nav-header">Main</li>
-                <li><a asp-controller="ProjectManager" asp-action="Dashboard"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a></li>
+                <li>
+                    <a asp-controller="ProjectManager" asp-action="Dashboard">
+                        <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
+                    </a>
+                </li>
 
+                <!-- === PROJECTS === -->
                 <li class="nav-header">Projects</li>
-                <li><a asp-controller="Projects" asp-action="Index"><i class="fa-solid fa-diagram-project"></i><span>All Projects</span></a></li>
-                <li><a asp-controller="Quotes" asp-action="Index"><i class="fa-solid fa-file-invoice"></i><span>Quotes</span></a></li>
-                <li><a asp-controller="Tasks" asp-action="Index"><i class="fa-solid fa-list-check"></i><span>Tasks</span></a></li>
+                <li>
+                    <a asp-controller="Projects" asp-action="Index">
+                        <i class="fa-solid fa-diagram-project"></i><span>All Projects</span>
+                    </a>
+                </li>
+                <li>
+                    <a asp-controller="ProjectManager" asp-action="CreateProject">
+                        <i class="fa-solid fa-plus"></i><span>New Project</span>
+                    </a>
+                </li>
+                <li>
+                    <a asp-controller="Quotes" asp-action="Index">
+                        <i class="fa-solid fa-file-invoice"></i><span>Quotes</span>
+                    </a>
+                </li>
+                <li>
+                    <a asp-controller="Estimates" asp-action="Index">
+                        <i class="fa-solid fa-calculator"></i><span>Estimates</span>
+                    </a>
+                </li>
 
+                <!-- === REPORTS === -->
+                <li class="nav-header">Reports</li>
+                <li>
+                    <a asp-controller="Reports" asp-action="Index">
+                        <i class="fa-solid fa-chart-pie"></i><span>Analytics</span>
+                    </a>
+                </li>
+                <li>
+                    <a asp-controller="Reports" asp-action="Financial">
+                        <i class="fa-solid fa-sack-dollar"></i><span>Financial</span>
+                    </a>
+                </li>
+
+                <!-- === CLIENTS === -->
                 <li class="nav-header">Clients</li>
-                <li><a asp-controller="Clients" asp-action="Index"><i class="fa-solid fa-user-tie"></i><span>Client List</span></a></li>
+                <li>
+                    <a asp-controller="Clients" asp-action="Index">
+                        <i class="fa-solid fa-user-tie"></i><span>Client List</span>
+                    </a>
+                </li>
 
+                <!-- === CONTRACTORS === -->
+                <li class="nav-header">Contractors</li>
+                <li>
+                    <a asp-controller="Contractors" asp-action="Index">
+                        <i class="fa-solid fa-helmet-safety"></i><span>Contractor List</span>
+                    </a>
+                </li>
+
+                <!-- === COMMUNICATION === -->
                 <li class="nav-header">Communication</li>
-                <li><a asp-controller="Messages" asp-action="Index"><i class="fa-solid fa-comments"></i><span>Messages</span></a></li>
+                <li>
+                    <a asp-controller="Messages" asp-action="Index">
+                        <i class="fa-solid fa-comments"></i><span>Messages</span>
+                    </a>
+                </li>
 
+                <!-- === ADMIN === -->
                 @if (User.IsInRole("Admin"))
                 {
                     <li class="nav-header">Admin</li>
-                    <li><a asp-controller="Users" asp-action="Index"><i class="fa-solid fa-users"></i><span>Users</span></a></li>
+                    <li>
+                        <a asp-controller="Users" asp-action="Index">
+                            <i class="fa-solid fa-users"></i><span>Users</span>
+                        </a>
+                    </li>
                 }
             }
         </ul>
@@ -185,6 +244,7 @@
             <button id="sidebar-toggle"><i class="fa-solid fa-chevron-left"></i></button>
         </div>
     </aside>
+
 
     <!-- ===== HEADER ===== -->
     <header id="main-header">
