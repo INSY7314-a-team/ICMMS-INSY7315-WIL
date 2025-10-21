@@ -1,0 +1,872 @@
+/* User Management Styles - Construction Theme */
+
+.user-management-container {
+    padding: 20px;
+    background-color: #1A1B25;
+    min-height: 100vh;
+}
+
+/* ===========================================
+   CONSTRUCTION THEME - DIAGONAL STRIPES
+   =========================================== */
+
+.construction-border {
+    border: 3px solid;
+    border-image: repeating-linear-gradient(
+        45deg,
+        #1A1B25,
+        #1A1B25 8px,
+        #F7EC59 8px,
+        #F7EC59 16px
+    ) 1;
+}
+
+.construction-border-thin {
+    border: 2px solid;
+    border-image: repeating-linear-gradient(
+        45deg,
+        #1A1B25,
+        #1A1B25 6px,
+        #F7EC59 6px,
+        #F7EC59 12px
+    ) 1;
+}
+
+/* ===========================================
+   DASHBOARD HEADER
+   =========================================== */
+
+.user-dashboard-header {
+    background: #0D1821;
+    color: #FFFFFF;
+    padding: 25px 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.user-dashboard-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: #FFFFFF;
+}
+
+.user-dashboard-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+/* ===========================================
+   STAT CARDS
+   =========================================== */
+
+.stat-card {
+    background: #0D1821;
+    color: #FFFFFF;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(247, 236, 89, 0.2);
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-color: #F7EC59;
+}
+
+.stat-card .card-title {
+    color: #F7EC59;
+    font-weight: 600;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-card .card-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    margin: 0;
+}
+
+.stat-card .stat-icon {
+    color: #F7EC59;
+    font-size: 2.5rem;
+    opacity: 0.8;
+}
+
+/* ===========================================
+   MAIN CONTENT CARDS
+   =========================================== */
+
+.user-content-card {
+    background: #0D1821;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    border: 2px solid #F7EC59;
+    overflow: hidden;
+}
+
+.user-card-header {
+    background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);
+    color: #FFFFFF;
+    padding: 20px 25px;
+    border-bottom: 1px solid rgba(247, 236, 89, 0.4);
+}
+
+.user-card-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    color: #FFFFFF;
+}
+
+.user-card-title i {
+    color: #F7EC59;
+    margin-right: 10px;
+}
+
+/* ===========================================
+   SEARCH AND FILTERS
+   =========================================== */
+
+.search-section {
+    margin-bottom: 20px;
+}
+
+.search-input-group {
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.search-input {
+    width: 100%;
+    padding: 15px 50px 15px 20px;
+    background: #1A1B25;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 25px;
+    color: #FFFFFF;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #F7EC59;
+    background: rgba(247, 236, 89, 0.1);
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.2);
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.search-btn, .clear-search-btn {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #F7EC59;
+    border: none;
+    color: #1A1B25;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.clear-search-btn {
+    right: 50px;
+    background: #FF5964;
+    color: #FFFFFF;
+}
+
+.search-btn:hover, .clear-search-btn:hover {
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* Filter Dropdown */
+.filter-dropdown {
+    background: #1A1B25;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: #FFFFFF;
+    border-radius: 10px;
+    padding: 10px 15px;
+    transition: all 0.3s ease;
+}
+
+.filter-dropdown:focus {
+    outline: none;
+    border-color: #F7EC59;
+    background: rgba(247, 236, 89, 0.1);
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.2);
+}
+
+.filter-dropdown option {
+    background: #1A1B25;
+    color: #FFFFFF;
+}
+
+/* ===========================================
+   TABLE STYLING
+   =========================================== */
+
+.user-table-container {
+    background: #1A1B25;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.user-table {
+    width: 100%;
+    margin: 0;
+    background: #1A1B25;
+    color: #FFFFFF;
+}
+
+.user-table thead {
+    background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);
+    border-bottom: 2px solid #F7EC59;
+}
+
+.user-table thead th {
+    color: #F7EC59;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    padding: 20px 15px;
+    border: none;
+}
+
+.user-table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.user-table tbody tr:hover {
+    background: rgba(247, 236, 89, 0.1);
+    transform: translateX(5px);
+}
+
+.user-table tbody td {
+    padding: 20px 15px;
+    vertical-align: middle;
+    border: none;
+    color: #FFFFFF;
+}
+
+/* Avatar Styling */
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1A1B25;
+    font-weight: bold;
+    font-size: 14px;
+    margin-right: 15px;
+}
+
+/* Badge Styling */
+.user-badge {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.user-badge.admin {
+    background: #FF5964;
+    color: #FFFFFF;
+}
+
+.user-badge.manager {
+    background: #F7EC59;
+    color: #1A1B25;
+}
+
+.user-badge.contractor {
+    background: #6BF178;
+    color: #1A1B25;
+}
+
+.user-badge.client {
+    background: #FFB347;
+    color: #1A1B25;
+}
+
+.user-badge.active {
+    background: #6BF178;
+    color: #1A1B25;
+}
+
+.user-badge.inactive {
+    background: #FF5964;
+    color: #FFFFFF;
+}
+
+/* ===========================================
+   FORM STYLING
+   =========================================== */
+
+.user-form-container {
+    background: #0D1821;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    border: 2px solid #F7EC59;
+    overflow: hidden;
+}
+
+.user-form-header {
+    background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);
+    color: #FFFFFF;
+    padding: 25px 30px;
+    border-bottom: 1px solid rgba(247, 236, 89, 0.4);
+}
+
+.user-form-title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin: 0;
+    color: #FFFFFF;
+}
+
+.user-form-title i {
+    color: #F7EC59;
+    margin-right: 10px;
+}
+
+.user-form-body {
+    background: #0D1821;
+    color: #FFFFFF;
+    padding: 30px;
+}
+
+.user-form-label {
+    color: #F7EC59;
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.user-form-control {
+    background: #1A1B25;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: #FFFFFF;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.user-form-control:focus {
+    outline: none;
+    border-color: #F7EC59;
+    background: rgba(247, 236, 89, 0.1);
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.2);
+}
+
+.user-form-control::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.user-form-select {
+    background: #1A1B25;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: #FFFFFF;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.user-form-select:focus {
+    outline: none;
+    border-color: #F7EC59;
+    background: rgba(247, 236, 89, 0.1);
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.2);
+}
+
+.user-form-select option {
+    background: #1A1B25;
+    color: #FFFFFF;
+}
+
+/* ===========================================
+   BUTTON STYLING
+   =========================================== */
+
+.user-btn {
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.user-btn-primary {
+    background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+    color: #1A1B25;
+    box-shadow: 0 2px 8px rgba(247, 236, 89, 0.2);
+}
+
+.user-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(247, 236, 89, 0.4);
+    color: #1A1B25;
+}
+
+.user-btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #FFFFFF;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.user-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #FFFFFF;
+    transform: translateY(-2px);
+    color: #FFFFFF;
+}
+
+.user-btn-danger {
+    background: linear-gradient(135deg, #FF5964 0%, #E53E3E 100%);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(255, 89, 100, 0.2);
+}
+
+.user-btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 89, 100, 0.4);
+    color: #FFFFFF;
+}
+
+.user-btn-success {
+    background: linear-gradient(135deg, #6BF178 0%, #4ECDC4 100%);
+    color: #1A1B25;
+    box-shadow: 0 2px 8px rgba(107, 241, 120, 0.2);
+}
+
+.user-btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(107, 241, 120, 0.4);
+    color: #1A1B25;
+}
+
+/* ===========================================
+   ALERT STYLING
+   =========================================== */
+
+.user-alert {
+    border-radius: 15px;
+    border: none;
+    padding: 20px 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    animation: slideInDown 0.3s ease-out;
+}
+
+.user-alert-success {
+    background: linear-gradient(135deg, #6BF178 0%, #4ECDC4 100%);
+    color: #1A1B25;
+    border-left: 4px solid #4ECDC4;
+}
+
+.user-alert-danger {
+    background: linear-gradient(135deg, #FF5964 0%, #E53E3E 100%);
+    color: #FFFFFF;
+    border-left: 4px solid #E53E3E;
+}
+
+.user-alert-warning {
+    background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+    color: #1A1B25;
+    border-left: 4px solid #E6D547;
+}
+
+/* ===========================================
+   DROPDOWN MENUS
+   =========================================== */
+
+.user-dropdown-menu {
+    background: #1A1B25 !important;
+    border: 1px solid rgba(247, 236, 89, 0.2);
+    border-radius: 10px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    padding: 10px 0;
+    z-index: 1050 !important;
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    position: absolute !important;
+    min-width: 200px !important;
+    pointer-events: auto !important;
+}
+
+/* Fix dropdown positioning and prevent click-through */
+.dropdown-menu.user-dropdown-menu {
+    background: #1A1B25 !important;
+    border: 1px solid rgba(247, 236, 89, 0.2) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important;
+    padding: 10px 0 !important;
+    z-index: 1050 !important;
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    position: absolute !important;
+    min-width: 200px !important;
+    pointer-events: auto !important;
+    display: block !important;
+}
+
+/* Ensure dropdown items are clickable */
+.user-dropdown-menu .dropdown-item {
+    background: transparent !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+/* Prevent any transparency issues */
+.user-dropdown-menu * {
+    pointer-events: auto !important;
+    background: transparent !important;
+}
+
+/* Additional dropdown fixes */
+.dropdown-menu.user-dropdown-menu {
+    display: none !important;
+}
+
+.dropdown-menu.user-dropdown-menu.show {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Only hide filter dropdown by default, not action dropdowns */
+.dropdown-menu:not(.user-dropdown-menu) {
+    display: none !important;
+}
+
+.dropdown-menu:not(.user-dropdown-menu).show {
+    display: block !important;
+}
+
+/* Ensure dropdown doesn't interfere with table rows */
+.user-table tbody tr {
+    position: relative;
+    z-index: 1;
+}
+
+/* Fix table cell pointer events */
+.user-table tbody tr td {
+    position: relative;
+    z-index: 1;
+}
+
+.user-table tbody tr td:last-child {
+    position: relative;
+    z-index: 1;
+}
+
+.user-dropdown-menu {
+    z-index: 9999 !important;
+    display: none !important;
+    position: absolute !important;
+}
+
+.user-dropdown-menu.show {
+    display: block !important;
+    z-index: 9999 !important;
+}
+
+/* Ensure only one action dropdown is open at a time */
+.user-dropdown-menu:not(.show) {
+    display: none !important;
+}
+
+/* Fix dropdown positioning and prevent cell interference */
+.user-table tbody tr td:last-child .dropdown {
+    position: relative;
+    z-index: 10;
+}
+
+.user-table tbody tr td:last-child .dropdown-menu {
+    position: absolute !important;
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+}
+
+/* Prevent table cell from intercepting clicks on dropdown items */
+.user-dropdown-menu .dropdown-item {
+    position: relative;
+    z-index: 10000 !important;
+    pointer-events: auto !important;
+}
+
+/* Critical fix: Prevent table cells from intercepting dropdown clicks */
+.user-table tbody tr td:last-child {
+    position: relative;
+    z-index: 1;
+    pointer-events: none !important;
+}
+
+.user-table tbody tr td:last-child .dropdown {
+    position: relative;
+    z-index: 10;
+    pointer-events: auto !important;
+}
+
+.user-table tbody tr td:last-child .dropdown-menu {
+    position: absolute !important;
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+}
+
+.user-table tbody tr td:last-child .dropdown-item {
+    position: relative;
+    z-index: 10000 !important;
+    pointer-events: auto !important;
+}
+
+/* Ensure dropdown button is always clickable */
+.user-table tbody tr td:last-child .user-btn {
+    position: relative;
+    z-index: 10;
+    pointer-events: auto !important;
+}
+
+/* Force dropdown items to be clickable */
+.user-dropdown-menu .dropdown-item {
+    position: relative;
+    z-index: 10001 !important;
+    pointer-events: auto !important;
+    background: #1A1B25 !important;
+    border: none !important;
+}
+
+.user-dropdown-menu .dropdown-item:hover {
+    background: #2A2B35 !important;
+    color: #F7EC59 !important;
+}
+
+/* Fix for Bootstrap dropdown positioning */
+.dropdown-menu.user-dropdown-menu.dropdown-menu-end {
+    right: 0 !important;
+    left: auto !important;
+    transform: none !important;
+}
+
+.user-dropdown-item {
+    color: #FFFFFF;
+    padding: 12px 20px;
+    transition: all 0.3s ease;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    display: flex;
+    align-items: center;
+}
+
+.user-dropdown-item:hover {
+    background: rgba(247, 236, 89, 0.1);
+    color: #F7EC59;
+}
+
+.user-dropdown-item i {
+    margin-right: 10px;
+    width: 16px;
+}
+
+/* ===========================================
+   EMPTY STATE
+   =========================================== */
+
+.user-empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: #1A1B25;
+    border-radius: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.user-empty-state i {
+    font-size: 4rem;
+    color: rgba(255, 255, 255, 0.3);
+    margin-bottom: 20px;
+}
+
+.user-empty-state h4 {
+    color: #FFFFFF;
+    margin-bottom: 15px;
+}
+
+.user-empty-state p {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 25px;
+}
+
+/* ===========================================
+   ANIMATIONS
+   =========================================== */
+
+@keyframes slideInDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* ===========================================
+   FORM SECTIONS
+   =========================================== */
+
+.form-section {
+    border-bottom: 1px solid rgba(247, 236, 89, 0.2);
+    padding-bottom: 20px;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+}
+
+.section-title {
+    color: #F7EC59;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-actions {
+    background: rgba(247, 236, 89, 0.1);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.form-info {
+    display: flex;
+    align-items: center;
+}
+
+/* ===========================================
+   INFO SIDEBAR
+   =========================================== */
+
+.info-item {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 15px;
+}
+
+.info-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.info-label {
+    color: #F7EC59;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.info-value {
+    color: #FFFFFF;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN
+   =========================================== */
+
+@media (max-width: 768px) {
+    .user-dashboard-title {
+        font-size: 2rem;
+    }
+    
+    .user-table-container {
+        overflow-x: auto;
+    }
+    
+    .user-table {
+        min-width: 600px;
+    }
+    
+    .search-input-group {
+        max-width: 100%;
+    }
+    
+    .user-form-body {
+        padding: 20px;
+    }
+    
+    .user-btn {
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 10px;
+    }
+}
+
+@media (max-width: 576px) {
+    .user-management-container {
+        padding: 10px;
+    }
+    
+    .user-dashboard-header {
+        padding: 20px;
+    }
+    
+    .user-form-body {
+        padding: 15px;
+    }
+    
+    .stat-card {
+        padding: 20px;
+    }
+    
+    .user-card-header {
+        padding: 15px 20px;
+    }
+}
