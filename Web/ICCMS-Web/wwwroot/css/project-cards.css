@@ -1,7 +1,6 @@
 /* Project Card Styling - Dark Theme */
 .project-card {
     background-color: #2A2B35 !important;
-    border: 1px solid #F7EC59 !important;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -15,10 +14,9 @@
 
 /* Card Header */
 .project-card .card-header {
-    background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 50%, #3A3B45 100%) !important;
-    border-bottom: 1px solid #F7EC59 !important;
+    background: #1A1B25 !important;
     border-radius: 8px 8px 0 0 !important;
-    padding: 1rem;
+    padding: 1.25rem;
 }
 
 .project-card .card-title {
@@ -55,7 +53,7 @@
 .project-card .card-body {
     background-color: #2A2B35 !important;
     color: #FFFFFF !important;
-    padding: 1.25rem;
+    padding: 1.5rem;
 }
 
 .project-card .card-text {
@@ -179,75 +177,63 @@
 /* Card Footer */
 .project-card .card-footer {
     background-color: #1A1B25 !important;
-    border-top: 1px solid #F7EC59 !important;
     border-radius: 0 0 8px 8px !important;
-    padding: 1rem;
+    padding: 1.25rem;
 }
 
 /* Action Buttons */
 .project-card .action-buttons {
     display: flex;
-    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
 }
 
 .project-card .btn-action {
     border: none !important;
     border-radius: 6px;
-    padding: 0.4rem 0.8rem;
-    font-size: 0.8rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
     font-weight: 500;
     transition: all 0.2s ease;
-    flex: 1;
     text-align: center;
-    min-width: 120px;
-    margin-bottom: 0.25rem;
+    min-width: 100px;
 }
 
-.project-card .btn-add-phases {
-    background-color: #007BFF !important;
-    color: #FFFFFF !important;
-}
-
-.project-card .btn-add-phases:hover {
-    background-color: #0056B3 !important;
-    color: #FFFFFF !important;
-    transform: translateY(-1px);
-}
-
-.project-card .btn-assign-tasks {
-    background-color: #6BF178 !important;
-    color: #1A1B25 !important;
-}
-
-.project-card .btn-assign-tasks:hover {
-    background-color: #5ADF68 !important;
-    color: #1A1B25 !important;
-    transform: translateY(-1px);
-}
-
-.project-card .btn-generate-quotation {
+.project-card .btn-action.btn-primary {
     background-color: #F7EC59 !important;
     color: #1A1B25 !important;
+    flex: 1;
 }
 
-.project-card .btn-generate-quotation:hover {
-    background-color: #E6D94A !important;
-    color: #1A1B25 !important;
-    transform: translateY(-1px);
-}
-
-.project-card .btn-edit-line-items {
+.project-card .btn-action.btn-secondary {
     background-color: #6C757D !important;
     color: #FFFFFF !important;
+    min-width: 80px;
 }
 
-.project-card .btn-edit-line-items:hover {
-    background-color: #5A6268 !important;
-    color: #FFFFFF !important;
+.project-card .btn-action:hover {
     transform: translateY(-1px);
+    opacity: 0.9;
+}
+
+/* Dropdown styling */
+.project-card .dropdown-menu {
+    background-color: #1A1B25 !important;
+    border: 1px solid #F7EC59 !important;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.project-card .dropdown-item {
+    color: #FFFFFF !important;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+}
+
+.project-card .dropdown-item:hover {
+    background-color: #2A2B35 !important;
+    color: #F7EC59 !important;
 }
 
 /* Button Icons */
@@ -265,19 +251,7 @@
     
     .project-card .btn-action {
         width: 100%;
-        flex: none;
         min-width: auto;
-    }
-}
-
-@media (max-width: 480px) {
-    .project-card .action-buttons {
-        gap: 0.25rem;
-    }
-    
-    .project-card .btn-action {
-        padding: 0.3rem 0.6rem;
-        font-size: 0.75rem;
     }
 }
 

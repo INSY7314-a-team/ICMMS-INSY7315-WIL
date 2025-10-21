@@ -142,25 +142,37 @@
       el.innerHTML = `
         <div class="card-body">
           <div class="row g-2 align-items-end">
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label class="form-label">Task Name</label>
               <input type="text" class="form-control pt-name" data-id="${id}" value="${
         (task && task.name) || ""
       }">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
               <label class="form-label">Phase</label>
               <select class="form-select pt-phase"></select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
               <label class="form-label">Contractor</label>
               <select class="form-select pt-contractor">${this.contractorOptions(
                 task && task.assignedTo
               )}</select>
             </div>
-            <div class="col-md-1">
+            <div class="col-md-2">
+              <label class="form-label">Start</label>
+              <input type="date" class="form-control pt-start" value="${
+                task && task.startDate
+                  ? new Date(task.startDate).toISOString().split("T")[0]
+                  : ""
+              }">
+            </div>
+            <div class="col-md-2">
               <label class="form-label">Due</label>
-              <input type="date" class="form-control pt-due">
+              <input type="date" class="form-control pt-due" value="${
+                task && task.dueDate
+                  ? new Date(task.dueDate).toISOString().split("T")[0]
+                  : ""
+              }">
             </div>
             <div class="col-md-1 text-end">
               <button class="btn btn-outline-danger btn-sm pt-remove">Remove</button>
@@ -197,9 +209,27 @@
           name: card.querySelector(".pt-name")?.value || "",
           phaseId: card.querySelector(".pt-phase")?.value || "",
           assignedTo: card.querySelector(".pt-contractor")?.value || "",
-          dueDate: card.querySelector(".pt-due")?.value || "",
+          startDate:
+            this.parseDateInput(card.querySelector(".pt-start")?.value) ||
+            new Date().toISOString(),
+          dueDate:
+            this.parseDateInput(card.querySelector(".pt-due")?.value) ||
+            new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          status: "Not Started",
+          priority: "Medium",
+          progress: 0,
+          estimatedHours: 0,
+          actualHours: 0,
+          description: "",
         })
       );
+    }
+
+    parseDateInput(value) {
+      if (!value) return null;
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return null;
+      return d.toISOString();
     }
 
     refreshTaskPhaseSelects() {
@@ -235,16 +265,26 @@
           );
         }
         if (tasks.length) {
-          await fetch(
-            `/ProjectManager/SaveTasks?id=${encodeURIComponent(
-              this.projectId
-            )}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(tasks),
+          console.log("Saving tasks", tasks);
+          try {
+            const res = await fetch(
+              `/ProjectManager/SaveTasks?id=${encodeURIComponent(
+                this.projectId
+              )}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(tasks),
+              }
+            );
+            if (res.ok) {
+              console.log("Tasks saved successfully");
+            } else {
+              console.error("Failed to save tasks", res.status, res.statusText);
             }
-          );
+          } catch (e) {
+            console.error("Error saving tasks", e);
+          }
         }
         // simple toast using existing helper if available
         if (window.showToast) showToast("Saved successfully", "success");

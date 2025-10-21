@@ -72,6 +72,7 @@ namespace ICCMS_API.Models
         public string ProjectId { get; set; } = string.Empty;
         public string UserId { get; set; } = string.Empty;
         public Dictionary<string, object> Data { get; set; } = new Dictionary<string, object>();
-        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+        public DateTime Timestamp { get; set; } =
+            DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc);
     }
 }

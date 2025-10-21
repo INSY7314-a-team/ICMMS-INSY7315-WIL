@@ -36,13 +36,28 @@ namespace ICCMS_Web.Services
             return list.OrderByDescending(e => e.CreatedAt).FirstOrDefault();
         }
 
-        public Task<EstimateDto?> SaveAsync(
+        public async Task<EstimateDto?> SaveAsync(
             string estimateId,
             EstimateDto estimate,
             ClaimsPrincipal user
         )
         {
-            return _apiClient.PutAsync<EstimateDto>($"/api/estimates/{estimateId}", estimate, user);
+            var result = await _apiClient.PutAsync<EstimateDto>(
+                $"/api/estimates/{estimateId}",
+                estimate,
+                user
+            );
+
+            // If API returns null (204 No Content), return the original estimate
+            if (result == null)
+            {
+                _logger.LogInformation(
+                    "✅ Save successful (204 No Content) - returning original estimate"
+                );
+                return estimate;
+            }
+
+            return result;
         }
 
         public Task<EstimateDto?> ProcessBlueprintAsync(

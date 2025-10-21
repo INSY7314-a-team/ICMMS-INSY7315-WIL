@@ -77,7 +77,10 @@ namespace ICCMS_API.Controllers
             {
                 estimate.CreatedAt = DateTime.UtcNow;
                 var estimateId = await _firebaseService.AddDocumentAsync("estimates", estimate);
-                return Ok(estimateId);
+                estimate.EstimateId = estimateId;
+                await _firebaseService.UpdateDocumentAsync("estimates", estimateId, estimate);
+                Console.WriteLine("Estimate created with ID: " + estimateId);
+                return Ok(estimate);
             }
             catch (Exception ex)
             {
@@ -127,8 +130,11 @@ namespace ICCMS_API.Controllers
                     request.ContractorId
                 );
 
+                estimate.CreatedAt = DateTime.UtcNow;
                 var estimateId = await _firebaseService.AddDocumentAsync("estimates", estimate);
                 estimate.EstimateId = estimateId;
+                await _firebaseService.UpdateDocumentAsync("estimates", estimateId, estimate);
+                Console.WriteLine("Estimate created with ID: " + estimateId);
 
                 return Ok(estimate);
             }
@@ -212,5 +218,4 @@ namespace ICCMS_API.Controllers
             }
         }
     }
-
 }

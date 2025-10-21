@@ -7,11 +7,37 @@
 }
 
 /* ===========================================
+   CONSTRUCTION THEME - DIAGONAL STRIPES
+   =========================================== */
+
+.construction-border {
+    border: 3px solid;
+    border-image: repeating-linear-gradient(
+        45deg,
+        #1A1B25,
+        #1A1B25 8px,
+        #F7EC59 8px,
+        #F7EC59 16px
+    ) 1;
+}
+
+.construction-border-thin {
+    border: 2px solid;
+    border-image: repeating-linear-gradient(
+        45deg,
+        #1A1B25,
+        #1A1B25 6px,
+        #F7EC59 6px,
+        #F7EC59 12px
+    ) 1;
+}
+
+/* ===========================================
    ENHANCED FILTERS STYLING
    =========================================== */
 
 .filter-toggle-btn {
-    background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+    background: #F7EC59;
     border: none;
     color: #1A1B25;
     padding: 12px 24px;
@@ -19,7 +45,7 @@
     font-weight: 600;
     font-size: 1rem;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(247, 236, 89, 0.3);
+    box-shadow: 0 2px 8px rgba(247, 236, 89, 0.2);
 }
 
 .filter-toggle-btn:hover {
@@ -29,12 +55,11 @@
 }
 
 .filters-panel {
-    background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%) !important;
+    background: #1A1B25 !important;
     border-radius: 15px;
     padding: 25px;
     margin-top: 20px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-    border: 2px solid #F7EC59;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     animation: slideDown 0.3s ease-out;
 }
 
@@ -65,8 +90,6 @@
 }
 
 .filter-group-header {
-    display: flex;
-    align-items: center;
     margin-bottom: 15px;
     color: #F7EC59;
 }
@@ -75,10 +98,6 @@
     font-weight: 600;
     margin: 0;
     font-size: 1.1rem;
-}
-
-.filter-group-header i {
-    font-size: 1.2rem;
 }
 
 /* Status Filter Buttons */
@@ -111,7 +130,7 @@
 }
 
 .status-filter-btn.active {
-    background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+    background: #F7EC59;
     color: #1A1B25;
     border-color: #F7EC59;
     font-weight: 600;
@@ -148,12 +167,6 @@
     font-weight: 600;
     margin-bottom: 8px;
     font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-}
-
-.filter-label i {
-    font-size: 0.8rem;
 }
 
 .filter-input,
@@ -225,9 +238,9 @@
 }
 
 .filter-action-btn.primary {
-    background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+    background: #F7EC59;
     color: #1A1B25;
-    box-shadow: 0 4px 15px rgba(247, 236, 89, 0.3);
+    box-shadow: 0 2px 8px rgba(247, 236, 89, 0.2);
 }
 
 .filter-action-btn.primary:hover {
@@ -283,25 +296,17 @@
 .dashboard-header {
     background: #0D1821;
     color: #FFFFFF;
-    padding: 30px;
+    padding: 25px 30px;
     border-radius: 15px;
     margin-bottom: 30px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-    border: 2px solid #F7EC59;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
 .dashboard-title {
     font-size: 2.5rem;
     font-weight: 700;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.dashboard-title i {
-    color: #F7EC59;
-    font-size: 2.2rem;
+    margin-bottom: 15px;
+    color: #FFFFFF;
 }
 
 .dashboard-subtitle {
@@ -384,14 +389,14 @@
 }
 
 .create-project-btn {
-    background: linear-gradient(135deg, #F7EC59 0%, #f4d03f 100%);
+    background: #F7EC59;
     border: none;
     padding: 15px 30px;
     border-radius: 25px;
     font-weight: 600;
     font-size: 1.1rem;
     color: #1A1B25;
-    box-shadow: 0 4px 15px rgba(247, 236, 89, 0.3);
+    box-shadow: 0 2px 8px rgba(247, 236, 89, 0.2);
     transition: all 0.3s ease;
 }
 
@@ -432,7 +437,7 @@
 }
 
 .section-header {
-    background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);
+    background: #1A1B25;
     color: #FFFFFF;
     padding: 20px 25px;
     border-radius: 15px;
@@ -440,21 +445,14 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 .section-title {
     font-size: 1.5rem;
     font-weight: 600;
     margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.section-title i {
-    color: #F7EC59;
-    font-size: 1.3rem;
+    color: #FFFFFF;
 }
 
 .badge {
@@ -543,9 +541,9 @@
 .no-projects-message {
     text-align: center;
     padding: 60px 20px;
-    background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 50%, #3A3B45 100%) !important;
+    background: #1A1B25 !important;
     border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 .pagination-container {

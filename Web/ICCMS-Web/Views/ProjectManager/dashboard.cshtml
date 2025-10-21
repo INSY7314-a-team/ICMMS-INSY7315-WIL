@@ -8,17 +8,17 @@
 @await Html.PartialAsync("_QuoteBuilder")
 @await Html.PartialAsync("_BlueprintPickerModal")
 @await Html.PartialAsync("_EstimateEditorModal")
+@await Html.PartialAsync("_ProjectEstimatesModal")
 @await Html.PartialAsync("_ProjectCreationWizard", Model)
 @await Html.PartialAsync("_PlanEditorModal")
 
 <div class="pm-dashboard-container">
     <!-- Header Section -->
-    <div class="dashboard-header">
+    <div class="dashboard-header construction-border">
         <h1 class="dashboard-title">
-            <i class="fa-solid fa-chart-line"></i>
             @User.Identity.Name Dashboard
         </h1>
-        <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Manage your projects and quotations</p>
+        <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Manage your projects and quotations </p>
     </div>
 
     <!-- Search and Filter Controls -->
@@ -49,12 +49,11 @@
             </div>
 
             <!-- Enhanced Filters Panel -->
-            <div class="filters-panel" id="filtersPanel" style="display: none;">
+            <div class="filters-panel construction-border-thin" id="filtersPanel" style="display: none;">
                 <div class="filters-container">
                     <!-- Quick Status Filters -->
                     <div class="filter-group">
                         <div class="filter-group-header">
-                            <i class="fa-solid fa-filter me-2"></i>
                             <h6 class="mb-0">Project Status</h6>
                         </div>
                         <div class="status-filters">
@@ -91,7 +90,6 @@
                         </div>
                         <div class="filter-item">
                             <label class="filter-label">
-                                <i class="fa-solid fa-user me-1"></i>
                                 Client
                             </label>
                             <select class="filter-select" id="clientFilter">
@@ -161,9 +159,8 @@
         @if (Model.DraftProjects.Any())
         {
             <div id="draftSection" class="draft-projects-section">
-                <div class="section-header collapsible-header" data-target="draftProjects">
+                <div class="section-header collapsible-header construction-border-thin" data-target="draftProjects">
                     <h3 class="section-title">
-                        <i class="fa-solid fa-file-lines"></i>
                         Draft Projects
                         <span class="badge badge-secondary">@Model.DraftProjects.Count</span>
                     </h3>
@@ -197,9 +194,8 @@
 
         <!-- Main Projects Section -->
         <div class="main-projects-section">
-            <div class="section-header">
+            <div class="section-header construction-border-thin">
                 <h3 class="section-title">
-                    <i class="fa-solid fa-project-diagram"></i>
                     Projects
                     <span class="badge badge-secondary">@Model.FilteredProjects.Count</span>
                 </h3>

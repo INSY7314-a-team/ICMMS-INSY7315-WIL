@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Mvc;
-using ICCMS_API.Services;
 using ICCMS_API.Models;
+using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ICCMS_API.Controllers
 {
@@ -23,7 +23,9 @@ namespace ICCMS_API.Controllers
         /// <param name="request">Blueprint processing request</param>
         /// <returns>Generated estimate with line items</returns>
         [HttpPost("process-supabase-blueprint")]
-        public async Task<IActionResult> ProcessSupabaseBlueprint([FromBody] ProcessBlueprintRequest request)
+        public async Task<IActionResult> ProcessSupabaseBlueprint(
+            [FromBody] ProcessBlueprintRequest request
+        )
         {
             try
             {
@@ -53,24 +55,29 @@ namespace ICCMS_API.Controllers
                     request.ContractorId
                 );
 
-                return Ok(new
-                {
-                    success = true,
-                    data = estimate,
-                    message = "Blueprint processed successfully",
-                    timestamp = DateTime.UtcNow
-                });
+                return Ok(
+                    new
+                    {
+                        success = true,
+                        data = estimate,
+                        message = "Blueprint processed successfully",
+                        timestamp = DateTime.UtcNow,
+                    }
+                );
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error processing Supabase blueprint: {ex.Message}");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    error = "Failed to process blueprint",
-                    message = ex.Message,
-                    timestamp = DateTime.UtcNow
-                });
+                return StatusCode(
+                    500,
+                    new
+                    {
+                        success = false,
+                        error = "Failed to process blueprint",
+                        message = ex.Message,
+                        timestamp = DateTime.UtcNow,
+                    }
+                );
             }
         }
 
@@ -80,7 +87,9 @@ namespace ICCMS_API.Controllers
         /// <param name="request">Blueprint processing request</param>
         /// <returns>Extracted line items</returns>
         [HttpPost("extract-line-items")]
-        public async Task<IActionResult> ExtractLineItems([FromBody] ExtractLineItemsRequest request)
+        public async Task<IActionResult> ExtractLineItems(
+            [FromBody] ExtractLineItemsRequest request
+        )
         {
             try
             {
@@ -89,36 +98,44 @@ namespace ICCMS_API.Controllers
                     return BadRequest("Blueprint URL is required");
                 }
 
-                Console.WriteLine($"Extracting line items from Supabase blueprint: {request.BlueprintUrl}");
+                Console.WriteLine(
+                    $"Extracting line items from Supabase blueprint: {request.BlueprintUrl}"
+                );
 
                 // Extract line items using the AI service
-                var lineItems = await _aiProcessingService.ExtractLineItemsFromBlueprintAsync(request.BlueprintUrl);
+                var lineItems = await _aiProcessingService.ExtractLineItemsFromBlueprintAsync(
+                    request.BlueprintUrl
+                );
 
-                return Ok(new
-                {
-                    success = true,
-                    data = new
+                return Ok(
+                    new
                     {
-                        lineItems = lineItems,
-                        totalItems = lineItems.Count,
-                        extractedAt = DateTime.UtcNow
-                    },
-                    message = "Line items extracted successfully",
-                    timestamp = DateTime.UtcNow
-                });
+                        success = true,
+                        data = new
+                        {
+                            lineItems = lineItems,
+                            totalItems = lineItems.Count,
+                            extractedAt = DateTime.UtcNow,
+                        },
+                        message = "Line items extracted successfully",
+                        timestamp = DateTime.UtcNow,
+                    }
+                );
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error extracting line items: {ex.Message}");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    error = "Failed to extract line items",
-                    message = ex.Message,
-                    timestamp = DateTime.UtcNow
-                });
+                return StatusCode(
+                    500,
+                    new
+                    {
+                        success = false,
+                        error = "Failed to extract line items",
+                        message = ex.Message,
+                        timestamp = DateTime.UtcNow,
+                    }
+                );
             }
         }
     }
-
 }

@@ -360,13 +360,25 @@ class ProjectCreationWizard {
   async ensureDraft() {
     if (this.projectId) return;
     try {
-      const res = await fetch("/ProjectManager/StartDraft", { method: "POST" });
+      const projectData = {
+        project: { status: "Draft" },
+        phases: [],
+        tasks: [],
+      };
+
+      const res = await fetch("/ProjectManager/SaveProject", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(projectData),
+      });
+
       const data = await res.json();
       if (data?.success) {
         this.projectId = data.projectId;
+        console.log("Draft project created:", this.projectId);
       }
     } catch (e) {
-      console.warn("StartDraft failed", e);
+      console.warn("SaveProject failed", e);
     }
   }
 
@@ -390,36 +402,22 @@ class ProjectCreationWizard {
   async autosave(isSync = false) {
     if (!this.projectId) return;
 
-    // Gather basic info only for autosave (steps 1-2)
-    const payload = {
-      ProjectId: this.projectId,
-      Name: document.getElementById("projectName")?.value || "",
-      ClientId: document.getElementById("clientSelect")?.value || "",
-      Description: document.getElementById("projectDescription")?.value || "",
-      BudgetPlanned: parseFloat(
-        document.getElementById("budgetPlanned")?.value || "0"
-      ),
-      StartDate: this.parseDateInput(
-        document.getElementById("startDate")?.value
-      ),
-      EndDatePlanned: this.parseDateInput(
-        document.getElementById("endDatePlanned")?.value
-      ),
-      Status: "Draft",
+    const projectData = this.collectProjectData();
+    const phases = this.collectPhases().filter((p) => p.name?.trim());
+
+    const request = {
+      project: projectData,
+      phases: phases,
+      tasks: [],
     };
 
     try {
-      await fetch(
-        `/ProjectManager/AutosaveProject?id=${encodeURIComponent(
-          this.projectId
-        )}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          keepalive: isSync, // allow send on unload
-        }
-      );
+      await fetch("/ProjectManager/SaveProject", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+        keepalive: isSync, // allow send on unload
+      });
     } catch (e) {
       if (!isSync) console.debug("Autosave failed", e);
     }
@@ -615,6 +613,16 @@ class ProjectCreationWizard {
         projectId: this.projectId,
         name: card.querySelector(".phase-name")?.value || "",
         description: card.querySelector(".phase-desc")?.value || "",
+        startDate:
+          this.parseDateInput(card.querySelector(".phase-start")?.value) ||
+          new Date().toISOString(),
+        endDate:
+          this.parseDateInput(card.querySelector(".phase-end")?.value) ||
+          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        status: "Not Started",
+        progress: 0,
+        budget: 0,
+        assignedTo: "",
       };
     });
   }
@@ -629,60 +637,149 @@ class ProjectCreationWizard {
         name: card.querySelector(".task-name")?.value || "",
         phaseId: card.querySelector(".task-phase-select")?.value || "",
         assignedTo: card.querySelector(".task-contractor")?.value || "",
-        dueDate: this.parseDateInput(card.querySelector(".task-due")?.value),
+        startDate:
+          this.parseDateInput(card.querySelector(".task-start")?.value) ||
+          new Date().toISOString(),
+        dueDate:
+          this.parseDateInput(card.querySelector(".task-due")?.value) ||
+          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        status: "Not Started",
+        priority: "Medium",
+        progress: 0,
+        estimatedHours: 0,
+        actualHours: 0,
+        description: "",
       };
     });
   }
 
+  collectProjectData() {
+    const form = document.getElementById("projectCreationForm");
+    if (!form) {
+      console.error("Project creation form not found");
+      return {
+        projectId: this.projectId || this.generateProjectId(),
+        name: "",
+        description: "",
+        clientId: "",
+        startDate: null,
+        endDatePlanned: null,
+        budgetPlanned: 0,
+        status: "Planning",
+      };
+    }
+
+    // Ensure we have a valid projectId
+    if (!this.projectId) {
+      this.projectId = this.generateProjectId();
+      console.log("Generated new projectId:", this.projectId);
+    }
+
+    return {
+      projectId: this.projectId,
+      name: form.querySelector("#projectName")?.value || "",
+      description: form.querySelector("#projectDescription")?.value || "",
+      clientId: form.querySelector("#clientSelect")?.value || "",
+      startDate: this.parseDateInput(form.querySelector("#startDate")?.value),
+      endDatePlanned: this.parseDateInput(
+        form.querySelector("#endDatePlanned")?.value
+      ),
+      budgetPlanned:
+        parseFloat(form.querySelector("#budgetPlanned")?.value) || 0,
+      status: "Planning", // Set to Planning instead of Draft
+      // projectManagerId will be set by the server from the current user
+    };
+  }
+
   async finalizeProject() {
+    console.log("finalizeProject called - using NEW method");
+    console.log("Current projectId:", this.projectId);
+
     await this.ensureDraft();
 
-    // Persist phases and tasks first
+    // Collect all project data
+    const projectData = this.collectProjectData();
     const phases = this.collectPhases().filter((p) => p.name?.trim());
     const tasks = this.collectTasks().filter((t) => t.name?.trim());
 
+    console.log("Project Data:", projectData);
+    console.log("Phases count:", phases.length);
+    console.log("Tasks count:", tasks.length);
+
+    // Add validation to ensure projectData is not empty
+    if (!projectData || Object.keys(projectData).length === 0) {
+      console.error("Project data is empty or null");
+      this.showError("Project data is missing. Please check the form.");
+      return;
+    }
+
+    // Validate required fields
+    if (!projectData.name || projectData.name.trim() === "") {
+      this.showError("Project name is required.");
+      return;
+    }
+
+    if (!projectData.clientId || projectData.clientId.trim() === "") {
+      this.showError("Please select a client for this project.");
+      return;
+    }
+
     try {
-      if (phases.length) {
-        await fetch(
-          `/ProjectManager/SavePhases?id=${encodeURIComponent(this.projectId)}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(phases),
-          }
+      // Use the new complete project creation endpoint
+      const completeRequest = {
+        project: projectData,
+        phases: phases,
+        tasks: tasks,
+      };
+
+      console.log("Calling SaveProject endpoint /ProjectManager/SaveProject");
+      const createRes = await fetch(`/ProjectManager/SaveProject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(completeRequest),
+      });
+
+      console.log("Response status:", createRes.status);
+
+      if (!createRes.ok) {
+        console.error("HTTP Error:", createRes.status, createRes.statusText);
+        this.showError(
+          `Server error: ${createRes.status} ${createRes.statusText}`
         );
-      }
-      if (tasks.length) {
-        await fetch(
-          `/ProjectManager/SaveTasks?id=${encodeURIComponent(this.projectId)}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(tasks),
-          }
-        );
+        return;
       }
 
-      // Finalize -> Planning
-      const res = await fetch(
-        `/ProjectManager/FinalizeProject?id=${encodeURIComponent(
-          this.projectId
-        )}`,
-        {
-          method: "POST",
-        }
-      );
-      const data = await res.json();
-      if (data?.success) {
-        this.showSuccess("Project moved to Planning.");
+      const createData = await createRes.json();
+      console.log("Response data:", createData);
+      console.log("Success:", createData?.success);
+      console.log("Message:", createData?.message);
+      console.log("Status:", createData?.status);
+
+      if (createData?.success) {
+        this.showSuccess(
+          createData.message || "Project created and moved to Planning status."
+        );
         this.closeWizard();
         setTimeout(() => window.location.reload(), 1200);
       } else {
-        this.showError(data?.error || "Finalize failed.");
+        console.error("API Error:", createData);
+        const errorMessage = createData?.error || "Failed to create project.";
+
+        // Check if it's an authentication error
+        if (
+          errorMessage.includes("Authentication error") ||
+          errorMessage.includes("project manager ID")
+        ) {
+          this.showError(
+            "Authentication error: Please log out and log in again to create projects."
+          );
+        } else {
+          this.showError(errorMessage);
+        }
       }
     } catch (e) {
-      console.error("Finalize failed", e);
-      this.showError("Finalize failed");
+      console.error("Project creation failed", e);
+      this.showError("Project creation failed");
     }
   }
 

@@ -249,7 +249,15 @@ namespace ICCMS_API.Controllers
                 var currentPmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrWhiteSpace(currentPmId))
                 {
-                    return Unauthorized(new { error = "No authenticated user" });
+                    Console.WriteLine(
+                        "[SaveDraft] No current user ID found - Draft creation is not allowed"
+                    );
+                    return Unauthorized(
+                        new
+                        {
+                            error = "Authentication error: No project manager ID found. Please log in again.",
+                        }
+                    );
                 }
 
                 // Initialize draft defaults
@@ -449,7 +457,35 @@ namespace ICCMS_API.Controllers
                     {
                         task.TaskId = Guid.NewGuid().ToString();
                     }
-                    await _firebaseService.AddDocumentWithIdAsync("tasks", task.TaskId, task);
+
+                    // Create a normalized task with proper DateTime handling
+                    var normalizedTask = new ProjectTask
+                    {
+                        TaskId = task.TaskId,
+                        ProjectId = task.ProjectId,
+                        PhaseId = task.PhaseId,
+                        Name = task.Name,
+                        Description = task.Description,
+                        AssignedTo = task.AssignedTo,
+                        Priority = task.Priority,
+                        Status = task.Status,
+                        Progress = task.Progress,
+                        EstimatedHours = task.EstimatedHours,
+                        ActualHours = task.ActualHours,
+                        // Normalize DateTime fields to UTC
+                        StartDate = NormalizeDateTime(task.StartDate, DateTime.UtcNow),
+                        DueDate = NormalizeDateTime(task.DueDate, DateTime.UtcNow.AddDays(7)),
+                        CompletedDate =
+                            task.CompletedDate.HasValue && task.CompletedDate.Value.Year > 1900
+                                ? NormalizeDateTime(task.CompletedDate.Value, null)
+                                : null,
+                    };
+
+                    await _firebaseService.AddDocumentWithIdAsync(
+                        "tasks",
+                        task.TaskId,
+                        normalizedTask
+                    );
                 }
                 return Ok(new { saved = tasks.Count });
             }
@@ -586,15 +622,350 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpPost("save-project")]
+        public async Task<ActionResult<SaveProjectResponse>> SaveProject(
+            [FromBody] SaveProjectRequest request
+        )
+        {
+            try
+            {
+                // 1. Validate authentication
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    Console.WriteLine(
+                        "SaveProject: No current user ID found - Project save is not allowed"
+                    );
+                    return BadRequest(
+                        new
+                        {
+                            error = "Authentication error: No project manager ID found. Please log in again.",
+                        }
+                    );
+                }
+
+                // 2. Set ProjectManagerId (double-check)
+                request.Project.ProjectManagerId = currentUserId;
+                Console.WriteLine($"SaveProject: Set ProjectManagerId to: '{currentUserId}'");
+
+                // 3. Normalize DateTime fields to UTC
+                NormalizeDateTimeFields(request.Project);
+
+                // 4. Check if project exists (update vs create)
+                var existing = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    request.Project.ProjectId
+                );
+
+                if (existing != null)
+                {
+                    // Update existing project
+                    UpdateProjectFields(existing, request.Project);
+                    await _firebaseService.UpdateDocumentAsync(
+                        "projects",
+                        request.Project.ProjectId,
+                        existing
+                    );
+                    Console.WriteLine(
+                        $"SaveProject: Updated existing project {request.Project.ProjectId}"
+                    );
+                }
+                else
+                {
+                    // Create new project
+                    await _firebaseService.AddDocumentWithIdAsync(
+                        "projects",
+                        request.Project.ProjectId,
+                        request.Project
+                    );
+                    Console.WriteLine(
+                        $"SaveProject: Created new project {request.Project.ProjectId}"
+                    );
+                }
+
+                // 5. Save phases if provided
+                int phasesSaved = 0;
+                int phasesFailed = 0;
+                if (request.Phases?.Any() == true)
+                {
+                    foreach (var phase in request.Phases)
+                    {
+                        try
+                        {
+                            phase.ProjectId = request.Project.ProjectId;
+                            await SavePhase(phase);
+                            phasesSaved++;
+                        }
+                        catch (Exception ex)
+                        {
+                            phasesFailed++;
+                            Console.WriteLine(
+                                $"SaveProject: Failed to save phase {phase.PhaseId} - {ex.Message}"
+                            );
+                        }
+                    }
+                    Console.WriteLine(
+                        $"SaveProject: Saved {phasesSaved} phases, {phasesFailed} failed"
+                    );
+                }
+
+                // 6. Save tasks if provided
+                int tasksSaved = 0;
+                int tasksFailed = 0;
+                if (request.Tasks?.Any() == true)
+                {
+                    foreach (var task in request.Tasks)
+                    {
+                        try
+                        {
+                            task.ProjectId = request.Project.ProjectId;
+                            await SaveTask(task);
+                            tasksSaved++;
+                        }
+                        catch (Exception ex)
+                        {
+                            tasksFailed++;
+                            Console.WriteLine(
+                                $"SaveProject: Failed to save task {task.TaskId} - {ex.Message}"
+                            );
+                        }
+                    }
+                    Console.WriteLine(
+                        $"SaveProject: Saved {tasksSaved} tasks, {tasksFailed} failed"
+                    );
+                }
+
+                // Build response message
+                var message = $"Project saved successfully";
+                if (phasesFailed > 0 || tasksFailed > 0)
+                {
+                    message +=
+                        $" (Warning: {phasesFailed} phases and {tasksFailed} tasks failed to save)";
+                }
+
+                return Ok(
+                    new SaveProjectResponse
+                    {
+                        ProjectId = request.Project.ProjectId,
+                        Status = request.Project.Status,
+                        Message = message,
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"SaveProject: Error - {ex.Message}");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        private void NormalizeDateTimeFields(Project project)
+        {
+            project.StartDate = DateTime.SpecifyKind(project.StartDate, DateTimeKind.Utc);
+            project.EndDatePlanned = DateTime.SpecifyKind(project.EndDatePlanned, DateTimeKind.Utc);
+            if (project.EndDateActual.HasValue)
+                project.EndDateActual = DateTime.SpecifyKind(
+                    project.EndDateActual.Value,
+                    DateTimeKind.Utc
+                );
+            project.UpdatedAt = DateTime.UtcNow;
+        }
+
+        private void UpdateProjectFields(Project existing, Project updated)
+        {
+            existing.Name = updated.Name;
+            existing.Description = updated.Description;
+            existing.ClientId = updated.ClientId;
+            existing.StartDate = updated.StartDate;
+            existing.EndDatePlanned = updated.EndDatePlanned;
+            existing.BudgetPlanned = updated.BudgetPlanned;
+            existing.Status = updated.Status;
+            existing.UpdatedAt = DateTime.UtcNow;
+        }
+
+        private async Task SavePhase(Phase phase)
+        {
+            try
+            {
+                var phaseId = string.IsNullOrEmpty(phase.PhaseId)
+                    ? Guid.NewGuid().ToString()
+                    : phase.PhaseId;
+
+                Console.WriteLine($"SavePhase: Processing phase {phaseId}");
+                Console.WriteLine(
+                    $"Original StartDate: {phase.StartDate} (Kind: {phase.StartDate.Kind})"
+                );
+                Console.WriteLine(
+                    $"Original EndDate: {phase.EndDate} (Kind: {phase.EndDate.Kind})"
+                );
+
+                // Create a new phase object with properly normalized DateTime fields
+                var normalizedPhase = new Phase
+                {
+                    PhaseId = phaseId,
+                    ProjectId = phase.ProjectId,
+                    Name = phase.Name,
+                    Description = phase.Description,
+                    Status = phase.Status,
+                    Progress = phase.Progress,
+                    Budget = phase.Budget,
+                    AssignedTo = phase.AssignedTo,
+                    // Normalize DateTime fields to UTC
+                    StartDate = NormalizeDateTime(phase.StartDate, DateTime.UtcNow),
+                    EndDate = NormalizeDateTime(phase.EndDate, DateTime.UtcNow.AddDays(30)),
+                };
+
+                Console.WriteLine(
+                    $"Normalized StartDate: {normalizedPhase.StartDate} (Kind: {normalizedPhase.StartDate.Kind})"
+                );
+                Console.WriteLine(
+                    $"Normalized EndDate: {normalizedPhase.EndDate} (Kind: {normalizedPhase.EndDate.Kind})"
+                );
+
+                var existing = await _firebaseService.GetDocumentAsync<Phase>("phases", phaseId);
+                if (existing != null)
+                {
+                    await _firebaseService.UpdateDocumentAsync("phases", phaseId, normalizedPhase);
+                    Console.WriteLine($"SavePhase: Updated existing phase {phaseId}");
+                }
+                else
+                {
+                    await _firebaseService.AddDocumentWithIdAsync(
+                        "phases",
+                        phaseId,
+                        normalizedPhase
+                    );
+                    Console.WriteLine($"SavePhase: Created new phase {phaseId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"SavePhase: Error saving phase {phase.PhaseId} - {ex.Message}");
+                Console.WriteLine($"SavePhase: Stack trace: {ex.StackTrace}");
+                throw; // Re-throw to be handled by the calling method
+            }
+        }
+
+        private DateTime NormalizeDateTime(DateTime dateTime, DateTime? fallback = null)
+        {
+            // If the date is invalid (year <= 1900), use fallback or current time
+            if (dateTime.Year <= 1900)
+            {
+                return fallback ?? DateTime.UtcNow;
+            }
+
+            // Ensure the DateTime is UTC
+            if (dateTime.Kind == DateTimeKind.Unspecified)
+            {
+                return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+            }
+            else if (dateTime.Kind == DateTimeKind.Local)
+            {
+                return dateTime.ToUniversalTime();
+            }
+            else
+            {
+                return dateTime; // Already UTC
+            }
+        }
+
+        private async Task SaveTask(ProjectTask task)
+        {
+            try
+            {
+                var taskId = string.IsNullOrEmpty(task.TaskId)
+                    ? Guid.NewGuid().ToString()
+                    : task.TaskId;
+
+                Console.WriteLine($"SaveTask: Processing task {taskId}");
+                Console.WriteLine(
+                    $"Original StartDate: {task.StartDate} (Kind: {task.StartDate.Kind})"
+                );
+                Console.WriteLine($"Original DueDate: {task.DueDate} (Kind: {task.DueDate.Kind})");
+                Console.WriteLine(
+                    $"Original CompletedDate: {task.CompletedDate} (Kind: {task.CompletedDate?.Kind})"
+                );
+
+                // Create a new task object with properly normalized DateTime fields
+                var normalizedTask = new ProjectTask
+                {
+                    TaskId = taskId,
+                    ProjectId = task.ProjectId,
+                    PhaseId = task.PhaseId,
+                    Name = task.Name,
+                    Description = task.Description,
+                    AssignedTo = task.AssignedTo,
+                    Priority = task.Priority,
+                    Status = task.Status,
+                    Progress = task.Progress,
+                    EstimatedHours = task.EstimatedHours,
+                    ActualHours = task.ActualHours,
+                    // Normalize DateTime fields to UTC
+                    StartDate = NormalizeDateTime(task.StartDate, DateTime.UtcNow),
+                    DueDate = NormalizeDateTime(task.DueDate, DateTime.UtcNow.AddDays(7)),
+                    CompletedDate =
+                        task.CompletedDate.HasValue && task.CompletedDate.Value.Year > 1900
+                            ? NormalizeDateTime(task.CompletedDate.Value, null)
+                            : null,
+                };
+
+                Console.WriteLine(
+                    $"Normalized StartDate: {normalizedTask.StartDate} (Kind: {normalizedTask.StartDate.Kind})"
+                );
+                Console.WriteLine(
+                    $"Normalized DueDate: {normalizedTask.DueDate} (Kind: {normalizedTask.DueDate.Kind})"
+                );
+                Console.WriteLine(
+                    $"Normalized CompletedDate: {normalizedTask.CompletedDate} (Kind: {normalizedTask.CompletedDate?.Kind})"
+                );
+
+                var existing = await _firebaseService.GetDocumentAsync<ProjectTask>(
+                    "tasks",
+                    taskId
+                );
+                if (existing != null)
+                {
+                    await _firebaseService.UpdateDocumentAsync("tasks", taskId, normalizedTask);
+                    Console.WriteLine($"SaveTask: Updated existing task {taskId}");
+                }
+                else
+                {
+                    await _firebaseService.AddDocumentWithIdAsync("tasks", taskId, normalizedTask);
+                    Console.WriteLine($"SaveTask: Created new task {taskId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"SaveTask: Error saving task {task.TaskId} - {ex.Message}");
+                Console.WriteLine($"SaveTask: Stack trace: {ex.StackTrace}");
+                throw; // Re-throw to be handled by the calling method
+            }
+        }
+
         [HttpPost("create/project")]
         public async Task<ActionResult<Project>> CreateProject([FromBody] Project project)
         {
             try
             {
-                // 🔐 Assign the Project Manager ID from the logged-in user
-                project.ProjectManagerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                // Assign the Project Manager ID from the logged-in user
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    Console.WriteLine("No current user ID found - Project creation is not allowed");
+                    return BadRequest(
+                        new
+                        {
+                            error = "Authentication error: No project manager ID found. Please log in again.",
+                        }
+                    );
+                }
 
-                // 🕒 Normalize all DateTime fields to UTC
+                project.ProjectManagerId = currentUserId;
+                Console.WriteLine(
+                    $"[CreateProject] Set ProjectManagerId to: '{project.ProjectManagerId}'"
+                );
+
+                // Normalize all DateTime fields to UTC
                 project.StartDate = DateTime.SpecifyKind(project.StartDate, DateTimeKind.Utc);
                 project.EndDatePlanned = DateTime.SpecifyKind(
                     project.EndDatePlanned,
@@ -607,7 +978,7 @@ namespace ICCMS_API.Controllers
                         DateTimeKind.Utc
                     );
 
-                // 🧾 Log the normalized values (optional)
+                // Log the normalized values (optional)
                 Console.WriteLine($"[CreateProject] StartDate.Kind = {project.StartDate.Kind}");
                 Console.WriteLine(
                     $"[CreateProject] EndDatePlanned.Kind = {project.EndDatePlanned.Kind}"
@@ -616,19 +987,19 @@ namespace ICCMS_API.Controllers
                     $"[CreateProject] EndDateActual.Kind = {project.EndDateActual?.Kind.ToString() ?? "null"}"
                 );
 
-                // 💾 Add to Firestore
+                // Add to Firestore
                 await _firebaseService.AddDocumentWithIdAsync(
                     "projects",
                     project.ProjectId,
                     project
                 );
 
-                Console.WriteLine($"[CreateProject] Added project {project.Name} successfully.");
+                Console.WriteLine($"Added project {project.Name} successfully.");
                 return Ok(project);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[CreateProject] Error: {ex.Message}");
+                Console.WriteLine($"Error: {ex.Message}");
                 return StatusCode(500, new { error = ex.Message });
             }
         }

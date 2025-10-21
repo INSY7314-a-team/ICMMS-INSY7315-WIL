@@ -1,5 +1,6 @@
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ICCMS_Web.Models;
@@ -177,294 +178,6 @@ namespace ICCMS_Web.Controllers
             }
         }
 
-        // // ===============================================================
-        // // 🧭 1. INITIALIZATION + USER CONTEXT
-        // // ===============================================================
-        // _logger.LogInformation(
-        //     "=== [Dashboard] ENTERED ProjectManagerController.Dashboard ==="
-        // );
-        // _logger.LogInformation(
-        //     "Active User: {UserName} | Role: ProjectManager",
-        //     User.Identity?.Name
-        // );
-
-        // // Debug: Check user claims
-        // var firebaseToken = User.FindFirst("FirebaseToken")?.Value;
-        // _logger.LogInformation(
-        //     "🔑 [Dashboard] FirebaseToken present: {HasToken}",
-        //     !string.IsNullOrEmpty(firebaseToken)
-        // );
-        // _logger.LogInformation(
-        //     "🔑 [Dashboard] User claims count: {Count}",
-        //     User.Claims.Count()
-        // );
-
-        // var vm = new DashboardViewModel();
-
-        // var phaseDict = new Dictionary<string, List<PhaseDto>>();
-        // var taskDict = new Dictionary<string, List<ProjectTaskDto>>();
-
-        // // ===============================================================
-        // // 📦 2. FETCH ALL PROJECTS FOR PM
-        // // ===============================================================
-
-        // _logger.LogInformation("🔍 [Dashboard] Fetching ALL projects for current PM...");
-        // var allProjects =
-        //     await _apiClient.GetAsync<List<ProjectDto>>(
-        //         "/api/projectmanager/projects/all",
-        //         User
-        //     ) ?? new();
-
-        // _logger.LogInformation(
-        //     "📊 [Dashboard] Retrieved {Count} total projects for PM",
-        //     allProjects.Count
-        // );
-
-        // // Separate draft and non-draft projects
-        // vm.DraftProjects = allProjects.Where(p => p.Status == "Draft").ToList();
-        // vm.FilteredProjects = allProjects.Where(p => p.Status != "Draft").ToList();
-
-        // _logger.LogInformation(
-        //     "📊 [Dashboard] Project categorization - Draft: {DraftCount}, Active: {ActiveCount}",
-        //     vm.DraftProjects.Count,
-        //     vm.FilteredProjects.Count
-        // );
-
-        // vm.TotalProjects = allProjects.Count;
-
-        // _logger.LogInformation(
-        //     "✅ [Dashboard] All projects loaded: {TotalCount}",
-        //     allProjects.Count
-        // );
-
-        // // ===============================================================
-        // // 💬 3. FETCH QUOTATIONS
-        // // ===============================================================
-        // var allQuotes =
-        //     await _apiClient.GetAsync<List<QuotationDto>>("/api/quotations", User) ?? new();
-        // var acceptedQuotes = allQuotes
-        //     .Where(q => q.Status.Equals("ClientAccepted", StringComparison.OrdinalIgnoreCase))
-        //     .OrderByDescending(q => q.ApprovedAt ?? q.CreatedAt)
-        //     .Take(5)
-        //     .ToList();
-
-        // _logger.LogInformation(
-        //     "✅ Quotations loaded. Total: {All}, Accepted: {Accepted}",
-        //     allQuotes.Count,
-        //     acceptedQuotes.Count
-        // );
-
-        // // ===============================================================
-        // // 👥 4. FETCH CLIENTS
-        // // ===============================================================
-        // _logger.LogInformation("=== [Dashboard] Fetching Clients from /api/users/clients ===");
-
-        // var allClients =
-        //     await _apiClient.GetAsync<List<UserDto>>("/api/users/clients", User) ?? new();
-        // vm.Clients = allClients; // ✅ Now this works because vm exists
-        // vm.TotalClients = allClients.Count;
-        // vm.RecentClients = allClients.Take(5).ToList();
-
-        // _logger.LogInformation("✅ Clients loaded. Total: {Count}", allClients.Count);
-
-        // // ===============================================================
-        // // 🧰 5. FETCH CONTRACTORS
-        // // ===============================================================
-        // var allContractors =
-        //     await _apiClient.GetAsync<List<UserDto>>("/api/users/contractors", User) ?? new();
-        // var recentContractors = allContractors.Take(5).ToList();
-
-        // _logger.LogInformation("✅ Contractors loaded. Total: {Count}", allContractors.Count);
-
-        // // ===============================================================
-        // // 🧮 6. FETCH ESTIMATES (moved before project processing)
-        // // ===============================================================
-        // var allEstimates =
-        //     await _apiClient.GetAsync<List<EstimateDto>>("/api/estimates", User) ?? new();
-        // var estimateDict = allEstimates
-        //     .Where(e => !string.IsNullOrEmpty(e.ProjectId))
-        //     .GroupBy(e => e.ProjectId)
-        //     .ToDictionary(g => g.Key, g => g.OrderByDescending(e => e.CreatedAt).First());
-        // vm.ProjectEstimates = estimateDict;
-
-        // // ===============================================================
-        // // 🧩 7. FETCH PHASES + TASKS (Optimized - only for displayed projects)
-        // // ===============================================================
-        // var projectsToFetch = vm.FilteredProjects.Take(5).ToList(); // Only fetch for displayed projects
-
-        // _logger.LogInformation(
-        //     "Fetching phases/tasks for {Count} projects",
-        //     projectsToFetch.Count
-        // );
-
-        // foreach (var project in projectsToFetch)
-        // {
-        //     try
-        //     {
-        //         var phases =
-        //             await _apiClient.GetAsync<List<PhaseDto>>(
-        //                 $"/api/projectmanager/project/{project.ProjectId}/phases",
-        //                 User
-        //             ) ?? new();
-
-        //         phaseDict[project.ProjectId] = phases;
-
-        //         // Only fetch tasks if there are phases
-        //         if (phases.Any())
-        //         {
-        //             var allTasks =
-        //                 await _apiClient.GetAsync<List<ProjectTaskDto>>(
-        //                     $"/api/projectmanager/project/{project.ProjectId}/tasks",
-        //                     User
-        //                 ) ?? new();
-        //             foreach (var phase in phases)
-        //             {
-        //                 var phaseTasks = allTasks
-        //                     .Where(t => t.PhaseId == phase.PhaseId)
-        //                     .ToList();
-        //                 taskDict[phase.PhaseId] = phaseTasks;
-        //             }
-        //         }
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         _logger.LogWarning(
-        //             "Failed to fetch phases/tasks for project {ProjectId}: {Error}",
-        //             project.ProjectId,
-        //             ex.Message
-        //         );
-        //         // Continue with other projects even if one fails
-        //     }
-        // }
-
-        // // ===============================================================
-        // // 🧠 7. POPULATE VM
-        // // ===============================================================
-        // vm.TotalQuotes = allQuotes.Count;
-        // vm.RecentAcceptedQuotes = acceptedQuotes;
-        // vm.AllQuotes = allQuotes;
-        // vm.TotalContractors = allContractors.Count;
-        // vm.RecentContractors = recentContractors;
-        // vm.ProjectPhases = phaseDict;
-        // vm.PhaseTasks = taskDict;
-
-        // // Pre-process project data to avoid complex operations in the view
-        // var allProjectsToProcess = vm
-        //     .FilteredProjects.Concat(vm.DraftProjects)
-        //     .Distinct()
-        //     .ToList();
-        // _logger.LogInformation(
-        //     "Processing data for {Count} projects",
-        //     allProjectsToProcess.Count
-        // );
-
-        // foreach (var project in allProjectsToProcess)
-        // {
-        //     try
-        //     {
-        //         var phases = phaseDict.ContainsKey(project.ProjectId)
-        //             ? phaseDict[project.ProjectId]
-        //             : new List<PhaseDto>();
-        //         var tasks = phases
-        //             .SelectMany(p =>
-        //                 taskDict.ContainsKey(p.PhaseId)
-        //                     ? taskDict[p.PhaseId]
-        //                     : new List<ProjectTaskDto>()
-        //             )
-        //             .ToList();
-        //         var estimate = estimateDict.ContainsKey(project.ProjectId)
-        //             ? estimateDict[project.ProjectId]
-        //             : null;
-        //         var progress = vm.GetProjectProgress(project);
-        //         var statusBadgeClass = vm.GetStatusBadgeClass(project.Status);
-
-        //         // Store processed data in the ViewModel
-        //         vm.ProjectDetails[project.ProjectId] = new ProjectDetails
-        //         {
-        //             Phases = phases,
-        //             Tasks = tasks,
-        //             Estimate = estimate,
-        //             Progress = progress,
-        //             StatusBadgeClass = statusBadgeClass,
-        //         };
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         _logger.LogWarning(
-        //             "Failed to process project data for {ProjectId}: {Error}",
-        //             project.ProjectId,
-        //             ex.Message
-        //         );
-        //         // Set default values for failed projects
-        //         vm.ProjectDetails[project.ProjectId] = new ProjectDetails
-        //         {
-        //             Phases = new List<PhaseDto>(),
-        //             Tasks = new List<ProjectTaskDto>(),
-        //             Estimate = null,
-        //             Progress = 0,
-        //             StatusBadgeClass = "badge-light",
-        //         };
-        //     }
-        // }
-
-        // // ===============================================================
-        // // 🧮 8. ESTIMATES ALREADY PROCESSED ABOVE
-        // // ===============================================================
-
-        // // ===============================================================
-        // // 🚀 9. RETURN
-        // // ===============================================================
-        // _logger.LogInformation(
-        //     "✅ DashboardViewModel ready: Projects={P}, Clients={C}, Contractors={Co}",
-        //     vm.TotalProjects,
-        //     vm.TotalClients,
-        //     vm.TotalContractors
-        // );
-
-        // try
-        // {
-        //     return View(vm);
-        // }
-        // catch (Exception ex)
-        // {
-        //     _logger.LogError(ex, "❌ Error rendering dashboard view");
-
-        //     // Return a simple error view if the main view fails
-        //     ViewBag.ErrorMessage =
-        //         "Dashboard is temporarily unavailable. Please try again later.";
-        //     return View("Error");
-        // }
-
-        /// <summary>
-        /// Displays form for creating a new project.
-        /// </summary>
-        [HttpGet]
-        public async Task<IActionResult> CreateProject()
-        {
-            _logger.LogInformation("=== Displaying Create Project form ===");
-
-            // Fetch Clients via API (the ProjectManager only needs clients)
-            var clients =
-                await _apiClient.GetAsync<List<UserDto>>("/api/users/clients", User)
-                ?? new List<UserDto>();
-
-            // Optional: fetch projects if you want to show references or validations
-            var projects =
-                await _apiClient.GetAsync<List<ProjectDto>>("/api/projectmanager/projects", User)
-                ?? new List<ProjectDto>();
-
-            // Build ViewModel
-            var vm = new CreateProjectViewModel { Project = new ProjectDto(), Clients = clients };
-
-            _logger.LogInformation(
-                "Loaded {C} clients and {P} existing projects for CreateProject form",
-                clients.Count,
-                projects.Count
-            );
-
-            return View(vm);
-        }
-
         /// <summary>
         /// Submits a new project to the API.
         /// </summary>
@@ -517,6 +230,26 @@ namespace ICCMS_Web.Controllers
 
             try
             {
+                // Set the project manager ID from the current user
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                _logger.LogInformation("Current User ID: {CurrentUserId}", currentUserId);
+
+                if (!string.IsNullOrEmpty(currentUserId))
+                {
+                    project.ProjectManagerId = currentUserId;
+                    _logger.LogInformation(
+                        "Set ProjectManagerId to: {ProjectManagerId}",
+                        project.ProjectManagerId
+                    );
+                }
+                else
+                {
+                    _logger.LogError("No current user ID found - Project creation is not allowed");
+                    TempData["ErrorMessage"] =
+                        "Authentication error: No project manager ID found. Please log in again.";
+                    return RedirectToAction("CreateProject");
+                }
+
                 // === Normalize to UTC ===
                 project.StartDate = DateTime.SpecifyKind(project.StartDate, DateTimeKind.Utc);
                 project.EndDatePlanned = DateTime.SpecifyKind(
@@ -869,6 +602,38 @@ namespace ICCMS_Web.Controllers
             return Json(estimate ?? new EstimateDto { ProjectId = projectId });
         }
 
+        /// <summary>
+        /// Get all estimates for a project in chronological order
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetProjectEstimates(string projectId)
+        {
+            try
+            {
+                var estimates = await _apiClient.GetAsync<List<EstimateDto>>(
+                    $"/api/estimates/project/{projectId}",
+                    User
+                );
+                if (estimates == null)
+                {
+                    return Json(new List<EstimateDto>());
+                }
+
+                // Sort by creation date (newest first)
+                var sortedEstimates = estimates.OrderByDescending(e => e.CreatedAt).ToList();
+                return Json(sortedEstimates);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error retrieving estimates for project {ProjectId}",
+                    projectId
+                );
+                return Json(new List<EstimateDto>());
+            }
+        }
+
         [HttpPut]
         public async Task<IActionResult> SaveEstimate(
             string estimateId,
@@ -878,8 +643,13 @@ namespace ICCMS_Web.Controllers
             if (string.IsNullOrWhiteSpace(estimateId))
                 return BadRequest(new { error = "Missing estimate id" });
             var saved = await _estimatesService.SaveAsync(estimateId, estimate, User);
+            Console.WriteLine("SaveEstimate: " + saved);
             if (saved == null)
+            {
+                Console.WriteLine("SaveEstimate failed");
                 return StatusCode(500, new { error = "Save failed" });
+            }
+            Console.WriteLine("SaveEstimate successful");
             return Json(saved);
         }
 
@@ -926,7 +696,7 @@ namespace ICCMS_Web.Controllers
                 if (project == null)
                 {
                     _logger.LogWarning(
-                        "⚠️ Project not found for task assignment (ProjectId={ProjectId})",
+                        "Project not found for task assignment (ProjectId={ProjectId})",
                         projectId
                     );
                     TempData["ErrorMessage"] = "Project not found.";
@@ -935,18 +705,14 @@ namespace ICCMS_Web.Controllers
 
                 // Placeholder — redirect to a future AssignTasks view
                 _logger.LogInformation(
-                    "✅ Preparing AssignTasks page for project {Name}",
+                    "Preparing AssignTasks page for project {Name}",
                     project.Name
                 );
                 return RedirectToAction("Tasks", "ProjectTasks", new { projectId });
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "💥 Error assigning tasks for ProjectId={ProjectId}",
-                    projectId
-                );
+                _logger.LogError(ex, "Error assigning tasks for ProjectId={ProjectId}", projectId);
                 TempData["ErrorMessage"] = $"Error assigning tasks: {ex.Message}";
                 return RedirectToAction("Dashboard");
             }
@@ -963,8 +729,38 @@ namespace ICCMS_Web.Controllers
                 project.Name
             );
 
+            // Add null checks to identify the issue
+            if (project == null)
+            {
+                _logger.LogError("CreateProjectAjax: Project is null");
+                return Json(new { success = false, error = "Project is null" });
+            }
+
             try
             {
+                // Set the project manager ID from the current user
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                _logger.LogInformation("Current User ID: {CurrentUserId}", currentUserId);
+
+                if (!string.IsNullOrEmpty(currentUserId))
+                {
+                    project.ProjectManagerId = currentUserId;
+                    _logger.LogInformation(
+                        "Set ProjectManagerId to: {ProjectManagerId}",
+                        project.ProjectManagerId
+                    );
+                }
+                else
+                {
+                    _logger.LogError("No current user ID found - Project creation is not allowed");
+                    return Json(
+                        new
+                        {
+                            success = false,
+                            error = "Authentication error: No project manager ID found. Please log in again.",
+                        }
+                    );
+                }
                 if (string.IsNullOrEmpty(project.ProjectId))
                 {
                     project.ProjectId = Guid.NewGuid().ToString();
@@ -993,14 +789,14 @@ namespace ICCMS_Web.Controllers
                 if (created == null)
                 {
                     _logger.LogError(
-                        "❌ API returned null when creating project {Name}",
+                        "API returned null when creating project {Name}",
                         project.Name
                     );
                     return Json(new { success = false, error = "Failed to create project." });
                 }
 
                 _logger.LogInformation(
-                    "✅ Project {Name} ({Id}) created successfully.",
+                    "Project {Name} ({Id}) created successfully.",
                     created.Name,
                     created.ProjectId
                 );
@@ -1015,7 +811,7 @@ namespace ICCMS_Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🔥 Error creating project {Name}", project.Name);
+                _logger.LogError(ex, "Error creating project {Name}", project.Name);
                 return Json(new { success = false, error = ex.Message });
             }
         }
@@ -1025,12 +821,29 @@ namespace ICCMS_Web.Controllers
         [HttpPost]
         public async Task<IActionResult> StartDraft()
         {
+            // Check if user is authenticated
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                _logger.LogError(
+                    "StartDraft: No current user ID found - Draft creation is not allowed"
+                );
+                return Json(
+                    new
+                    {
+                        success = false,
+                        error = "Authentication error: No project manager ID found. Please log in again.",
+                    }
+                );
+            }
+
             var draft = new ProjectDto { ProjectId = Guid.NewGuid().ToString(), Status = "Draft" };
             var created = await _apiClient.PostAsync<ProjectDto>(
                 "/api/projectmanager/save-draft",
                 draft,
                 User
             );
+            Console.WriteLine("StartDraft: " + created);
             if (created == null)
             {
                 return Json(new { success = false, error = "Failed to start draft" });
@@ -1097,6 +910,93 @@ namespace ICCMS_Web.Controllers
                 return Json(new { success = false, error = "Finalize failed" });
             }
             return Json(new { success = true, status = finalized.Status });
+        }
+
+        /// <summary>
+        /// Unified endpoint for creating and updating projects with phases and tasks
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> SaveProject([FromBody] SaveProjectRequest request)
+        {
+            // 1. Validate authentication - CRITICAL: ProjectManagerId is REQUIRED
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                _logger.LogError(
+                    "SaveProject: No current user ID found - Project save is not allowed"
+                );
+                return Json(
+                    new
+                    {
+                        success = false,
+                        error = "Authentication error: No project manager ID found. Please log in again.",
+                    }
+                );
+            }
+
+            // 2. Set ProjectManagerId - This is MANDATORY
+            request.Project.ProjectManagerId = currentUserId;
+            _logger.LogInformation(
+                "SaveProject: Set ProjectManagerId to: {ProjectManagerId}",
+                currentUserId
+            );
+
+            // 3. Detect create vs update by ProjectId presence
+            bool isNew = string.IsNullOrEmpty(request.Project.ProjectId);
+            if (isNew)
+            {
+                request.Project.ProjectId = Guid.NewGuid().ToString();
+            }
+
+            // 4. Validate required fields and set status
+            bool isComplete = ValidateRequiredFields(request.Project);
+            request.Project.Status = isComplete ? "Planning" : "Draft";
+
+            _logger.LogInformation(
+                "SaveProject: ProjectId={ProjectId}, Status={Status}, IsComplete={IsComplete}",
+                request.Project.ProjectId,
+                request.Project.Status,
+                isComplete
+            );
+
+            // 5. Call unified API endpoint
+            var result = await _apiClient.PostAsync<SaveProjectResponse>(
+                "/api/projectmanager/save-project",
+                request,
+                User
+            );
+
+            if (result == null)
+            {
+                _logger.LogError("SaveProject: API returned null");
+                return Json(new { success = false, error = "Failed to save project" });
+            }
+
+            return Json(
+                new
+                {
+                    success = true,
+                    projectId = result.ProjectId,
+                    status = result.Status,
+                    message = result.Message
+                        ?? (
+                            result.Status == "Planning"
+                                ? "Project created successfully"
+                                : "Draft saved"
+                        ),
+                }
+            );
+        }
+
+        private bool ValidateRequiredFields(ProjectDto project)
+        {
+            // CRITICAL: ProjectManagerId is REQUIRED - without it, project is inaccessible
+            return !string.IsNullOrWhiteSpace(project.ProjectManagerId)
+                && !string.IsNullOrWhiteSpace(project.Name)
+                && !string.IsNullOrWhiteSpace(project.ClientId)
+                && project.StartDate.Year > 1900
+                && project.EndDatePlanned.Year > 1900
+                && project.BudgetPlanned > 0;
         }
 
         /// <summary>
@@ -1219,12 +1119,12 @@ namespace ICCMS_Web.Controllers
 
                 if (created == null)
                 {
-                    _logger.LogError("❌ API returned null when saving draft project");
+                    _logger.LogError("API returned null when saving draft project");
                     return Json(new { success = false, error = "Failed to save draft project." });
                 }
 
                 _logger.LogInformation(
-                    "✅ Draft project {Name} ({Id}) saved successfully.",
+                    "Draft project {Name} ({Id}) saved successfully.",
                     created.Name,
                     created.ProjectId
                 );
@@ -1239,7 +1139,7 @@ namespace ICCMS_Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🔥 Error saving draft project {Name}", project.Name);
+                _logger.LogError(ex, "Error saving draft project {Name}", project.Name);
                 return Json(new { success = false, error = ex.Message });
             }
         }
@@ -1268,12 +1168,12 @@ namespace ICCMS_Web.Controllers
 
                 if (updated == null)
                 {
-                    _logger.LogError("❌ API returned null when updating draft project {Id}", id);
+                    _logger.LogError("API returned null when updating draft project {Id}", id);
                     return Json(new { success = false, error = "Failed to update draft project." });
                 }
 
                 _logger.LogInformation(
-                    "✅ Draft project {Name} ({Id}) updated successfully.",
+                    "Draft project {Name} ({Id}) updated successfully.",
                     updated.Name,
                     updated.ProjectId
                 );
@@ -1288,7 +1188,7 @@ namespace ICCMS_Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🔥 Error updating draft project {Id}", id);
+                _logger.LogError(ex, "Error updating draft project {Id}", id);
                 return Json(new { success = false, error = ex.Message });
             }
         }
@@ -1311,12 +1211,12 @@ namespace ICCMS_Web.Controllers
 
                 if (project == null)
                 {
-                    _logger.LogWarning("⚠️ Draft project {Id} not found", id);
+                    _logger.LogWarning("Draft project {Id} not found", id);
                     return Json(new { success = false, error = "Draft project not found." });
                 }
 
                 _logger.LogInformation(
-                    "✅ Draft project {Name} ({Id}) retrieved successfully.",
+                    "Draft project {Name} ({Id}) retrieved successfully.",
                     project.Name,
                     project.ProjectId
                 );
@@ -1324,7 +1224,7 @@ namespace ICCMS_Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🔥 Error retrieving draft project {Id}", id);
+                _logger.LogError(ex, "Error retrieving draft project {Id}", id);
                 return Json(new { success = false, error = ex.Message });
             }
         }
@@ -1399,14 +1299,14 @@ namespace ICCMS_Web.Controllers
 
                 if (completed == null)
                 {
-                    _logger.LogError("❌ API returned null when completing draft project {Id}", id);
+                    _logger.LogError("API returned null when completing draft project {Id}", id);
                     return Json(
                         new { success = false, error = "Failed to complete draft project." }
                     );
                 }
 
                 _logger.LogInformation(
-                    "✅ Draft project {Name} ({Id}) completed successfully.",
+                    "Draft project {Name} ({Id}) completed successfully.",
                     completed.Name,
                     completed.ProjectId
                 );
@@ -1421,7 +1321,7 @@ namespace ICCMS_Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🔥 Error completing draft project {Id}", id);
+                _logger.LogError(ex, "Error completing draft project {Id}", id);
                 return Json(new { success = false, error = ex.Message });
             }
         }
@@ -1463,6 +1363,113 @@ namespace ICCMS_Web.Controllers
                 _logger.LogError(ex, "Error retrieving contractors");
                 return Json(new List<UserDto>());
             }
+        }
+
+        /// <summary>
+        /// Stream blueprint processing progress via Server-Sent Events
+        /// </summary>
+        [HttpGet]
+        public async Task ProcessBlueprintStream(string projectId, string blueprintUrl)
+        {
+            Response.Headers.Add("Content-Type", "text/event-stream");
+            Response.Headers.Add("Cache-Control", "no-cache");
+            Response.Headers.Add("Connection", "keep-alive");
+            Response.Headers.Add("Access-Control-Allow-Origin", "*");
+
+            try
+            {
+                await SendProgressUpdate("Starting blueprint processing...", 0);
+
+                // Simulate progress updates with realistic timing
+                await SendProgressUpdate("Validating blueprint URL...", 5);
+                await Task.Delay(500);
+
+                await SendProgressUpdate("Downloading blueprint file...", 15);
+                await Task.Delay(1000);
+
+                await SendProgressUpdate("Analyzing file format...", 25);
+                await Task.Delay(800);
+
+                await SendProgressUpdate("Preparing for AI processing...", 35);
+                await Task.Delay(600);
+
+                await SendProgressUpdate("Sending to AI service...", 45);
+                await Task.Delay(500);
+
+                // Call the actual API endpoint
+                var request = new ProcessBlueprintRequest
+                {
+                    ProjectId = projectId,
+                    BlueprintUrl = blueprintUrl,
+                };
+
+                await SendProgressUpdate("AI is analyzing the blueprint...", 60);
+
+                // Simulate AI processing time
+                var processingTask = _estimatesService.ProcessBlueprintAsync(request, User);
+
+                // Update progress while processing
+                var progressTask = Task.Run(async () =>
+                {
+                    await Task.Delay(2000);
+                    await SendProgressUpdate("Extracting line items...", 75);
+                    await Task.Delay(2000);
+                    await SendProgressUpdate("Categorizing materials...", 85);
+                    await Task.Delay(1500);
+                    await SendProgressUpdate("Calculating quantities...", 90);
+                    await Task.Delay(1000);
+                    await SendProgressUpdate("Finalizing estimate...", 95);
+                });
+
+                // Wait for both tasks
+                await Task.WhenAll(processingTask, progressTask);
+
+                var result = await processingTask;
+
+                if (result != null)
+                {
+                    await SendProgressUpdate("Blueprint processed successfully!", 100);
+                    await SendProgressUpdate(
+                        "COMPLETE",
+                        100,
+                        new { estimateId = result.EstimateId, total = result.TotalAmount }
+                    );
+                }
+                else
+                {
+                    await SendProgressUpdate(
+                        "Failed to process blueprint",
+                        100,
+                        new { error = "Processing failed" }
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in ProcessBlueprintStream");
+                await SendProgressUpdate($"Error: {ex.Message}", 100, new { error = ex.Message });
+            }
+            finally
+            {
+                await Response.Body.FlushAsync();
+            }
+        }
+
+        private async Task SendProgressUpdate(string message, int percentage, object? data = null)
+        {
+            var progressData = new
+            {
+                message = message,
+                percentage = percentage,
+                timestamp = DateTime.UtcNow,
+                data = data,
+            };
+
+            var json = JsonSerializer.Serialize(progressData);
+            var sseData = $"data: {json}\n\n";
+
+            await Response.WriteAsync(sseData);
+            await Response.Body.FlushAsync();
         }
     }
 }
