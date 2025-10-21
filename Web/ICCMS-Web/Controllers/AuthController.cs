@@ -14,7 +14,11 @@ namespace ICCMS_Web.Controllers
         private readonly IConfiguration _configuration;
         private readonly string _apiBaseUrl;
 
-        public AuthController(ILogger<AuthController> logger, HttpClient httpClient, IConfiguration configuration)
+        public AuthController(
+            ILogger<AuthController> logger,
+            HttpClient httpClient,
+            IConfiguration configuration
+        )
         {
             _logger = logger;
             _httpClient = httpClient;
@@ -44,7 +48,10 @@ namespace ICCMS_Web.Controllers
 
             try
             {
-                _logger.LogInformation("VerifyToken: Sending token to API for {Email}", request.Email);
+                _logger.LogInformation(
+                    "VerifyToken: Sending token to API for {Email}",
+                    request.Email
+                );
 
                 // Call API /api/auth/verify-token
                 var response = await _httpClient.PostAsJsonAsync(
@@ -55,7 +62,11 @@ namespace ICCMS_Web.Controllers
                 if (!response.IsSuccessStatusCode)
                 {
                     var body = await response.Content.ReadAsStringAsync();
-                    _logger.LogError("VerifyToken: API returned {Status}. Body: {Body}", response.StatusCode, body);
+                    _logger.LogError(
+                        "VerifyToken: API returned {Status}. Body: {Body}",
+                        response.StatusCode,
+                        body
+                    );
                     return Json(new { success = false, message = "API verification failed" });
                 }
 
@@ -67,12 +78,25 @@ namespace ICCMS_Web.Controllers
 
                 if (verificationResponse == null || !verificationResponse.Success)
                 {
-                    _logger.LogWarning("VerifyToken: API rejected token for {Email}", request.Email);
-                    return Json(new { success = false, message = verificationResponse?.Message ?? "Verification failed" });
+                    _logger.LogWarning(
+                        "VerifyToken: API rejected token for {Email}",
+                        request.Email
+                    );
+                    return Json(
+                        new
+                        {
+                            success = false,
+                            message = verificationResponse?.Message ?? "Verification failed",
+                        }
+                    );
                 }
 
                 var user = verificationResponse.User;
-                _logger.LogInformation("VerifyToken: API verified {Email} as {Role}", user.Email, user.Role);
+                _logger.LogInformation(
+                    "VerifyToken: API verified {Email} as {Role}",
+                    user.Email,
+                    user.Role
+                );
 
                 // Build claims (now includes role!)
                 var claims = new List<Claim>
@@ -81,7 +105,7 @@ namespace ICCMS_Web.Controllers
                     new Claim(ClaimTypes.Name, user.FullName ?? user.Email ?? "User"),
                     new Claim(ClaimTypes.Email, user.Email ?? ""),
                     new Claim(ClaimTypes.Role, user.Role ?? "User"),
-                    new Claim("FirebaseToken", request.IdToken) // Save raw token for ApiClient
+                    new Claim("FirebaseToken", request.IdToken), // Save raw token for ApiClient
                 };
 
                 var identity = new ClaimsIdentity(claims, "Cookies");
@@ -93,19 +117,30 @@ namespace ICCMS_Web.Controllers
                     new AuthenticationProperties
                     {
                         IsPersistent = request.RememberMe,
-                        ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
+                        ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8),
                     }
                 );
 
-                return Json(new
-                {
-                    success = true,
-                    user = new { user.FullName, user.Email, user.Role }
-                });
+                return Json(
+                    new
+                    {
+                        success = true,
+                        user = new
+                        {
+                            user.FullName,
+                            user.Email,
+                            user.Role,
+                        },
+                    }
+                );
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "VerifyToken: Exception while verifying {Email}", request.Email);
+                _logger.LogError(
+                    ex,
+                    "VerifyToken: Exception while verifying {Email}",
+                    request.Email
+                );
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
         }
@@ -117,6 +152,19 @@ namespace ICCMS_Web.Controllers
             _logger.LogInformation("User logged out.");
             TempData["SuccessMessage"] = "You have been logged out successfully.";
             return RedirectToAction("Login");
+        }
+
+        [HttpGet]
+        public IActionResult AccessDenied()
+        {
+            _logger.LogWarning(
+                "Access denied for user {User} trying to access {ReturnUrl}",
+                User.Identity?.Name,
+                Request.Query["ReturnUrl"]
+            );
+
+            ViewBag.ReturnUrl = Request.Query["ReturnUrl"];
+            return View();
         }
     }
 

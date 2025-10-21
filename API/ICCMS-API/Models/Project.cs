@@ -29,6 +29,9 @@ namespace ICCMS_API.Models
         [FirestoreProperty("status")]
         public string Status { get; set; } = string.Empty;
 
+        [FirestoreProperty("isDraft")]
+        public bool IsDraft { get; set; } = false;
+
         [FirestoreProperty("startDatePlanned")]
         public DateTime StartDate { get; set; }
 
@@ -37,5 +40,12 @@ namespace ICCMS_API.Models
 
         [FirestoreProperty("endDateActual")]
         public DateTime? EndDateActual { get; set; }
+
+        // Draft/ownership/housekeeping fields
+        [FirestoreProperty("createdByUserId")]
+        public string CreatedByUserId { get; set; } = string.Empty;
+
+        [FirestoreProperty("updatedAt")]
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }

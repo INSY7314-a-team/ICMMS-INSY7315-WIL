@@ -69,9 +69,13 @@ builder.Services.AddScoped<IWorkflowMessageService, WorkflowMessageService>();
 builder.Services.AddScoped<IQuoteWorkflowService, QuoteWorkflowService>();
 builder.Services.AddScoped<IInvoiceWorkflowService, InvoiceWorkflowService>();
 
+// Add HttpClient for external API calls
+builder.Services.AddHttpClient();
+
 // Add AI processing and material database services
 builder.Services.AddScoped<IAiProcessingService, AiProcessingService>();
 builder.Services.AddScoped<IMaterialDatabaseService, MaterialDatabaseService>();
+builder.Services.AddScoped<SupabaseBlueprintService>();
 
 // Add Authentication
 builder

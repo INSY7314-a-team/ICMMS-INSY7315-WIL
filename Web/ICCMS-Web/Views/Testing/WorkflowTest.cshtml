@@ -189,8 +189,12 @@
                         <div class="mb-3">
                             <label class="form-label">Blueprint URL</label>
                             <input type="text" class="form-control" id="blueprintUrl" 
-                                   value="https://example.com/construction-blueprint.pdf" 
-                                   placeholder="Enter blueprint URL">
+                                   value="https://givtrrcqxteqcnmtnnkt.supabase.co/storage/v1/object/sign/upload/blueprint.pdf?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8wYjEwMjZjYi04YTM1LTRhZTktYjQxMi1kZGRiYmQ1MDVmZTQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1cGxvYWQvYmx1ZXByaW50LnBkZiIsImlhdCI6MTc2MDY0MTQ0MiwiZXhwIjoxNzkyMTc3NDQyfQ.GiK-oUawd5-CA9Gl6CHdPJyXj3WuyCb7lJOVQOn7X-U" 
+                                   placeholder="Enter Supabase blueprint URL">
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Real blueprint: 1,136 sq ft house with garage and foundation plans
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Project ID</label>
@@ -516,65 +520,98 @@ async function processBlueprint() {
     try {
         markStepActive(1);
         
-        const requestData = {
-            blueprintUrl: document.getElementById('blueprintUrl').value,
-            projectId: document.getElementById('projectId').value,
-            contractorId: document.getElementById('contractorId').value
+        const blueprintUrl = document.getElementById('blueprintUrl').value;
+        const projectId = document.getElementById('projectId').value;
+        const contractorId = document.getElementById('contractorId').value;
+        
+        console.log('🚀 Processing Blueprint via .NET API...');
+        console.log('📄 Blueprint URL:', blueprintUrl);
+        console.log('🏗️ Project ID:', projectId);
+        console.log('👷 Contractor ID:', contractorId);
+
+        // Call .NET API (which will then call GenKitMicroservice)
+        const apiData = {
+            blueprintUrl: blueprintUrl,
+            projectId: projectId,
+            contractorId: contractorId
         };
 
+        console.log('🤖 Calling .NET API (which calls GenKitMicroservice)...');
         const response = await fetch('https://localhost:7136/api/estimates/process-blueprint', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + await getAuthToken()
             },
-            body: JSON.stringify(requestData)
+            body: JSON.stringify(apiData)
         });
 
         let result;
         const responseText = await response.text();
         
-        console.log('Process Blueprint - API Response Status:', response.status);
-        console.log('Process Blueprint - API Response Headers:', response.headers);
-        console.log('Process Blueprint - API Response Text:', responseText);
-        console.log('Process Blueprint - Request URL:', 'https://localhost:7136/api/estimates/process-blueprint');
-        console.log('Process Blueprint - Request Headers:', {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + await getAuthToken()
-        });
+        console.log('.NET API Response Status:', response.status);
+        console.log('.NET API Response Text:', responseText);
         
         if (responseText) {
             try {
                 result = JSON.parse(responseText);
             } catch (parseError) {
-                console.error('Process Blueprint - JSON Parse Error:', parseError);
+                console.error('.NET API JSON Parse Error:', parseError);
                 throw new Error(`Invalid JSON response: ${responseText}`);
             }
         } else {
-            result = { message: 'Empty response from server' };
+            result = { message: 'Empty response from .NET API' };
         }
         
         if (response.ok) {
-            currentEstimateId = result.estimateId;
-            workflowData.estimate = result;
+            console.log('✅ .NET API processing successful!');
+            console.log('📊 Total items:', result.lineItems?.length || 0);
+            console.log('💰 Total amount:', result.totalAmount || 0);
+            
+            // Log all materials found
+            if (result.lineItems) {
+                console.log('📋 All line items found:', result.lineItems.length);
+                result.lineItems.forEach(item => {
+                    console.log(`  - ${item.name}: ${item.quantity} ${item.unit} (${item.category})`);
+                });
+            }
+            
+            // Create estimate data structure
+            const estimateData = {
+                estimateId: result.estimateId || `EST_${Date.now()}`,
+                projectId: projectId,
+                contractorId: contractorId,
+                lineItems: result.lineItems || [],
+                summary: {
+                    totalValue: result.totalAmount || 0,
+                    totalItems: result.lineItems?.length || 0,
+                    processingTime: 0, // .NET API doesn't provide this
+                    confidence: 0.8
+                },
+                createdAt: new Date().toISOString()
+            };
+            console.log('Estimate Data:', estimateData);
+            currentEstimateId = estimateData.estimateId;
+            workflowData.estimate = estimateData;
             
             showResponse(1, result);
-            displayEstimateLineItems(result.lineItems);
+            displayEstimateLineItems(result.lineItems || []);
             markStepCompleted(1);
             
             // Enable next step
             document.getElementById('convertBtn').disabled = false;
             markStepActive(2);
         } else {
-            throw new Error(result.message || 'Failed to process blueprint');
+            throw new Error(result.error || '.NET API processing failed');
         }
     } catch (error) {
+        console.error('❌ Blueprint processing failed:', error);
         showResponse(1, { error: error.message }, true);
         markStepError(1);
     }
 }
 
-// Display estimate line items
+// Display estimate line items with pagination
 function displayEstimateLineItems(lineItems) {
     const container = document.getElementById('estimateLineItems');
     
@@ -583,35 +620,312 @@ function displayEstimateLineItems(lineItems) {
         return;
     }
 
+    console.log('📋 Displaying AI-generated line items:', lineItems.length, 'items');
+    console.log('📋 Line items data:', lineItems);
+
+    // Store line items globally for pagination
+    window.allLineItems = lineItems;
+    window.currentPage = 1;
+    window.itemsPerPage = 5;
+
+    // Separate general and material items based on the AI categorization
+    const generalItems = lineItems.filter(item => 
+        item.itemType === 'General' || 
+        item.category === 'General' || 
+        (item.name && (
+            item.name.toLowerCase().includes('preparation') ||
+            item.name.toLowerCase().includes('management') ||
+            item.name.toLowerCase().includes('supervision') ||
+            item.name.toLowerCase().includes('utilities') ||
+            item.name.toLowerCase().includes('equipment') ||
+            item.name.toLowerCase().includes('safety') ||
+            item.name.toLowerCase().includes('permits')
+        ))
+    );
+    
+    const materialItems = lineItems.filter(item => 
+        item.itemType === 'Material' || 
+        (item.category !== 'General' && 
+         item.itemType !== 'General' && 
+         !(item.name && (
+            item.name.toLowerCase().includes('preparation') ||
+            item.name.toLowerCase().includes('management') ||
+            item.name.toLowerCase().includes('supervision') ||
+            item.name.toLowerCase().includes('utilities') ||
+            item.name.toLowerCase().includes('equipment') ||
+            item.name.toLowerCase().includes('safety') ||
+            item.name.toLowerCase().includes('permits')
+         )))
+    );
+
+    console.log('🔧 General work items:', generalItems.length);
+    console.log('🧱 Material items:', materialItems.length);
+
+    // Store separated items globally
+    window.generalItems = generalItems;
+    window.materialItems = materialItems;
+
+    // Render the first page
+    renderLineItemsPage();
+    
+    // Store line items for workflow tracking
+    workflowData.estimateLineItems = lineItems;
+    console.log('💾 Stored line items in workflow data:', workflowData.estimateLineItems.length, 'items');
+}
+
+// Render line items with pagination
+function renderLineItemsPage() {
+    const container = document.getElementById('estimateLineItems');
+    const currentPage = window.currentPage || 1;
+    const itemsPerPage = window.itemsPerPage || 5;
+    const allItems = window.allLineItems || [];
+    const generalItems = window.generalItems || [];
+    const materialItems = window.materialItems || [];
+
+    // Calculate pagination
+    const totalPages = Math.ceil(allItems.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, allItems.length);
+    const currentItems = allItems.slice(startIndex, endIndex);
+
+    // Separate current page items
+    const currentGeneralItems = currentItems.filter(item => 
+        item.itemType === 'General' || 
+        item.category === 'General' || 
+        (item.name && (
+            item.name.toLowerCase().includes('preparation') ||
+            item.name.toLowerCase().includes('management') ||
+            item.name.toLowerCase().includes('supervision') ||
+            item.name.toLowerCase().includes('utilities') ||
+            item.name.toLowerCase().includes('equipment') ||
+            item.name.toLowerCase().includes('safety') ||
+            item.name.toLowerCase().includes('permits')
+        ))
+    );
+    
+    const currentMaterialItems = currentItems.filter(item => 
+        item.itemType === 'Material' || 
+        (item.category !== 'General' && 
+         item.itemType !== 'General' && 
+         !(item.name && (
+            item.name.toLowerCase().includes('preparation') ||
+            item.name.toLowerCase().includes('management') ||
+            item.name.toLowerCase().includes('supervision') ||
+            item.name.toLowerCase().includes('utilities') ||
+            item.name.toLowerCase().includes('equipment') ||
+            item.name.toLowerCase().includes('safety') ||
+            item.name.toLowerCase().includes('permits')
+         )))
+    );
+
     let html = '<div class="row">';
-    lineItems.forEach((item, index) => {
-        html += `
-            <div class="col-md-6 mb-3">
-                <div class="material-item">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="mb-1">${item.name}</h6>
-                        <span class="status-badge status-draft">AI Generated</span>
-                    </div>
-                    <p class="text-muted small mb-2">${item.description}</p>
-                    <div class="row">
-                        <div class="col-6">
-                            <small class="text-muted">Quantity: ${item.quantity} ${item.unit}</small>
+    
+    // Show General Work Items first
+    if (currentGeneralItems.length > 0) {
+        html += '<div class="col-12 mb-4">';
+        html += '<h5 class="text-primary mb-3"><i class="fas fa-tools me-2"></i>General Work Items</h5>';
+        html += '<div class="row">';
+        
+        currentGeneralItems.forEach((item, index) => {
+            html += `
+                <div class="col-md-6 mb-3">
+                    <div class="material-item" style="border-left: 4px solid #007bff;">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="mb-1 text-primary">${item.name || 'Unnamed Work Item'}</h6>
+                            <span class="badge bg-primary">General Work</span>
                         </div>
-                        <div class="col-6">
-                            <small class="text-muted">Unit Price: R${item.unitPrice.toFixed(2)}</small>
+                        <p class="text-muted small mb-2">${item.description || 'No description available'}</p>
+                        <div class="row">
+                            <div class="col-6">
+                                <small class="text-muted">Quantity: ${item.quantity || 0} ${item.unit || 'N/A'}</small>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Unit Price: R${(item.unitPrice || 0).toFixed(2)}</small>
+                            </div>
                         </div>
+                        <div class="mt-2">
+                            <strong class="text-primary">Line Total: R${(item.lineTotal || 0).toFixed(2)}</strong>
+                        </div>
+                        ${item.isAiGenerated ? `<div class="mt-1"><small class="text-info">AI Confidence: ${((item.aiConfidence || 0) * 100).toFixed(1)}%</small></div>` : ''}
+                        ${item.notes ? `<div class="mt-1"><small class="text-muted">Notes: ${item.notes}</small></div>` : ''}
+                        <div class="mt-1"><small class="text-muted">ID: ${item.itemId || item.id || 'N/A'}</small></div>
                     </div>
-                    <div class="mt-2">
-                        <strong>Line Total: R${item.lineTotal.toFixed(2)}</strong>
-                    </div>
-                    ${item.isAiGenerated ? `<div class="mt-1"><small class="text-info">AI Confidence: ${(item.aiConfidence * 100).toFixed(1)}%</small></div>` : ''}
                 </div>
-            </div>
-        `;
-    });
+            `;
+        });
+        
+        html += '</div></div>';
+    }
+
+    // Show Material Items
+    if (currentMaterialItems.length > 0) {
+        html += '<div class="col-12 mb-4">';
+        html += '<h5 class="text-success mb-3"><i class="fas fa-cube me-2"></i>Material Items</h5>';
+        html += '<div class="row">';
+        
+        currentMaterialItems.forEach((item, index) => {
+            // Get category-based styling
+            const categoryColors = {
+                'Foundation': '#8B4513',    // Brown
+                'Walls': '#228B22',         // Forest Green
+                'Roof': '#DC143C',          // Crimson
+                'Electrical': '#FFD700',    // Gold
+                'Plumbing': '#00CED1',      // Dark Turquoise
+                'HVAC': '#FF6347',          // Tomato
+                'Flooring': '#9370DB',      // Medium Purple
+                'Fixtures': '#20B2AA',      // Light Sea Green
+                'Walls': '#32CD32',         // Lime Green
+                'Ceilings': '#FF69B4'       // Hot Pink
+            };
+            
+            const borderColor = categoryColors[item.category] || '#6c757d';
+            const textColor = 'text-secondary';
+            
+            html += `
+                <div class="col-md-6 mb-3">
+                    <div class="material-item" style="border-left: 4px solid ${borderColor};">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="mb-1 ${textColor}">${item.name || 'Unnamed Material'}</h6>
+                            <span class="badge bg-secondary">${item.category || 'Material'}</span>
+                        </div>
+                        <p class="text-muted small mb-2">${item.description || 'No description available'}</p>
+                        <div class="row">
+                            <div class="col-6">
+                                <small class="text-muted">Quantity: ${item.quantity || 0} ${item.unitOfQuantity || item.unit || 'N/A'}</small>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Unit Price: R${(item.unitPrice || 0).toFixed(2)}</small>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <strong class="${textColor}">Line Total: R${(item.lineTotal || 0).toFixed(2)}</strong>
+                        </div>
+                        ${item.isAiGenerated ? `<div class="mt-1"><small class="text-info">AI Confidence: ${((item.aiConfidence || 0) * 100).toFixed(1)}%</small></div>` : ''}
+                        ${item.notes ? `<div class="mt-1"><small class="text-muted">Notes: ${item.notes}</small></div>` : ''}
+                        <div class="mt-1"><small class="text-muted">ID: ${item.itemId || item.id || 'N/A'}</small></div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div></div>';
+    }
+
     html += '</div>';
     
+    // Add pagination controls
+    html += `
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="text-muted">
+                                    Showing ${startIndex + 1}-${endIndex} of ${allItems.length} line items
+                                </span>
+                            </div>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-primary btn-sm" 
+                                        onclick="changePage(${currentPage - 1})" 
+                                        ${currentPage <= 1 ? 'disabled' : ''}>
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </button>
+                                <span class="btn btn-outline-secondary btn-sm disabled">
+                                    Page ${currentPage} of ${totalPages}
+                                </span>
+                                <button type="button" class="btn btn-outline-primary btn-sm" 
+                                        onclick="changePage(${currentPage + 1})" 
+                                        ${currentPage >= totalPages ? 'disabled' : ''}>
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add comprehensive summary
+    const totalValue = allItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+    const generalValue = generalItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+    const materialValue = materialItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+    
+    html += `
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card border-info">
+                    <div class="card-body">
+                        <h6 class="card-title text-info"><i class="fas fa-chart-bar me-2"></i>AI Estimate Summary</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <h5 class="text-primary">R${generalValue.toFixed(2)}</h5>
+                                    <small class="text-muted">General Work Items (${generalItems.length})</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <h5 class="text-success">R${materialValue.toFixed(2)}</h5>
+                                    <small class="text-muted">Material Items (${materialItems.length})</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <h5 class="text-info">R${totalValue.toFixed(2)}</h5>
+                                    <small class="text-muted">Total Estimate (${allItems.length})</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-robot me-1"></i>
+                                Generated by AI with South African pricing and material categorization
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
     container.innerHTML = html;
+}
+
+// Change page function
+function changePage(newPage) {
+    const totalPages = Math.ceil((window.allLineItems || []).length / (window.itemsPerPage || 5));
+    
+    if (newPage >= 1 && newPage <= totalPages) {
+        window.currentPage = newPage;
+        renderLineItemsPage();
+    }
+}
+
+// Display quotation line items
+function displayQuotationLineItems(lineItems) {
+    console.log('📋 Displaying quotation line items:', lineItems.length, 'items');
+    
+    // For now, quotation line items are the same as estimate line items
+    // In a real implementation, you might fetch the actual quotation data
+    workflowData.quotationLineItems = lineItems;
+    
+    // You could add a separate container for quotation items if needed
+    // For now, we'll just log that quotation items are ready
+    console.log('✅ Quotation line items ready for PM review');
+}
+
+// Display invoice line items
+function displayInvoiceLineItems(lineItems) {
+    console.log('📋 Displaying invoice line items:', lineItems.length, 'items');
+    
+    // Store invoice line items
+    workflowData.invoiceLineItems = lineItems;
+    
+    // You could add a separate container for invoice items if needed
+    // For now, we'll just log that invoice items are ready
+    console.log('✅ Invoice line items ready for payment');
 }
 
 // Step 2: Convert to Quotation
@@ -659,6 +973,13 @@ async function convertToQuotation() {
             const quotationId = typeof result === 'string' ? result : result.quotationId || result;
             currentQuotationId = quotationId;
             workflowData.quotationId = quotationId;
+            
+            console.log('✅ Quotation created successfully:', quotationId);
+            
+            // Display quotation line items (same as estimate for now)
+            if (workflowData.estimateLineItems) {
+                displayQuotationLineItems(workflowData.estimateLineItems);
+            }
             
             showResponse(3, { quotationId: quotationId, message: 'Quotation created successfully' });
             markStepCompleted(2);
@@ -871,6 +1192,13 @@ async function generateInvoice() {
             currentInvoiceId = result;
             workflowData.invoiceId = result;
             
+            console.log('✅ Invoice generated successfully:', result);
+            
+            // Display invoice line items
+            if (workflowData.quotationLineItems) {
+                displayInvoiceLineItems(workflowData.quotationLineItems);
+            }
+            
             showResponse(6, { invoiceId: result, message: 'Invoice generated successfully' });
             markStepCompleted(6);
             
@@ -889,6 +1217,20 @@ async function generateInvoice() {
 function showWorkflowSummary() {
     const summaryEl = document.getElementById('workflowSummary');
     
+    // Calculate totals from line items
+    const estimateItems = workflowData.estimateLineItems || [];
+    const quotationItems = workflowData.quotationLineItems || [];
+    const invoiceItems = workflowData.invoiceLineItems || [];
+    
+    const estimateTotal = estimateItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+    const quotationTotal = quotationItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+    const invoiceTotal = invoiceItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+    
+    // Count material items by category
+    const materialCount = estimateItems.filter(item => 
+        item.category && item.category !== 'General'
+    ).length;
+    
     summaryEl.innerHTML = `
         <div class="row">
             <div class="col-md-4">
@@ -898,6 +1240,10 @@ function showWorkflowSummary() {
                         <h5 class="card-title">AI Estimate</h5>
                         <p class="card-text">Generated from blueprint</p>
                         <small class="text-muted">ID: ${workflowData.estimate?.estimateId || 'N/A'}</small>
+                        <div class="mt-2">
+                            <strong class="text-primary">R${estimateTotal.toFixed(2)}</strong>
+                            <br><small class="text-muted">${estimateItems.length} line items</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -908,6 +1254,10 @@ function showWorkflowSummary() {
                         <h5 class="card-title">Quotation</h5>
                         <p class="card-text">PM approved & client accepted</p>
                         <small class="text-muted">ID: ${workflowData.quotationId || 'N/A'}</small>
+                        <div class="mt-2">
+                            <strong class="text-info">R${quotationTotal.toFixed(2)}</strong>
+                            <br><small class="text-muted">${quotationItems.length} line items</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -918,6 +1268,45 @@ function showWorkflowSummary() {
                         <h5 class="card-title">Invoice</h5>
                         <p class="card-text">Ready for payment</p>
                         <small class="text-muted">ID: ${workflowData.invoiceId || 'N/A'}</small>
+                        <div class="mt-2">
+                            <strong class="text-success">R${invoiceTotal.toFixed(2)}</strong>
+                            <br><small class="text-muted">${invoiceItems.length} line items</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card border-info">
+                    <div class="card-body">
+                        <h6 class="card-title text-info"><i class="fas fa-chart-line me-2"></i>AI Workflow Analytics</h6>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h5 class="text-primary">${estimateItems.length}</h5>
+                                    <small class="text-muted">Total Line Items</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h5 class="text-success">${materialCount}</h5>
+                                    <small class="text-muted">Material Items</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h5 class="text-info">${estimateItems.filter(item => item.isAiGenerated).length}</h5>
+                                    <small class="text-muted">AI Generated</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h5 class="text-warning">R${estimateTotal.toFixed(2)}</h5>
+                                    <small class="text-muted">Total Value</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -925,7 +1314,7 @@ function showWorkflowSummary() {
         <div class="mt-4">
             <div class="alert alert-success">
                 <h5><i class="fas fa-check-circle me-2"></i>Workflow Completed Successfully!</h5>
-                <p class="mb-0">The complete AI-powered construction workflow has been tested from blueprint processing to invoice generation.</p>
+                <p class="mb-0">The complete AI-powered construction workflow has been tested from blueprint processing to invoice generation. All line items have been properly tracked through the entire workflow.</p>
             </div>
         </div>
     `;

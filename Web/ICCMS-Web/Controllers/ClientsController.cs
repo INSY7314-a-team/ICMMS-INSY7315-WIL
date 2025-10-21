@@ -11,12 +11,18 @@ namespace ICCMS_Web.Controllers
     {
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<ClientsController> _logger;
         private readonly string _apiBaseUrl;
 
-        public ClientsController(HttpClient httpClient, IConfiguration configuration)
+        public ClientsController(
+            HttpClient httpClient,
+            IConfiguration configuration,
+            ILogger<ClientsController> logger
+        )
         {
             _httpClient = httpClient;
             _configuration = configuration;
+            _logger = logger;
             _apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7136";
         }
 
@@ -27,49 +33,133 @@ namespace ICCMS_Web.Controllers
                 var firebaseToken = User.FindFirst("FirebaseToken")?.Value;
                 if (string.IsNullOrEmpty(firebaseToken))
                 {
+                    _logger.LogWarning(
+                        "No FirebaseToken found for user {User}",
+                        User.Identity?.Name
+                    );
+                    TempData["ErrorMessage"] =
+                        "Authentication token not found. Please login again.";
                     return RedirectToAction("Login", "Auth");
                 }
 
                 _httpClient.DefaultRequestHeaders.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", firebaseToken);
 
-                // Get client's projects
-                var projectsResponse = await _httpClient.GetAsync($"{_apiBaseUrl}/api/clients/projects");
-                var quotationsResponse = await _httpClient.GetAsync($"{_apiBaseUrl}/api/clients/quotations");
-
                 var projects = new List<ProjectDto>();
                 var quotations = new List<QuotationDto>();
 
-                if (projectsResponse.IsSuccessStatusCode)
+                // Get client's projects with timeout
+                try
                 {
-                    var projectsBody = await projectsResponse.Content.ReadAsStringAsync();
-                    projects = JsonSerializer.Deserialize<List<ProjectDto>>(
-                        projectsBody,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    ) ?? new List<ProjectDto>();
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    var projectsResponse = await _httpClient.GetAsync(
+                        $"{_apiBaseUrl}/api/clients/projects",
+                        cts.Token
+                    );
+
+                    if (projectsResponse.IsSuccessStatusCode)
+                    {
+                        var projectsBody = await projectsResponse.Content.ReadAsStringAsync();
+                        projects =
+                            JsonSerializer.Deserialize<List<ProjectDto>>(
+                                projectsBody,
+                                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                            ) ?? new List<ProjectDto>();
+                    }
+                    else
+                    {
+                        // Fallback data when API fails
+                        projects = new List<ProjectDto>
+                        {
+                            new ProjectDto
+                            {
+                                Name = "Sample Project",
+                                Description = "API service unavailable",
+                            },
+                        };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Fallback data when API fails
+                    projects = new List<ProjectDto>
+                    {
+                        new ProjectDto
+                        {
+                            Name = "Sample Project",
+                            Description = "API service unavailable",
+                        },
+                    };
                 }
 
-                if (quotationsResponse.IsSuccessStatusCode)
+                // Get client's quotations with timeout
+                try
                 {
-                    var quotationsBody = await quotationsResponse.Content.ReadAsStringAsync();
-                    quotations = JsonSerializer.Deserialize<List<QuotationDto>>(
-                        quotationsBody,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    ) ?? new List<QuotationDto>();
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    var quotationsResponse = await _httpClient.GetAsync(
+                        $"{_apiBaseUrl}/api/clients/quotations",
+                        cts.Token
+                    );
+
+                    if (quotationsResponse.IsSuccessStatusCode)
+                    {
+                        var quotationsBody = await quotationsResponse.Content.ReadAsStringAsync();
+                        quotations =
+                            JsonSerializer.Deserialize<List<QuotationDto>>(
+                                quotationsBody,
+                                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                            ) ?? new List<QuotationDto>();
+                    }
+                    else
+                    {
+                        // Fallback data when API fails
+                        quotations = new List<QuotationDto>
+                        {
+                            new QuotationDto { QuotationId = "demo-1", Status = "API Unavailable" },
+                        };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Fallback data when API fails
+                    quotations = new List<QuotationDto>
+                    {
+                        new QuotationDto { QuotationId = "demo-1", Status = "API Unavailable" },
+                    };
                 }
 
                 var viewModel = new ClientDashboardViewModel
                 {
                     Projects = projects,
-                    Quotations = quotations
+                    Quotations = quotations,
                 };
 
                 return View(viewModel);
             }
             catch (Exception ex)
             {
-                TempData["ErrorMessage"] = $"Error: {ex.Message}";
-                return View(new ClientDashboardViewModel());
+                _logger.LogError(ex, "Error in ClientsController.Index");
+
+                // Complete fallback when everything fails
+                var fallbackViewModel = new ClientDashboardViewModel
+                {
+                    Projects = new List<ProjectDto>
+                    {
+                        new ProjectDto
+                        {
+                            Name = "Service Unavailable",
+                            Description = "API connection failed",
+                        },
+                    },
+                    Quotations = new List<QuotationDto>
+                    {
+                        new QuotationDto { QuotationId = "demo-1", Status = "Service Unavailable" },
+                    },
+                };
+
+                TempData["ErrorMessage"] =
+                    "API service is currently unavailable. Showing demo data.";
+                return View(fallbackViewModel);
             }
         }
 
@@ -86,8 +176,10 @@ namespace ICCMS_Web.Controllers
                 _httpClient.DefaultRequestHeaders.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", firebaseToken);
 
-                var response = await _httpClient.GetAsync($"{_apiBaseUrl}/api/clients/project/{id}");
-                
+                var response = await _httpClient.GetAsync(
+                    $"{_apiBaseUrl}/api/clients/project/{id}"
+                );
+
                 if (response.IsSuccessStatusCode)
                 {
                     var responseBody = await response.Content.ReadAsStringAsync();
@@ -123,8 +215,10 @@ namespace ICCMS_Web.Controllers
                 _httpClient.DefaultRequestHeaders.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", firebaseToken);
 
-                var response = await _httpClient.GetAsync($"{_apiBaseUrl}/api/clients/quotation/{id}");
-                
+                var response = await _httpClient.GetAsync(
+                    $"{_apiBaseUrl}/api/clients/quotation/{id}"
+                );
+
                 if (response.IsSuccessStatusCode)
                 {
                     var responseBody = await response.Content.ReadAsStringAsync();
@@ -162,8 +256,11 @@ namespace ICCMS_Web.Controllers
                 _httpClient.DefaultRequestHeaders.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", firebaseToken);
 
-                var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/clients/quotation/{quotationId}/approve", null);
-                
+                var response = await _httpClient.PostAsync(
+                    $"{_apiBaseUrl}/api/clients/quotation/{quotationId}/approve",
+                    null
+                );
+
                 if (response.IsSuccessStatusCode)
                 {
                     TempData["SuccessMessage"] = "Quotation approved successfully.";
@@ -196,8 +293,11 @@ namespace ICCMS_Web.Controllers
                 _httpClient.DefaultRequestHeaders.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", firebaseToken);
 
-                var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/clients/quotation/{quotationId}/reject", null);
-                
+                var response = await _httpClient.PostAsync(
+                    $"{_apiBaseUrl}/api/clients/quotation/{quotationId}/reject",
+                    null
+                );
+
                 if (response.IsSuccessStatusCode)
                 {
                     TempData["SuccessMessage"] = "Quotation rejected successfully.";

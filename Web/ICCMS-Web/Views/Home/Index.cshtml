@@ -1,15 +1,375 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "ICCMS Dashboard";
 }
 
-<div class="text-center">
-    @if (User.Identity.IsAuthenticated)
-    {
-        <h1 class="display-4">Welcome @User.Identity.Name</h1>
-        <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-    }
-    else
-    {
-        <h1 class="display-4">Please login to continue</h1>
-    }
-</div>
+@if (User.Identity.IsAuthenticated)
+{
+    <div class="container-fluid">
+        <!-- Welcome Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="welcome-card">
+                    <div class="d-flex align-items-center">
+                        <div class="welcome-icon">
+                            <i class="fa-solid fa-user-circle"></i>
+                        </div>
+                        <div class="welcome-content">
+                            <h1 class="welcome-title">Welcome back, @User.Identity.Name!</h1>
+                            <p class="welcome-subtitle">Manage your projects, view notifications, and access documents</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Grid -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="section-title">Quick Actions</h2>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-5">
+            <!-- Dashboard Card -->
+            @if (User.IsInRole("Project Manager") || User.IsInRole("Tester"))
+            {
+                <div class="col-lg-4 col-md-6">
+                    <div class="action-card dashboard-card">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-gauge"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-title">Dashboard</h3>
+                            <p class="card-description">View project overview, manage tasks, and track progress</p>
+                            <a href="@Url.Action("Dashboard", "ProjectManager")" class="btn btn-primary">
+                                <i class="fa-solid fa-arrow-right"></i>
+                                Go to Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Notifications Card -->
+            <div class="col-lg-4 col-md-6">
+                <div class="action-card notifications-card">
+                    <div class="card-icon">
+                        <i class="fa-solid fa-bell"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-title">Notifications</h3>
+                        <p class="card-description">View and manage your notifications and alerts</p>
+                        <a href="@Url.Action("Index", "Notifications")" class="btn btn-primary">
+                            <i class="fa-solid fa-arrow-right"></i>
+                            View Notifications
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents Card -->
+            <div class="col-lg-4 col-md-6">
+                <div class="action-card documents-card">
+                    <div class="card-icon">
+                        <i class="fa-slab fa-regular fa-file"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-title">Documents</h3>
+                        <p class="card-description">Access and manage your uploaded documents</p>
+                        <a href="@Url.Action("Index", "Documents")" class="btn btn-primary">
+                            <i class="fa-solid fa-arrow-right"></i>
+                            View Documents
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quotes Card (for Project Managers) -->
+            @if (User.IsInRole("ProjectManager") || User.IsInRole("Tester"))
+            {
+                <div class="col-lg-4 col-md-6">
+                    <div class="action-card quotes-card">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-file-invoice"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-title">Quotations</h3>
+                            <p class="card-description">Create and manage project quotations</p>
+                            <a href="@Url.Action("Index", "Quotes")" class="btn btn-primary">
+                                <i class="fa-solid fa-arrow-right"></i>
+                                Manage Quotes
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Users Management (for Admins) -->
+            @if (User.IsInRole("Admin"))
+            {
+                <div class="col-lg-4 col-md-6">
+                    <div class="action-card users-card">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-title">User Management</h3>
+                            <p class="card-description">Manage users, roles, and permissions</p>
+                            <a href="@Url.Action("Index", "Users")" class="btn btn-primary">
+                                <i class="fa-solid fa-arrow-right"></i>
+                                Manage Users
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Testing (for Testers) -->
+            @if (User.IsInRole("Tester"))
+            {
+                <div class="col-lg-4 col-md-6">
+                    <div class="action-card testing-card">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-flask"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-title">Testing</h3>
+                            <p class="card-description">Access testing tools and message testing</p>
+                            <a href="@Url.Action("Index", "Testing")" class="btn btn-primary">
+                                <i class="fa-solid fa-arrow-right"></i>
+                                Testing Tools
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+    </div>
+
+    <style>
+        .welcome-card {
+            background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);
+            border-radius: 15px;
+            padding: 2rem;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .welcome-icon {
+            font-size: 3rem;
+            margin-right: 1.5rem;
+            opacity: 0.9;
+        }
+
+        .welcome-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .welcome-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #F7EC59;
+            margin-bottom: 1rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .action-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            height: 100%;
+            border: 1px solid #e9ecef;
+        }
+
+        .action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #1A1B25;
+        }
+
+        .dashboard-card .card-icon {
+            color: #226F54;
+        }
+
+        .notifications-card .card-icon {
+            color: #F7EC59;
+        }
+
+        .documents-card .card-icon {
+            color: #226F54;
+        }
+
+        .quotes-card .card-icon {
+            color: #F7EC59;
+        }
+
+        .users-card .card-icon {
+            color: #FF6663;
+        }
+
+        .testing-card .card-icon {
+            color: #226F54;
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #1A1B25;
+            margin-bottom: 0.8rem;
+        }
+
+        .card-description {
+            color: #666;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: #1A1B25;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(247, 236, 89, 0.4);
+            color: #1A1B25;
+        }
+
+        .notifications-container,
+        .documents-container {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e9ecef;
+        }
+
+        .notification-item,
+        .document-item {
+            padding: 1rem;
+            border-bottom: 1px solid #f1f3f4;
+            transition: background-color 0.2s ease;
+        }
+
+        .notification-item:hover,
+        .document-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .notification-item:last-child,
+        .document-item:last-child {
+            border-bottom: none;
+        }
+
+        .notification-title,
+        .document-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .notification-message,
+        .document-description {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .notification-time,
+        .document-date {
+            color: #999;
+            font-size: 0.8rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #666;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: #ddd;
+            margin-bottom: 1rem;
+        }
+    </style>
+
+}
+else
+{
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <div class="login-prompt">
+                    <div class="login-icon">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <h1 class="display-4 mb-4">Welcome to ICMMS</h1>
+                    <p class="lead mb-4">Please login to access your dashboard and manage your projects</p>
+                    <a href="@Url.Action("Login", "Auth")" class="btn btn-primary btn-lg">
+                        <i class="fa-solid fa-sign-in-alt"></i>
+                        Login to Continue
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .login-prompt {
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            color: white;
+        }
+
+        .login-icon {
+            font-size: 4rem;
+            color: #F7EC59;
+            margin-bottom: 2rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 1rem 2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: #1A1B25;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(247, 236, 89, 0.4);
+            color: #1A1B25;
+        }
+    </style>
+}

@@ -1,3 +1,15 @@
+/* === ICCMS COLOR PALETTE === */
+:root {
+  --primary-bg: #1A1B25;
+  --secondary-bg: #2A2B35;
+  --accent-yellow: #F7EC59;
+  --accent-red: #FF6663;
+  --accent-green: #226F54;
+  --text-light: #ffffff;
+  --text-dark: #1A1B25;
+  --text-muted: #666666;
+}
+
 html {
   font-size: 14px;
 }
@@ -9,7 +21,7 @@ html {
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+  box-shadow: 0 0 0 0.1rem var(--text-light), 0 0 0 0.25rem var(--accent-yellow);
 }
 
 html {
@@ -22,26 +34,26 @@ body {
 }
 
 .btn-workflow-white {
-    background: #FFC748;
-    color: white;
-    border: 2px solid #FFD54F; /* golden outline */
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    border: 2px solid var(--accent-yellow);
     border-radius: 25px;
     font-weight: 600;
     padding: 0.75rem 2rem;
     transition: all 0.3s ease;
 }
 .btn-workflow-white:hover {
-    background: #fff;
-    color: #333;
+    background: var(--text-light);
+    color: var(--text-dark);
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
     transform: translateY(-2px);
 }
 
 .main-btn-style {
-  background: linear-gradient(270deg, #FFD54F, #FFEB3B, #FFD54F);
+  background: linear-gradient(270deg, var(--accent-yellow), #E6D547, var(--accent-yellow));
   background-size: 400% 400%;
-  color: #12103F;
-  border: 2px solid #FFD54F;
+  color: var(--text-dark);
+  border: 2px solid var(--accent-yellow);
   border-radius: 25px;
   font-weight: 600;
   padding: 0.75rem 2rem;
@@ -93,8 +105,8 @@ body {
 
 /* Hover state */
 .main-btn-style:hover {
-  background: #fff;
-  color: #12103F;
+  background: var(--text-light);
+  color: var(--text-dark);
   box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
   transform: translateY(-2px);
 }
@@ -113,9 +125,9 @@ body {
 }
 
 .main-bounce{
-  background: linear-gradient(135deg, #FFD54F 0%, #FFEB3B 100%);
-  color: #12103F;
-  border: 2px solid #FFD54F;
+  background: linear-gradient(135deg, var(--accent-yellow) 0%, #E6D547 100%);
+  color: var(--text-dark);
+  border: 2px solid var(--accent-yellow);
   border-radius: 25px;
   font-weight: 600;
   padding: 0.75rem 2rem;
@@ -134,8 +146,8 @@ body {
 /* === MAIN CTA BUTTON (Primary) === */
 /* Big, bold gradient — used for the most important actions like "Request Quote" */
 .btn-main-style {
-  background: linear-gradient(135deg, #FFD54F 0%, #FFEB3B 100%);
-  color: #12103F; /* navy text */
+  background: linear-gradient(135deg, var(--accent-yellow) 0%, #E6D547 100%);
+  color: var(--text-dark);
   border: transparent; 
   border-radius: 25px;
   font-weight: 700;
@@ -145,17 +157,17 @@ body {
   letter-spacing: 0.5px;
 }
 .btn-main-style:hover {
-  background: #fff;
-  color: #12103F;
-  box-shadow: 0 8px 20px rgba(255, 199, 72, 0.5);
+  background: var(--text-light);
+  color: var(--text-dark);
+  box-shadow: 0 8px 20px rgba(247, 236, 89, 0.5);
   transform: translateY(-2px);
 }
 
 /* === SECONDARY BUTTON === */
 /* Solid dark button, contrasts against the main gold, good for "Contact Us" */
 .btn-secondary-style {
-  background: #12103F; /* navy */
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--text-light);
   border: transparent;
   border-radius: 25px;
   font-weight: 600;
@@ -163,17 +175,17 @@ body {
   transition: all 0.3s ease;
 }
 .btn-secondary-style:hover {
-  background: #FFD54F; /* flip to gold */
-  color: #12103F;
-  box-shadow: 0 6px 15px rgba(18,16,63,0.4);
+  background: var(--accent-yellow);
+  color: var(--text-dark);
+  box-shadow: 0 6px 15px rgba(26,27,37,0.4);
   transform: translateY(-2px);
 }
 
 /* === TERTIARY BUTTON === */
 /* White/outline style — light, less dominant, used for "Learn More", "See Details" */
 .btn-tertiary-style {
-  background: #fff;
-  color: #12103F;
+  background: var(--text-light);
+  color: var(--text-dark);
   border: transparent;
   border-radius: 25px;
   font-weight: 600;
@@ -181,9 +193,9 @@ body {
   transition: all 0.3s ease;
 }
 .btn-tertiary-style:hover {
-  background: #FFEB3B;
-  color: #12103F;
-  box-shadow: 0 6px 15px rgba(255, 199, 72, 0.4);
+  background: var(--accent-yellow);
+  color: var(--text-dark);
+  box-shadow: 0 6px 15px rgba(247, 236, 89, 0.4);
   transform: translateY(-2px);
 }
 
@@ -191,7 +203,7 @@ body {
 /* Minimal link-style CTA with subtle underline — for less important actions */
 .btn-accent-style {
   background: transparent;
-  color: #12103F;
+  color: var(--text-dark);
   border: none;
   font-weight: 600;
   padding: 0.5rem 1rem;
@@ -205,11 +217,11 @@ body {
   bottom: 0;
   width: 0;
   height: 2px;
-  background: #FFD54F;
+  background: var(--accent-yellow);
   transition: width 0.3s ease;
 }
 .btn-accent-style:hover {
-  color: #FFD54F;
+  color: var(--accent-yellow);
 }
 .btn-accent-style:hover::after {
   width: 100%;

@@ -37,13 +37,14 @@
 
         <div class="mb-3">
             <label asp-for="Password" class="form-label">Password</label>
-            <input asp-for="Password" class="form-control" id="passwordInput" type="password" placeholder="Enter password" />
+            <input asp-for="Password" class="form-control" id="passwordInput" type="password"
+                placeholder="Enter password" />
             <span asp-validation-for="Password" class="text-danger"></span>
         </div>
 
         <div class="form-check mb-4">
             <input asp-for="RememberMe" class="form-check-input" id="rememberMeInput" />
-            <label asp-for="RememberMe" class="form-check-label">Remember me</label>
+            <label asp-for="RememberMe" class="form-label">Remember me</label>
         </div>
 
         <div class="d-grid">
@@ -54,56 +55,56 @@
 </div>
 
 @section Scripts {
-<script>
-    document.getElementById('loginForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        console.log('[Login] Form submitted');
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            console.log('[Login] Form submitted');
 
-        const email = document.getElementById('emailInput').value;
-        const password = document.getElementById('passwordInput').value;
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
 
-        try {
-            submitBtn.textContent = 'Logging in...';
-            submitBtn.disabled = true;
+            try {
+                submitBtn.textContent = 'Logging in...';
+                submitBtn.disabled = true;
 
-            console.log('[Login] Attempting Firebase sign-in for', email);
-            const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
-            const user = userCredential.user;
-            console.log('[Login] Firebase sign-in successful:', user.email);
+                console.log('[Login] Attempting Firebase sign-in for', email);
+                const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                console.log('[Login] Firebase sign-in successful:', user.email);
 
-            const idToken = await user.getIdToken();
-            console.log('[Login] Got Firebase ID token');
+                const idToken = await user.getIdToken();
+                console.log('[Login] Got Firebase ID token');
 
-            const response = await fetch('/Auth/VerifyToken', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken })
-            });
+                const response = await fetch('/Auth/VerifyToken', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idToken })
+                });
 
-            console.log('[Login] API response status:', response.status);
-            const result = await response.json();
-            console.log('[Login] API response:', result);
+                console.log('[Login] API response status:', response.status);
+                const result = await response.json();
+                console.log('[Login] API response:', result);
 
-            if (result.success) {
-                const role = result.user?.role?.toLowerCase();
-                console.log('[Login] Verified user role:', role);
-                if (role === 'client') window.location.href = '/Clients';
-                else if (role === 'admin') window.location.href = '/Users';
-                else window.location.href = '/';
-            } else {
-                alert(result.message || 'Login failed');
+                if (result.success) {
+                    const role = result.user?.role?.toLowerCase();
+                    console.log('[Login] Verified user role:', role);
+                    if (role === 'client') window.location.href = '/Clients';
+                    else if (role === 'admin') window.location.href = '/Users';
+                    else window.location.href = '/';
+                } else {
+                    alert(result.message || 'Login failed');
+                }
+            } catch (error) {
+                console.error('[Login] Error:', error);
+                alert('Login failed: ' + error.message);
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
             }
-        } catch (error) {
-            console.error('[Login] Error:', error);
-            alert('Login failed: ' + error.message);
-        } finally {
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-        }
-    });
-</script>
+        });
+    </script>
 }
 
 <style>

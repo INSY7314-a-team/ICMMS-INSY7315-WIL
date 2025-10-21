@@ -44,15 +44,19 @@ namespace ICCMS_Web.Models
         public string Status { get; set; } = "Draft";
 
         // Planned start date (required, user input).
-        [JsonPropertyName("startDatePlanned")]
-        public DateTime StartDate { get; set; } = DateTime.UtcNow;
+        [JsonPropertyName("startDate")]
+        public DateTime StartDate { get; set; }
 
         // Planned end date (required, user input).
         [JsonPropertyName("endDatePlanned")]
-        public DateTime EndDatePlanned { get; set; } = DateTime.UtcNow.AddMonths(1);
+        public DateTime EndDatePlanned { get; set; }
 
         // Actual end date (nullable, only filled when project completes).
         [JsonPropertyName("endDateActual")]
         public DateTime? EndDateActual { get; set; }
+
+        // Completion phase for draft projects (0, 1, 2, or 3)
+        [JsonPropertyName("completionPhase")]
+        public int? CompletionPhase { get; set; }
     }
 }

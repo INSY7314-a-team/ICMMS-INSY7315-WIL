@@ -137,8 +137,7 @@ namespace ICCMS_API.Controllers
         {
             try
             {
-                
-                // IMPORTANT: quotation.ClientId must be set to the client's UserId
+                // ✅ Ensure required fields and defaults
                 quotation.Status ??= "Draft";
 
                 // Set timestamps and defaults
@@ -147,16 +146,21 @@ namespace ICCMS_API.Controllers
 
                 // Validate ValidUntil
                 if (quotation.ValidUntil <= quotation.CreatedAt)
-                {
                     return BadRequest("ValidUntil must be after CreatedAt");
-                }
 
-                // Recalculate pricing
+                // ✅ Recalculate totals
                 Pricing.Recalculate(quotation);
 
-                
-
+                // ✅ Step 1: Add the quotation to Firestore (generates a doc ID)
                 var quotationId = await _firebaseService.AddDocumentAsync("quotations", quotation);
+
+                // ✅ Step 2: Save the generated Firestore ID back into the document
+                quotation.QuotationId = quotationId;
+
+                // ✅ Step 3: Update Firestore with this new field
+                await _firebaseService.UpdateDocumentAsync("quotations", quotationId, quotation);
+
+                // ✅ Step 4: Return the quotation ID to the caller
                 return Ok(quotationId);
             }
             catch (Exception ex)
@@ -456,10 +460,7 @@ namespace ICCMS_API.Controllers
         {
             return Ok(User.Claims.Select(c => new { c.Type, c.Value }));
         }
-
     }
-
-
 
     public class ClientDecisionBody
     {

@@ -77,7 +77,10 @@ namespace ICCMS_API.Controllers
             {
                 estimate.CreatedAt = DateTime.UtcNow;
                 var estimateId = await _firebaseService.AddDocumentAsync("estimates", estimate);
-                return Ok(estimateId);
+                estimate.EstimateId = estimateId;
+                await _firebaseService.UpdateDocumentAsync("estimates", estimateId, estimate);
+                Console.WriteLine("Estimate created with ID: " + estimateId);
+                return Ok(estimate);
             }
             catch (Exception ex)
             {
@@ -127,8 +130,11 @@ namespace ICCMS_API.Controllers
                     request.ContractorId
                 );
 
+                estimate.CreatedAt = DateTime.UtcNow;
                 var estimateId = await _firebaseService.AddDocumentAsync("estimates", estimate);
                 estimate.EstimateId = estimateId;
+                await _firebaseService.UpdateDocumentAsync("estimates", estimateId, estimate);
+                Console.WriteLine("Estimate created with ID: " + estimateId);
 
                 return Ok(estimate);
             }
@@ -211,17 +217,5 @@ namespace ICCMS_API.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
-    }
-
-    public class ProcessBlueprintRequest
-    {
-        public string BlueprintUrl { get; set; } = string.Empty;
-        public string ProjectId { get; set; } = string.Empty;
-        public string ContractorId { get; set; } = string.Empty;
-    }
-
-    public class ConvertToQuotationRequest
-    {
-        public string ClientId { get; set; } = string.Empty;
     }
 }

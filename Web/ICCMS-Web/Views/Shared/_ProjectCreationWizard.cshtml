@@ -1,0 +1,185 @@
+@model ICCMS_Web.Models.DashboardViewModel
+
+<!-- Project Creation Wizard Modal -->
+<div class="modal fade" id="projectCreationWizardModal" tabindex="-1" aria-labelledby="projectCreationWizardModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="d-flex align-items-center gap-2">
+                    <h5 class="modal-title mb-0" id="projectCreationWizardModalLabel">
+                        Create Project
+                    </h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Wizard Progress Indicator -->
+                <div class="wizard-progress mb-4">
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 0%" id="wizardProgress"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-muted">Step <span id="currentStep">1</span> of 5</small>
+                        <small class="text-muted" id="stepTitle">Basic Information</small>
+                    </div>
+                </div>
+
+                <!-- Wizard Steps -->
+                <form id="projectCreationForm">
+                    <!-- Step 1: Basic Information -->
+                    <div class="wizard-step" id="step1">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fa-solid fa-info-circle text-primary me-2"></i>
+                            <h6 class="mb-0">Basic Project Information</h6>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="projectName" class="form-label">Project Name <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="projectName" name="Name" required>
+                                <div class="invalid-feedback">Please provide a project name.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="clientSelect" class="form-label">Client <span
+                                        class="text-danger">*</span></label>
+                                <select class="form-select" id="clientSelect" name="ClientId" required>
+                                    <option value="">Select a client...</option>
+                                </select>
+                                <div class="invalid-feedback">Please select a client.</div>
+                            </div>
+                            <div class="col-12">
+                                <label for="projectDescription" class="form-label">Description</label>
+                                <textarea class="form-control" id="projectDescription" name="Description" rows="3"
+                                    placeholder="Brief description of the project..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Budget & Timeline -->
+                    <div class="wizard-step d-none" id="step2">
+                        <div class="d-flex align-items-center mb-3">
+                            <h6 class="mb-0">Budget & Timeline</h6>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="budgetPlanned" class="form-label">Planned Budget <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="budgetPlanned" name="BudgetPlanned"
+                                        min="0" step="0.01" required>
+                                </div>
+                                <div class="invalid-feedback">Please enter a valid budget amount.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="startDate" class="form-label">Start Date <span
+                                        class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="startDate" name="StartDate" required>
+                                <div class="invalid-feedback">Please select a start date.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="endDatePlanned" class="form-label">Planned End Date <span
+                                        class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="endDatePlanned" name="EndDatePlanned"
+                                    required>
+                                <div class="invalid-feedback">Please select an end date.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Phases -->
+                    <div class="wizard-step d-none" id="step3">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fa-solid fa-layer-group text-warning me-2"></i>
+                            <h6 class="mb-0">Phases</h6>
+                        </div>
+                        <div id="phasesContainer" class="mb-3"></div>
+                        <button type="button" class="btn btn-outline-primary" id="addPhaseBtn">
+                            <i class="fa-solid fa-plus me-1"></i>Add Phase
+                        </button>
+                    </div>
+
+                    <!-- Step 4: Tasks & Contractors -->
+                    <div class="wizard-step d-none" id="step4">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fa-solid fa-tasks text-info me-2"></i>
+                            <h6 class="mb-0">Tasks & Contractors</h6>
+                        </div>
+                        <div id="tasksContainer" class="mb-3"></div>
+                        <button type="button" class="btn btn-outline-primary" id="addTaskBtn">
+                            <i class="fa-solid fa-plus me-1"></i>Add Task
+                        </button>
+                    </div>
+
+                    <!-- Step 5: Review & Finalize -->
+                    <div class="wizard-step d-none" id="step5">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fa-solid fa-check-circle text-success me-2"></i>
+                            <h6 class="mb-0">Review & Finalize</h6>
+                        </div>
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title">Project Summary</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>Name:</strong> <span id="reviewName">-</span></p>
+                                        <p><strong>Client:</strong> <span id="reviewClient">-</span></p>
+                                        <p><strong>Budget:</strong> R<span id="reviewBudget">-</span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>Start Date:</strong> <span id="reviewStartDate">-</span></p>
+                                        <p><strong>End Date:</strong> <span id="reviewEndDate">-</span></p>
+                                        <p><strong>Status:</strong> <span id="reviewStatus">-</span></p>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <p><strong>Description:</strong></p>
+                                    <p class="text-muted" id="reviewDescription">-</p>
+                                </div>
+                                <div class="mt-4">
+                                    <h6 class="mb-2">
+                                        <i class="fa-solid fa-diagram-project me-2 text-warning"></i>
+                                        Phases & Tasks
+                                    </h6>
+                                    <div id="reviewPhaseTaskGroups"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="saveAsDraft">
+                            <label class="form-check-label" for="saveAsDraft">
+                                Save as draft (can be completed later)
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-secondary" id="prevStepBtn" style="display: none;">
+                    <i class="fa-solid fa-arrow-left me-1"></i>Previous
+                </button>
+                <button type="button" class="btn btn-primary" id="nextStepBtn">
+                    Next <i class="fa-solid fa-arrow-right ms-1"></i>
+                </button>
+                <button type="button" class="btn btn-success" id="createProjectBtn" style="display: none;">
+                    <i class="fa-solid fa-check me-1"></i>Finalize
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="wizardLoadingOverlay" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Creating project...</p>
+</div>
+
+<script>
+    // Pass clients data to the wizard JavaScript
+    window.dashboardClients = @Html.Raw(Json.Serialize(Model.Clients));
+</script>

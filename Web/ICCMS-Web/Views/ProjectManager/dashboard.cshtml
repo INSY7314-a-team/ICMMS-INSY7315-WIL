@@ -1,3 +1,4 @@
+@using System.Linq
 @model ICCMS_Web.Models.DashboardViewModel
 @{
     ViewData["Title"] = "Project Manager Dashboard";
@@ -5,78 +6,439 @@
 }
 
 @await Html.PartialAsync("_QuoteBuilder")
+@await Html.PartialAsync("_BlueprintPickerModal")
+@await Html.PartialAsync("_EstimateEditorModal")
+@await Html.PartialAsync("_ProjectEstimatesModal")
+@await Html.PartialAsync("_ProjectCreationWizard", Model)
+@await Html.PartialAsync("_PlanEditorModal")
 
-<div class="container mt-4">
-    <h2 class="fw-bold mb-3">🧱 Project Manager Dashboard (Simplified)</h2>
-    <p class="text-muted mb-4">Basic view for development and Quote Builder testing.</p>
+<div class="pm-dashboard-container">
+    <!-- Header Section -->
+    <div class="dashboard-header construction-border">
+        <h1 class="dashboard-title">
+            @User.Identity.Name Dashboard
+        </h1>
+        <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Manage your projects and quotations </p>
+    </div>
 
-    <a href="@Url.Action("CreateProject", "ProjectManager")" class="btn btn-dark mb-3">
-        <i class="fas fa-plus-circle me-1"></i> New Project
-    </a>
+    <!-- Search and Filter Controls -->
+    <div class="ProjectsContainer">
+        <div class="dashboard-controls">
+            <div class="search-section">
+                <div class="search-input-group">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search projects by name..."
+                        value="">
+                    <button type="button" id="searchBtn" class="search-btn">
+                        <i class="fa-solid fa-search"></i>
+                    </button>
+                    <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+            </div>
 
-    @if (Model.RecentProjects != null && Model.RecentProjects.Any())
-    {
-        <table class="table table-bordered table-hover align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Project Name</th>
-                    <th>Status</th>
-                    <th>Start</th>
-                    <th>End</th>
-                    <th>Budget (R)</th>
-                    <th>Client</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var project in Model.RecentProjects)
-                {
-                    <tr>
-                        <td>@project.Name</td>
-                        <td>@project.Status</td>
-                        <td>@project.StartDate.ToString("yyyy-MM-dd")</td>
-                        <td>@project.EndDatePlanned.ToString("yyyy-MM-dd")</td>
-                        <td>@project.BudgetPlanned.ToString("N2")</td>
-                        <td>@project.ClientId</td>
-                        <td>
-                            <button class="btn btn-sm btn-warning fw-bold"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#quoteBuilderModal"
-                                    data-project-id="@project.ProjectId"
-                                    data-project-name="@project.Name"
-                                    data-description="@project.Description"
-                                    data-client-id="@project.ClientId"
-                                    data-contractor-id="@User.FindFirst("UserId")?.Value">
-                                <i class="fas fa-file-invoice-dollar me-1"></i> Build Quote
-                            </button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
-    else
-    {
-        <div class="alert alert-info">
-            No projects available yet. Create one to begin testing.
+            <!-- Enhanced Filters Section -->
+            <div class="filter-section">
+                <div class="d-flex justify-content-center mb-3">
+                    <button type="button" class="filter-toggle-btn" onclick="toggleFilters()">
+                        <i class="fa-solid fa-sliders-h me-2"></i>
+                        <span id="filterToggleText">Show Filters</span>
+                        <i class="fa-solid fa-chevron-down ms-2" id="filterToggleIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Enhanced Filters Panel -->
+            <div class="filters-panel construction-border-thin" id="filtersPanel" style="display: none;">
+                <div class="filters-container">
+                    <!-- Quick Status Filters -->
+                    <div class="filter-group">
+                        <div class="filter-group-header">
+                            <h6 class="mb-0">Project Status</h6>
+                        </div>
+                        <div class="status-filters">
+                            @{
+                                var statuses = (Model.AvailableStatuses ?? new List<string>());
+                            }
+                            @{
+                                if (!statuses.Contains("Planning"))
+                                {
+                                    statuses =
+                                    statuses.Concat(new[] { "Planning" }).ToList();
+                                }
+                            }
+                            @foreach (var status in statuses)
+                            {
+                                var icon = status == "Draft" ? "fa-file-lines"
+                                : status == "Planning" ? "fa-project-diagram"
+                                : status == "Active" ? "fa-play"
+                                : status == "Completed" ? "fa-check-circle"
+                                : status == "Maintenance" ? "fa-wrench" : "fa-list";
+                                <a href="@Url.Action("Dashboard")" class="status-filter-btn" data-status="@status">
+                                    <i class="fa-solid @icon me-2"></i>
+                                    @status
+
+                                </a>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Advanced Filters -->
+                    <div class="filter-group">
+                        <div class="filter-group-header">
+                            <h6 class="mb-0">Filters</h6>
+                        </div>
+                        <div class="filter-item">
+                            <label class="filter-label">
+                                Client
+                            </label>
+                            <select class="filter-select" id="clientFilter">
+                                <option value="">All Clients</option>
+                                @foreach (var client in Model.Clients)
+                                {
+                                    <option value="@client.UserId">
+                                        @client.FullName
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                        <div class="advanced-filters-grid">
+                            <div class="filter-item">
+                                <label class="filter-label">
+                                    Start Date From
+                                </label>
+                                <input type="date" class="filter-input" id="startDateFrom" value="">
+                            </div>
+                            <div class="filter-item">
+                                <label class="filter-label">
+                                    Start Date To
+                                </label>
+                                <input type="date" class="filter-input" id="startDateTo" value="">
+                            </div>
+                        </div>
+                        <div class="advanced-filters-grid">
+                            <div class="filter-item">
+                                <label class="filter-label">
+                                    Budget Range
+                                </label>
+                                <div class="budget-range">
+                                    <input type="number" class="filter-input" id="budgetMin" placeholder="Min Budget"
+                                        value="">
+                                    <span class="range-separator">to</span>
+                                    <input type="number" class="filter-input" id="budgetMax" placeholder="Max Budget"
+                                        value="">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter Actions -->
+                    <div class="filter-actions">
+                        <button type="button" class="filter-action-btn primary" onclick="applyAdvancedFilters()">
+                            <i class="fa-solid fa-search me-2"></i>Apply Filters
+                        </button>
+                        <button type="button" class="filter-action-btn secondary" onclick="clearAdvancedFilters()">
+                            <i class="fa-solid fa-times me-2"></i>Clear All
+                        </button>
+                        <button type="button" class="filter-action-btn tertiary" onclick="toggleFilters()">
+                            <i class="fa-solid fa-chevron-up me-2"></i>Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Project Button -->
+            <div class="create-project-section text-center">
+                <button type="button" class="btn btn-warning btn-lg create-project-btn"
+                    onclick="openCreateProjectWizard()">
+                    <i class="fa-solid fa-plus me-2"></i>Create New Project
+                </button>
+            </div>
         </div>
-    }
+        <!-- Draft Projects Section (Collapsible) -->
+        @if (Model.DraftProjects.Any())
+        {
+            <div id="draftSection" class="draft-projects-section">
+                <div class="section-header collapsible-header construction-border-thin" data-target="draftProjects">
+                    <h3 class="section-title">
+                        Draft Projects
+                        <span class="badge badge-secondary">@Model.DraftProjects.Count</span>
+                    </h3>
+                    <i class="fa-solid fa-chevron-up toggle-icon"></i>
+                </div>
+                <div class="draft-projects-content" id="draftProjects" style="display: block;">
+                    <div class="projects-grid" id="draftProjectsGrid">
+                        @foreach (var project in Model.DraftProjects)
+                        {
+                            // Get pre-processed data from ViewModel
+                            var projectDetails = Model.ProjectDetails.ContainsKey(project.ProjectId)
+                            ? Model.ProjectDetails[project.ProjectId]
+                            : new ICCMS_Web.Models.ProjectDetails();
+
+                            ViewBag.Phases = projectDetails.Phases;
+                            ViewBag.Tasks = projectDetails.Tasks;
+                            ViewBag.Estimate = projectDetails.Estimate;
+                            ViewBag.Progress = projectDetails.Progress;
+                            ViewBag.StatusBadgeClass = projectDetails.StatusBadgeClass;
+
+                            // Get client name
+                            var client = Model.Clients?.FirstOrDefault(c => c.UserId == project.ClientId);
+                            ViewBag.ClientName = client?.FullName ?? project.ClientId;
+
+                            @await Html.PartialAsync("_ProjectCard", project)
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Main Projects Section -->
+        <div class="main-projects-section">
+            <div class="section-header construction-border-thin">
+                <h3 class="section-title">
+                    Projects
+                    <span class="badge badge-secondary">@Model.FilteredProjects.Count</span>
+                </h3>
+            </div>
+
+            @if (Model.FilteredProjects.Any())
+            {
+                <div class="projects-grid" id="projectsGrid">
+                    @foreach (var project in Model.FilteredProjects)
+                    {
+                        // Get pre-processed data from ViewModel
+                        var projectDetails = Model.ProjectDetails.ContainsKey(project.ProjectId)
+                        ? Model.ProjectDetails[project.ProjectId]
+                        : new ICCMS_Web.Models.ProjectDetails();
+
+                        ViewBag.Phases = projectDetails.Phases;
+                        ViewBag.Tasks = projectDetails.Tasks;
+                        ViewBag.Estimate = projectDetails.Estimate;
+                        ViewBag.Progress = projectDetails.Progress;
+                        ViewBag.StatusBadgeClass = projectDetails.StatusBadgeClass;
+
+                        // Get client name
+                        var client = Model.Clients?.FirstOrDefault(c => c.UserId == project.ClientId);
+                        ViewBag.ClientName = client?.FullName ?? project.ClientId;
+
+                        @await Html.PartialAsync("_ProjectCard", project)
+                    }
+                </div>
+
+                <!-- Pagination -->
+                @if (Model.TotalPages > 1)
+                {
+                    <div class="pagination-container">
+                        <nav aria-label="Project pagination">
+                            <ul class="pagination justify-content-center">
+                                <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                                    <a class="page-link" href="@Url.Action("Dashboard", new { page = Model.CurrentPage - 1 })">
+                                        <i class="fa-solid fa-chevron-left"></i>
+                                    </a>
+                                </li>
+
+                                @for (int i = Math.Max(1, Model.CurrentPage - 2); i <= Math.Min(Model.TotalPages,
+                                                        Model.CurrentPage + 2); i++)
+                                {
+                                    <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                        <a class="page-link" href="@Url.Action("Dashboard", new { page = i })">@i</a>
+                                    </li>
+                                }
+
+                                <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                                    <a class="page-link" href="@Url.Action("Dashboard", new { page = Model.CurrentPage + 1 })">
+                                        <i class="fa-solid fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                        <div class="pagination-info">
+                            Showing @((Model.CurrentPage - 1) * Model.PageSize + 1) to @(Math.Min(Model.CurrentPage *
+                            Model.PageSize, Model.TotalProjects)) of @Model.TotalProjects projects
+                    </div>
+                </div>
+                        }
+            }
+            else
+            {
+                <div class="no-projects-message">
+                    <div class="text-center py-5">
+                        <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">No projects found</h4>
+                        <p class="text-muted">
+                            <span>No projects available.</span>
+                        </p>
+                        @if (false)
+                        {
+                            <button type="button" class="btn btn-outline-primary" onclick="clearSearch()">
+                                <i class="fa-solid fa-times"></i> Clear Search
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+    </div>
 </div>
+
+
+</div>
+
+<!-- Include dashboard CSS directly -->
+<link rel="stylesheet" href="~/css/pm-dashboard.css" />
+<link rel="stylesheet" href="~/css/project-cards.css" />
 
 @section Scripts {
     <script src="~/js/quote-builder.js"></script>
+    <script src="~/js/project-creation-wizard.js"></script>
+    <script src="~/js/pm-dashboard.js"></script>
+    <script src="~/js/plan-editor.js"></script>
 
     <script>
-        // Autofill modal fields when Build Quote button is clicked
-        document.getElementById("quoteBuilderModal").addEventListener("show.bs.modal", function (event) {
-            const button = event.relatedTarget;
-            if (!button) return;
-
-            document.getElementById("qb-projectId").value = button.dataset.projectId || "";
-            document.getElementById("qb-clientId").value = button.dataset.clientId || "";
-            document.getElementById("qb-contractorId").value = button.dataset.contractorId || "";
-
-            console.log("🟢 Opening Quote Builder for:", button.dataset.projectName);
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeDashboard();
+            initializeDraftProjectsToggle();
         });
+
+        // Initialize draft projects toggle functionality
+        function initializeDraftProjectsToggle() {
+            console.log('Initializing draft projects toggle...');
+            const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+            console.log('Found collapsible headers:', collapsibleHeaders.length);
+
+            collapsibleHeaders.forEach((header, index) => {
+                console.log(`Setting up header ${index}:`, header);
+                header.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    console.log('Draft section clicked!');
+                    const targetId = this.getAttribute('data-target');
+                    const targetElement = document.getElementById(targetId);
+                    const toggleIcon = this.querySelector('.toggle-icon');
+
+                    console.log('Target ID:', targetId);
+                    console.log('Target Element:', targetElement);
+                    console.log('Toggle Icon:', toggleIcon);
+
+                    if (targetElement) {
+                        const isExpanded = targetElement.style.display !== 'none';
+                        console.log('Is expanded:', isExpanded);
+
+                        if (isExpanded) {
+                            targetElement.style.display = 'none';
+                            if (toggleIcon) {
+                                toggleIcon.classList.remove('fa-chevron-up');
+                                toggleIcon.classList.add('fa-chevron-down');
+                            }
+                            this.setAttribute('data-expanded', 'false');
+                            console.log('Collapsed');
+                        } else {
+                            targetElement.style.display = 'block';
+                            if (toggleIcon) {
+                                toggleIcon.classList.remove('fa-chevron-down');
+                                toggleIcon.classList.add('fa-chevron-up');
+                            }
+                            this.setAttribute('data-expanded', 'true');
+                            console.log('Expanded');
+                        }
+                    } else {
+                        console.error('Target element not found:', targetId);
+                    }
+                });
+            });
+        }
+
+        // Inject project data into Quote Builder modal
+        document.getElementById("quoteBuilderModal")?.addEventListener("show.bs.modal", function (event) {
+            const btn = event.relatedTarget;
+            if (!btn) return;
+            document.getElementById("qb-projectId").value = btn.dataset.projectId || "";
+            document.getElementById("qb-clientId").value = btn.dataset.clientId || "";
+            document.getElementById("qb-contractorId").value = btn.dataset.contractorId || "";
+            console.log("🟢 Opening Quote Builder for:", btn.dataset.projectName);
+        });
+
+        // DEV-ONLY: simulate client approval
+        async function simulateClientApproval(quoteId) {
+            if (!quoteId) return alert("No quote ID found.");
+            if (!confirm("Simulate client approval for this quote?")) return;
+
+            try {
+                const res = await fetch(`/Quotes/simulate-client-approval/${quoteId}`, { method: "POST" });
+                if (!res.ok) throw new Error(`API error ${res.status}`);
+                showToast("✅ Simulated client approval successfully!");
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (err) {
+                console.error("🔥 Simulate approval failed:", err);
+                showToast("❌ Failed to simulate approval.");
+            }
+        }
+
+        function showAllDraftProjects() {
+            // Toggle to show all draft projects
+            window.location.href = '@Url.Action("Dashboard")';
+        }
+
+        function clearSearch() {
+            window.location.href = '@Url.Action("Dashboard")';
+        }
+
+        function toggleFilters() {
+            const panel = document.getElementById('filtersPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function applyAdvancedFilters() {
+            try {
+                const clientId = document.getElementById('clientFilter').value;
+                // infer selected status from active quick buttons if any
+                const activeStatusBtn = document.querySelector('.status-filter-btn.active');
+                const status = activeStatusBtn ? activeStatusBtn.getAttribute('data-status') : '';
+
+                const params = new URLSearchParams();
+                if (clientId) params.set('clientId', clientId);
+                if (status && status !== 'All') params.set('status', status);
+
+                const res = await fetch(`/ProjectManager/SearchProjects?${params.toString()}`);
+                if (!res.ok) throw new Error('Filter failed');
+                const data = await res.json();
+
+                // If a specific status (non-draft) is applied, hide drafts; otherwise update both
+                if (status && status.toLowerCase() !== 'draft' && status !== 'All') {
+                    document.getElementById('draftSection')?.style && (document.getElementById('draftSection').style.display = 'none');
+                    document.getElementById('projectsGrid').innerHTML = data.projectsHtml;
+                } else {
+                    document.getElementById('draftSection')?.style && (document.getElementById('draftSection').style.display = 'block');
+                    document.getElementById('projectsGrid').innerHTML = data.projectsHtml;
+                    const draftsGrid = document.getElementById('draftProjectsGrid');
+                    if (draftsGrid) draftsGrid.innerHTML = data.draftsHtml;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function clearAdvancedFilters() {
+            document.getElementById('clientFilter').value = '';
+            document.getElementById('startDateFrom').value = '';
+            document.getElementById('startDateTo').value = '';
+            document.getElementById('budgetMin').value = '';
+            document.getElementById('budgetMax').value = '';
+
+            try {
+                const res = await fetch(`/ProjectManager/SearchProjects`);
+                if (!res.ok) throw new Error('Clear filters failed');
+                const data = await res.json();
+                document.getElementById('draftSection')?.style && (document.getElementById('draftSection').style.display = 'block');
+                document.getElementById('projectsGrid').innerHTML = data.projectsHtml;
+                const draftsGrid = document.getElementById('draftProjectsGrid');
+                if (draftsGrid) draftsGrid.innerHTML = data.draftsHtml;
+            } catch (e) {
+                console.error(e);
+            }
+        }
     </script>
 }
