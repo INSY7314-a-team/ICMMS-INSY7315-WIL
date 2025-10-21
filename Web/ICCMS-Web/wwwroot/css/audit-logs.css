@@ -1,0 +1,861 @@
+/* Audit Logs Styles - Construction Theme */
+
+.audit-logs-container {
+    padding: 20px;
+    background-color: #1A1B25;
+    min-height: 100vh;
+}
+
+/* ===========================================
+   CONSTRUCTION THEME - DIAGONAL STRIPES
+   =========================================== */
+
+.construction-border {
+    border: 3px solid;
+    border-image: repeating-linear-gradient(
+        45deg,
+        #1A1B25,
+        #1A1B25 8px,
+        #F7EC59 8px,
+        #F7EC59 16px
+    ) 1;
+}
+
+.construction-border-thin {
+    border: 2px solid;
+    border-image: repeating-linear-gradient(
+        45deg,
+        #1A1B25,
+        #1A1B25 6px,
+        #F7EC59 6px,
+        #F7EC59 12px
+    ) 1;
+}
+
+/* ===========================================
+   DASHBOARD HEADER
+   =========================================== */
+
+.audit-dashboard-header {
+    background: #0D1821;
+    color: #FFFFFF;
+    padding: 25px 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.audit-dashboard-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: #FFFFFF;
+}
+
+.audit-dashboard-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+/* ===========================================
+   STAT CARDS
+   =========================================== */
+
+.audit-stat-card {
+    background: #0D1821;
+    color: #FFFFFF;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(247, 236, 89, 0.2);
+}
+
+.audit-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-color: #F7EC59;
+}
+
+.audit-stat-card .card-title {
+    color: #F7EC59;
+    font-weight: 600;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.audit-stat-card .card-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    margin: 0;
+}
+
+.audit-stat-card .stat-icon {
+    color: #F7EC59;
+    font-size: 2.5rem;
+    opacity: 0.8;
+}
+
+/* ===========================================
+   MAIN CONTENT CARDS
+   =========================================== */
+
+.audit-content-card {
+    background: #0D1821;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    border: 2px solid #F7EC59;
+    overflow: visible;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.audit-card-header {
+    background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);
+    color: #FFFFFF;
+    padding: 20px 25px;
+    border-bottom: 1px solid rgba(247, 236, 89, 0.4);
+}
+
+.audit-card-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    color: #FFFFFF;
+}
+
+.audit-card-title i {
+    color: #F7EC59;
+    margin-right: 10px;
+}
+
+/* ===========================================
+   SEARCH AND FILTERS
+   =========================================== */
+
+.search-section {
+    margin-bottom: 20px;
+}
+
+.search-input-group {
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.search-input {
+    width: 100%;
+    padding: 15px 50px 15px 20px;
+    background: #1A1B25;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 25px;
+    color: #FFFFFF;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #F7EC59;
+    background: rgba(247, 236, 89, 0.1);
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.2);
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.search-btn, .clear-search-btn {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #F7EC59;
+    border: none;
+    color: #1A1B25;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.clear-search-btn {
+    right: 50px;
+    background: #FF5964;
+    color: #FFFFFF;
+}
+
+.search-btn:hover, .clear-search-btn:hover {
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* Filter Dropdown */
+.filter-dropdown {
+    background: transparent;
+    border: none;
+    color: #FFFFFF;
+    border-radius: 10px;
+    padding: 0;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 1001;
+    display: inline-block;
+}
+
+.filter-btn {
+    background: #1A1B25;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: #FFFFFF;
+    border-radius: 10px;
+    padding: 12px 20px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.filter-btn:hover {
+    border-color: #F7EC59;
+    background: rgba(247, 236, 89, 0.1);
+    color: #F7EC59;
+    transform: translateY(-1px);
+}
+
+.filter-btn:focus {
+    outline: none;
+    border-color: #F7EC59;
+    background: rgba(247, 236, 89, 0.1);
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.2);
+}
+
+.filter-dropdown:focus {
+    outline: none;
+    border-color: #F7EC59;
+    background: rgba(247, 236, 89, 0.1);
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.2);
+}
+
+.filter-dropdown option {
+    background: #1A1B25;
+    color: #FFFFFF;
+}
+
+.filter-dropdown-menu {
+    background: #1A1B25 !important;
+    border: 1px solid rgba(247, 236, 89, 0.2);
+    border-radius: 10px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    padding: 10px 0;
+    z-index: 9999 !important;
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    position: absolute !important;
+    min-width: 200px !important;
+    pointer-events: auto !important;
+    margin-top: 5px;
+    top: 100% !important;
+    left: 0 !important;
+    right: auto !important;
+    display: none !important;
+}
+
+.filter-dropdown-menu.show {
+    display: block !important;
+}
+
+.filter-dropdown-item {
+    color: #FFFFFF;
+    padding: 12px 20px;
+    transition: all 0.3s ease;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.filter-dropdown-item:hover {
+    background: rgba(247, 236, 89, 0.1);
+    color: #F7EC59;
+    text-decoration: none;
+}
+
+.filter-dropdown-item.active {
+    background: rgba(247, 236, 89, 0.2);
+    color: #F7EC59;
+}
+
+.filter-dropdown-item i {
+    margin-right: 10px;
+    width: 16px;
+}
+
+/* ===========================================
+   TABLE STYLING
+   =========================================== */
+
+.audit-table-container {
+    background: #1A1B25;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.audit-table {
+    width: 100%;
+    margin: 0;
+    background: #1A1B25;
+    color: #FFFFFF;
+    table-layout: fixed;
+}
+
+.audit-table thead {
+    background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);
+    border-bottom: 2px solid #F7EC59;
+}
+
+.audit-table thead th {
+    color: #F7EC59;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    padding: 20px 15px;
+    border: none;
+}
+
+.audit-table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.audit-table tbody tr:hover {
+    background: rgba(247, 236, 89, 0.1);
+    transform: translateX(5px);
+}
+
+.audit-table tbody td {
+    padding: 20px 15px;
+    vertical-align: middle;
+    border: none;
+    color: #FFFFFF;
+}
+
+/* Badge Styling */
+.audit-badge {
+    padding: 8px 16px;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+    min-width: 60px;
+}
+
+.audit-badge-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.audit-badge-success {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    color: #ffffff;
+}
+
+.audit-badge-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: #1A1B25;
+}
+
+.audit-badge-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: #ffffff;
+}
+
+.audit-badge-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
+    color: #ffffff;
+}
+
+.audit-badge-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: #ffffff;
+}
+
+/* ===========================================
+   BUTTON STYLING
+   =========================================== */
+
+.audit-btn {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    text-align: center;
+}
+
+.audit-btn-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.audit-btn-primary:hover {
+    background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.5);
+    color: #ffffff;
+}
+
+.audit-btn-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: #ffffff;
+}
+
+.audit-btn-secondary:hover {
+    background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+    transform: translateY(-1px);
+    color: #ffffff;
+}
+
+.audit-btn-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: #ffffff;
+}
+
+.audit-btn-info:hover {
+    background: linear-gradient(135deg, #138496 0%, #117a8b 100%);
+    transform: translateY(-1px);
+    color: #ffffff;
+}
+
+.audit-btn-sm {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+}
+
+/* ===========================================
+   ALERT STYLING
+   =========================================== */
+
+.audit-alert {
+    border-radius: 15px;
+    border: none;
+    padding: 20px 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    animation: slideInDown 0.3s ease-out;
+}
+
+.audit-alert-success {
+    background: linear-gradient(135deg, #6BF178 0%, #4ECDC4 100%);
+    color: #1A1B25;
+    border-left: 4px solid #4ECDC4;
+}
+
+.audit-alert-danger {
+    background: linear-gradient(135deg, #FF5964 0%, #E53E3E 100%);
+    color: #FFFFFF;
+    border-left: 4px solid #E53E3E;
+}
+
+.audit-alert-warning {
+    background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+    color: #1A1B25;
+    border-left: 4px solid #E6D547;
+}
+
+/* ===========================================
+   PAGINATION
+   =========================================== */
+
+.pagination-container {
+    background: #0D1821;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    margin-top: 20px;
+}
+
+.pagination {
+    margin-bottom: 15px;
+}
+
+.pagination .page-link {
+    border: none;
+    color: #FFFFFF;
+    padding: 10px 15px;
+    margin: 0 2px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: #1A1B25;
+}
+
+.pagination .page-link:hover {
+    background: #F7EC59;
+    color: #1A1B25;
+    transform: translateY(-1px);
+}
+
+.pagination .page-item.active .page-link {
+    background: #F7EC59;
+    border-color: #F7EC59;
+    color: #1A1B25;
+}
+
+.pagination-info {
+    color: #B0B0B0;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+/* ===========================================
+   MODALS
+   =========================================== */
+
+.audit-modal .modal-content {
+    background: #1A1B25;
+    border: 1px solid #F7EC59;
+    border-radius: 10px;
+    color: #ffffff;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+/* Simple Info Card for Modal */
+.simple-info-card {
+    background: transparent;
+    padding: 0;
+}
+
+.info-row {
+    display: flex;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    color: #F7EC59;
+    font-weight: 600;
+    min-width: 120px;
+    font-size: 0.9rem;
+}
+
+.info-value {
+    color: #ffffff;
+    font-size: 0.9rem;
+    flex: 1;
+}
+
+.badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.badge-primary {
+    background: #007bff;
+    color: #ffffff;
+}
+
+.audit-modal .modal-header {
+    background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);
+    border-bottom: 2px solid #F7EC59;
+    border-radius: 15px 15px 0 0;
+    padding: 20px 25px;
+}
+
+.audit-modal .modal-title {
+    color: #F7EC59;
+    font-weight: 600;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.audit-modal .modal-title i {
+    color: #F7EC59;
+    font-size: 1.3rem;
+}
+
+.audit-modal .btn-close {
+    filter: invert(1);
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.audit-modal .btn-close:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.audit-modal .modal-body {
+    background: #1A1B25;
+    padding: 25px;
+}
+
+/* Modal Info Sections */
+.audit-modal .info-section {
+    margin-bottom: 25px;
+}
+
+.audit-modal .info-section-title {
+    color: #F7EC59;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.audit-modal .info-section-title i {
+    color: #F7EC59;
+    font-size: 1rem;
+}
+
+.audit-modal .info-table {
+    background: transparent;
+    color: #ffffff;
+    border: none;
+    width: 100%;
+}
+
+.audit-modal .info-table tr {
+    border-bottom: 1px solid rgba(247, 236, 89, 0.2);
+    transition: all 0.3s ease;
+}
+
+.audit-modal .info-table tr:hover {
+    background: rgba(247, 236, 89, 0.05);
+}
+
+.audit-modal .info-table tr:last-child {
+    border-bottom: none;
+}
+
+.audit-modal .info-table td {
+    border: none;
+    padding: 8px 0;
+    vertical-align: top;
+}
+
+.audit-modal .info-label {
+    color: #B0B0B0;
+    font-weight: 500;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    width: 100px;
+    min-width: 100px;
+}
+
+.audit-modal .info-value {
+    color: #ffffff;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.audit-modal .info-code {
+    color: #F7EC59;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    background: rgba(247, 236, 89, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.audit-modal .info-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.audit-modal .info-badge-primary {
+    background: #007bff;
+    color: #ffffff;
+}
+
+.audit-modal .info-user-name {
+    color: #ffffff;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.audit-modal .info-user-id {
+    color: #B0B0B0;
+    font-size: 0.8rem;
+    font-family: 'Courier New', monospace;
+    margin-top: 2px;
+}
+
+.audit-modal .info-timestamp {
+    color: #B0B0B0;
+    font-size: 0.85rem;
+}
+
+.audit-modal .info-description {
+    color: #ffffff;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.audit-modal .form-label {
+    color: #F7EC59;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.audit-modal .form-control,
+.audit-modal .form-select {
+    background: #2A2B35;
+    border: 1px solid rgba(247, 236, 89, 0.3);
+    border-radius: 8px;
+    color: #ffffff;
+    padding: 12px 15px;
+}
+
+.audit-modal .form-control:focus,
+.audit-modal .form-select:focus {
+    border-color: #F7EC59;
+    box-shadow: 0 0 0 0.2rem rgba(247, 236, 89, 0.25);
+    background: #3A3B45;
+}
+
+.audit-modal .form-control::placeholder {
+    color: #B0B0B0;
+}
+
+/* ===========================================
+   EMPTY STATE
+   =========================================== */
+
+.audit-empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: #1A1B25;
+    border-radius: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.audit-empty-state i {
+    font-size: 4rem;
+    color: rgba(255, 255, 255, 0.3);
+    margin-bottom: 20px;
+}
+
+.audit-empty-state h4 {
+    color: #FFFFFF;
+    margin-bottom: 15px;
+}
+
+.audit-empty-state p {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 25px;
+}
+
+.no-audit-logs-message {
+    text-align: center;
+    padding: 60px 20px;
+    background: #1A1B25;
+    border-radius: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* ===========================================
+   ANIMATIONS
+   =========================================== */
+
+@keyframes slideInDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN
+   =========================================== */
+
+@media (max-width: 768px) {
+    .audit-dashboard-title {
+        font-size: 2rem;
+    }
+    
+    .audit-table-container {
+        overflow-x: auto;
+    }
+    
+    .audit-table {
+        min-width: 600px;
+    }
+    
+    .search-input-group {
+        max-width: 100%;
+    }
+    
+    .audit-btn {
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 10px;
+    }
+}
+
+@media (max-width: 576px) {
+    .audit-logs-container {
+        padding: 10px;
+    }
+    
+    .audit-dashboard-header {
+        padding: 20px;
+    }
+    
+    .audit-stat-card {
+        padding: 20px;
+    }
+    
+    .audit-card-header {
+        padding: 15px 20px;
+    }
+}
