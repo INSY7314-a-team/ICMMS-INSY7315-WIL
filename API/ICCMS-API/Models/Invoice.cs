@@ -57,11 +57,8 @@ namespace ICCMS_API.Models
         [FirestoreProperty("taxTotal")]
         public double TaxTotal { get; set; }
 
-        [FirestoreProperty("subtotalWithMarkup")]
-        public double SubtotalWithMarkup { get; set; }
-
-        [FirestoreProperty("taxTotalWithMarkup")]
-        public double TaxTotalWithMarkup { get; set; }
+        [FirestoreProperty("markupRate")]
+        public double MarkupRate { get; set; } = 1.0; // Default to no markup (1.0 = 100%)
 
         [FirestoreProperty("currency")]
         public string Currency { get; set; } = "ZAR";
