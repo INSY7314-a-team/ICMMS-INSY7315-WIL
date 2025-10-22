@@ -1,0 +1,331 @@
+@model ICCMS_Web.Models.ContractorDashboardViewModel
+@{
+    ViewData["Title"] = "Contractor Dashboard";
+    Layout = "_Layout";
+}
+
+@await Html.PartialAsync("_TaskDetailsModal")
+@await Html.PartialAsync("_ProgressReportModal")
+@await Html.PartialAsync("_CompletionRequestModal")
+
+<div class="contractor-dashboard-container">
+    <!-- Header Section -->
+    <div class="dashboard-header construction-border">
+        <h1 class="dashboard-title">
+            <i class="fa-solid fa-hard-hat me-2"></i>@User.Identity.Name Dashboard
+        </h1>
+        <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Manage your assigned tasks and track progress
+        </p>
+    </div>
+
+    <!-- Stats Summary Cards -->
+    <div class="stats-container">
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-tasks"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-number">@Model.TotalTasks</h3>
+                        <p class="stat-label">Total Tasks</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon in-progress">
+                        <i class="fa-solid fa-play"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-number">@Model.InProgressTasks</h3>
+                        <p class="stat-label">In Progress</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon completed">
+                        <i class="fa-solid fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-number">@Model.CompletedTasks</h3>
+                        <p class="stat-label">Completed</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon overdue">
+                        <i class="fa-solid fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-number">@Model.OverdueTasks</h3>
+                        <p class="stat-label">Overdue</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter Controls -->
+    <div class="TasksContainer">
+        <div class="dashboard-controls">
+            <div class="search-section">
+                <div class="search-input-group">
+                    <input type="text" id="searchInput" class="search-input"
+                        placeholder="Search tasks by name or project..." value="">
+                    <button type="button" id="searchBtn" class="search-btn">
+                        <i class="fa-solid fa-search"></i>
+                    </button>
+                    <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Enhanced Filters Section -->
+            <div class="filter-section">
+                <div class="d-flex justify-content-center mb-3">
+                    <button type="button" class="filter-toggle-btn" onclick="toggleFilters()">
+                        <i class="fa-solid fa-sliders-h me-2"></i>
+                        <span id="filterToggleText">Show Filters</span>
+                        <i class="fa-solid fa-chevron-down ms-2" id="filterToggleIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Enhanced Filters Panel -->
+            <div class="filters-panel construction-border-thin" id="filtersPanel" style="display: none;">
+                <div class="filters-container">
+                    <!-- Quick Status Filters -->
+                    <div class="filter-group">
+                        <div class="filter-group-header">
+                            <h6 class="mb-0">Task Status</h6>
+                        </div>
+                        <div class="status-filters">
+                            @foreach (var status in Model.AvailableStatuses)
+                            {
+                                var icon = status == "All" ? "fa-list"
+                                : status == "Pending" ? "fa-clock"
+                                : status == "In Progress" ? "fa-play"
+                                : status == "Awaiting Approval" ? "fa-hourglass-half"
+                                : status == "Completed" ? "fa-check-circle"
+                                : status == "Overdue" ? "fa-exclamation-triangle" : "fa-list";
+                                <a href="@Url.Action("Dashboard")" class="status-filter-btn" data-status="@status">
+                                    <i class="fa-solid @icon me-2"></i>
+                                    @status
+                                </a>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Advanced Filters -->
+                    <div class="filter-group">
+                        <div class="filter-group-header">
+                            <h6 class="mb-0">Filters</h6>
+                        </div>
+                        <div class="advanced-filters-grid">
+                            <div class="filter-item">
+                                <label class="filter-label">Start Date From</label>
+                                <input type="date" class="filter-input" id="startDateFrom" value="">
+                            </div>
+                            <div class="filter-item">
+                                <label class="filter-label">Start Date To</label>
+                                <input type="date" class="filter-input" id="startDateTo" value="">
+                            </div>
+                            <div class="filter-item">
+                                <label class="filter-label">Due Date From</label>
+                                <input type="date" class="filter-input" id="dueDateFrom" value="">
+                            </div>
+                            <div class="filter-item">
+                                <label class="filter-label">Due Date To</label>
+                                <input type="date" class="filter-input" id="dueDateTo" value="">
+                            </div>
+                        </div>
+                        <div class="advanced-filters-grid">
+                            <div class="filter-item">
+                                <label class="filter-label">Sort By</label>
+                                <select class="filter-select" id="sortBy">
+                                    <option value="dueDate">Due Date</option>
+                                    <option value="startDate">Start Date</option>
+                                    <option value="projectName">Project Name</option>
+                                    <option value="status">Status</option>
+                                    <option value="priority">Priority</option>
+                                </select>
+                            </div>
+                            <div class="filter-item">
+                                <label class="filter-label">Sort Order</label>
+                                <select class="filter-select" id="sortOrder">
+                                    <option value="asc">Ascending</option>
+                                    <option value="desc">Descending</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter Actions -->
+                    <div class="filter-actions">
+                        <button type="button" class="filter-action-btn primary" onclick="applyAdvancedFilters()">
+                            <i class="fa-solid fa-search me-2"></i>Apply Filters
+                        </button>
+                        <button type="button" class="filter-action-btn secondary" onclick="clearAdvancedFilters()">
+                            <i class="fa-solid fa-times me-2"></i>Clear All
+                        </button>
+                        <button type="button" class="filter-action-btn tertiary" onclick="toggleFilters()">
+                            <i class="fa-solid fa-chevron-up me-2"></i>Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Projects Section -->
+        <div class="main-projects-section">
+            <div class="section-header construction-border-thin">
+                <div class="section-header-content">
+                    <h3 class="section-title">
+                        <i class="fa-solid fa-folder-open me-2"></i>My Projects
+                        <span class="badge badge-secondary">@Model.Projects.Count</span>
+                    </h3>
+                    <div class="section-actions">
+                        <div class="sort-controls">
+                            <label for="projectSortBy">Sort by</label>
+                            <select id="projectSortBy" class="form-select">
+                                <option value="name">Project Name</option>
+                                <option value="progress">Progress</option>
+                                <option value="budget">Budget</option>
+                                <option value="tasks">Number of Tasks</option>
+                                <option value="overdue">Overdue Tasks</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary btn-sm" id="refreshProjectsBtn">
+                            <i class="fa-solid fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="projectsContainer" class="projects-container">
+                @await Html.PartialAsync("_ProjectsList", Model.Projects)
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include dashboard CSS directly -->
+<link rel="stylesheet" href="~/css/contractor-dashboard.css" />
+<link rel="stylesheet" href="~/css/contractor-task-cards.css" />
+<link rel="stylesheet" href="~/css/contractor-collapsible-tasks.css" />
+<link rel="stylesheet" href="~/css/contractor-project-cards.css" />
+
+@section Scripts {
+    <script src="~/js/contractor-dashboard.js"></script>
+    <script src="~/js/contractor-task-actions.js"></script>
+    <script src="~/js/contractor-collapsible-tasks.js"></script>
+    <script src="~/js/contractor-project-cards.js"></script>
+
+    <script>
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeContractorDashboard();
+        });
+
+        function toggleFilters() {
+            const panel = document.getElementById('filtersPanel');
+            const toggleText = document.getElementById('filterToggleText');
+            const toggleIcon = document.getElementById('filterToggleIcon');
+
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                toggleText.textContent = 'Hide Filters';
+                toggleIcon.classList.remove('fa-chevron-down');
+                toggleIcon.classList.add('fa-chevron-up');
+            } else {
+                panel.style.display = 'none';
+                toggleText.textContent = 'Show Filters';
+                toggleIcon.classList.remove('fa-chevron-up');
+                toggleIcon.classList.add('fa-chevron-down');
+            }
+        }
+
+        async function applyAdvancedFilters() {
+            try {
+                const status = document.querySelector('.status-filter-btn.active')?.getAttribute('data-status') || '';
+                const startDateFrom = document.getElementById('startDateFrom').value;
+                const startDateTo = document.getElementById('startDateTo').value;
+                const dueDateFrom = document.getElementById('dueDateFrom').value;
+                const dueDateTo = document.getElementById('dueDateTo').value;
+                const sortBy = document.getElementById('sortBy').value;
+                const sortOrder = document.getElementById('sortOrder').value;
+
+                const params = new URLSearchParams();
+                if (status && status !== 'All') params.set('status', status);
+                if (startDateFrom) params.set('startDateFrom', startDateFrom);
+                if (startDateTo) params.set('startDateTo', startDateTo);
+                if (dueDateFrom) params.set('dueDateFrom', dueDateFrom);
+                if (dueDateTo) params.set('dueDateTo', dueDateTo);
+                if (sortBy) params.set('sortBy', sortBy);
+                if (sortOrder) params.set('sortOrder', sortOrder);
+
+                const res = await fetch(`/Contractor/GetAssignedTasks?${params.toString()}`);
+                if (!res.ok) throw new Error('Filter failed');
+                const tasks = await res.json();
+
+                // Update task grid
+                const tasksGrid = document.getElementById('tasksGrid');
+                if (tasksGrid) {
+                    // Render tasks using the same partial
+                    // This would need to be implemented with server-side rendering
+                    console.log('Filtered tasks:', tasks);
+                }
+            } catch (e) {
+                console.error('Filter error:', e);
+                showToast('Failed to apply filters', 'error');
+            }
+        }
+
+        async function clearAdvancedFilters() {
+            document.getElementById('startDateFrom').value = '';
+            document.getElementById('startDateTo').value = '';
+            document.getElementById('dueDateFrom').value = '';
+            document.getElementById('dueDateTo').value = '';
+            document.getElementById('sortBy').value = 'dueDate';
+            document.getElementById('sortOrder').value = 'asc';
+
+            // Remove active status filter
+            document.querySelectorAll('.status-filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            try {
+                const res = await fetch('/Contractor/GetAssignedTasks');
+                if (!res.ok) throw new Error('Clear filters failed');
+                const tasks = await res.json();
+                console.log('All tasks:', tasks);
+            } catch (e) {
+                console.error('Clear filters error:', e);
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-bg-${type === 'error' ? 'danger' : type} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                                                    <div class="d-flex">
+                                                        <div class="toast-body">${message}</div>
+                                                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                                                    </div>
+                                                `;
+
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+
+            toast.addEventListener('hidden.bs.toast', () => {
+                document.body.removeChild(toast);
+            });
+        }
+    </script>
+}

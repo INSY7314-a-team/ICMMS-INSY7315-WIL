@@ -1320,5 +1320,169 @@ namespace ICCMS_API.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
+        // ===================== PROGRESS REPORT & COMPLETION APPROVAL ENDPOINTS =====================
+
+        [HttpGet("progress-reports/pending")]
+        public async Task<ActionResult<List<ProgressReport>>> GetPendingProgressReports()
+        {
+            try
+            {
+                var progressReports = await _firebaseService.GetCollectionAsync<ProgressReport>(
+                    "progressReports"
+                );
+                var pendingReports = progressReports
+                    .Where(pr => pr.Status == "Submitted")
+                    .OrderBy(pr => pr.SubmittedAt)
+                    .ToList();
+
+                return Ok(pendingReports);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("progress-report/{id}/approve")]
+        public async Task<ActionResult<ProgressReport>> ApproveProgressReport(
+            string id,
+            [FromBody] object approvalData
+        )
+        {
+            try
+            {
+                var pmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(pmId))
+                {
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
+                var report = await _firebaseService.GetDocumentAsync<ProgressReport>(
+                    "progressReports",
+                    id
+                );
+                if (report == null)
+                {
+                    return NotFound(new { error = "Progress report not found" });
+                }
+
+                // Update report status
+                report.Status = "Approved";
+                report.ReviewedBy = pmId;
+                report.ReviewedAt = DateTime.UtcNow;
+
+                await _firebaseService.UpdateDocumentAsync("progressReports", id, report);
+
+                return Ok(report);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("progress-report/{id}/reject")]
+        public async Task<ActionResult<ProgressReport>> RejectProgressReport(
+            string id,
+            [FromBody] object rejectionData
+        )
+        {
+            try
+            {
+                var pmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(pmId))
+                {
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
+                var report = await _firebaseService.GetDocumentAsync<ProgressReport>(
+                    "progressReports",
+                    id
+                );
+                if (report == null)
+                {
+                    return NotFound(new { error = "Progress report not found" });
+                }
+
+                // Update report status
+                report.Status = "Rejected";
+                report.ReviewedBy = pmId;
+                report.ReviewedAt = DateTime.UtcNow;
+                // Note: ReviewNotes would be extracted from rejectionData in a real implementation
+
+                await _firebaseService.UpdateDocumentAsync("progressReports", id, report);
+
+                return Ok(report);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("task/{taskId}/approve-completion")]
+        public async Task<ActionResult<ProjectTask>> ApproveTaskCompletion(string taskId)
+        {
+            try
+            {
+                var pmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(pmId))
+                {
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
+                var task = await _firebaseService.GetDocumentAsync<ProjectTask>("tasks", taskId);
+                if (task == null)
+                {
+                    return NotFound(new { error = "Task not found" });
+                }
+
+                // Update task status to completed
+                task.Status = "Completed";
+                task.CompletedDate = DateTime.UtcNow;
+
+                await _firebaseService.UpdateDocumentAsync("tasks", taskId, task);
+
+                return Ok(task);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("task/{taskId}/reject-completion")]
+        public async Task<ActionResult<ProjectTask>> RejectTaskCompletion(
+            string taskId,
+            [FromBody] object rejectionData
+        )
+        {
+            try
+            {
+                var pmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(pmId))
+                {
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
+                var task = await _firebaseService.GetDocumentAsync<ProjectTask>("tasks", taskId);
+                if (task == null)
+                {
+                    return NotFound(new { error = "Task not found" });
+                }
+
+                // Revert task status back to In Progress
+                task.Status = "In Progress";
+
+                await _firebaseService.UpdateDocumentAsync("tasks", taskId, task);
+
+                return Ok(task);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
     }
 }

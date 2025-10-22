@@ -1,0 +1,144 @@
+@model ICCMS_Web.Models.ContractorProjectCardDto
+
+<div class="project-card-collapsible" data-project-id="@Model.ProjectId">
+    <!-- Project Header (Always Visible) -->
+    <div class="project-card-header">
+        <div class="project-header-left">
+            <div class="project-name-section">
+                <h4 class="project-name">@Model.ProjectName</h4>
+                <div class="project-stats">
+                    <span class="project-budget">
+                        <i class="fa-solid fa-dollar-sign"></i>
+                        @Model.ProjectBudget.ToString("C")
+                    </span>
+                    <span class="project-progress">
+                        <i class="fa-solid fa-chart-line"></i>
+                        @Model.OverallProgress%
+                    </span>
+                </div>
+            </div>
+            <div class="project-summary">
+                <span class="task-count">
+                    <i class="fa-solid fa-tasks"></i>
+                    @Model.TotalTasks tasks
+                </span>
+                <span class="completed-count">
+                    <i class="fa-solid fa-check-circle"></i>
+                    @Model.CompletedTasks completed
+                </span>
+                <span class="in-progress-count">
+                    <i class="fa-solid fa-play"></i>
+                    @Model.InProgressTasks in progress
+                </span>
+            </div>
+        </div>
+        <div class="project-header-right">
+            @if (Model.OverdueTasks > 0)
+            {
+                <div class="overdue-indicator">
+                    <div class="red-dot">
+                        <span class="overdue-count">@Model.OverdueTasks</span>
+                    </div>
+                </div>
+            }
+            <div class="project-collapse-icon">
+                <i class="fa-solid fa-chevron-down"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Details (Collapsible Content) -->
+    <div class="project-card-content" id="project-content-@Model.ProjectId" style="display: none;">
+        <div class="project-details-grid">
+            <!-- Project Overview -->
+            <div class="project-detail-section">
+                <h6><i class="fa-solid fa-info-circle"></i> Project Overview</h6>
+                <div class="detail-row">
+                    <span class="detail-label">Project ID:</span>
+                    <span class="detail-value">@Model.ProjectId</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Budget:</span>
+                    <span class="detail-value">@Model.ProjectBudget.ToString("C")</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Overall Progress:</span>
+                    <span class="detail-value">@Model.OverallProgress%</span>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: @Model.OverallProgress%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Task Statistics -->
+            <div class="project-detail-section">
+                <h6><i class="fa-solid fa-chart-bar"></i> Task Statistics</h6>
+                <div class="task-stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-number">@Model.TotalTasks</span>
+                        <span class="stat-label">Total Tasks</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">@Model.CompletedTasks</span>
+                        <span class="stat-label">Completed</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">@Model.InProgressTasks</span>
+                        <span class="stat-label">In Progress</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">@Model.OverdueTasks</span>
+                        <span class="stat-label">Overdue</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tasks List -->
+        <div class="project-tasks-section">
+            <h6><i class="fa-solid fa-tasks"></i> Assigned Tasks</h6>
+            <div class="tasks-list">
+                @foreach (var task in Model.Tasks)
+                {
+                    <div class="task-item @(task.IsOverdue ? "overdue" : "")">
+                        <div class="task-item-header">
+                            <div class="task-item-left">
+                                <span class="task-item-name">@task.Name</span>
+                                <span class="task-item-dates">
+                                    @task.StartDate.ToString("dd/MM/yyyy") - @task.DueDate.ToString("dd/MM/yyyy")
+                                </span>
+                            </div>
+                            <div class="task-item-right">
+                                <span class="task-item-status @task.Status.Replace(" ", "-").ToLower()">@task.Status</span>
+                                <span class="task-item-priority priority-@task.Priority.ToLower()">@task.Priority</span>
+                                @if (task.IsOverdue)
+                                {
+                                    <span class="overdue-badge">OVERDUE</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="task-item-actions">
+                            <button class="btn btn-xs btn-info view-task-details" data-task-id="@task.TaskId">
+                                <i class="fa-solid fa-eye"></i> Details
+                            </button>
+                            @if (task.CanSubmitProgress)
+                            {
+                                <button class="btn btn-xs btn-primary submit-progress" data-task-id="@task.TaskId">
+                                    <i class="fa-solid fa-upload"></i> Progress
+                                </button>
+                            }
+                            @if (task.CanRequestCompletion)
+                            {
+                                <button class="btn btn-xs btn-success request-completion" data-task-id="@task.TaskId">
+                                    <i class="fa-solid fa-check"></i> Complete
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -250,6 +250,11 @@
                         <li><a asp-controller="ProjectManager" asp-action="Dashboard"><i
                                     class="fa-solid fa-gauge"></i><span>Dashboard</span></a></li>
                     }
+                    if (User.IsInRole("Contractor") || User.IsInRole("Tester"))
+                    {
+                        <li><a asp-controller="Contractor" asp-action="Dashboard"><i
+                                    class="fa-solid fa-hard-hat"></i><span>My Tasks</span></a></li>
+                    }
                     if (User.IsInRole("Admin"))
                     {
                         <li><a asp-controller="Users" asp-action="Index"><i class="fa-solid fa-users"></i><span>Users</span></a>

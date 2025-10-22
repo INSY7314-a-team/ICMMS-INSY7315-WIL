@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
 using System.Text.Json;
 using ICCMS_Web.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ICCMS_Web.Controllers
 {
@@ -34,34 +34,36 @@ namespace ICCMS_Web.Controllers
 
                 // Clear any existing headers to avoid conflicts
                 _httpClient.DefaultRequestHeaders.Clear();
-                
+
                 // Set authorization header
-                _httpClient.DefaultRequestHeaders.Authorization = 
+                _httpClient.DefaultRequestHeaders.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", firebaseToken);
 
                 // Get audit logs from API
                 var response = await _httpClient.GetAsync($"{_apiBaseUrl}/api/auditlogs?limit=100");
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsStringAsync();
-                    var logs = JsonSerializer.Deserialize<List<AuditLogViewModel>>(content, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                    
+                    var logs = JsonSerializer.Deserialize<List<AuditLogViewModel>>(
+                        content,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
                     TempData["Success"] = $"Successfully retrieved {logs?.Count ?? 0} audit logs";
                     return View(logs ?? new List<AuditLogViewModel>());
                 }
                 else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
-                    TempData["Error"] = "Authentication failed. Your session may have expired. Please log in again.";
+                    TempData["Error"] =
+                        "Authentication failed. Your session may have expired. Please log in again.";
                     return View(new List<AuditLogViewModel>());
                 }
                 else
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
-                    TempData["Error"] = $"Failed to retrieve audit logs. Status: {response.StatusCode}. Error: {errorContent}";
+                    TempData["Error"] =
+                        $"Failed to retrieve audit logs. Status: {response.StatusCode}. Error: {errorContent}";
                     return View(new List<AuditLogViewModel>());
                 }
             }
@@ -86,29 +88,46 @@ namespace ICCMS_Web.Controllers
 
                 // Clear any existing headers to avoid conflicts
                 _httpClient.DefaultRequestHeaders.Clear();
-                
-                _httpClient.DefaultRequestHeaders.Authorization = 
+
+                _httpClient.DefaultRequestHeaders.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", firebaseToken);
 
                 var json = JsonSerializer.Serialize(request);
-                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                var content = new StringContent(
+                    json,
+                    System.Text.Encoding.UTF8,
+                    "application/json"
+                );
 
                 var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/auditlogs", content);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
-                    var result = JsonSerializer.Deserialize<CreateAuditLogResponse>(responseContent, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                    
-                    return Json(new { success = true, message = "Audit log created successfully", id = result?.Id });
+                    var result = JsonSerializer.Deserialize<CreateAuditLogResponse>(
+                        responseContent,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    return Json(
+                        new
+                        {
+                            success = true,
+                            message = "Audit log created successfully",
+                            id = result?.Id,
+                        }
+                    );
                 }
                 else
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
-                    return Json(new { success = false, message = $"Failed to create audit log: {response.StatusCode}" });
+                    return Json(
+                        new
+                        {
+                            success = false,
+                            message = $"Failed to create audit log: {response.StatusCode}",
+                        }
+                    );
                 }
             }
             catch (Exception ex)
@@ -131,20 +150,20 @@ namespace ICCMS_Web.Controllers
 
                 // Clear any existing headers to avoid conflicts
                 _httpClient.DefaultRequestHeaders.Clear();
-                
-                _httpClient.DefaultRequestHeaders.Authorization = 
+
+                _httpClient.DefaultRequestHeaders.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", firebaseToken);
 
                 var response = await _httpClient.GetAsync($"{_apiBaseUrl}/api/auditlogs/types");
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsStringAsync();
-                    var types = JsonSerializer.Deserialize<List<string>>(content, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                    
+                    var types = JsonSerializer.Deserialize<List<string>>(
+                        content,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
                     return Json(new { success = true, types = types });
                 }
                 else

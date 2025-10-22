@@ -31,6 +31,7 @@ builder.Services.AddSingleton<IProjectIndexService, ProjectIndexService>();
 builder.Services.AddScoped<IEstimatesService, EstimatesService>();
 builder.Services.AddScoped<IDocumentsService, DocumentsService>();
 builder.Services.AddScoped<IQuotationsService, QuotationsService>();
+builder.Services.AddScoped<IContractorService, ContractorService>();
 
 //Register Dink To PDF for pdf
 builder.Services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));

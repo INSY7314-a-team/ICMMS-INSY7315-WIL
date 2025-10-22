@@ -1,0 +1,111 @@
+@model List<ICCMS_Web.Models.ContractorTaskDto>
+
+<div class="tasks-list-container">
+    @if (Model != null && Model.Any())
+    {
+        @foreach (var task in Model)
+        {
+            <div class="task-card-collapsible" data-task-id="@task.TaskId">
+                <!-- Task Header (Always Visible) -->
+                <div class="task-card-header" onclick="toggleTaskCard('@task.TaskId')">
+                    <div class="task-header-left">
+                        <div class="task-date-time">
+                            <i class="fa-solid fa-calendar-alt"></i>
+                            <span>@task.StartDate.ToString("dd/MM/yyyy") - @task.DueDate.ToString("dd/MM/yyyy")</span>
+                        </div>
+                        <div class="task-summary">
+                            <span class="task-name">@task.Name</span>
+                            <span class="task-project">• @task.ProjectName</span>
+                        </div>
+                    </div>
+                    <div class="task-header-right">
+                        <div class="task-status-badge @task.Status.Replace(" ", "-").ToLower()">
+                            @task.Status
+                        </div>
+                        <div class="task-priority-badge priority-@task.Priority.ToLower()">
+                            @task.Priority
+                        </div>
+                        <div class="task-collapse-icon">
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Task Details (Collapsible Content) -->
+                <div class="task-card-content" id="task-content-@task.TaskId" style="display: none;">
+                    <div class="task-details-grid">
+                        <div class="task-detail-section">
+                            <h6><i class="fa-solid fa-info-circle"></i> Task Information</h6>
+                            <div class="detail-row">
+                                <span class="detail-label">Description:</span>
+                                <span class="detail-value">@task.Description</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Project Budget:</span>
+                                <span class="detail-value">@task.ProjectBudget.ToString("C")</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Estimated Hours:</span>
+                                <span class="detail-value">@task.EstimatedHours hours</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Actual Hours:</span>
+                                <span class="detail-value">@task.ActualHours hours</span>
+                            </div>
+                        </div>
+
+                        <div class="task-detail-section">
+                            <h6><i class="fa-solid fa-chart-line"></i> Progress</h6>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: @task.Progress%"></div>
+                                </div>
+                                <span class="progress-text">@task.Progress% Complete</span>
+                            </div>
+                            @if (task.IsOverdue)
+                            {
+                                <div class="overdue-warning">
+                                    <i class="fa-solid fa-exclamation-triangle"></i>
+                                    <span>This task is overdue by @task.DaysUntilDue days</span>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="task-detail-section">
+                            <h6><i class="fa-solid fa-tools"></i> Actions</h6>
+                            <div class="task-actions">
+                                <button class="btn btn-sm btn-info view-details-btn" data-task-id="@task.TaskId">
+                                    <i class="fa-solid fa-eye"></i> View Details
+                                </button>
+                                @if (task.CanSubmitProgress)
+                                {
+                                    <button class="btn btn-sm btn-primary submit-progress-btn" data-task-id="@task.TaskId">
+                                        <i class="fa-solid fa-upload"></i> Submit Progress
+                                    </button>
+                                }
+                                @if (task.CanRequestCompletion)
+                                {
+                                    <button class="btn btn-sm btn-success request-completion-btn" data-task-id="@task.TaskId">
+                                        <i class="fa-solid fa-check"></i> Request Completion
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="no-tasks-message">
+            <div class="text-center py-5">
+                <i class="fa-solid fa-clipboard-list fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No tasks assigned</h4>
+                <p class="text-muted">
+                    You don't have any tasks assigned yet. Contact your project manager for task assignments.
+                </p>
+            </div>
+        </div>
+    }
+</div>

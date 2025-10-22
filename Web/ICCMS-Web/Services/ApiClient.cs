@@ -295,6 +295,20 @@ namespace ICCMS_Web.Services
         // ===========================================================
         // 🔧 CIRCUIT BREAKER HELPERS
         // ===========================================================
+
+        public void ResetCircuitBreaker(string endpoint)
+        {
+            lock (_failureCounts)
+            {
+                _logger.LogInformation(
+                    "Manually resetting circuit breaker for {Endpoint}",
+                    endpoint
+                );
+                _failureCounts.Remove(endpoint);
+                _lastFailureTimes.Remove(endpoint);
+            }
+        }
+
         private bool IsCircuitOpen(string endpoint)
         {
             lock (_failureCounts)
