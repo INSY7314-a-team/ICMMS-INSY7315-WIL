@@ -126,6 +126,15 @@
   ],
   "logs": [
     {
+      "code": "Undefined",
+      "level": "Warning",
+      "message": "Problem reading the cache file C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7315-WIL\\Web\\ICCMS-Web\\obj\\project.nuget.cache : '<' is an invalid start of a property name. Expected a '\"'. Path: $ | LineNumber: 2 | BytePositionInLine: 0.",
+      "projectPath": "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7315-WIL\\Web\\ICCMS-Web\\ICCMS-Web.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7315-WIL\\Web\\ICCMS-Web\\ICCMS-Web.csproj",
+      "targetGraphs": []
+    },
+    {
       "code": "NU1603",
       "level": "Warning",
       "message": "ICCMS-Web depends on QuestPDF (>= 2024.2.3) but QuestPDF 2024.2.3 was not found. QuestPDF 2024.3.0 was resolved instead.",
