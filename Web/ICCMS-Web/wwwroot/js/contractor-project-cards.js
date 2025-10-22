@@ -184,6 +184,14 @@ async function refreshProjects() {
 }
 
 function addTaskActionHandlers() {
+  // Handle start task
+  document.addEventListener("click", function (e) {
+    if (e.target.closest(".start-task-btn")) {
+      const taskId = e.target.closest(".start-task-btn").dataset.taskId;
+      startTask(taskId);
+    }
+  });
+
   // Handle view task details
   document.addEventListener("click", function (e) {
     if (e.target.closest(".view-task-details")) {
@@ -227,22 +235,173 @@ function addTaskActionHandlers() {
   });
 }
 
+// Start a task (update status from Pending to In Progress)
+function startTask(taskId) {
+  if (!taskId) {
+    showToast("Task ID is required", "error");
+    return;
+  }
+
+  // Show confirmation dialog
+  if (
+    !confirm(
+      "Are you sure you want to start this task? This will change the status from 'Pending' to 'In Progress'."
+    )
+  ) {
+    return;
+  }
+
+  // Show loading state on the button
+  const startBtn = document.querySelector(
+    `[data-task-id="${taskId}"].start-task-btn`
+  );
+  const originalText = startBtn.innerHTML;
+  startBtn.innerHTML =
+    '<i class="fa-solid fa-spinner fa-spin"></i> Starting...';
+  startBtn.disabled = true;
+
+  // First get the existing task to get all required fields
+  fetch(`https://localhost:7136/api/contractors/tasks/assigned`)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((tasks) => {
+      console.log("Received tasks:", tasks);
+      console.log("Looking for taskId:", taskId);
+      const task = tasks.find((t) => t.taskId === taskId);
+      if (!task) {
+        console.error(
+          "Available task IDs:",
+          tasks.map((t) => t.taskId)
+        );
+        throw new Error("Task not found in assigned tasks");
+      }
+      console.log("Found task:", task);
+
+      // Update only the status field, keep all other fields
+      const updatedTask = {
+        taskId: task.taskId,
+        projectId: task.projectId,
+        phaseId: task.phaseId,
+        name: task.name,
+        description: task.description,
+        assignedTo: task.assignedTo,
+        priority: task.priority,
+        status: "In Progress",
+        startDate: task.startDate,
+        dueDate: task.dueDate,
+        completedDate: task.completedDate,
+        progress: task.progress,
+        estimatedHours: task.estimatedHours,
+        actualHours: task.actualHours,
+      };
+
+      // Now update the task
+      return fetch(
+        `https://localhost:7136/api/contractors/update/project/task/${encodeURIComponent(
+          taskId
+        )}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include", // Include cookies for authentication
+          body: JSON.stringify(updatedTask),
+        }
+      );
+    })
+    .then((response) => {
+      if (!response.ok) {
+        return response.text().then((text) => {
+          throw new Error(
+            `HTTP error! status: ${response.status}, message: ${text}`
+          );
+        });
+      }
+      return response.json();
+    })
+    .then((data) => {
+      showToast("Task started successfully!", "success");
+
+      // Refresh the page to update the task list
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    })
+    .catch((error) => {
+      console.error("Error starting task:", error);
+      showToast("Failed to start task. Please try again.", "error");
+
+      // Reset button state
+      startBtn.innerHTML = originalText;
+      startBtn.disabled = false;
+    });
+}
+
 function viewTaskDetails(taskId) {
-  // Open task details modal
   console.log(`Viewing details for task ${taskId}`);
-  // This would integrate with existing task details modal
+
+  // Load task details and open modal
+  if (typeof loadTaskDetailsForModal === "function") {
+    loadTaskDetailsForModal(taskId);
+  } else {
+    console.warn("loadTaskDetailsForModal function not found");
+    showToast("Task details functionality not available", "warning");
+  }
 }
 
 function submitTaskProgress(taskId) {
-  // Open progress report modal
   console.log(`Submitting progress for task ${taskId}`);
-  // This would integrate with existing progress report modal
+
+  // Set current task ID for modal
+  if (typeof currentTaskId !== "undefined") {
+    currentTaskId = taskId;
+  }
+
+  // Load task details for progress modal and open it
+  if (typeof loadTaskDetailsForProgressModal === "function") {
+    loadTaskDetailsForProgressModal(taskId);
+  } else {
+    console.warn("loadTaskDetailsForProgressModal function not found");
+  }
+
+  // Open progress modal
+  const modalElement = document.getElementById("progressReportModal");
+  if (modalElement) {
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+  } else {
+    showToast("Progress report modal not found", "error");
+  }
 }
 
 function requestTaskCompletion(taskId) {
-  // Open completion request modal
   console.log(`Requesting completion for task ${taskId}`);
-  // This would integrate with existing completion request modal
+
+  // Set current task ID for modal
+  if (typeof currentTaskId !== "undefined") {
+    currentTaskId = taskId;
+  }
+
+  // Load task details for completion modal and open it
+  if (typeof loadTaskDetailsForCompletionModal === "function") {
+    loadTaskDetailsForCompletionModal(taskId);
+  } else {
+    console.warn("loadTaskDetailsForCompletionModal function not found");
+  }
+
+  // Open completion modal
+  const modalElement = document.getElementById("completionRequestModal");
+  if (modalElement) {
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+  } else {
+    showToast("Completion request modal not found", "error");
+  }
 }
 
 function viewProjectDetails(projectId) {
@@ -463,28 +622,7 @@ function loadProjectTasks(projectId) {
   console.log(`Loaded ${taskItems.length} tasks for project ${projectId}`);
 }
 
-function showToast(message, type = "info") {
-  // Create toast notification
-  const toast = document.createElement("div");
-  toast.className = `toast align-items-center text-bg-${
-    type === "error" ? "danger" : type
-  } border-0`;
-  toast.setAttribute("role", "alert");
-  toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">${message}</div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
-    `;
-
-  document.body.appendChild(toast);
-  const bsToast = new bootstrap.Toast(toast);
-  bsToast.show();
-
-  toast.addEventListener("hidden.bs.toast", () => {
-    document.body.removeChild(toast);
-  });
-}
+// showToast function is now imported from contractor-task-actions.js
 
 // Export functions for global access
 window.toggleProjectCard = toggleProjectCard;
@@ -492,6 +630,10 @@ window.sortProjects = sortProjects;
 window.refreshProjects = refreshProjects;
 window.viewProjectDetails = viewProjectDetails;
 window.viewAllTasks = viewAllTasks;
+window.startTask = startTask;
+window.viewTaskDetails = viewTaskDetails;
+window.submitTaskProgress = submitTaskProgress;
+window.requestTaskCompletion = requestTaskCompletion;
 
 // Debug function to test project card expansion
 window.testProjectCard = function () {

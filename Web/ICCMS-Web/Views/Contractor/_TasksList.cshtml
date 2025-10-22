@@ -74,18 +74,27 @@
                         <div class="task-detail-section">
                             <h6><i class="fa-solid fa-tools"></i> Actions</h6>
                             <div class="task-actions">
-                                <button class="btn btn-sm btn-info view-details-btn" data-task-id="@task.TaskId">
+                                @if (task.Status == "Pending")
+                                {
+                                    <button class="btn btn-sm btn-warning start-task-btn" data-task-id="@task.TaskId">
+                                        <i class="fa-solid fa-play"></i> Start Task
+                                    </button>
+                                }
+                                <button class="btn btn-sm btn-info view-details-btn" data-bs-toggle="modal"
+                                    data-bs-target="#taskDetailsModal" data-task-id="@task.TaskId">
                                     <i class="fa-solid fa-eye"></i> View Details
                                 </button>
-                                @if (task.CanSubmitProgress)
+                                @if (task.CanSubmitProgress && task.Status != "Pending")
                                 {
-                                    <button class="btn btn-sm btn-primary submit-progress-btn" data-task-id="@task.TaskId">
+                                    <button class="btn btn-sm btn-primary submit-progress-btn" data-bs-toggle="modal"
+                                        data-bs-target="#progressReportModal" data-task-id="@task.TaskId">
                                         <i class="fa-solid fa-upload"></i> Submit Progress
                                     </button>
                                 }
-                                @if (task.CanRequestCompletion)
+                                @if (task.CanRequestCompletion && task.Status != "Pending")
                                 {
-                                    <button class="btn btn-sm btn-success request-completion-btn" data-task-id="@task.TaskId">
+                                    <button class="btn btn-sm btn-success request-completion-btn" data-bs-toggle="modal"
+                                        data-bs-target="#completionRequestModal" data-task-id="@task.TaskId">
                                         <i class="fa-solid fa-check"></i> Request Completion
                                     </button>
                                 }
