@@ -204,27 +204,37 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpPost("create/maintenanceRequest")]
-        public async Task<ActionResult> CreateMaintenanceRequest(
-            [FromBody] MaintenanceRequest maintenanceRequest
-        )
+        public async Task<ActionResult> CreateMaintenanceRequest([FromBody] MaintenanceRequest maintenanceRequest)
         {
             try
             {
                 maintenanceRequest.ClientId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 maintenanceRequest.Status = "Pending";
                 maintenanceRequest.CreatedAt = DateTime.UtcNow;
-                var newMaintenanceRequest =
-                    await _firebaseService.AddDocumentAsync<MaintenanceRequest>(
-                        "maintenanceRequests",
-                        maintenanceRequest
-                    );
-                return Ok(new { maintenanceRequestId = newMaintenanceRequest });
+
+                // ✅ Use existing ID if provided, else generate one
+                if (string.IsNullOrWhiteSpace(maintenanceRequest.MaintenanceRequestId))
+                    maintenanceRequest.MaintenanceRequestId = Guid.NewGuid().ToString("N");
+
+                // ✅ Use your existing Firestore service method
+                await _firebaseService.AddDocumentWithIdAsync(
+                    "maintenanceRequests",
+                    maintenanceRequest.MaintenanceRequestId,
+                    maintenanceRequest
+                );
+
+                Console.WriteLine($"✅ Created maintenance request with Firestore ID = {maintenanceRequest.MaintenanceRequestId}");
+
+                return Ok(new { maintenanceRequestId = maintenanceRequest.MaintenanceRequestId });
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"🔥 Error creating maintenance request: {ex.Message}");
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
+
 
         [HttpPost("pay/invoice/{id}")]
         public async Task<ActionResult> PayInvoice(string id, [FromBody] Payment payment)

@@ -207,7 +207,38 @@ namespace ICCMS_Web.Controllers
                 return RedirectToAction("Index");
             }
         }
+        
 
+        public async Task<IActionResult> MaintenanceRequestDetails(string id)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(id))
+                {
+                    TempData["ErrorMessage"] = "Invalid maintenance request ID.";
+                    return RedirectToAction("Index");
+                }
+
+                var request = await _apiClient.GetAsync<MaintenanceRequestDto>(
+                    $"/api/clients/maintenanceRequest/{id}",
+                    User
+                );
+
+                if (request != null)
+                {
+                    return View(request);
+                }
+
+                TempData["ErrorMessage"] = "Failed to fetch maintenance request details.";
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching maintenance request details for ID {Id}", id);
+                TempData["ErrorMessage"] = $"Error: {ex.Message}";
+                return RedirectToAction("Index");
+            }
+        }
 
 
         public async Task<IActionResult> QuotationDetails(string id)
