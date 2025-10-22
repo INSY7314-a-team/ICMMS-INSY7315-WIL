@@ -27,13 +27,23 @@ namespace ICCMS_Web.Services
             );
         }
 
-        public Task<QuotationDto?> SendToClientAsync(string quotationId, ClaimsPrincipal user)
+        public async Task<QuotationDto?> SendToClientAsync(string quotationId, ClaimsPrincipal user)
         {
-            return _apiClient.PostAsync<QuotationDto>(
+            var result = await _apiClient.PostAsync<QuotationDto>(
                 $"/api/quotations/{quotationId}/send-to-client",
                 new { },
                 user
             );
+
+            // ✅ Handle empty success response
+            if (result == null)
+            {
+                Console.WriteLine($"⚠️ API returned empty response for quotation {quotationId} — assuming success.");
+                return new QuotationDto { QuotationId = quotationId, Status = "SentToClient" };
+            }
+
+            return result;
         }
+
     }
 }
