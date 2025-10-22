@@ -261,7 +261,7 @@ function startTask(taskId) {
   startBtn.disabled = true;
 
   // First get the existing task to get all required fields
-  fetch(`https://localhost:7136/api/contractors/tasks/assigned`)
+  fetch(`/Contractor/GetAssignedTasks`)
     .then((response) => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -300,19 +300,17 @@ function startTask(taskId) {
       };
 
       // Now update the task
-      return fetch(
-        `https://localhost:7136/api/contractors/update/project/task/${encodeURIComponent(
-          taskId
-        )}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include", // Include cookies for authentication
-          body: JSON.stringify(updatedTask),
-        }
-      );
+      // Use the Web controller endpoint which handles authentication properly
+      return fetch(`/Contractor/UpdateTaskStatus`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          taskId: taskId,
+          status: "In Progress",
+        }),
+      });
     })
     .then((response) => {
       if (!response.ok) {
@@ -622,7 +620,10 @@ function loadProjectTasks(projectId) {
   console.log(`Loaded ${taskItems.length} tasks for project ${projectId}`);
 }
 
-// showToast function is now imported from contractor-task-actions.js
+// Toast functionality removed - using console logging instead
+function showToast(message, type = "info") {
+  console.log(`📢 ${type.toUpperCase()}: ${message}`);
+}
 
 // Export functions for global access
 window.toggleProjectCard = toggleProjectCard;

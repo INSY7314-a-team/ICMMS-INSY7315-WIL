@@ -1,8 +1,16 @@
+using System.Linq;
 using System.Security.Claims;
 using ICCMS_Web.Models;
 using ICCMS_Web.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+
+// Request model for updating task status
+public class UpdateTaskStatusRequest
+{
+    public string TaskId { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+}
 
 namespace ICCMS_Web.Controllers
 {
@@ -119,6 +127,120 @@ namespace ICCMS_Web.Controllers
         }
 
         /// <summary>
+        /// Project detail page showing full project information and tasks
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> ProjectDetail(string projectId)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    _logger.LogWarning("No user ID found for project detail");
+                    ViewBag.ErrorMessage = "Authentication error. Please log in again.";
+                    return View("Error");
+                }
+
+                if (string.IsNullOrEmpty(projectId))
+                {
+                    _logger.LogWarning("No project ID provided for project detail");
+                    ViewBag.ErrorMessage = "Project ID is required.";
+                    return View("Error");
+                }
+
+                _logger.LogInformation(
+                    "Loading project detail for project {ProjectId} and user {UserId}",
+                    projectId,
+                    userId
+                );
+
+                // Get the current user for API calls
+                var currentUser = _httpContextAccessor.HttpContext?.User;
+                if (currentUser == null)
+                {
+                    _logger.LogWarning("User not authenticated for project detail");
+                    ViewBag.ErrorMessage = "Authentication error. Please log in again.";
+                    return View("Error");
+                }
+
+                // Get tasks for this project first
+                var tasks = await _apiClient.GetAsync<List<ContractorTaskDto>>(
+                    "/api/contractors/tasks/assigned",
+                    currentUser
+                );
+
+                if (tasks == null || !tasks.Any())
+                {
+                    _logger.LogWarning("No tasks found for user {UserId}", userId);
+                    ViewBag.ErrorMessage = "No tasks found.";
+                    return View("Error");
+                }
+
+                var projectTasks = tasks.Where(t => t.ProjectId == projectId).ToList();
+                if (!projectTasks.Any())
+                {
+                    _logger.LogWarning(
+                        "No tasks found for project {ProjectId} and user {UserId}",
+                        projectId,
+                        userId
+                    );
+                    ViewBag.ErrorMessage = "No tasks found for this project.";
+                    return View("Error");
+                }
+
+                // Get project information from the first task (since all tasks in the project will have the same project info)
+                var firstTask = projectTasks.First();
+
+                // Create ProjectDetailDto from the task data
+                var projectDetails = new ProjectDetailDto
+                {
+                    ProjectId = firstTask.ProjectId,
+                    Name = $"Project {firstTask.ProjectId.Substring(0, 8)}", // Use a truncated project ID as name
+                    Description = $"Project tasks for {firstTask.ProjectId}",
+                    BudgetPlanned = 0, // Default values since we don't have project budget info
+                    BudgetActual = 0,
+                    Status = "Active", // Default status
+                    StartDate = projectTasks.Min(t => t.StartDate),
+                    EndDatePlanned = projectTasks.Max(t => t.DueDate),
+                    EndDateActual = null,
+                    CompletionPhase = null,
+                    ClientId = "",
+                    ClientName = "Client", // Default client name
+                    ProjectManagerId = "",
+                    ProjectManagerName = "Project Manager", // Default PM name
+                    Tasks = projectTasks,
+                    TotalTasks = projectTasks.Count,
+                    CompletedTasks = projectTasks.Count(t => t.Status == "Completed"),
+                    InProgressTasks = projectTasks.Count(t => t.Status == "In Progress"),
+                    PendingTasks = projectTasks.Count(t => t.Status == "Pending"),
+                    OverdueTasks = projectTasks.Count(t => t.IsOverdue),
+                    OverallProgress = projectTasks.Any()
+                        ? (int)projectTasks.Average(t => t.Progress)
+                        : 0,
+                };
+
+                _logger.LogInformation(
+                    "Project detail loaded for project {ProjectId} with {TaskCount} tasks",
+                    projectId,
+                    projectDetails.Tasks?.Count ?? 0
+                );
+
+                return View(projectDetails);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error loading project detail for project {ProjectId}",
+                    projectId
+                );
+                ViewBag.ErrorMessage = "Failed to load project details. Please try again later.";
+                return View("Error");
+            }
+        }
+
+        /// <summary>
         /// Get assigned tasks as JSON (for AJAX calls)
         /// </summary>
         [HttpGet]
@@ -167,6 +289,88 @@ namespace ICCMS_Web.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting task details for {TaskId}", taskId);
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Update task status (for starting tasks)
+        /// </summary>
+        [HttpPut]
+        public async Task<IActionResult> UpdateTaskStatus(
+            [FromBody] UpdateTaskStatusRequest request
+        )
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { error = "User ID not found" });
+                }
+
+                if (string.IsNullOrEmpty(request.TaskId))
+                {
+                    return BadRequest(new { error = "Task ID is required" });
+                }
+
+                if (string.IsNullOrEmpty(request.Status))
+                {
+                    return BadRequest(new { error = "Status is required" });
+                }
+
+                // Get the current user for API calls
+                var currentUser = _httpContextAccessor.HttpContext?.User;
+                if (currentUser == null)
+                {
+                    return Unauthorized(new { error = "User not authenticated" });
+                }
+
+                // Get the existing task first to ensure we have all required fields
+                var existingTasks = await _apiClient.GetAsync<List<ProjectTaskDto>>(
+                    $"/api/contractors/tasks/assigned",
+                    currentUser
+                );
+
+                if (existingTasks == null)
+                {
+                    return StatusCode(500, new { error = "Failed to get task data" });
+                }
+
+                // Find the specific task
+                var taskToUpdate = existingTasks.FirstOrDefault(t => t.TaskId == request.TaskId);
+                if (taskToUpdate == null)
+                {
+                    return NotFound(new { error = "Task not found" });
+                }
+
+                // Update only the status field
+                taskToUpdate.Status = request.Status;
+
+                // Update the task using the API client
+                var updatedTask = await _apiClient.PutAsync<ProjectTaskDto>(
+                    $"/api/contractors/update/project/task/{request.TaskId}",
+                    taskToUpdate,
+                    currentUser
+                );
+
+                if (updatedTask == null)
+                {
+                    return StatusCode(500, new { error = "Failed to update task" });
+                }
+
+                _logger.LogInformation(
+                    "Task {TaskId} status updated to {Status} by contractor {UserId}",
+                    request.TaskId,
+                    request.Status,
+                    userId
+                );
+
+                return Json(new { success = true, task = updatedTask });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating task status");
                 return StatusCode(500, new { error = ex.Message });
             }
         }

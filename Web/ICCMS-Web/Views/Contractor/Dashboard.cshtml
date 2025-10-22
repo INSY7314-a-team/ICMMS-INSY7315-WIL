@@ -10,9 +10,9 @@
 
 <div class="contractor-dashboard-container">
     <!-- Header Section -->
-    <div class="dashboard-header construction-border">
+    <div class="dashboard-header">
         <h1 class="dashboard-title">
-            <i class="fa-solid fa-hard-hat me-2"></i>@User.Identity.Name Dashboard
+            <i class="fa-solid fa-hard-hat me-2" style="color: #F7EC59;"></i>@User.Identity.Name Dashboard
         </h1>
         <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Manage your assigned tasks and track progress
         </p>
@@ -20,47 +20,58 @@
 
     <!-- Stats Summary Cards -->
     <div class="stats-container">
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="stat-card">
+        <div class="row g-2 mb-3">
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
                     <div class="stat-icon">
                         <i class="fa-solid fa-tasks"></i>
                     </div>
                     <div class="stat-content">
-                        <h3 class="stat-number">@Model.TotalTasks</h3>
-                        <p class="stat-label">Total Tasks</p>
+                        <h4 class="stat-number">@Model.TotalTasks</h4>
+                        <p class="stat-label">Total</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-card">
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon pending">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.PendingTasks</h4>
+                        <p class="stat-label">Pending</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
                     <div class="stat-icon in-progress">
                         <i class="fa-solid fa-play"></i>
                     </div>
                     <div class="stat-content">
-                        <h3 class="stat-number">@Model.InProgressTasks</h3>
+                        <h4 class="stat-number">@Model.InProgressTasks</h4>
                         <p class="stat-label">In Progress</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-card">
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
                     <div class="stat-icon completed">
                         <i class="fa-solid fa-check-circle"></i>
                     </div>
                     <div class="stat-content">
-                        <h3 class="stat-number">@Model.CompletedTasks</h3>
+                        <h4 class="stat-number">@Model.CompletedTasks</h4>
                         <p class="stat-label">Completed</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-card">
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
                     <div class="stat-icon overdue">
                         <i class="fa-solid fa-exclamation-triangle"></i>
                     </div>
                     <div class="stat-content">
-                        <h3 class="stat-number">@Model.OverdueTasks</h3>
+                        <h4 class="stat-number">@Model.OverdueTasks</h4>
                         <p class="stat-label">Overdue</p>
                     </div>
                 </div>
@@ -68,149 +79,39 @@
         </div>
     </div>
 
-    <!-- Search and Filter Controls -->
-    <div class="TasksContainer">
-        <div class="dashboard-controls">
-            <div class="search-section">
-                <div class="search-input-group">
-                    <input type="text" id="searchInput" class="search-input"
-                        placeholder="Search tasks by name or project..." value="">
-                    <button type="button" id="searchBtn" class="search-btn">
-                        <i class="fa-solid fa-search"></i>
-                    </button>
-                    <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">
-                        <i class="fa-solid fa-times"></i>
-                    </button>
+
+
+    <!-- Projects Section -->
+    <div class="main-projects-section">
+        @* <div class="section-header construction-border-thin"> *@
+        <div class="section-header-content">
+            <h3 class="section-title">
+                <i class="fa-solid fa-folder-open me-2"></i>My Projects
+                <span class="badge badge-secondary">@Model.Projects.Count</span>
+            </h3>
+            <div class="section-actions">
+                <div class="sort-controls">
+                    <label for="projectSortBy" class="sort-label">Sort by</label>
+                    <select id="projectSortBy" class="dashboard-select">
+                        <option value="name">Project Name</option>
+                        <option value="progress">Progress</option>
+                        <option value="budget">Budget</option>
+                        <option value="tasks">Number of Tasks</option>
+                        <option value="overdue">Overdue Tasks</option>
+                    </select>
                 </div>
-            </div>
-
-            <!-- Enhanced Filters Section -->
-            <div class="filter-section">
-                <div class="d-flex justify-content-center mb-3">
-                    <button type="button" class="filter-toggle-btn" onclick="toggleFilters()">
-                        <i class="fa-solid fa-sliders-h me-2"></i>
-                        <span id="filterToggleText">Show Filters</span>
-                        <i class="fa-solid fa-chevron-down ms-2" id="filterToggleIcon"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Enhanced Filters Panel -->
-            <div class="filters-panel construction-border-thin" id="filtersPanel" style="display: none;">
-                <div class="filters-container">
-                    <!-- Quick Status Filters -->
-                    <div class="filter-group">
-                        <div class="filter-group-header">
-                            <h6 class="mb-0">Task Status</h6>
-                        </div>
-                        <div class="status-filters">
-                            @foreach (var status in Model.AvailableStatuses)
-                            {
-                                var icon = status == "All" ? "fa-list"
-                                : status == "Pending" ? "fa-clock"
-                                : status == "In Progress" ? "fa-play"
-                                : status == "Awaiting Approval" ? "fa-hourglass-half"
-                                : status == "Completed" ? "fa-check-circle"
-                                : status == "Overdue" ? "fa-exclamation-triangle" : "fa-list";
-                                <a href="@Url.Action("Dashboard")" class="status-filter-btn" data-status="@status">
-                                    <i class="fa-solid @icon me-2"></i>
-                                    @status
-                                </a>
-                            }
-                        </div>
-                    </div>
-
-                    <!-- Advanced Filters -->
-                    <div class="filter-group">
-                        <div class="filter-group-header">
-                            <h6 class="mb-0">Filters</h6>
-                        </div>
-                        <div class="advanced-filters-grid">
-                            <div class="filter-item">
-                                <label class="filter-label">Start Date From</label>
-                                <input type="date" class="filter-input" id="startDateFrom" value="">
-                            </div>
-                            <div class="filter-item">
-                                <label class="filter-label">Start Date To</label>
-                                <input type="date" class="filter-input" id="startDateTo" value="">
-                            </div>
-                            <div class="filter-item">
-                                <label class="filter-label">Due Date From</label>
-                                <input type="date" class="filter-input" id="dueDateFrom" value="">
-                            </div>
-                            <div class="filter-item">
-                                <label class="filter-label">Due Date To</label>
-                                <input type="date" class="filter-input" id="dueDateTo" value="">
-                            </div>
-                        </div>
-                        <div class="advanced-filters-grid">
-                            <div class="filter-item">
-                                <label class="filter-label">Sort By</label>
-                                <select class="filter-select" id="sortBy">
-                                    <option value="dueDate">Due Date</option>
-                                    <option value="startDate">Start Date</option>
-                                    <option value="projectName">Project Name</option>
-                                    <option value="status">Status</option>
-                                    <option value="priority">Priority</option>
-                                </select>
-                            </div>
-                            <div class="filter-item">
-                                <label class="filter-label">Sort Order</label>
-                                <select class="filter-select" id="sortOrder">
-                                    <option value="asc">Ascending</option>
-                                    <option value="desc">Descending</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Filter Actions -->
-                    <div class="filter-actions">
-                        <button type="button" class="filter-action-btn primary" onclick="applyAdvancedFilters()">
-                            <i class="fa-solid fa-search me-2"></i>Apply Filters
-                        </button>
-                        <button type="button" class="filter-action-btn secondary" onclick="clearAdvancedFilters()">
-                            <i class="fa-solid fa-times me-2"></i>Clear All
-                        </button>
-                        <button type="button" class="filter-action-btn tertiary" onclick="toggleFilters()">
-                            <i class="fa-solid fa-chevron-up me-2"></i>Close
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Projects Section -->
-        <div class="main-projects-section">
-            <div class="section-header construction-border-thin">
-                <div class="section-header-content">
-                    <h3 class="section-title">
-                        <i class="fa-solid fa-folder-open me-2"></i>My Projects
-                        <span class="badge badge-secondary">@Model.Projects.Count</span>
-                    </h3>
-                    <div class="section-actions">
-                        <div class="sort-controls">
-                            <label for="projectSortBy">Sort by</label>
-                            <select id="projectSortBy" class="form-select">
-                                <option value="name">Project Name</option>
-                                <option value="progress">Progress</option>
-                                <option value="budget">Budget</option>
-                                <option value="tasks">Number of Tasks</option>
-                                <option value="overdue">Overdue Tasks</option>
-                            </select>
-                        </div>
-                        <button class="btn btn-primary btn-sm" id="refreshProjectsBtn">
-                            <i class="fa-solid fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="projectsContainer" class="projects-container">
-                @await Html.PartialAsync("_ProjectsList", Model.Projects)
+                <button class="dashboard-btn" id="refreshProjectsBtn">
+                    <i class="fa-solid fa-refresh"></i> Refresh
+                </button>
             </div>
         </div>
     </div>
+
+    <div id="projectsContainer" class="projects-container">
+        @await Html.PartialAsync("_ProjectsList", Model.Projects)
+    </div>
+</div>
+</div>
 </div>
 
 <!-- Include dashboard CSS directly -->
@@ -308,24 +209,9 @@
             }
         }
 
+        // Toast functionality removed - using console logging instead
         function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `toast align-items-center text-bg-${type === 'error' ? 'danger' : type} border-0`;
-            toast.setAttribute('role', 'alert');
-            toast.innerHTML = `
-                                                    <div class="d-flex">
-                                                        <div class="toast-body">${message}</div>
-                                                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                                                    </div>
-                                                `;
-
-            document.body.appendChild(toast);
-            const bsToast = new bootstrap.Toast(toast);
-            bsToast.show();
-
-            toast.addEventListener('hidden.bs.toast', () => {
-                document.body.removeChild(toast);
-            });
+            console.log(`📢 ${type.toUpperCase()}: ${message}`);
         }
     </script>
 }

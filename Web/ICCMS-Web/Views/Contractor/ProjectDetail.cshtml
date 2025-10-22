@@ -1,0 +1,713 @@
+@model ICCMS_Web.Models.ProjectDetailDto
+
+@{
+    ViewData["Title"] = $"Project: {Model.Name}";
+}
+
+<div class="project-detail-container">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="@Url.Action("Dashboard", "Contractor")" class="text-decoration-none">
+                    <i class="fa-solid fa-home"></i> Dashboard
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                <i class="fa-solid fa-project-diagram"></i> @Model.Name
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Project Header -->
+    <div class="project-header">
+        <div class="project-header-content">
+            <div class="project-title-section">
+                <h1 class="project-title">
+                    <i class="fa-solid fa-project-diagram"></i>
+                    @Model.Name
+                </h1>
+                <p class="project-description">@Model.Description</p>
+            </div>
+            <div class="project-status-section">
+                <div class="status-badge status-@Model.Status.Replace(" ", "-").ToLower()">
+                    @Model.Status
+                </div>
+                <div class="progress-info">
+                    <span class="progress-percentage">@Model.OverallProgress%</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: @Model.OverallProgress%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Information Grid -->
+    <div class="project-info-grid">
+        <!-- Project Details -->
+        <div class="info-card">
+            <h3><i class="fa-solid fa-info-circle"></i> Project Details</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Project ID:</span>
+                    <span class="info-value">@Model.ProjectId</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Client:</span>
+                    <span class="info-value">@Model.ClientName</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Project Manager:</span>
+                    <span class="info-value">@Model.ProjectManagerName</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Start Date:</span>
+                    <span class="info-value">@Model.StartDate.ToString("dd MMM yyyy")</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Planned End:</span>
+                    <span class="info-value">@Model.EndDatePlanned.ToString("dd MMM yyyy")</span>
+                </div>
+                @if (Model.EndDateActual.HasValue)
+                {
+                    <div class="info-item">
+                        <span class="info-label">Actual End:</span>
+                        <span class="info-value">@Model.EndDateActual.Value.ToString("dd MMM yyyy")</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Budget Information -->
+        <div class="info-card">
+            <h3><i class="fa-solid fa-dollar-sign"></i> Budget Information</h3>
+            <div class="budget-grid">
+                <div class="budget-item">
+                    <span class="budget-label">Planned Budget:</span>
+                    <span class="budget-value planned">@Model.BudgetPlanned.ToString("C")</span>
+                </div>
+                <div class="budget-item">
+                    <span class="budget-label">Actual Budget:</span>
+                    <span class="budget-value actual">@Model.BudgetActual.ToString("C")</span>
+                </div>
+                <div class="budget-item">
+                    <span class="budget-label">Variance:</span>
+                    <span class="budget-value variance @(Model.BudgetActual > Model.BudgetPlanned ? "over" : "under")">
+                        @((Model.BudgetActual - Model.BudgetPlanned).ToString("C"))
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task Statistics -->
+        <div class="info-card">
+            <h3><i class="fa-solid fa-chart-bar"></i> Task Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number">@Model.TotalTasks</div>
+                    <div class="stat-label">Total Tasks</div>
+                </div>
+                <div class="stat-item completed">
+                    <div class="stat-number">@Model.CompletedTasks</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat-item in-progress">
+                    <div class="stat-number">@Model.InProgressTasks</div>
+                    <div class="stat-label">In Progress</div>
+                </div>
+                <div class="stat-item pending">
+                    <div class="stat-number">@Model.PendingTasks</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+                @if (Model.OverdueTasks > 0)
+                {
+                    <div class="stat-item overdue">
+                        <div class="stat-number">@Model.OverdueTasks</div>
+                        <div class="stat-label">Overdue</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Tasks Section -->
+    <div class="tasks-section">
+        <div class="tasks-header">
+            <h2><i class="fa-solid fa-tasks"></i> Assigned Tasks (@Model.Tasks.Count)</h2>
+            <div class="task-filters">
+                <select class="task-filter" id="statusFilter">
+                    <option value="">All Status</option>
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                </select>
+                <select class="task-filter" id="priorityFilter">
+                    <option value="">All Priority</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="tasks-list" id="tasksList">
+            @foreach (var task in Model.Tasks)
+            {
+                <div class="task-item @(task.IsOverdue ? "overdue" : "")" data-status="@task.Status"
+                    data-priority="@task.Priority">
+                    <div class="task-item-header">
+                        <div class="task-item-left">
+                            <span class="task-item-name">@task.Name</span>
+                            <span class="task-item-dates">
+                                @task.StartDate.ToString("dd/MM/yyyy") - @task.DueDate.ToString("dd/MM/yyyy")
+                            </span>
+                        </div>
+                        <div class="task-item-right">
+                            <span class="task-item-status @task.Status.Replace(" ", "-").ToLower()">@task.Status</span>
+                            <span class="task-item-priority priority-@task.Priority.ToLower()">@task.Priority</span>
+                            @if (task.IsOverdue)
+                            {
+                                <span class="overdue-badge">OVERDUE</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="task-item-actions">
+                        @if (task.Status == "Pending")
+                        {
+                            <button class="btn btn-xs btn-warning start-task-btn" data-task-id="@task.TaskId">
+                                <i class="fa-solid fa-play"></i> Start
+                            </button>
+                        }
+                        <button class="btn btn-xs btn-info view-details-btn" data-bs-toggle="modal"
+                            data-bs-target="#taskDetailsModal" data-task-id="@task.TaskId">
+                            <i class="fa-solid fa-eye"></i> Details
+                        </button>
+                        @if (task.CanSubmitProgress && task.Status != "Pending")
+                        {
+                            <button class="btn btn-xs btn-primary submit-progress-btn" data-bs-toggle="modal"
+                                data-bs-target="#progressReportModal" data-task-id="@task.TaskId">
+                                <i class="fa-solid fa-upload"></i> Progress
+                            </button>
+                        }
+                        @if (task.CanRequestCompletion && task.Status != "Pending")
+                        {
+                            <button class="btn btn-xs btn-success request-completion-btn" data-bs-toggle="modal"
+                                data-bs-target="#completionRequestModal" data-task-id="@task.TaskId">
+                                <i class="fa-solid fa-check"></i> Complete
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Include modals -->
+@await Html.PartialAsync("_TaskDetailsModal")
+@await Html.PartialAsync("_ProgressReportModal")
+@await Html.PartialAsync("_CompletionRequestModal")
+
+<!-- Include JavaScript -->
+<script src="~/js/contractor-task-actions.js"></script>
+<script src="~/js/contractor-project-detail.js"></script>
+
+<style>
+    .project-detail-container {
+        padding: 2rem;
+        background: var(--primary-bg);
+        min-height: 100vh;
+    }
+
+    .project-header {
+        background: var(--secondary-bg);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .project-header-content {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 2rem;
+        align-items: center;
+    }
+
+    .project-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-light);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .project-description {
+        font-size: 1.1rem;
+        color: var(--text-muted);
+        margin: 0;
+    }
+
+    .project-status-section {
+        text-align: right;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .status-active {
+        background: rgba(25, 135, 84, 0.2);
+        color: #198754;
+        border: 1px solid rgba(25, 135, 84, 0.3);
+    }
+
+    .status-draft {
+        background: rgba(108, 117, 125, 0.2);
+        color: #6c757d;
+        border: 1px solid rgba(108, 117, 125, 0.3);
+    }
+
+    .progress-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.5rem;
+    }
+
+    .progress-percentage {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--accent-yellow);
+    }
+
+    .progress-bar {
+        width: 200px;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: var(--accent-yellow);
+        transition: width 0.3s ease;
+    }
+
+    .project-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .info-card {
+        background: var(--secondary-bg);
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .info-card h3 {
+        color: var(--accent-yellow);
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .info-grid {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .info-item:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
+    .info-value {
+        color: var(--text-light);
+        font-weight: 600;
+    }
+
+    .budget-grid {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .budget-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .budget-item:last-child {
+        border-bottom: none;
+    }
+
+    .budget-label {
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
+    .budget-value {
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    .budget-value.planned {
+        color: var(--accent-yellow);
+    }
+
+    .budget-value.actual {
+        color: var(--text-light);
+    }
+
+    .budget-value.variance.over {
+        color: #dc3545;
+    }
+
+    .budget-value.variance.under {
+        color: #198754;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 1rem;
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: rgba(247, 236, 89, 0.1);
+        border-radius: 8px;
+        border: 1px solid rgba(247, 236, 89, 0.2);
+    }
+
+    .stat-item.completed {
+        background: rgba(25, 135, 84, 0.1);
+        border-color: rgba(25, 135, 84, 0.2);
+    }
+
+    .stat-item.in-progress {
+        background: rgba(13, 202, 240, 0.1);
+        border-color: rgba(13, 202, 240, 0.2);
+    }
+
+    .stat-item.pending {
+        background: rgba(255, 193, 7, 0.1);
+        border-color: rgba(255, 193, 7, 0.2);
+    }
+
+    .stat-item.overdue {
+        background: rgba(220, 53, 69, 0.1);
+        border-color: rgba(220, 53, 69, 0.2);
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-light);
+        display: block;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 0.25rem;
+    }
+
+    .tasks-section {
+        background: var(--secondary-bg);
+        border-radius: 12px;
+        padding: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .tasks-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .tasks-header h2 {
+        color: var(--accent-yellow);
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .task-filters {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .task-filter {
+        background: var(--primary-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        color: var(--text-light);
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .task-filter:focus {
+        outline: none;
+        border-color: var(--accent-yellow);
+        box-shadow: 0 0 0 2px rgba(247, 236, 89, 0.2);
+    }
+
+    .tasks-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .task-item {
+        background: var(--primary-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        padding: 0.5rem;
+        margin-bottom: 0.3rem;
+        transition: all 0.3s ease;
+    }
+
+    .task-item:hover {
+        background: rgba(247, 236, 89, 0.05);
+        border-color: var(--accent-yellow);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .task-item.overdue {
+        border-color: #dc3545;
+        background: rgba(220, 53, 69, 0.05);
+    }
+
+    .task-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.3rem;
+    }
+
+    .task-item-name {
+        display: block;
+        font-weight: 600;
+        color: var(--text-light);
+        font-size: 0.8rem;
+        margin-bottom: 0.15rem;
+        line-height: 1.2;
+    }
+
+    .task-item-dates {
+        display: block;
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
+    .task-item-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.15rem;
+        margin-left: 0.4rem;
+    }
+
+    .task-item-status {
+        padding: 0.15rem 0.4rem;
+        border-radius: 10px;
+        font-size: 0.6rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.2px;
+    }
+
+    .task-item-status.pending {
+        background: rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+        border: 1px solid rgba(255, 193, 7, 0.3);
+    }
+
+    .task-item-status.in-progress {
+        background: rgba(13, 202, 240, 0.2);
+        color: #0dcaf0;
+        border: 1px solid rgba(13, 202, 240, 0.3);
+    }
+
+    .task-item-status.completed {
+        background: rgba(25, 135, 84, 0.2);
+        color: #198754;
+        border: 1px solid rgba(25, 135, 84, 0.3);
+    }
+
+    .task-item-priority {
+        padding: 0.1rem 0.3rem;
+        border-radius: 6px;
+        font-size: 0.55rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.2px;
+    }
+
+    .task-item-priority.high {
+        background: rgba(220, 53, 69, 0.2);
+        color: #dc3545;
+        border: 1px solid rgba(220, 53, 69, 0.3);
+    }
+
+    .task-item-priority.medium {
+        background: rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+        border: 1px solid rgba(255, 193, 7, 0.3);
+    }
+
+    .task-item-priority.low {
+        background: rgba(25, 135, 84, 0.2);
+        color: #198754;
+        border: 1px solid rgba(25, 135, 84, 0.3);
+    }
+
+    .overdue-badge {
+        background: #dc3545;
+        color: white;
+        padding: 0.1rem 0.3rem;
+        border-radius: 6px;
+        font-size: 0.55rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.2px;
+    }
+
+    .task-item-actions {
+        display: flex;
+        gap: 0.3rem;
+        flex-wrap: wrap;
+        margin-top: 0.3rem;
+        padding-top: 0.3rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .btn-xs {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.65rem;
+        border-radius: 3px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.2px;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+    }
+
+    .btn-xs:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-xs.btn-warning {
+        background: #ffc107;
+        color: #000;
+    }
+
+    .btn-xs.btn-warning:hover {
+        background: #ffca2c;
+        color: #000;
+    }
+
+    .btn-xs.btn-info {
+        background: #0dcaf0;
+        color: #000;
+    }
+
+    .btn-xs.btn-info:hover {
+        background: #3dd5f3;
+        color: #000;
+    }
+
+    .btn-xs.btn-primary {
+        background: #0d6efd;
+        color: #fff;
+    }
+
+    .btn-xs.btn-primary:hover {
+        background: #0b5ed7;
+        color: #fff;
+    }
+
+    .btn-xs.btn-success {
+        background: #198754;
+        color: #fff;
+    }
+
+    .btn-xs.btn-success:hover {
+        background: #157347;
+        color: #fff;
+    }
+
+    @@media(max - width: 768px) {
+            .project-detail-container {
+                padding: 1rem;
+            }
+
+            .project-header-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .project-info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .task-details {
+                grid-template-columns: 1fr;
+            }
+
+            .tasks-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .task-filters {
+                justify-content: center;
+            }
+        }
+    </style>

@@ -518,7 +518,7 @@ function startTask(taskId) {
   startBtn.disabled = true;
 
   // First get the existing task to get all required fields
-  fetch(`https://localhost:7136/api/contractors/tasks/assigned`)
+  fetch(`/Contractor/GetAssignedTasks`)
     .then((response) => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -557,19 +557,17 @@ function startTask(taskId) {
       };
 
       // Now update the task
-      return fetch(
-        `https://localhost:7136/api/contractors/update/project/task/${encodeURIComponent(
-          taskId
-        )}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include", // Include cookies for authentication
-          body: JSON.stringify(updatedTask),
-        }
-      );
+      // Use the Web controller endpoint which handles authentication properly
+      return fetch(`/Contractor/UpdateTaskStatus`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          taskId: taskId,
+          status: "In Progress",
+        }),
+      });
     })
     .then((response) => {
       if (!response.ok) {
@@ -729,48 +727,9 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Toast functionality removed - using console logging instead
 function showToast(message, type = "info") {
-  console.log("🍞 showToast called with:", message, type);
-  try {
-    const containerId = "toast-container";
-    let container = document.getElementById(containerId);
-    if (!container) {
-      container = document.createElement("div");
-      container.id = containerId;
-      container.className = "toast-container position-fixed top-0 end-0 p-3";
-      document.body.appendChild(container);
-    }
-
-    const toast = document.createElement("div");
-    toast.className = `toast align-items-center text-bg-${
-      type === "error" ? "danger" : type
-    } border-0`;
-    toast.setAttribute("role", "alert");
-    toast.setAttribute("aria-live", "assertive");
-    toast.setAttribute("aria-atomic", "true");
-    toast.innerHTML = `
-      <div class="d-flex">
-        <div class="toast-body">${message}</div>
-        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-      </div>
-    `;
-
-    container.appendChild(toast);
-    const bsToast = new bootstrap.Toast(toast);
-    bsToast.show();
-
-    toast.addEventListener("hidden.bs.toast", () => {
-      if (container && toast.parentNode === container) {
-        container.removeChild(toast);
-        // Remove container if it's empty
-        if (container.children.length === 0) {
-          document.body.removeChild(container);
-        }
-      }
-    });
-  } catch (error) {
-    console.error("Error showing toast:", error);
-  }
+  console.log(`📢 ${type.toUpperCase()}: ${message}`);
 }
 
 // Initialize when DOM is loaded

@@ -1,41 +1,23 @@
 {
   "format": 1,
   "restore": {
-<<<<<<< HEAD
-    "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7315-WIL\\API\\ICCMS-API\\ICCMS-API.csproj": {}
+    "C:\\Users\\maxat\\OneDrive - ADvTECH Ltd\\Varsity College\\2025\\Semester 2\\INSY7315\\ICMMS-INSY7314-WIL-\\API\\ICCMS-API\\ICCMS-API.csproj": {}
   },
   "projects": {
-    "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7315-WIL\\API\\ICCMS-API\\ICCMS-API.csproj": {
+    "C:\\Users\\maxat\\OneDrive - ADvTECH Ltd\\Varsity College\\2025\\Semester 2\\INSY7315\\ICMMS-INSY7314-WIL-\\API\\ICCMS-API\\ICCMS-API.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7315-WIL\\API\\ICCMS-API\\ICCMS-API.csproj",
+        "projectUniqueName": "C:\\Users\\maxat\\OneDrive - ADvTECH Ltd\\Varsity College\\2025\\Semester 2\\INSY7315\\ICMMS-INSY7314-WIL-\\API\\ICCMS-API\\ICCMS-API.csproj",
         "projectName": "ICCMS-API",
-        "projectPath": "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7315-WIL\\API\\ICCMS-API\\ICCMS-API.csproj",
-        "packagesPath": "C:\\Users\\brayd\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7315-WIL\\API\\ICCMS-API\\obj\\",
-=======
-    "C:\\Users\\danie\\source\\repos\\ICMMS-INSY7314-WIL-\\API\\ICCMS-API\\ICCMS-API.csproj": {}
-  },
-  "projects": {
-    "C:\\Users\\danie\\source\\repos\\ICMMS-INSY7314-WIL-\\API\\ICCMS-API\\ICCMS-API.csproj": {
-      "version": "1.0.0",
-      "restore": {
-        "projectUniqueName": "C:\\Users\\danie\\source\\repos\\ICMMS-INSY7314-WIL-\\API\\ICCMS-API\\ICCMS-API.csproj",
-        "projectName": "ICCMS-API",
-        "projectPath": "C:\\Users\\danie\\source\\repos\\ICMMS-INSY7314-WIL-\\API\\ICCMS-API\\ICCMS-API.csproj",
-        "packagesPath": "C:\\Users\\danie\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\danie\\source\\repos\\ICMMS-INSY7314-WIL-\\API\\ICCMS-API\\obj\\",
->>>>>>> f45b7809770a6500ba864cfdb0f1654f4e6c15c8
+        "projectPath": "C:\\Users\\maxat\\OneDrive - ADvTECH Ltd\\Varsity College\\2025\\Semester 2\\INSY7315\\ICMMS-INSY7314-WIL-\\API\\ICCMS-API\\ICCMS-API.csproj",
+        "packagesPath": "C:\\Users\\maxat\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\maxat\\OneDrive - ADvTECH Ltd\\Varsity College\\2025\\Semester 2\\INSY7315\\ICMMS-INSY7314-WIL-\\API\\ICCMS-API\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-<<<<<<< HEAD
-          "C:\\Users\\brayd\\AppData\\Roaming\\NuGet\\NuGet.Config",
-=======
-          "C:\\Users\\danie\\AppData\\Roaming\\NuGet\\NuGet.Config",
->>>>>>> f45b7809770a6500ba864cfdb0f1654f4e6c15c8
+          "C:\\Users\\maxat\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -44,7 +26,6 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -63,7 +44,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.200"
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net9.0": {
@@ -125,11 +106,7 @@
               "privateAssets": "all"
             }
           },
-<<<<<<< HEAD
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
-=======
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.201/PortableRuntimeIdentifierGraph.json"
->>>>>>> f45b7809770a6500ba864cfdb0f1654f4e6c15c8
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.305/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
