@@ -252,6 +252,8 @@
                     }
                     if (User.IsInRole("Admin"))
                     {
+                        <li><a asp-controller="SystemOverview" asp-action="Index"><i class="fa-solid fa-tachometer-alt"></i><span>System Overview</span></a>
+                        </li>
                         <li><a asp-controller="Users" asp-action="Index"><i class="fa-solid fa-users"></i><span>Users</span></a>
                         </li>
                         <li><a asp-controller="AuditLogs" asp-action="Index"><i class="fa-solid fa-clipboard-list"></i><span>Audit Logs</span></a>
