@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
-using Microsoft.AspNetCore.Mvc;
 using ICCMS_Web.Models;
 using System.IO;
 using System.Threading.Tasks;

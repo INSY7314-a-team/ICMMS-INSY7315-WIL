@@ -74,13 +74,26 @@
                 </div>
             </div>
         </div>
+
+        @{
+            // ✅ Define which statuses count as active/sent for flexibility
+            var activeProjectStatuses = new[] { "Active" };
+            var sentQuoteStatuses = new[] { "SentToClient" };
+        }
+
+        <!-- ===== Active Projects Card ===== -->
         <div class="col-xl-3 col-md-6 mb-3">
             <div class="card stat-card bg-success text-white h-100 shadow-sm">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="card-title text-white-50 mb-1">Active Projects</h6>
-                            <h2 class="mb-0">@(Model.Projects?.Count(p => p.Status?.ToLower() == "active") ?? 0)</h2>
+                            <h2 class="mb-0">
+                                @(Model.Projects?.Count(p =>
+                                    p.Status != null &&
+                                    activeProjectStatuses.Contains(p.Status.Trim(), StringComparer.OrdinalIgnoreCase)
+                                ) ?? 0)
+                            </h2>
                         </div>
                         <div class="stat-icon">
                             <i class="fas fa-play-circle fa-2x opacity-75"></i>
@@ -89,21 +102,30 @@
                 </div>
             </div>
         </div>
+
+        <!-- ===== Quotations Sent to Client Card ===== -->
         <div class="col-xl-3 col-md-6 mb-3">
             <div class="card stat-card bg-warning text-white h-100 shadow-sm">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-title text-white-50 mb-1">Pending Quotations</h6>
-                            <h2 class="mb-0">@(Model.Quotations?.Count(q => q.Status?.ToLower() == "pending") ?? 0)</h2>
+                            <h6 class="card-title text-white-50 mb-1">Quotations Pending</h6>
+                            <h2 class="mb-0">
+                                @(Model.Quotations?.Count(q =>
+                                    q.Status != null &&
+                                    sentQuoteStatuses.Contains(q.Status.Trim(), StringComparer.OrdinalIgnoreCase)
+                                ) ?? 0)
+                            </h2>
                         </div>
                         <div class="stat-icon">
-                            <i class="fas fa-clock fa-2x opacity-75"></i>
+                            <i class="fas fa-envelope fa-2x opacity-75"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+
         <div class="col-xl-3 col-md-6 mb-3">
             <div class="card stat-card bg-info text-white h-100 shadow-sm">
                 <div class="card-body">
