@@ -655,26 +655,108 @@ namespace ICCMS_Web.Controllers
 
         // ===================== QUOTATION ACTIONS =====================
         [HttpPost]
-        public async Task<IActionResult> CreateQuoteFromEstimate(string estimateId)
+        public Task<string?> CreateFromEstimateAsync(string estimateId, ClaimsPrincipal user)
         {
+            // ==============================================================
+            // 🧱 CreateFromEstimateAsync
+            // Purpose:
+            //  Sends a POST request to the API to create a quotation
+            //  from a specific estimate. The API returns only the
+            //  generated quotationId as a plain string, NOT JSON.
+            // ==============================================================
+
+            // ✅ Defensive check for missing estimateId
             if (string.IsNullOrWhiteSpace(estimateId))
-                return BadRequest(new { error = "Missing estimate id" });
-            var quote = await _quotationsService.CreateFromEstimateAsync(estimateId, User);
-            if (quote == null)
-                return StatusCode(500, new { error = "Create quotation failed" });
-            return Json(new { quotationId = quote.QuotationId });
+            {
+                Console.WriteLine("❌ [QuotationsService] Missing estimateId for CreateFromEstimateAsync");
+                return Task.FromResult<string?>(null);
+            }
+
+            Console.WriteLine($"🚀 [QuotationsService] Creating quotation from estimate {estimateId}");
+
+            // ✅ The API expects a simple request body (even if empty)
+            var payload = new { note = "Auto-created from estimate" };
+
+            // ✅ Call ApiClient using <string> since the API returns a raw string quotationId
+            return _apiClient.PostAsync<string>(
+                $"/api/quotations/from-estimate/{estimateId}",
+                payload,
+                user
+            );
         }
 
+        // ===================== QUOTATION CREATION (FROM ESTIMATE) =====================
+        [HttpPost]
+        public async Task<IActionResult> CreateQuoteFromEstimate(string estimateId)
+        {
+            _logger.LogInformation("🚀 [CreateQuoteFromEstimate] Triggered for EstimateId={EstimateId}", estimateId);
+
+            if (string.IsNullOrWhiteSpace(estimateId))
+            {
+                _logger.LogWarning("❌ Missing estimateId parameter.");
+                return BadRequest(new { error = "Missing estimate ID" });
+            }
+
+            try
+            {
+                // Call the quotation service to create quote from estimate
+                var quotation = await _quotationsService.CreateFromEstimateAsync(estimateId, User);
+
+                if (quotation == null)
+                {
+                    _logger.LogError("❌ Quotation creation failed for EstimateId={EstimateId}", estimateId);
+                    return StatusCode(500, new { error = "Failed to create quotation" });
+                }
+
+                _logger.LogInformation("✅ Quotation created successfully from EstimateId={EstimateId}", estimateId);
+                return Json(new { success = true, quotation });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "💥 Exception while creating quotation from estimate {EstimateId}", estimateId);
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+
+        /// <summary>
+        /// Sends a quotation to the client (proxy to API via QuotationsService)
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> SendQuoteToClient(string quotationId)
         {
-            if (string.IsNullOrWhiteSpace(quotationId))
-                return BadRequest(new { error = "Missing quotation id" });
-            var sent = await _quotationsService.SendToClientAsync(quotationId, User);
-            if (sent == null)
-                return StatusCode(500, new { error = "Send to client failed" });
-            return Json(new { success = true });
+            _logger.LogInformation("📬 [SendQuoteToClient] Triggered for quotation {QuotationId}", quotationId);
+
+            try
+            {
+                // ===== Validate input =====
+                if (string.IsNullOrWhiteSpace(quotationId))
+                {
+                    _logger.LogWarning("⚠️ Missing quotationId parameter.");
+                    return BadRequest(new { error = "Missing quotation ID." });
+                }
+
+                _logger.LogInformation("🧭 Attempting to send quotation {QuotationId} via QuotationsService...", quotationId);
+
+                // ===== Call QuotationsService =====
+                var sent = await _quotationsService.SendToClientAsync(quotationId, User);
+
+                if (sent == null)
+                {
+                    _logger.LogWarning("❌ QuotationsService.SendToClientAsync returned null for {QuotationId}", quotationId);
+                    return StatusCode(500, new { error = "Send to client failed — service returned null." });
+                }
+
+                _logger.LogInformation("✅ Successfully sent quotation {QuotationId} to client.", quotationId);
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "💥 Exception in SendQuoteToClient for quotation {QuotationId}", quotationId);
+                return StatusCode(500, new { error = ex.Message });
+            }
         }
+
 
         /// <summary>
         /// Step 3: Assign tasks to a project (after quote approval).
@@ -1471,5 +1553,45 @@ namespace ICCMS_Web.Controllers
             await Response.WriteAsync(sseData);
             await Response.Body.FlushAsync();
         }
+
+        /// <summary>
+        /// Approve a quotation as Project Manager (proxy to API)
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> ApproveQuoteByPM([FromQuery] string quotationId)
+        {
+            _logger.LogInformation("🚀 [ApproveQuoteByPM] Triggered for quotation {QuotationId}", quotationId);
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(quotationId))
+                {
+                    _logger.LogWarning("⚠️ Missing quotationId parameter.");
+                    return Json(new { success = false, message = "Missing quotation ID." });
+                }
+
+                // ✅ Use PostAsync and expect a generic JSON response (object)
+                var result = await _apiClient.PostAsync<object>($"/api/quotations/{quotationId}/pm-approve", new { }, User);
+
+                if (result == null)
+                {
+                    _logger.LogWarning("❌ API returned null response for quotation {QuotationId}", quotationId);
+                    return Json(new { success = false, message = "Approval failed or unauthorized." });
+                }
+
+                _logger.LogInformation("✅ Quotation {QuotationId} approved successfully.", quotationId);
+                return Json(new { success = true, data = result });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "💥 Error approving quotation {QuotationId}", quotationId);
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        
+
+
+
     }
 }

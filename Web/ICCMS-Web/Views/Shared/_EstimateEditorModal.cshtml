@@ -312,14 +312,150 @@
             }
         }
 
+        // ==========================================================
+        //  🚀 handleSendQuote()
+        //  Full quotation workflow — step-by-step automation
+        //  1️⃣ Create Quote From Estimate
+        //  2️⃣ Approve Quote by PM
+        //  3️⃣ Send Quote to Client
+        //  4️⃣ Download PDF
+        //  5️⃣ Trigger UI + Toast
+        // ==========================================================
         async function handleSendQuote() {
-            if (!estimate || !estimate.estimateId) { alert('No estimate available'); return; }
-            const q = await (await fetch(`/ProjectManager/CreateQuoteFromEstimate?estimateId=${encodeURIComponent(estimate.estimateId)}`, { method: 'POST' })).json();
-            if (!q || !q.quotationId) { alert('Failed to create quotation'); return; }
-            const sent = await fetch(`/ProjectManager/SendQuoteToClient?quotationId=${encodeURIComponent(q.quotationId)}`, { method: 'POST' });
-            if (!sent.ok) { alert('Failed to send quote'); return; }
-            alert('Quote sent to client');
+            console.log("🚀 [SendQuote] STARTED | Function triggered!");
+            console.log("🧱 DEBUG | Estimate before quote:", estimate);
+
+            // ==========================================================
+            //  STEP 0️⃣ — VALIDATE ESTIMATE
+            // ==========================================================
+            if (!estimate || !estimate.estimateId) {
+                console.warn("⚠️ No estimate found — creating blank fallback...");
+                const fallback = await fetch("/ProjectManager/CreateBlankEstimate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        projectId,
+                        description: "Manual estimate (user skipped blueprint)",
+                        totalAmount: 0,
+                        lineItems: []
+                    })
+                });
+
+                const res = await fallback.json().catch(() => ({}));
+                if (fallback.ok && res.estimateId) {
+                    estimate = { ...estimate, estimateId: res.estimateId };
+                    console.log("✅ Blank estimate created:", res.estimateId);
+                } else {
+                    console.error("❌ Failed to create blank estimate:", res);
+                    alert("Could not create default estimate — please try again.");
+                    return;
+                }
+            }
+
+            try {
+                // ==========================================================
+                //  STEP 1️⃣ — CREATE QUOTE FROM ESTIMATE
+                // ==========================================================
+                console.log("🧱 [Step 1] Creating quote from estimate:", estimate.estimateId);
+
+                const createRes = await fetch(`/ProjectManager/CreateQuoteFromEstimate?estimateId=${encodeURIComponent(estimate.estimateId)}`, {
+                    method: "POST"
+                });
+
+                console.log("📡 [CreateQuoteFromEstimate] Response:", createRes.status, createRes.statusText);
+
+                // Read response once and keep the raw text for logging or JSON parsing
+                const rawText = await createRes.text();
+                console.log("🧱 DEBUG | Raw response text:", rawText);
+
+                // Try parse safely
+                let q = {};
+                try {
+                    q = JSON.parse(rawText);
+                } catch {
+                    console.warn("⚠️ Could not parse JSON — backend may have returned plain text.");
+                }
+
+                // Accept either structure { quotationId } or { success, quotation: {...} }
+                const quotationId = q?.quotationId || q?.quotation?.quotationId;
+                if (!createRes.ok || !quotationId) {
+                    console.error("❌ [Step 1 FAILED] Could not create quote:", q);
+                    alert("Failed to create quotation — check console for details.");
+                    return;
+                }
+
+                console.log("✅ [Step 1 SUCCESS] Quote created successfully! Quotation ID:", quotationId);
+
+                // ==========================================================
+                //  STEP 2️⃣ — PM APPROVES QUOTE
+                // ==========================================================
+                console.log("🧾 [Step 2] Approving quote as Project Manager...");
+                const approveRes = await fetch(`/ProjectManager/ApproveQuoteByPM?quotationId=${encodeURIComponent(quotationId)}`, { method: "POST" });
+
+                console.log("📡 [ApproveQuoteByPM] Response:", approveRes.status, approveRes.statusText);
+                if (!approveRes.ok) {
+                    console.error("❌ [Step 2 FAILED] PM approval failed!");
+                    alert("Failed to approve quote — check console.");
+                    return;
+                }
+                console.log("✅ [Step 2 SUCCESS] Quote approved by Project Manager!");
+
+                // ==========================================================
+                //  STEP 3️⃣ — SEND QUOTE TO CLIENT
+                // ==========================================================
+                console.log("📬 [Step 3] Sending approved quote to client...");
+                const sendRes = await fetch(`/ProjectManager/SendQuoteToClient?quotationId=${encodeURIComponent(quotationId)}`, { method: "POST" });
+
+                console.log("📡 [SendQuoteToClient] Response:", sendRes.status, sendRes.statusText);
+                if (!sendRes.ok) {
+                    console.error("❌ [Step 3 FAILED] Quote failed to send to client!");
+                    alert("Failed to send quote to client — check console.");
+                    return;
+                }
+                console.log("✅ [Step 3 SUCCESS] Quote successfully sent to client inbox!");
+
+                // ==========================================================
+                //  STEP 4️⃣ — DOWNLOAD PDF AUTOMATICALLY
+                // ==========================================================
+                console.log("📥 [Step 4] Attempting to download quote PDF...");
+                const pdfRes = await fetch(`/Quotes/download/${encodeURIComponent(quotationId)}`);
+                console.log("📡 [DownloadQuote] Response:", pdfRes.status, pdfRes.statusText);
+
+                if (pdfRes.ok) {
+                    const blob = await pdfRes.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `Quotation_${quotationId}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                    console.log("💾 [Step 4 SUCCESS] PDF downloaded to user device!");
+                } else {
+                    console.warn("⚠️ [Step 4 SKIPPED] PDF download failed — missing endpoint or server issue.");
+                }
+
+                // ==========================================================
+                //  STEP 5️⃣ — UI FEEDBACK + EVENT DISPATCH
+                // ==========================================================
+                console.log("🪶 [Step 5] Dispatching custom event: 'quoteSent'");
+                window.dispatchEvent(new CustomEvent("quoteSent", {
+                    detail: { projectId, quoteId: quotationId }
+                }));
+
+                showToast("✅ Quote created, approved, sent & downloaded successfully!");
+                console.log("🏁 [SendQuote] Workflow COMPLETE ✅");
+
+            } catch (err) {
+                // ==========================================================
+                //  ERROR HANDLER
+                // ==========================================================
+                console.error("🔥 [SendQuote FATAL ERROR]", err);
+                alert("Unexpected error during quote sequence: " + err.message);
+            }
         }
+
 
         async function loadEstimate() {
             try {

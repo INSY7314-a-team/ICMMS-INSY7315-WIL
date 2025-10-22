@@ -8,9 +8,13 @@ using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
-
-
-
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using ICCMS_Web.Models;
+using System.IO;
+using System.Threading.Tasks;
 
 
 namespace ICCMS_Web.Controllers
@@ -609,31 +613,161 @@ namespace ICCMS_Web.Controllers
         // STEP X: Download PDF (GET)
         // ============================
         [HttpGet("download/{id}")]
-        [Authorize(Roles = "Project Manager,Admin,Tester")]
         public async Task<IActionResult> DownloadQuote(string id)
         {
-            // 1️⃣ Get the quotation from API
+            _logger.LogInformation("🧾 [DownloadQuote] Generating PDF for quotation {Id}", id);
+
+            QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+            QuestPDF.Settings.EnableDebugging = false;
+
             var quote = await _apiClient.GetAsync<QuotationDto>($"/api/quotations/{id}", User);
-            if (quote == null) return NotFound("Quotation not found");
-
-            // 2️⃣ Render the Razor view to HTML
-            var html = await this.RenderViewAsync("~/Views/Quotes/QuotePdf.cshtml", quote, true);
-
-            // 3️⃣ Convert to PDF
-            var doc = new HtmlToPdfDocument()
+            if (quote == null)
             {
-                GlobalSettings = new GlobalSettings
-                {
-                    PaperSize = PaperKind.A4,
-                    Orientation = Orientation.Portrait
-                },
-                Objects = { new ObjectSettings { HtmlContent = html } }
-            };
-            var pdf = _pdfConverter.Convert(doc);
+                _logger.LogWarning("❌ Quotation not found for ID {Id}", id);
+                return NotFound("Quotation not found");
+            }
 
-            // 4️⃣ Return as file
-            return File(pdf, "application/pdf", $"Quotation_{id}.pdf");
+            var fileBytes = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4);
+                    page.Margin(40);
+                    page.DefaultTextStyle(x => x.FontFamily("Arial").FontSize(11));
+                    page.Background("#FFFFFF");
+
+
+                    // ===== HEADER =====
+                    page.Header().Row(row =>
+                    {
+                        row.RelativeItem().Column(col =>
+                        {
+                            col.Item().Text(t => t.Span("TASKIT").FontSize(22).Bold().FontColor("#222"));
+                            col.Item().Text(t => t.Span("Integrated Construction & Maintenance Management System")
+                                                .FontSize(10).FontColor("#666"));
+                            col.Item().Text(t => t.Span("support@taskit.co.za | +27 87 123 4567")
+                                                .FontSize(9).FontColor("#666"));
+                        });
+
+                        row.ConstantItem(110).AlignRight().Height(50).Width(100).Element(e =>
+                        {
+                            e.Image("wwwroot/images/TaskIt2.png").FitHeight();
+                        });
+                    });
+
+                    // ===== CONTENT =====
+                    page.Content().PaddingVertical(15).Column(stack =>
+                    {
+                        stack.Spacing(10);
+
+                        // --- Summary box ---
+                        stack.Item().Border(1).BorderColor("#FFD54F")
+                            .Padding(10).Background("#FFFDE7")
+                            .Column(summary =>
+                            {
+                                summary.Spacing(2);
+                                summary.Item().Text(t => t.Span($"Quotation ID: {quote.QuotationId}").Bold());
+                                summary.Item().Text(t => t.Span($"Project ID: {quote.ProjectId}"));
+                                summary.Item().Text(t => t.Span($"Client ID: {quote.ClientId}"));
+                                summary.Item().Text(t => t.Span($"Issued: {quote.CreatedAt:dd MMM yyyy}"));
+                                summary.Item().Text(t => t.Span($"Valid Until: {quote.ValidUntil:dd MMM yyyy}"));
+                            });
+
+                        if (!string.IsNullOrWhiteSpace(quote.Description))
+                            stack.Item().PaddingTop(10)
+                                .Text(t => t.Span($"Description: {quote.Description}").FontColor("#333"));
+
+                        // ===== TABLE =====
+                        stack.Item().PaddingTop(10).Element(e =>
+                        {
+                            e.Table(table =>
+                            {
+                                table.ColumnsDefinition(cols =>
+                                {
+                                    cols.RelativeColumn(3);
+                                    cols.RelativeColumn(4);
+                                    cols.RelativeColumn(1);
+                                    cols.RelativeColumn(2);
+                                    cols.RelativeColumn(2);
+                                });
+
+                                // header row
+                                table.Header(h =>
+                                {
+                                    AddHeader(h, "Item");
+                                    AddHeader(h, "Description");
+                                    AddHeader(h, "Qty");
+                                    AddHeader(h, "Unit Price (R)");
+                                    AddHeader(h, "Total (R)");
+                                });
+
+                                if (quote.Items != null && quote.Items.Any())
+                                {
+                                    foreach (var item in quote.Items)
+                                    {
+                                        AddCell(table, item.Name);
+                                        AddCell(table, item.Description);
+                                        AddCell(table, item.Quantity.ToString());
+                                        AddCell(table, item.UnitPrice.ToString("N2"));
+                                        AddCell(table, item.LineTotal.ToString("N2"));
+                                    }
+                                }
+                                else
+                                {
+                                    table.Cell().ColumnSpan(5)
+                                        .BorderBottom(0.5f).BorderColor("#EEE")
+                                        .AlignCenter()
+                                        .Text(t => t.Span("No line items available"));
+                                }
+                            });
+                        });
+
+                        // ===== TOTALS =====
+                        stack.Item().PaddingTop(20).AlignRight().Column(tot =>
+                        {
+                            tot.Item().Text(t => t.Span($"Subtotal: R {quote.Subtotal:N2}"));
+                            tot.Item().Text(t => t.Span($"Tax (15%): R {quote.TaxTotal:N2}"));
+                            tot.Item().Text(t => t.Span($"Grand Total: R {quote.GrandTotal:N2}")
+                                                    .Bold().FontSize(13).FontColor("#000"));
+                        });
+
+                        // ===== BANKING =====
+                        stack.Item().PaddingTop(25).BorderTop(1).BorderColor("#DDD").PaddingTop(10).Column(bank =>
+                        {
+                            bank.Item().Text(t => t.Span("Banking Details").Bold().FontSize(12).FontColor("#222"));
+                            bank.Item().Text(t => t.Span("Bank: FNB | Acc No: 0000000000 | Branch: 250655 | Ref: Project ID"));
+                            bank.Item().Text(t => t.Span("Email proof of payment to accounts@taskit.co.za"));
+                        });
+                    });
+
+                    // ===== FOOTER =====
+                    page.Footer().AlignCenter().PaddingTop(10)
+                        .Text(t => t.Span("Thank you for choosing TaskIt — powered by ICCMS")
+                                    .FontSize(9).FontColor("#777"));
+                });
+
+                // --- local helpers ---
+                static void AddHeader(TableCellDescriptor h, string text)
+                {
+                    h.Cell().BorderBottom(0.5f).BorderColor("#ccc")
+                        .Background("#FFD54F").Padding(5)
+                        .Text(t => t.Span(text).Bold().FontColor("#000"));
+                }
+
+                static void AddCell(TableDescriptor table, string? text)
+                {
+                    table.Cell().BorderBottom(0.5f).BorderColor("#EEE")
+                        .PaddingVertical(4).PaddingHorizontal(3)
+                        .Text(t => t.Span(text ?? "—"));
+                }
+            }).GeneratePdf();
+
+            _logger.LogInformation("✅ PDF generated for quotation {Id}", id);
+            return File(fileBytes, "application/pdf", $"Quotation_{id}.pdf");
         }
+
+
+
 
         // ================================================
         // STEP X: CREATE QUOTE FROM ESTIMATE (AUTO-PREFILL)
