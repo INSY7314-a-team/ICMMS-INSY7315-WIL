@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7314-WIL-\\API\\ICCMS-API\\ICCMS-API.csproj": {}
+    "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7315-WIL\\API\\ICCMS-API\\ICCMS-API.csproj": {}
   },
   "projects": {
-    "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7314-WIL-\\API\\ICCMS-API\\ICCMS-API.csproj": {
+    "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7315-WIL\\API\\ICCMS-API\\ICCMS-API.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7314-WIL-\\API\\ICCMS-API\\ICCMS-API.csproj",
+        "projectUniqueName": "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7315-WIL\\API\\ICCMS-API\\ICCMS-API.csproj",
         "projectName": "ICCMS-API",
-        "projectPath": "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7314-WIL-\\API\\ICCMS-API\\ICCMS-API.csproj",
+        "projectPath": "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7315-WIL\\API\\ICCMS-API\\ICCMS-API.csproj",
         "packagesPath": "C:\\Users\\brayd\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7314-WIL-\\API\\ICCMS-API\\obj\\",
+        "outputPath": "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7315-WIL\\API\\ICCMS-API\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

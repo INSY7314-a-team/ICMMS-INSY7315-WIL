@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "oyQRnXXGqJU=",
+  "dgSpecHash": "Ic6mIc3lWLg=",
   "success": true,
-  "projectFilePath": "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7314-WIL-\\API\\ICCMS-API\\ICCMS-API.csproj",
+  "projectFilePath": "C:\\Users\\brayd\\Documents\\Varsity\\3rd year\\Semester 2\\INSY7315 (WIL)\\Project\\ICMMS-INSY7315-WIL\\API\\ICCMS-API\\ICCMS-API.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\brayd\\.nuget\\packages\\automapper\\12.0.1\\automapper.12.0.1.nupkg.sha512",
     "C:\\Users\\brayd\\.nuget\\packages\\automapper.extensions.microsoft.dependencyinjection\\12.0.1\\automapper.extensions.microsoft.dependencyinjection.12.0.1.nupkg.sha512",
