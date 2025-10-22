@@ -1,0 +1,306 @@
+/* Project Card Styling - Dark Theme */
+.project-card {
+    background-color: #2A2B35 !important;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    height: 100%;
+}
+
+.project-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Card Header */
+.project-card .card-header {
+    background: #1A1B25 !important;
+    border-radius: 8px 8px 0 0 !important;
+    padding: 1.25rem;
+}
+
+.project-card .card-title {
+    color: #FFFFFF !important;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    line-height: 1.3;
+}
+
+.project-card .card-subtitle {
+    color: #CCCCCC !important;
+    font-size: 0.85rem;
+    margin-bottom: 0;
+}
+
+/* Status Badge */
+.project-card .status-badge {
+    background-color: #6BF178 !important;
+    color: #1A1B25 !important;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    border: none;
+}
+
+/* Remove collapse button - hide it completely */
+.project-card .collapse-btn {
+    display: none !important;
+}
+
+/* Card Body */
+.project-card .card-body {
+    background-color: #2A2B35 !important;
+    color: #FFFFFF !important;
+    padding: 1.5rem;
+}
+
+.project-card .card-text {
+    color: #CCCCCC !important;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    margin-bottom: 1rem;
+}
+
+/* Project Stats */
+.project-card .stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.project-card .stat-item small {
+    color: #CCCCCC !important;
+    font-size: 0.8rem;
+}
+
+.project-card .stat-item span {
+    color: #FFFFFF !important;
+    font-weight: 500;
+}
+
+/* Progress Bar */
+.project-card .progress {
+    height: 8px;
+    background-color: #1A1B25 !important;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.project-card .progress-bar {
+    background-color: #F7EC59 !important;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.project-card .progress-label {
+    color: #CCCCCC !important;
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+}
+
+.project-card .progress-percentage {
+    color: #FFFFFF !important;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+/* Task Progress */
+.project-card .task-progress {
+    margin-bottom: 1rem;
+}
+
+.project-card .task-progress .progress {
+    height: 4px;
+    background-color: #1A1B25 !important;
+}
+
+.project-card .task-progress .progress-bar {
+    background-color: #6BF178 !important;
+}
+
+/* Phases Summary */
+.project-card .phases-summary {
+    margin-bottom: 1rem;
+}
+
+.project-card .phases-summary .phases-label {
+    color: #CCCCCC !important;
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.project-card .phase-badge {
+    background-color: #1A1B25 !important;
+    color: #FFFFFF !important;
+    border: 1px solid #F7EC59 !important;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    margin-right: 0.25rem;
+    margin-bottom: 0.25rem;
+    display: inline-block;
+}
+
+.project-card .phase-badge.more {
+    background-color: #6C757D !important;
+    color: #FFFFFF !important;
+    border: 1px solid #6C757D !important;
+}
+
+/* Estimate Info */
+.project-card .estimate-info {
+    margin-bottom: 1rem;
+}
+
+.project-card .estimate-info .estimate-label {
+    color: #CCCCCC !important;
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.project-card .estimate-amount {
+    color: #6BF178 !important;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.project-card .estimate-date {
+    color: #CCCCCC !important;
+    font-size: 0.75rem;
+}
+
+/* Card Footer */
+.project-card .card-footer {
+    background-color: #1A1B25 !important;
+    border-radius: 0 0 8px 8px !important;
+    padding: 1.25rem;
+}
+
+/* Action Buttons */
+.project-card .action-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.project-card .btn-action {
+    border: none !important;
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    text-align: center;
+    min-width: 100px;
+}
+
+.project-card .btn-action.btn-primary {
+    background-color: #F7EC59 !important;
+    color: #1A1B25 !important;
+    flex: 1;
+}
+
+.project-card .btn-action.btn-secondary {
+    background-color: #6C757D !important;
+    color: #FFFFFF !important;
+    min-width: 80px;
+}
+
+.project-card .btn-action:hover {
+    transform: translateY(-1px);
+    opacity: 0.9;
+}
+
+/* Dropdown styling */
+.project-card .dropdown-menu {
+    background-color: #1A1B25 !important;
+    border: 1px solid #F7EC59 !important;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.project-card .dropdown-item {
+    color: #FFFFFF !important;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+}
+
+.project-card .dropdown-item:hover {
+    background-color: #2A2B35 !important;
+    color: #F7EC59 !important;
+}
+
+/* Button Icons */
+.project-card .btn i {
+    margin-right: 0.25rem;
+    font-size: 0.8rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .project-card .action-buttons {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .project-card .btn-action {
+        width: 100%;
+        min-width: auto;
+    }
+}
+
+/* Animation for card loading */
+@keyframes cardFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.project-card {
+    animation: cardFadeIn 0.3s ease-out;
+}
+
+/* Focus states for accessibility */
+.project-card .btn:focus {
+    outline: 2px solid #F7EC59;
+    outline-offset: 2px;
+}
+
+/* Ensure proper spacing and alignment */
+.project-card .d-flex {
+    align-items: center;
+}
+
+.project-card .justify-content-between {
+    justify-content: space-between;
+}
+
+/* Text truncation for long content */
+.project-card .card-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+/* Ensure consistent spacing */
+.project-card .mb-3 {
+    margin-bottom: 1rem !important;
+}
+
+.project-card .mb-2 {
+    margin-bottom: 0.5rem !important;
+}

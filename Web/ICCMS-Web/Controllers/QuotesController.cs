@@ -1,6 +1,21 @@
 using ICCMS_Web.Models;
 using ICCMS_Web.Services;
 using Microsoft.AspNetCore.Mvc;
+using DinkToPdf;
+using DinkToPdf.Contracts;
+using System.Text;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using ICCMS_Web.Models;
+using System.IO;
+using System.Threading.Tasks;
+
 
 namespace ICCMS_Web.Controllers
 {
@@ -9,14 +24,24 @@ namespace ICCMS_Web.Controllers
     {
         private readonly IApiClient _apiClient;
         private readonly ILogger<QuotesController> _logger;
+        private readonly IWebHostEnvironment _env;
+        private readonly IConverter _pdfConverter;
+        private readonly ICompositeViewEngine _viewEngine;
 
-        public QuotesController(IApiClient apiClient, ILogger<QuotesController> logger)
+        public QuotesController(
+            IApiClient apiClient,
+            ILogger<QuotesController> logger,
+            IWebHostEnvironment env,
+            IConverter pdfConverter,
+            ICompositeViewEngine viewEngine)
         {
             _apiClient = apiClient;
             _logger = logger;
+            _env = env;
+            _pdfConverter = pdfConverter;
+            _viewEngine = viewEngine;
         }
-
-        // ============================
+                // ============================
         // STEP 0: CREATE DRAFT
         // ============================
 
@@ -584,6 +609,165 @@ namespace ICCMS_Web.Controllers
             }
         }
 
+        // ============================
+        // STEP X: Download PDF (GET)
+        // ============================
+        [HttpGet("download/{id}")]
+        public async Task<IActionResult> DownloadQuote(string id)
+        {
+            _logger.LogInformation("🧾 [DownloadQuote] Generating PDF for quotation {Id}", id);
+
+            QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+            QuestPDF.Settings.EnableDebugging = false;
+
+            var quote = await _apiClient.GetAsync<QuotationDto>($"/api/quotations/{id}", User);
+            if (quote == null)
+            {
+                _logger.LogWarning("❌ Quotation not found for ID {Id}", id);
+                return NotFound("Quotation not found");
+            }
+
+            var fileBytes = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4);
+                    page.Margin(40);
+                    page.DefaultTextStyle(x => x.FontFamily("Arial").FontSize(11));
+                    page.Background("#FFFFFF");
+
+
+                    // ===== HEADER =====
+                    page.Header().Row(row =>
+                    {
+                        row.RelativeItem().Column(col =>
+                        {
+                            col.Item().Text(t => t.Span("TASKIT").FontSize(22).Bold().FontColor("#222"));
+                            col.Item().Text(t => t.Span("Integrated Construction & Maintenance Management System")
+                                                .FontSize(10).FontColor("#666"));
+                            col.Item().Text(t => t.Span("support@taskit.co.za | +27 87 123 4567")
+                                                .FontSize(9).FontColor("#666"));
+                        });
+
+                        row.ConstantItem(110).AlignRight().Height(50).Width(100).Element(e =>
+                        {
+                            e.Image("wwwroot/images/TaskIt2.png").FitHeight();
+                        });
+                    });
+
+                    // ===== CONTENT =====
+                    page.Content().PaddingVertical(15).Column(stack =>
+                    {
+                        stack.Spacing(10);
+
+                        // --- Summary box ---
+                        stack.Item().Border(1).BorderColor("#FFD54F")
+                            .Padding(10).Background("#FFFDE7")
+                            .Column(summary =>
+                            {
+                                summary.Spacing(2);
+                                summary.Item().Text(t => t.Span($"Quotation ID: {quote.QuotationId}").Bold());
+                                summary.Item().Text(t => t.Span($"Project ID: {quote.ProjectId}"));
+                                summary.Item().Text(t => t.Span($"Client ID: {quote.ClientId}"));
+                                summary.Item().Text(t => t.Span($"Issued: {quote.CreatedAt:dd MMM yyyy}"));
+                                summary.Item().Text(t => t.Span($"Valid Until: {quote.ValidUntil:dd MMM yyyy}"));
+                            });
+
+                        if (!string.IsNullOrWhiteSpace(quote.Description))
+                            stack.Item().PaddingTop(10)
+                                .Text(t => t.Span($"Description: {quote.Description}").FontColor("#333"));
+
+                        // ===== TABLE =====
+                        stack.Item().PaddingTop(10).Element(e =>
+                        {
+                            e.Table(table =>
+                            {
+                                table.ColumnsDefinition(cols =>
+                                {
+                                    cols.RelativeColumn(3);
+                                    cols.RelativeColumn(4);
+                                    cols.RelativeColumn(1);
+                                    cols.RelativeColumn(2);
+                                    cols.RelativeColumn(2);
+                                });
+
+                                // header row
+                                table.Header(h =>
+                                {
+                                    AddHeader(h, "Item");
+                                    AddHeader(h, "Description");
+                                    AddHeader(h, "Qty");
+                                    AddHeader(h, "Unit Price (R)");
+                                    AddHeader(h, "Total (R)");
+                                });
+
+                                if (quote.Items != null && quote.Items.Any())
+                                {
+                                    foreach (var item in quote.Items)
+                                    {
+                                        AddCell(table, item.Name);
+                                        AddCell(table, item.Description);
+                                        AddCell(table, item.Quantity.ToString());
+                                        AddCell(table, item.UnitPrice.ToString("N2"));
+                                        AddCell(table, item.LineTotal.ToString("N2"));
+                                    }
+                                }
+                                else
+                                {
+                                    table.Cell().ColumnSpan(5)
+                                        .BorderBottom(0.5f).BorderColor("#EEE")
+                                        .AlignCenter()
+                                        .Text(t => t.Span("No line items available"));
+                                }
+                            });
+                        });
+
+                        // ===== TOTALS =====
+                        stack.Item().PaddingTop(20).AlignRight().Column(tot =>
+                        {
+                            tot.Item().Text(t => t.Span($"Subtotal: R {quote.Subtotal:N2}"));
+                            tot.Item().Text(t => t.Span($"Tax (15%): R {quote.TaxTotal:N2}"));
+                            tot.Item().Text(t => t.Span($"Grand Total: R {quote.GrandTotal:N2}")
+                                                    .Bold().FontSize(13).FontColor("#000"));
+                        });
+
+                        // ===== BANKING =====
+                        stack.Item().PaddingTop(25).BorderTop(1).BorderColor("#DDD").PaddingTop(10).Column(bank =>
+                        {
+                            bank.Item().Text(t => t.Span("Banking Details").Bold().FontSize(12).FontColor("#222"));
+                            bank.Item().Text(t => t.Span("Bank: FNB | Acc No: 0000000000 | Branch: 250655 | Ref: Project ID"));
+                            bank.Item().Text(t => t.Span("Email proof of payment to accounts@taskit.co.za"));
+                        });
+                    });
+
+                    // ===== FOOTER =====
+                    page.Footer().AlignCenter().PaddingTop(10)
+                        .Text(t => t.Span("Thank you for choosing TaskIt — powered by ICCMS")
+                                    .FontSize(9).FontColor("#777"));
+                });
+
+                // --- local helpers ---
+                static void AddHeader(TableCellDescriptor h, string text)
+                {
+                    h.Cell().BorderBottom(0.5f).BorderColor("#ccc")
+                        .Background("#FFD54F").Padding(5)
+                        .Text(t => t.Span(text).Bold().FontColor("#000"));
+                }
+
+                static void AddCell(TableDescriptor table, string? text)
+                {
+                    table.Cell().BorderBottom(0.5f).BorderColor("#EEE")
+                        .PaddingVertical(4).PaddingHorizontal(3)
+                        .Text(t => t.Span(text ?? "—"));
+                }
+            }).GeneratePdf();
+
+            _logger.LogInformation("✅ PDF generated for quotation {Id}", id);
+            return File(fileBytes, "application/pdf", $"Quotation_{id}.pdf");
+        }
+
+
+
 
         // ================================================
         // STEP X: CREATE QUOTE FROM ESTIMATE (AUTO-PREFILL)
@@ -648,93 +832,94 @@ namespace ICCMS_Web.Controllers
             public string? ClientId { get; set; }
         }
         // ================================================
-        // STEP X: SUBMIT QUOTATION (Finalize + Notify Client)
+        // STEP X: SUBMIT QUOTATION (Create + Approve + Send)
         // ================================================
         [HttpPost("submit-quotation")]
         public async Task<IActionResult> SubmitQuotation([FromBody] QuotationDto model)
         {
-            _logger.LogInformation("📨 [SubmitQuotation] Start for QuotationId={QuotationId}", model.QuotationId);
+            _logger.LogInformation("📨 [SubmitQuotation] Start | ProjectId={ProjectId} | ClientId={ClientId}",
+                model.ProjectId, model.ClientId);
 
             try
             {
-                // === Validation ===
+                // === VALIDATION ===
                 if (string.IsNullOrWhiteSpace(model.ProjectId) || string.IsNullOrWhiteSpace(model.ClientId))
-                {
-                    _logger.LogWarning("⚠️ Missing ProjectId or ClientId in quotation submission");
                     return BadRequest(new { error = "Missing required project or client information." });
-                }
 
                 if (model.Items == null || !model.Items.Any())
-                {
-                    _logger.LogWarning("⚠️ Attempted submission with no line items.");
                     return BadRequest(new { error = "Quotation must contain at least one item." });
+
+                // === SANITIZATION ===
+                model.Description ??= "AI-generated estimate from blueprint";
+                model.ContractorId ??= User.FindFirst("UserId")?.Value ?? "unknown";
+                model.IsAiGenerated = true;
+                model.ValidUntil = DateTime.UtcNow.AddDays(30);
+
+                // === NORMALIZE RATES ===
+                double markupRate = model.MarkupRate / 100.0;
+
+                // === CALCULATIONS ===
+                double subtotal = 0, taxTotal = 0;
+                foreach (var item in model.Items)
+                {
+                    item.LineTotal = item.Quantity * item.UnitPrice;
+                    subtotal += item.LineTotal;
+                    double itemTaxRate = item.TaxRate / 100.0;
+                    taxTotal += (item.LineTotal * markupRate) * itemTaxRate;
                 }
 
-                // === Totals Calculation ===
-                double subtotal = model.Items.Sum(i => i.Quantity * i.UnitPrice);
-
-                // 🧮 Use item-level TaxRate (average if mixed)
-                double avgTaxRate = model.Items.Average(i => i.TaxRate);
-                double taxTotal = subtotal * (avgTaxRate / 100);
-
-                // 🧮 Apply markup before tax (markupRate stored as percentage)
-                double markupTotal = subtotal * (model.MarkupRate / 100);
-
+                double markupTotal = subtotal * markupRate;
                 double grandTotal = subtotal + markupTotal + taxTotal;
 
                 model.Subtotal = subtotal;
                 model.TaxTotal = taxTotal;
                 model.GrandTotal = grandTotal;
                 model.Total = grandTotal;
-                model.Status = "AwaitingClientResponse";
+                model.Status = "Draft";
+                model.CreatedAt = DateTime.UtcNow;
                 model.UpdatedAt = DateTime.UtcNow;
 
-                _logger.LogInformation("💰 Calculated Totals → Subtotal={Subtotal}, Markup={Markup}, Tax={Tax}, Grand={Grand}",
+                _logger.LogInformation("💰 Totals Calculated | Subtotal={Subtotal}, Markup={MarkupTotal}, Tax={TaxTotal}, Grand={GrandTotal}",
                     subtotal, markupTotal, taxTotal, grandTotal);
 
-                // === API Push ===
-                object? result = null;
-                try
-                {
-                    result = await _apiClient.PutAsync<object>(
-                        $"/api/quotations/{model.QuotationId}", model, User);
-                }
-                catch (System.Text.Json.JsonException jex)
-                {
-                    // Handle 204 or plain-text responses safely
-                    _logger.LogInformation("🟢 API returned NoContent or non-JSON body — treating as success ({Message})", jex.Message);
-                }
+                // === CREATE IN FIRESTORE ===
+                string? quotationId = await _apiClient.PostAsync<string>("/api/quotations", model, User);
+                if (string.IsNullOrWhiteSpace(quotationId))
+                    return StatusCode(500, new { error = "Quotation creation failed. No ID returned." });
 
-                if (result == null)
-                {
-                    _logger.LogInformation("🟢 API PUT returned null or NoContent — treating as success");
-                }
+                _logger.LogInformation("✅ Created quotation ID={QuotationId}", quotationId);
 
-                // === Update Project Status ===
-                var projectUpdate = new { status = "Awaiting Approval" };
-                await _apiClient.PutAsync<object>(
-                    $"/api/projectmanager/projects/{model.ProjectId}", projectUpdate, User);
+                // === STEP 1: SUBMIT FOR APPROVAL ===
+                _logger.LogInformation("📤 Submitting quotation {Id} for approval...", quotationId);
+                await _apiClient.PostAsync<object>($"/api/quotations/{quotationId}/submit-for-approval", null, User);
 
+                // === STEP 2: PM APPROVAL ===
+                _logger.LogInformation("🧾 Approving quotation {Id}...", quotationId);
+                await _apiClient.PostAsync<object>($"/api/quotations/{quotationId}/pm-approve", null, User);
 
-                // === Notify Client (stub) ===
-                _logger.LogInformation("📢 Simulating client notification for ClientId={ClientId}", model.ClientId);
+                // === STEP 3: SEND TO CLIENT ===
+                _logger.LogInformation("📩 Sending quotation {Id} to client...", quotationId);
+                await _apiClient.PostAsync<object>($"/api/quotations/{quotationId}/send-to-client", null, User);
+                model.Status = "SentToClient";
 
-                // === Return Success Response ===
+                _logger.LogInformation("✅ Quotation {Id} fully processed: Draft → Approval → SentToClient", quotationId);
+
                 return Ok(new
                 {
-                    message = "Quotation submitted successfully.",
-                    quotationId = model.QuotationId,
+                    message = "Quotation created, approved, and sent to client successfully.",
+                    quotationId,
                     status = model.Status
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🔥 Exception during SubmitQuotation for {QuotationId}", model.QuotationId);
+                _logger.LogError(ex, "🔥 Exception during SubmitQuotation for ProjectId={ProjectId}", model.ProjectId);
                 return StatusCode(500, new { error = ex.Message });
             }
         }
 
-        // ================================================
+
+       // ================================================
         // STEP: GetEstimateItems (for Quotation Prefill)
         // ================================================
         [HttpGet]
@@ -769,7 +954,33 @@ namespace ICCMS_Web.Controllers
 
 
 
+        private async Task<string> RenderViewAsync<T>(string viewName, T model, bool partial = false)
+        {
+            ViewData.Model = model;
+            using var sw = new StringWriter();
+            var viewResult = _viewEngine.FindView(ControllerContext, viewName, !partial);
+            if (viewResult.View == null)
+                throw new ArgumentNullException($"{viewName} not found");
+            var viewContext = new ViewContext(ControllerContext, viewResult.View, ViewData, TempData, sw, new HtmlHelperOptions());
+            await viewResult.View.RenderAsync(viewContext);
+            return sw.ToString();
+        }
 
+        [HttpPost("simulate-client-approval/{id}")]
+        [Authorize(Roles = "Project Manager,Tester")]
+        public async Task<IActionResult> SimulateClientApproval(string id)
+        {
+            try
+            {
+                var body = new { accept = true, note = "Simulated approval by tester" };
+                await _apiClient.PostAsync<object>($"/api/quotations/{id}/client-decision", body, User);
+                return Ok(new { message = "Simulated approval successful" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
 
 
 

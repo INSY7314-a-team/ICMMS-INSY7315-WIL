@@ -42,6 +42,8 @@ namespace ICCMS_API.Helpers
 
             // Apply markup to subtotal first
             var subtotalWithMarkup = invoice.Subtotal * invoice.MarkupRate;
+            // Apply markup to subtotal first
+            var subtotalWithMarkup = invoice.Subtotal * invoice.MarkupRate;
 
             // Calculate tax total on the marked-up subtotal
             invoice.TaxTotal = invoice.Items.Sum(item => (item.LineTotal * invoice.MarkupRate) * item.TaxRate);

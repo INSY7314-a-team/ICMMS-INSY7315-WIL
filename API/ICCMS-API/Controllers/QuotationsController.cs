@@ -137,8 +137,7 @@ namespace ICCMS_API.Controllers
         {
             try
             {
-                
-                // IMPORTANT: quotation.ClientId must be set to the client's UserId
+                // ✅ Ensure required fields and defaults
                 quotation.Status ??= "Draft";
 
                 // Set timestamps and defaults
@@ -147,16 +146,21 @@ namespace ICCMS_API.Controllers
 
                 // Validate ValidUntil
                 if (quotation.ValidUntil <= quotation.CreatedAt)
-                {
                     return BadRequest("ValidUntil must be after CreatedAt");
-                }
 
-                // Recalculate pricing
+                // ✅ Recalculate totals
                 Pricing.Recalculate(quotation);
 
-                
-
+                // ✅ Step 1: Add the quotation to Firestore (generates a doc ID)
                 var quotationId = await _firebaseService.AddDocumentAsync("quotations", quotation);
+
+                // ✅ Step 2: Save the generated Firestore ID back into the document
+                quotation.QuotationId = quotationId;
+
+                // ✅ Step 3: Update Firestore with this new field
+                await _firebaseService.UpdateDocumentAsync("quotations", quotationId, quotation);
+
+                // ✅ Step 4: Return the quotation ID to the caller
                 return Ok(quotationId);
             }
             catch (Exception ex)
@@ -167,65 +171,74 @@ namespace ICCMS_API.Controllers
 
         [HttpPost("from-estimate/{estimateId}")]
         [Authorize(Roles = "Project Manager,Tester")]
-        public async Task<ActionResult<string>> CreateQuotationFromEstimate(
-            string estimateId,
-            [FromBody] CreateQuotationFromEstimateRequest request
-        )
+        public async Task<ActionResult<Quotation>> CreateQuotationFromEstimate(string estimateId, [FromBody] CreateQuotationFromEstimateRequest request)
         {
             try
             {
-                var estimate = await _firebaseService.GetDocumentAsync<Estimate>(
-                    "estimates",
-                    estimateId
-                );
+                // ===== 1️⃣ Fetch the Estimate =====
+                var estimate = await _firebaseService.GetDocumentAsync<Estimate>("estimates", estimateId);
                 if (estimate == null)
-                    return NotFound("Estimate not found");
+                    return NotFound(new { error = "Estimate not found" });
 
-                // Convert EstimateLineItems to QuotationItems
-                var quotationItems = estimate
-                    .LineItems.Select(item => new QuotationItem
-                    {
-                        Name = item.Name,
-                        Quantity = item.Quantity,
-                        UnitPrice = item.UnitPrice,
-                        TaxRate = 0.15, // Default 15% VAT
-                        LineTotal = item.LineTotal,
-                    })
-                    .ToList();
+                // ===== 2️⃣ Fetch the Project to access ClientId =====
+                var project = await _firebaseService.GetDocumentAsync<Project>("projects", estimate.ProjectId);
+                if (project == null)
+                    return NotFound(new { error = "Project not found for estimate" });
 
-                // For testing purposes, use current user as client if in testing mode
-                var currentUserId = User.UserId();
-                var clientId =
-                    !string.IsNullOrEmpty(currentUserId) && currentUserId.Contains("tester")
-                        ? currentUserId
-                        : request.ClientId;
+                // ===== 3️⃣ Convert Estimate → Quotation Items =====
+                var quotationItems = estimate.LineItems.Select(item => new QuotationItem
+                {
+                    Name = item.Name,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    TaxRate = 0.15,
+                    LineTotal = item.LineTotal
+                }).ToList();
 
+                // ===== 4️⃣ Create the Quotation =====
                 var quotation = new Quotation
                 {
+                    QuotationId = Guid.NewGuid().ToString(),
+                    EstimateId = estimateId,
                     ProjectId = estimate.ProjectId,
-                    ClientId = clientId,
+                    ClientId = project.ClientId,        // ✅ from Project
                     ContractorId = estimate.ContractorId,
                     Description = estimate.Description,
                     Items = quotationItems,
-                    Status = "PendingPMApproval", // Set to correct status for PM approval workflow
+                    Status = "PendingPMApproval",
                     ValidUntil = estimate.ValidUntil,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
-                    Currency = estimate.Currency,
-                    IsAiGenerated = estimate.IsAiGenerated,
+                    Currency = estimate.Currency ?? "ZAR",
+                    IsAiGenerated = estimate.IsAiGenerated
                 };
 
-                // Calculate quotation totals
+                // ===== 5️⃣ Calculate totals =====
                 Pricing.Recalculate(quotation);
 
+                // ===== 6️⃣ Save to Firestore =====
                 var quotationId = await _firebaseService.AddDocumentAsync("quotations", quotation);
-                return Ok(quotationId);
+
+                // update record to include the Firestore-generated quotationId
+                quotation.QuotationId = quotationId;
+                await _firebaseService.UpdateDocumentAsync("quotations", quotationId, quotation);
+
+                // ===== 7️⃣ Return JSON (expected by Web side) =====
+                return Ok(new
+                {
+                    quotationId,
+                    quotation
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                Console.WriteLine($"💥 Exception while creating quotation from estimate {estimateId}: {ex.Message}");
+                return StatusCode(500, new { error = ex.Message });
             }
         }
+
+
+
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Project Manager,Tester")]
@@ -456,10 +469,7 @@ namespace ICCMS_API.Controllers
         {
             return Ok(User.Claims.Select(c => new { c.Type, c.Value }));
         }
-
     }
-
-
 
     public class ClientDecisionBody
     {

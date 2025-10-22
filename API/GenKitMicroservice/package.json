@@ -1,0 +1,46 @@
+{
+  "name": "genkit-microservice",
+  "version": "1.0.0",
+  "description": "Microservice to implement Google's GenKit into the ICMMS-API c#.",
+  "keywords": [
+    "AI",
+    "Microservice",
+    "GenKit",
+    "Google AI"
+  ],
+  "homepage": "https://github.com/INSY7314-a-team/ICMMS-INSY7315-WIL#readme",
+  "bugs": {
+    "url": "https://github.com/INSY7314-a-team/ICMMS-INSY7315-WIL/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/INSY7314-a-team/ICMMS-INSY7315-WIL.git"
+  },
+  "license": "ISC",
+  "author": "Max-Thunderbolt",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "genkit:dev": "genkit dev",
+    "genkit:build": "genkit build",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@genkit-ai/googleai": "^1.21.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "genkit": "^1.21.0",
+    "genkit-cli": "^1.21.0",
+    "helmet": "^7.1.0",
+    "mammoth": "^1.11.0",
+    "morgan": "^1.10.0",
+    "pdf-parse": "^2.3.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.10"
+  }
+}

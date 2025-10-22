@@ -4,6 +4,7 @@
    ================================================ *@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,37 +21,74 @@
             display: flex;
             min-height: 100vh;
             overflow-x: hidden;
-            background: #f5f6fa;
+            background: #1A1B25;
             transition: margin-left 0.3s ease;
         }
 
         /* === SIDEBAR === */
         #sidebar {
             width: 250px;
-            background: #212529;
+            background: #1A1B25;
             color: #fff;
             position: fixed;
-            top: 0; left: 0;
+            top: 0;
+            left: 0;
             height: 100vh;
             display: flex;
             flex-direction: column;
             transition: width 0.3s ease;
             z-index: 200;
+            border: 2px solid #F7EC59;
+            border-radius: 4px;
         }
-        #sidebar.collapsed { width: 70px; }
+
+        #sidebar.collapsed {
+            width: 70px;
+        }
+
+        /* Hide text in collapsed state */
+        #sidebar.collapsed ul li a span {
+            display: none;
+        }
+
+        #sidebar.collapsed .SidebarUserControlsLogin span,
+        #sidebar.collapsed .SidebarUserControls span {
+            display: none;
+        }
+
+        /* Center icons in collapsed state */
+        #sidebar.collapsed ul li a {
+            justify-content: center;
+            padding: 0.9rem 0.5rem;
+        }
+
+        #sidebar.collapsed .SidebarUserControlsLogin a,
+        #sidebar.collapsed .SidebarUserControls a {
+            justify-content: center;
+            padding: 0.9rem 0.5rem;
+        }
+
+        /* Adjust brand text in collapsed state */
+        #sidebar.collapsed .brand {
+            font-size: 0.8rem;
+            padding: 0.5rem;
+        }
+
         #sidebar .brand {
             font-weight: 700;
             font-size: 1.3rem;
             padding: 1rem;
             text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
+
         #sidebar ul {
             list-style: none;
             padding: 0;
             margin: 0;
             flex-grow: 1;
         }
+
         #sidebar ul li a {
             display: flex;
             align-items: center;
@@ -61,11 +99,13 @@
             font-weight: 500;
             transition: all 0.2s ease;
         }
+
         #sidebar ul li a:hover,
         #sidebar ul li a.active {
-            background: #343a40;
-            color: #fff;
+            background: #2A2B35;
+            color: #F7EC59;
         }
+
         #sidebar ul li a i {
             min-width: 20px;
             text-align: center;
@@ -81,27 +121,99 @@
             font-size: 1.1rem;
             transition: transform 0.3s ease;
         }
-        #sidebar-toggle:hover { color: #ffc107; }
+
+        #sidebar-toggle:hover {
+            color: #F7EC59;
+        }
+
         #sidebar.collapsed #sidebar-toggle i {
             transform: rotate(180deg);
+        }
+
+        .SidebarUserControls {
+            border: 2px solid #FF6663;
+            border-radius: 4px;
+            background-color: #FF6663;
+            color: #ffffff;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-align: center;
+            margin-left: 4rem;
+            margin-right: 4rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .SidebarUserControlsLogin {
+            border: 2px solid #226F54;
+            border-radius: 4px;
+            background-color: #226F54;
+            color: #ffffff;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-align: center;
+            margin-left: 4rem;
+            margin-right: 4rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .SidebarUserControlsLogin a,
+        .SidebarUserControls a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .SidebarUserControlsLogin a:hover,
+        .SidebarUserControls a:hover {
+            color: #F7EC59;
+        }
+
+        .SidebarUserControlsLogin {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #226F54;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        /* Adjust SidebarUserControls for collapsed state */
+        #sidebar.collapsed .SidebarUserControlsLogin,
+        #sidebar.collapsed .SidebarUserControls {
+            margin-left: 0.5rem;
+            margin-right: 0.5rem;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
         }
 
         /* === HEADER === */
         #main-header {
             position: fixed;
-            top: 0; left: 250px;
+            top: 0;
+            left: 250px;
             right: 0;
             height: 60px;
-            background: #fff;
-            border-bottom: 1px solid #ddd;
+            background: #2A2B35;
+            border-bottom: 1px solid #F7EC59;
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 1.5rem;
             z-index: 100;
             transition: left 0.3s ease;
+            border: 2px solid #F7EC59;
+            border-radius: 4px;
+            color: white;
         }
-        #sidebar.collapsed + #main-header {
+
+        #sidebar.collapsed+#main-header {
             left: 70px;
         }
 
@@ -112,7 +224,8 @@
             flex: 1;
             transition: margin-left 0.3s ease;
         }
-        #sidebar.collapsed ~ #content-area {
+
+        #sidebar.collapsed~#content-area {
             margin-left: 70px;
         }
 
@@ -125,31 +238,46 @@
 
 <body>
     <!-- ===== SIDEBAR ===== -->
-    <aside id="sidebar">
-        <div class="brand">ICCMS</div>
-        <ul>
-            @if (User.Identity.IsAuthenticated)
-            {
-                if (User.IsInRole("ProjectManager") || User.IsInRole("Tester"))
+@if (User.Identity.IsAuthenticated)
+{
+        <aside id="sidebar">
+            <div class="brand">ICCMS</div>
+            <ul>
+                @if (User.Identity.IsAuthenticated)
                 {
-                    <li><a asp-controller="ProjectManager" asp-action="Dashboard"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a></li>
+                    if (User.IsInRole("Project Manager") || User.IsInRole("Tester"))
+                    {
+                        <li><a asp-controller="ProjectManager" asp-action="Dashboard"><i
+                                    class="fa-solid fa-gauge"></i><span>Dashboard</span></a></li>
+                    }
+                    if (User.IsInRole("Admin"))
+                    {
+                        <li><a asp-controller="Users" asp-action="Index"><i class="fa-solid fa-users"></i><span>Users</span></a>
+                        </li>
+                        <li><a asp-controller="Data" asp-action="Index"><i class="fa-solid fa-database"></i><span>Database</span></a>
+                        </li>
+                    }
+                    if (User.IsInRole("Tester"))
+                    {
+                        <li><a asp-controller="Testing" asp-action="Index"><i class="fa-solid fa-flask"></i><span>Testing</span></a>
+                        </li>
+                        <li><a asp-controller="MessagesTest" asp-action="Index"><i class="fa-solid fa-comments"></i><span>Message
+                                    Test</span></a></li>
+                    }
                 }
-                if (User.IsInRole("Admin"))
-                {
-                    <li><a asp-controller="Users" asp-action="Index"><i class="fa-solid fa-users"></i><span>Users</span></a></li>
-                }
-                if (User.IsInRole("Tester"))
-                {
-                    <li><a asp-controller="Testing" asp-action="Index"><i class="fa-solid fa-flask"></i><span>Testing</span></a></li>
-                    <li><a asp-controller="MessagesTest" asp-action="Index"><i class="fa-solid fa-comments"></i><span>Message Test</span></a></li>
-                }
-            }
-        </ul>
-        <button id="sidebar-toggle"><i class="fa-solid fa-chevron-left"></i></button>
-    </aside>
+            </ul>
 
-    <!-- ===== HEADER ===== -->
-    <header id="main-header">
+
+            <div class="SidebarUserControls">
+                <a asp-controller="Auth" asp-action="Logout"><i
+                        class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+            </div>
+            
+            <button id="sidebar-toggle"><i class="fa-solid fa-chevron-left"></i></button>
+        </aside>
+    }
+        <!-- ===== HEADER ===== -->
+    @* <header id="main-header">
         <div class="d-flex align-items-center gap-2">
             <i class="fa-solid fa-layer-group text-warning"></i>
             <h5 class="m-0 fw-bold">@ViewData["Title"]</h5>
@@ -166,42 +294,43 @@
                 <a class="btn btn-sm btn-warning" asp-controller="Auth" asp-action="Login">Login</a>
             }
         </div>
-    </header>
+    </header> *@
 
-    <!-- ===== MAIN CONTENT ===== -->
-    <main id="content-area">
-        @if (TempData["SuccessMessage"] != null)
-        {
-            <div class="alert alert-success">@TempData["SuccessMessage"]</div>
-        }
-        @if (TempData["ErrorMessage"] != null)
-        {
-            <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
-        }
+        <!-- ===== MAIN CONTENT ===== -->
+        <main id="content-area">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+            }
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+            }
 
-        @RenderBody()
-    </main>
+            @RenderBody()
+        </main>
 
-    <!-- ===== SCRIPTS ===== -->
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+        <!-- ===== SCRIPTS ===== -->
+        <script src="~/lib/jquery/dist/jquery.min.js"></script>
+        <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="~/js/site.js" asp-append-version="true"></script>
 
-    <script>
-        const sidebar = document.getElementById('sidebar');
-        const toggleBtn = document.getElementById('sidebar-toggle');
+        <script>
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('sidebar-toggle');
 
-        toggleBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('collapsed');
-            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-        });
+            toggleBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('collapsed');
+                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+            });
 
-        // restore collapse state
-        if (localStorage.getItem('sidebarCollapsed') === 'true') {
-            sidebar.classList.add('collapsed');
-        }
-    </script>
+            // restore collapse state
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                sidebar.classList.add('collapsed');
+            }
+        </script>
 
     @await RenderSectionAsync("Scripts", required: false)
-</body>
-</html>
+    </body>
+
+    </html>

@@ -14,4 +14,6 @@ public interface ISupabaseService
     Task<byte[]> DownloadFileAsync(string bucketName, string fileName);
     Task<bool> DeleteFileAsync(string bucketName, string fileName);
     Task<List<string>> ListFilesAsync(string bucketName, string? folderPath = null);
+    Task<bool> EnsureBucketExistsAsync(string bucketName);
+    Task<bool> CreateBucketAsync(string bucketName, bool isPublic = true);
 }

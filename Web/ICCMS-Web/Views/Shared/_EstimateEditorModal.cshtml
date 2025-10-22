@@ -1,0 +1,789 @@
+@* Modal to edit estimate line items for a project *@
+<div class="modal fade" id="estimateEditorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content construction-border"
+            style="background-color: var(--secondary-bg); color: var(--text-light); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div class="modal-header"
+                style="background: var(--primary-bg); border-bottom: 1px solid var(--accent-yellow); border-radius: 12px 12px 0 0; padding: 1.5rem;">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <h5 class="modal-title mb-0"
+                            style="color: var(--text-light); font-weight: 600; font-size: 1.25rem;">Edit Line Items</h5>
+                        <small class="text-muted" id="ee-projectBadge"></small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"
+                    style="filter: brightness(0) invert(1);"></button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary" id="ee-btnPickBlueprint"
+                            style="border: 1px solid var(--accent-yellow); color: var(--accent-yellow); padding: 8px 16px; border-radius: 6px; font-weight: 500;">
+                            <i class="fa-solid fa-file me-1"></i>Process Blueprint
+                        </button>
+                        <button class="btn btn-outline-warning" id="ee-btnRegenerate"
+                            style="border: 1px solid var(--accent-yellow); color: var(--accent-yellow); padding: 8px 16px; border-radius: 6px; font-weight: 500;">
+                            <i class="fa-solid fa-robot me-1"></i>Regenerate
+                        </button>
+                    </div>
+                    <button class="btn" id="ee-btnAdd"
+                        style="background: linear-gradient(135deg, var(--accent-yellow), var(--accent-green)); color: var(--text-dark); border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600;">
+                        <i class="fa-solid fa-plus me-1"></i>Add Item
+                    </button>
+                </div>
+
+                <!-- Line Items Container -->
+                <div id="ee-line-items-container" style="min-height: 300px;">
+                    <!-- Line items will be rendered here by category -->
+                </div>
+
+                <!-- Summary Section -->
+                <div class="mt-4"
+                    style="background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%); border: 1px solid var(--accent-yellow); border-radius: 12px; padding: 1.5rem;">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6 style="color: var(--text-light); font-weight: 600; margin-bottom: 1rem;">
+                                <i class="fa-solid fa-calculator me-2"></i>Estimate Summary
+                            </h6>
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="metric">
+                                        <div
+                                            style="color: var(--text-muted); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            Line Items</div>
+                                        <div id="ee-item-count"
+                                            style="color: var(--accent-yellow); font-size: 1.5rem; font-weight: 600;">0
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="metric">
+                                        <div
+                                            style="color: var(--text-muted); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            Categories</div>
+                                        <div id="ee-category-count"
+                                            style="color: var(--accent-green); font-size: 1.5rem; font-weight: 600;">0
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="metric">
+                                        <div
+                                            style="color: var(--text-muted); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            Total Items</div>
+                                        <div id="ee-total-items"
+                                            style="color: var(--text-light); font-size: 1.5rem; font-weight: 600;">0
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-end">
+                                <div class="mb-2">
+                                    <span
+                                        style="color: var(--text-light); font-size: 1.1rem; font-weight: 500;">Subtotal:</span>
+                                    <span id="ee-subtotal"
+                                        style="color: var(--accent-yellow); font-size: 1.25rem; font-weight: 600; margin-left: 8px;">R
+                                        0.00</span>
+                                </div>
+                                <div class="mb-2">
+                                    <span style="color: var(--text-light); font-size: 1.1rem; font-weight: 500;">Tax
+                                        (15%):</span>
+                                    <span id="ee-tax"
+                                        style="color: var(--accent-yellow); font-size: 1.25rem; font-weight: 600; margin-left: 8px;">R
+                                        0.00</span>
+                                </div>
+                                <div
+                                    style="border-top: 2px solid var(--accent-yellow); padding-top: 8px; margin-top: 8px;">
+                                    <span
+                                        style="color: var(--text-light); font-size: 1.3rem; font-weight: 600;">Total:</span>
+                                    <span id="ee-total"
+                                        style="color: var(--accent-green); font-size: 1.5rem; font-weight: 700; margin-left: 8px;">R
+                                        0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"
+                style="background: var(--primary-bg); border-top: 1px solid var(--accent-yellow); border-radius: 0 0 12px 12px; padding: 1.5rem;">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <div class="text-muted" style="font-size: 0.9rem;">
+                        <i class="fa-solid fa-info-circle me-1"></i>Changes are saved automatically
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary" data-bs-dismiss="modal"
+                            style="border: 1px solid var(--text-muted); color: var(--text-light); padding: 8px 16px; border-radius: 6px;">
+                            Close
+                        </button>
+                        <button class="btn" id="ee-btnSave"
+                            style="background: linear-gradient(135deg, var(--accent-yellow), var(--accent-green)); color: var(--text-dark); border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600;">
+                            <i class="fa-solid fa-save me-1"></i>Save Changes
+                        </button>
+                        <button class="btn" id="ee-btnSendQuote"
+                            style="background: linear-gradient(135deg, #6BF178, var(--accent-green)); color: var(--text-dark); border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600;">
+                            <i class="fa-solid fa-paper-plane me-1"></i>Send Quote
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        let projectId = null;
+        let estimate = null;
+
+        function open(project, estimateId = null) {
+            projectId = project;
+            document.getElementById('ee-projectBadge').textContent = `Project: ${project}`;
+
+            // Restore original modal content
+            const modalBody = document.querySelector('#estimateEditorModal .modal-body');
+            modalBody.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary" id="ee-btnPickBlueprint" style="border: 1px solid var(--accent-yellow); color: var(--accent-yellow); padding: 8px 16px; border-radius: 6px; font-weight: 500;">
+                            <i class="fa-solid fa-file me-1"></i>Process Blueprint
+                        </button>
+                        <button class="btn btn-outline-warning" id="ee-btnRegenerate" style="border: 1px solid var(--accent-yellow); color: var(--accent-yellow); padding: 8px 16px; border-radius: 6px; font-weight: 500;">
+                            <i class="fa-solid fa-robot me-1"></i>Regenerate
+                        </button>
+                    </div>
+                    <button class="btn" id="ee-btnAdd" style="background: linear-gradient(135deg, var(--accent-yellow), var(--accent-green)); color: var(--text-dark); border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600;">
+                        <i class="fa-solid fa-plus me-1"></i>Add Item
+                    </button>
+                </div>
+
+                <div id="ee-line-items-container" style="min-height: 300px;"></div>
+
+                <div class="mt-4" style="background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%); border: 1px solid var(--accent-yellow); border-radius: 12px; padding: 1.5rem;">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6 style="color: var(--text-light); font-weight: 600; margin-bottom: 1rem;">
+                                <i class="fa-solid fa-calculator me-2"></i>Estimate Summary
+                            </h6>
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="metric">
+                                        <div style="color: var(--text-muted); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Line Items</div>
+                                        <div id="ee-item-count" style="color: var(--accent-yellow); font-size: 1.5rem; font-weight: 600;">0</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="metric">
+                                        <div style="color: var(--text-muted); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Categories</div>
+                                        <div id="ee-category-count" style="color: var(--accent-green); font-size: 1.5rem; font-weight: 600;">0</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="metric">
+                                        <div style="color: var(--text-muted); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Total Items</div>
+                                        <div id="ee-total-items" style="color: var(--text-light); font-size: 1.5rem; font-weight: 600;">0</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-end">
+                                <div class="mb-2">
+                                    <span style="color: var(--text-light); font-size: 1.1rem; font-weight: 500;">Subtotal:</span>
+                                    <span id="ee-subtotal" style="color: var(--accent-yellow); font-size: 1.25rem; font-weight: 600; margin-left: 8px;">R 0.00</span>
+                                </div>
+                                <div class="mb-2">
+                                    <span style="color: var(--text-light); font-size: 1.1rem; font-weight: 500;">Tax (15%):</span>
+                                    <span id="ee-tax" style="color: var(--accent-yellow); font-size: 1.25rem; font-weight: 600; margin-left: 8px;">R 0.00</span>
+                                </div>
+                                <div style="border-top: 2px solid var(--accent-yellow); padding-top: 8px; margin-top: 8px;">
+                                    <span style="color: var(--text-light); font-size: 1.3rem; font-weight: 600;">Total:</span>
+                                    <span id="ee-total" style="color: var(--accent-green); font-size: 1.5rem; font-weight: 700; margin-left: 8px;">R 0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const modal = new bootstrap.Modal(document.getElementById('estimateEditorModal'));
+            modal.show();
+            setTimeout(() => {
+                loadEstimate();
+                reattachEventListeners();
+            }, 150);
+        }
+
+        function reattachEventListeners() {
+            // Reattach all event listeners for dynamically created elements
+            const addBtn = document.getElementById('ee-btnAdd');
+            const pickBlueprintBtn = document.getElementById('ee-btnPickBlueprint');
+            const regenerateBtn = document.getElementById('ee-btnRegenerate');
+            const saveBtn = document.getElementById('ee-btnSave');
+            const sendQuoteBtn = document.getElementById('ee-btnSendQuote');
+
+            if (addBtn) {
+                addBtn.removeEventListener('click', handleAddItem);
+                addBtn.addEventListener('click', handleAddItem);
+            }
+
+            if (pickBlueprintBtn) {
+                pickBlueprintBtn.removeEventListener('click', handlePickBlueprint);
+                pickBlueprintBtn.addEventListener('click', handlePickBlueprint);
+            }
+
+            if (regenerateBtn) {
+                regenerateBtn.removeEventListener('click', handleRegenerate);
+                regenerateBtn.addEventListener('click', handleRegenerate);
+            }
+
+            if (saveBtn) {
+                saveBtn.removeEventListener('click', handleSave);
+                saveBtn.addEventListener('click', handleSave);
+            }
+
+            if (sendQuoteBtn) {
+                sendQuoteBtn.removeEventListener('click', handleSendQuote);
+                sendQuoteBtn.addEventListener('click', handleSendQuote);
+            }
+        }
+
+        function handleAddItem() {
+            if (!estimate.lineItems) estimate.lineItems = [];
+            estimate.lineItems.push({ name: '', description: '', category: '', unit: '', quantity: 0, unitPrice: 0, lineTotal: 0 });
+            render();
+        }
+
+        function handlePickBlueprint() {
+            openBlueprintPicker(projectId, async function (url) {
+                await processBlueprint(url);
+            });
+        }
+
+        async function handleRegenerate() {
+            if (!confirm('Regenerate from blueprint? This may overwrite your edits.')) return;
+            if (!estimate.blueprintUrl) { alert('Pick a blueprint first.'); return; }
+
+            const btn = document.getElementById('ee-btnRegenerate');
+            const originalText = btn.innerHTML;
+
+            try {
+                // Show loading state
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Regenerating...';
+
+                await processBlueprint(estimate.blueprintUrl);
+            } finally {
+                // Restore button state
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        async function handleSave() {
+            collect();
+            if (!estimate.estimateId) { alert('No estimate to save. Try processing a blueprint first.'); return; }
+            try {
+                const res = await fetch(`/ProjectManager/SaveEstimate?estimateId=${encodeURIComponent(estimate.estimateId)}`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(estimate)
+                });
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    console.error('Failed to save estimate:', res.status, res.statusText, errorText);
+                    throw new Error(`Failed to save estimate: ${res.status} ${res.statusText}`);
+                }
+                const savedEstimate = await res.json();
+                console.log('Estimate saved successfully:', savedEstimate);
+
+                // Update the estimate with the saved data (or keep original if 204 response)
+                if (savedEstimate) {
+                    estimate = savedEstimate;
+                }
+
+                alert('Saved successfully');
+            } catch (error) {
+                console.error('Error saving estimate:', error);
+                alert('Save failed: ' + error.message);
+            }
+        }
+
+        // ==========================================================
+        //  🚀 handleSendQuote()
+        //  Full quotation workflow — step-by-step automation
+        //  1️⃣ Create Quote From Estimate
+        //  2️⃣ Approve Quote by PM
+        //  3️⃣ Send Quote to Client
+        //  4️⃣ Download PDF
+        //  5️⃣ Trigger UI + Toast
+        // ==========================================================
+        async function handleSendQuote() {
+            console.log("🚀 [SendQuote] STARTED | Function triggered!");
+            console.log("🧱 DEBUG | Estimate before quote:", estimate);
+
+            // ==========================================================
+            //  STEP 0️⃣ — VALIDATE ESTIMATE
+            // ==========================================================
+            if (!estimate || !estimate.estimateId) {
+                console.warn("⚠️ No estimate found — creating blank fallback...");
+                const fallback = await fetch("/ProjectManager/CreateBlankEstimate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        projectId,
+                        description: "Manual estimate (user skipped blueprint)",
+                        totalAmount: 0,
+                        lineItems: []
+                    })
+                });
+
+                const res = await fallback.json().catch(() => ({}));
+                if (fallback.ok && res.estimateId) {
+                    estimate = { ...estimate, estimateId: res.estimateId };
+                    console.log("✅ Blank estimate created:", res.estimateId);
+                } else {
+                    console.error("❌ Failed to create blank estimate:", res);
+                    alert("Could not create default estimate — please try again.");
+                    return;
+                }
+            }
+
+            try {
+                // ==========================================================
+                //  STEP 1️⃣ — CREATE QUOTE FROM ESTIMATE
+                // ==========================================================
+                console.log("🧱 [Step 1] Creating quote from estimate:", estimate.estimateId);
+
+                const createRes = await fetch(`/ProjectManager/CreateQuoteFromEstimate?estimateId=${encodeURIComponent(estimate.estimateId)}`, {
+                    method: "POST"
+                });
+
+                console.log("📡 [CreateQuoteFromEstimate] Response:", createRes.status, createRes.statusText);
+
+                // Read response once and keep the raw text for logging or JSON parsing
+                const rawText = await createRes.text();
+                console.log("🧱 DEBUG | Raw response text:", rawText);
+
+                // Try parse safely
+                let q = {};
+                try {
+                    q = JSON.parse(rawText);
+                } catch {
+                    console.warn("⚠️ Could not parse JSON — backend may have returned plain text.");
+                }
+
+                // Accept either structure { quotationId } or { success, quotation: {...} }
+                const quotationId = q?.quotationId || q?.quotation?.quotationId;
+                if (!createRes.ok || !quotationId) {
+                    console.error("❌ [Step 1 FAILED] Could not create quote:", q);
+                    alert("Failed to create quotation — check console for details.");
+                    return;
+                }
+
+                console.log("✅ [Step 1 SUCCESS] Quote created successfully! Quotation ID:", quotationId);
+
+                // ==========================================================
+                //  STEP 2️⃣ — PM APPROVES QUOTE
+                // ==========================================================
+                console.log("🧾 [Step 2] Approving quote as Project Manager...");
+                const approveRes = await fetch(`/ProjectManager/ApproveQuoteByPM?quotationId=${encodeURIComponent(quotationId)}`, { method: "POST" });
+
+                console.log("📡 [ApproveQuoteByPM] Response:", approveRes.status, approveRes.statusText);
+                if (!approveRes.ok) {
+                    console.error("❌ [Step 2 FAILED] PM approval failed!");
+                    alert("Failed to approve quote — check console.");
+                    return;
+                }
+                console.log("✅ [Step 2 SUCCESS] Quote approved by Project Manager!");
+
+                // ==========================================================
+                //  STEP 3️⃣ — SEND QUOTE TO CLIENT
+                // ==========================================================
+                console.log("📬 [Step 3] Sending approved quote to client...");
+                const sendRes = await fetch(`/ProjectManager/SendQuoteToClient?quotationId=${encodeURIComponent(quotationId)}`, { method: "POST" });
+
+                console.log("📡 [SendQuoteToClient] Response:", sendRes.status, sendRes.statusText);
+                if (!sendRes.ok) {
+                    console.error("❌ [Step 3 FAILED] Quote failed to send to client!");
+                    alert("Failed to send quote to client — check console.");
+                    return;
+                }
+                console.log("✅ [Step 3 SUCCESS] Quote successfully sent to client inbox!");
+
+                // ==========================================================
+                //  STEP 4️⃣ — DOWNLOAD PDF AUTOMATICALLY
+                // ==========================================================
+                console.log("📥 [Step 4] Attempting to download quote PDF...");
+                const pdfRes = await fetch(`/Quotes/download/${encodeURIComponent(quotationId)}`);
+                console.log("📡 [DownloadQuote] Response:", pdfRes.status, pdfRes.statusText);
+
+                if (pdfRes.ok) {
+                    const blob = await pdfRes.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `Quotation_${quotationId}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                    console.log("💾 [Step 4 SUCCESS] PDF downloaded to user device!");
+                } else {
+                    console.warn("⚠️ [Step 4 SKIPPED] PDF download failed — missing endpoint or server issue.");
+                }
+
+                // ==========================================================
+                //  STEP 5️⃣ — UI FEEDBACK + EVENT DISPATCH
+                // ==========================================================
+                console.log("🪶 [Step 5] Dispatching custom event: 'quoteSent'");
+                window.dispatchEvent(new CustomEvent("quoteSent", {
+                    detail: { projectId, quoteId: quotationId }
+                }));
+
+                showToast("✅ Quote created, approved, sent & downloaded successfully!");
+                console.log("🏁 [SendQuote] Workflow COMPLETE ✅");
+
+            } catch (err) {
+                // ==========================================================
+                //  ERROR HANDLER
+                // ==========================================================
+                console.error("🔥 [SendQuote FATAL ERROR]", err);
+                alert("Unexpected error during quote sequence: " + err.message);
+            }
+        }
+
+
+        async function loadEstimate() {
+            try {
+                console.log('Loading estimate for project:', projectId);
+                const url = `/ProjectManager/GetEstimate?projectId=${encodeURIComponent(projectId)}`;
+                console.log('Fetching from URL:', url);
+
+                const res = await fetch(url);
+                console.log('GetEstimate response status:', res.status);
+                console.log('GetEstimate response headers:', res.headers);
+
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    console.error('Failed to load estimate:', res.status, res.statusText, errorText);
+                    throw new Error(`Failed to load estimate: ${res.status} ${res.statusText}`);
+                }
+
+                estimate = await res.json();
+                console.log('Estimate loaded successfully:', estimate);
+                console.log('Estimate line items count:', estimate.lineItems?.length || 0);
+                render();
+            } catch (error) {
+                console.error('Error loading estimate:', error);
+                // Don't throw the error, just log it and show empty state
+                estimate = { lineItems: [] };
+                render();
+            }
+        }
+
+        function render() {
+            const container = document.getElementById('ee-line-items-container');
+            if (!container) {
+                console.warn('Line items container not found, skipping render');
+                return;
+            }
+
+            if (!estimate || !estimate.lineItems || estimate.lineItems.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <div class="mb-3">
+                            <i class="fa-solid fa-calculator fa-3x" style="color: var(--text-muted);"></i>
+                        </div>
+                        <h5 style="color: var(--text-light);">No Line Items</h5>
+                        <p style="color: var(--text-muted);">Add items manually or process a blueprint to get started.</p>
+                    </div>
+                `;
+                updateSummary();
+                return;
+            }
+
+            // Group line items by category
+            const groupedItems = groupItemsByCategory(estimate.lineItems);
+
+            container.innerHTML = Object.keys(groupedItems).map(category => `
+                <div class="category-group mb-4" style="background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%); border: 1px solid var(--accent-yellow); border-radius: 12px; overflow: hidden;">
+                    <div class="category-header" style="background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%); padding: 1rem 1.5rem; display: flex; justify-content: between; align-items: center;">
+                        <div class="d-flex align-items-center">
+                            <div style="width: 32px; height: 32px; background: rgba(0,0,0,0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                                <i class="fa-solid fa-layer-group" style="color: var(--text-dark); font-size: 16px;"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0" style="color: var(--text-dark); font-weight: 600; font-size: 1.1rem;">${category || 'Uncategorized'}</h6>
+                                <small style="color: var(--text-dark); opacity: 0.8;">${groupedItems[category].length} item${groupedItems[category].length === 1 ? '' : 's'}</small>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="h6 mb-0" style="color: var(--text-dark); font-weight: 700;">${formatCurrency(groupedItems[category].reduce((sum, item) => sum + (item.lineTotal || 0), 0))}</div>
+                            <small style="color: var(--text-dark); opacity: 0.8;">Category Total</small>
+                        </div>
+                    </div>
+                    <div class="category-items" style="padding: 1rem;">
+                        ${groupedItems[category].map((item, index) => renderLineItem(item, index)).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            updateSummary();
+        }
+
+        function groupItemsByCategory(lineItems) {
+            const grouped = {};
+            lineItems.forEach((item, index) => {
+                const category = item.category || 'Uncategorized';
+                if (!grouped[category]) {
+                    grouped[category] = [];
+                }
+                grouped[category].push({ ...item, originalIndex: index });
+            });
+            return grouped;
+        }
+
+        function renderLineItem(item, index) {
+            return `
+                <div class="line-item mb-3" style="background: var(--secondary-bg); border: 1px solid var(--accent-yellow); border-radius: 8px; padding: 1rem;">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <input class="form-control form-control-sm" value="${escapeHtml(item.name || '')}" 
+                                   data-f="name" data-i="${item.originalIndex}" 
+                                   placeholder="Item name" style="background-color: var(--primary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);">
+                        </div>
+                        <div class="col-md-3">
+                            <input class="form-control form-control-sm" value="${escapeHtml(item.description || '')}" 
+                                   data-f="description" data-i="${item.originalIndex}" 
+                                   placeholder="Description" style="background-color: var(--primary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);">
+                        </div>
+                        <div class="col-md-1">
+                            <input class="form-control form-control-sm" value="${escapeHtml(item.unit || '')}" 
+                                   data-f="unit" data-i="${item.originalIndex}" 
+                                   placeholder="Unit" style="background-color: var(--primary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);">
+                        </div>
+                        <div class="col-md-1">
+                            <input type="number" step="0.01" class="form-control form-control-sm text-end" 
+                                   value="${Number(item.quantity || 0)}" data-f="quantity" data-i="${item.originalIndex}" 
+                                   style="background-color: var(--primary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);">
+                        </div>
+                        <div class="col-md-1">
+                            <input type="number" step="0.01" class="form-control form-control-sm text-end" 
+                                   value="${Number(item.unitPrice || 0)}" data-f="unitPrice" data-i="${item.originalIndex}" 
+                                   style="background-color: var(--primary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);">
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <div style="color: var(--accent-green); font-weight: 600; font-size: 1.1rem;">
+                                ${formatCurrency((item.quantity || 0) * (item.unitPrice || 0))}
+                            </div>
+                        </div>
+                        <div class="col-md-1 text-end">
+                            <button class="btn btn-sm btn-outline-danger" data-action="del" data-i="${item.originalIndex}" 
+                                    style="background-color: var(--accent-red); color: var(--text-light); border: 1px solid var(--accent-red); border-radius: 4px;">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateSummary() {
+            if (!estimate) return;
+
+            const lineItems = estimate.lineItems || [];
+            const categories = new Set(lineItems.map(item => item.category || 'Uncategorized'));
+
+            document.getElementById('ee-item-count').textContent = lineItems.length;
+            document.getElementById('ee-category-count').textContent = categories.size;
+            document.getElementById('ee-total-items').textContent = lineItems.length;
+
+            const subtotal = lineItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+            const tax = subtotal * 0.15;
+            const total = subtotal + tax;
+
+            estimate.subtotal = subtotal;
+            estimate.totalAmount = total;
+
+            // Only update elements if they exist
+            const subtotalEl = document.getElementById('ee-subtotal');
+            const taxEl = document.getElementById('ee-tax');
+            const totalEl = document.getElementById('ee-total');
+
+            if (subtotalEl) subtotalEl.textContent = formatCurrency(subtotal);
+            if (taxEl) taxEl.textContent = formatCurrency(tax);
+            if (totalEl) totalEl.textContent = formatCurrency(total);
+        }
+
+        function collect() {
+            if (!estimate || !estimate.lineItems) return;
+
+            const inputs = document.querySelectorAll('#ee-line-items-container input[data-f]');
+            inputs.forEach(input => {
+                const field = input.getAttribute('data-f');
+                const index = parseInt(input.getAttribute('data-i'));
+                if (index >= 0 && index < estimate.lineItems.length) {
+                    if (field === 'quantity' || field === 'unitPrice') {
+                        estimate.lineItems[index][field] = parseFloat(input.value) || 0;
+                    } else {
+                        estimate.lineItems[index][field] = input.value;
+                    }
+                }
+            });
+
+            // Recalculate line totals
+            estimate.lineItems.forEach(item => {
+                item.lineTotal = (item.quantity || 0) * (item.unitPrice || 0);
+            });
+
+            updateSummary();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatCurrency(amount) {
+            if (!amount) return 'R 0.00';
+            return 'R ' + Number(amount).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // Event delegation for dynamic content
+        document.addEventListener('input', function (e) {
+            if (e.target && e.target.matches('#ee-line-items-container input[data-f]')) {
+                collect();
+                render();
+            }
+        });
+
+        document.addEventListener('click', function (e) {
+            const el = e.target.closest('[data-action="del"]');
+            if (el) {
+                const i = Number(el.getAttribute('data-i'));
+                if (estimate && estimate.lineItems && i >= 0 && i < estimate.lineItems.length) {
+                    estimate.lineItems.splice(i, 1);
+                    render();
+                }
+            }
+        });
+
+        // Process Blueprint functions (existing implementation)
+        async function processBlueprint(url) {
+            const btn = document.getElementById('ee-btnPickBlueprint');
+            let originalText = '';
+
+            if (btn) {
+                originalText = btn.innerHTML;
+                try {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing Blueprint...';
+                } catch (e) {
+                    console.log('Button not available for loading state update');
+                }
+            }
+
+            try {
+                let res = await fetch('/ProjectManager/ProcessBlueprint', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectId, blueprintUrl: url })
+                });
+                if (!res.ok && res.status === 404) {
+                    res = await fetch(`${window.location.origin}/ProjectManager/ProcessBlueprint`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ projectId, blueprintUrl: url })
+                    });
+                }
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error('ProcessBlueprint failed', res.status, text);
+                    alert(`Failed to process blueprint (status ${res.status}).`);
+                    return false;
+                }
+
+                const responseData = await res.json();
+                console.log('ProcessBlueprint response:', responseData);
+
+                if (responseData.estimateId) {
+                    if (!estimate) {
+                        estimate = {};
+                    }
+                    estimate.estimateId = responseData.estimateId;
+                    console.log('Estimate ID set:', responseData.estimateId);
+                } else {
+                    console.warn('No estimateId in response:', responseData);
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                await loadEstimate();
+                return true;
+            } catch (e) {
+                console.error('ProcessBlueprint exception', e);
+                if (e.message && e.message.includes('Failed to load estimate')) {
+                    alert('Blueprint processed successfully, but failed to load the results. Please refresh the page.');
+                } else {
+                    alert('Failed to process blueprint (network error).');
+                }
+                return false;
+            } finally {
+                if (btn && originalText) {
+                    try {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                    } catch (e) {
+                        console.log('Button not available for state restoration');
+                    }
+                }
+            }
+        }
+
+        window.processBlueprintAndOpen = async function (projectIdParam, url) {
+            projectId = projectIdParam;
+            const modal = new bootstrap.Modal(document.getElementById('estimateEditorModal'));
+            modal.show();
+
+            const modalBody = document.querySelector('#estimateEditorModal .modal-body');
+            const originalContent = modalBody.innerHTML;
+            modalBody.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="mb-3">
+                        <i class="fa-solid fa-spinner fa-spin fa-3x" style="color: var(--accent-yellow);"></i>
+                    </div>
+                    <h5 style="color: var(--text-light);">Processing Blueprint...</h5>
+                    <p style="color: var(--text-muted);">Please wait while we analyze your blueprint and extract line items.</p>
+                </div>
+            `;
+
+            try {
+                console.log('Starting blueprint processing...');
+                const ok = await processBlueprint(url);
+                console.log('Blueprint processing completed:', ok);
+
+                if (ok !== false) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    modalBody.innerHTML = originalContent;
+                    reattachEventListeners();
+                    await loadEstimate();
+                } else {
+                    modalBody.innerHTML = originalContent;
+                    reattachEventListeners();
+                    alert('Failed to process blueprint. Please try again.');
+                    modal.hide();
+                }
+            } catch (error) {
+                console.error('Error processing blueprint:', error);
+                modalBody.innerHTML = originalContent;
+                reattachEventListeners();
+                alert('Failed to process blueprint. Please try again.');
+                modal.hide();
+            }
+        };
+
+        window.openEstimateEditor = open;
+    })();
+</script>

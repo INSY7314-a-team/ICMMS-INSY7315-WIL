@@ -66,7 +66,7 @@ namespace ICCMS_API.Controllers
                         Message = "Login successful",
                         User = new UserInfo
                         {
-                            UserId = user.UserId,
+                            UserId = firebaseUser.Uid, // Use Firebase UID directly instead of user.UserId
                             Email = user.Email,
                             FullName = user.FullName,
                             Role = user.Role,
@@ -118,7 +118,7 @@ namespace ICCMS_API.Controllers
                         Message = "Token verified successfully",
                         User = new UserInfo
                         {
-                            UserId = user.UserId,
+                            UserId = firebaseToken.Uid, // Use Firebase UID directly instead of user.UserId
                             Email = user.Email,
                             FullName = user.FullName,
                             Role = user.Role,
@@ -160,7 +160,7 @@ namespace ICCMS_API.Controllers
                 return Ok(
                     new UserInfo
                     {
-                        UserId = user.UserId,
+                        UserId = userId, // Use the userId from HttpContext instead of user.UserId
                         Email = user.Email,
                         FullName = user.FullName,
                         Role = user.Role,

@@ -1,0 +1,50 @@
+<div class="modal fade" id="planEditorModal" tabindex="-1" aria-labelledby="planEditorLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="planEditorLabel"><i class="fa-solid fa-diagram-project me-2"></i>Plan Editor
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="wizard-progress mb-3">
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 0%" id="planProgress"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-muted">Step <span id="planStep">1</span> of 2</small>
+                        <small class="text-muted" id="planStepTitle">Phases</small>
+                    </div>
+                </div>
+
+                <!-- Step 1: Phases -->
+                <div id="plan-step1">
+                    <h6 class="mb-2"><i class="fa-solid fa-layer-group text-warning me-2"></i>Phases</h6>
+                    <div id="plan-phases"></div>
+                    <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="plan-add-phase"><i
+                            class="fa-solid fa-plus me-1"></i>Add Phase</button>
+                </div>
+
+                <!-- Step 2: Tasks -->
+                <div id="plan-step2" class="d-none">
+                    <h6 class="mb-2"><i class="fa-solid fa-tasks text-info me-2"></i>Tasks</h6>
+                    <div id="plan-tasks"></div>
+                    <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="plan-add-task"><i
+                            class="fa-solid fa-plus me-1"></i>Add Task</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-link" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-outline-secondary" id="plan-prev" style="display:none;">
+                    <i class="fa-solid fa-arrow-left me-1"></i>Previous
+                </button>
+                <button type="button" class="btn btn-primary" id="plan-next">
+                    Next <i class="fa-solid fa-arrow-right ms-1"></i>
+                </button>
+                <button type="button" class="btn btn-success" id="plan-save" style="display:none;">
+                    <i class="fa-solid fa-check me-1"></i>Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
