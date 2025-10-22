@@ -143,6 +143,210 @@
         </div>
     </div>
 
+    <!-- Maintenance Requests Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tools me-2 text-danger"></i>Maintenance Requests
+                        </h5>
+                        <button class="btn btn-sm btn-outline-danger" onclick="showMaintenanceForm()">+ New Request</button>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <!-- Create Form (hidden by default) -->
+                    <div id="maintenanceForm" class="mb-4" style="display:none;">
+                        <form id="createMaintenanceForm" onsubmit="return submitMaintenanceRequest(event)">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Select Completed Project</label>
+                                <select id="projectSelect" class="form-select" required>
+                                    <option value="">-- Select --</option>
+                                    @foreach (var p in Model.Projects.Where(p => p.Status?.ToLower() == "completed"))
+                                    {
+                                        <option value="@p.ProjectId">@p.Name (@p.ProjectId)</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Priority</label>
+                                <select id="prioritySelect" class="form-select" required>
+                                    <option>Low</option>
+                                    <option selected>Medium</option>
+                                    <option>High</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Description</label>
+                                <textarea id="descriptionInput" class="form-control" rows="3" required></textarea>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Attach Photo (optional)</label>
+                                <input type="file" id="mediaFile" class="form-control" accept="image/*">
+                            </div>
+
+
+                            <button type="submit" class="btn btn-danger">Submit Request</button>
+                            <button type="button" class="btn btn-secondary" onclick="hideMaintenanceForm()">Cancel</button>
+                        </form>
+                    </div>
+
+                <!-- Existing Requests Table -->
+                <div id="maintenanceRequestsContainer">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Status</th>
+                                <th>Project</th>
+                                <th>Description</th>
+                                <th>Photo</th>
+                                <th>Priority</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="maintenanceRequestsTable">
+                        @foreach (var req in Model.MaintenanceRequests ?? new List<MaintenanceRequestDto>())
+                        {
+                            var projectName = Model.Projects.FirstOrDefault(p => p.ProjectId == req.ProjectId)?.Name ?? "Unknown Project";
+                            var statusClass = req.Status?.ToLower() switch
+                            {
+                                "pending" => "warning",
+                                "in progress" => "info",
+                                "resolved" => "success",
+                                "cancelled" => "danger",
+                                _ => "secondary"
+                            };
+
+                            <tr>
+                                <td><span class="badge bg-@statusClass">@req.Status</span></td>
+                                <td>@projectName</td>
+                                <td>@req.Description</td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(req.MediaUrl))
+                                    {
+                                        <img src="@req.MediaUrl" 
+                                            alt="Attached Image" 
+                                            class="img-thumbnail" 
+                                            style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;"
+                                            onclick="showImageModal('@req.MediaUrl')" />
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-image text-muted"></i>
+                                    }
+                                </td>
+                                <td><span class="fw-bold">@req.Priority</span></td>
+                                <td>@req.CreatedAt.ToString("MMM dd, yyyy")</td>
+                                <td>
+                                    <a href="@Url.Action("MaintenanceRequestDetails", "Clients", new { id = req.MaintenanceRequestId })"
+                                    class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i>View
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                    <!-- Image Preview Modal -->
+                    <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="imageModalLabel">Attached Image</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body text-center">
+                                    <img id="modalImage" src="" alt="Full View" class="img-fluid rounded shadow-sm" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showMaintenanceForm() {
+            console.log("🧩 Showing maintenance form");
+            document.getElementById("maintenanceForm").style.display = "block";
+        }
+
+        function hideMaintenanceForm() {
+            console.log("🚫 Hiding maintenance form");
+            document.getElementById("maintenanceForm").style.display = "none";
+        }
+
+        async function submitMaintenanceRequest(event) {
+            event.preventDefault();
+
+            const projectId = document.getElementById("projectSelect").value;
+            const priority = document.getElementById("prioritySelect").value;
+            const description = document.getElementById("descriptionInput").value;
+            const file = document.getElementById("mediaFile").files[0];
+
+            console.log("🧱 Submitting Maintenance Request:", { projectId, priority, description, file });
+
+            let mediaUrl = "";
+
+            try {
+                // 🧩 1️⃣ Upload file if provided
+                if (file) {
+                    console.log("📤 Uploading file:", file.name);
+                    const formData = new FormData();
+                    formData.append("file", file);
+
+                    const uploadRes = await fetch("/Upload/Media", { // ⬅️ you’ll add this controller
+                        method: "POST",
+                        body: formData
+                    });
+
+                    if (uploadRes.ok) {
+                        const data = await uploadRes.json();
+                        mediaUrl = data.url;
+
+                        console.log("✅ File uploaded:", mediaUrl);
+                    } else {
+                        console.warn("⚠️ File upload failed, continuing without image");
+                    }
+                }
+
+                // 🧱 2️⃣ Build payload
+                const payload = { projectId, priority, description, mediaUrl };
+
+                // 🌐 3️⃣ Send to backend
+                const res = await fetch("/Clients/CreateMaintenanceRequest", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    alert("✅ Maintenance request created successfully!");
+                    location.reload();
+                } else {
+                    alert("❌ Failed to create maintenance request.");
+                }
+
+            } catch (err) {
+                console.error("🔥 [submitMaintenanceRequest] Error:", err);
+                alert("Unexpected error: " + err.message);
+            }
+        }
+
+
+    </script>
+
+
     <!-- Projects Section -->
     <div class="row mb-4">
         <div class="col-12">
@@ -378,4 +582,15 @@
     .quotation-icon {
         background-color: rgba(25, 135, 84, 0.1);
     }
+
+    
 </style>
+<script>
+    function showImageModal(url) {
+        console.log("🖼️ Opening image modal for:", url);
+        document.getElementById("modalImage").src = url;
+        const modal = new bootstrap.Modal(document.getElementById("imageModal"));
+        modal.show();
+    }
+</script>
+

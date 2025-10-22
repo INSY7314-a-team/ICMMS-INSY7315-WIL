@@ -63,16 +63,46 @@ namespace ICCMS_Web.Controllers
 
                 var projects = new List<ProjectDto>();
                 var quotations = new List<QuotationDto>();
+                var maintenanceRequests = new List<MaintenanceRequestDto>();
 
-                // === Get Client Projects ===
+               // === 🔧 Get Client Maintenance Requests ===
                 try
                 {
-                    projects = await _apiClient.GetAsync<List<ProjectDto>>("/api/clients/projects", User)
-                            ?? new List<ProjectDto>();
+                    _logger.LogInformation("🚀 [Index] Fetching Maintenance Requests via API...");
+                    maintenanceRequests = await _apiClient.GetAsync<List<MaintenanceRequestDto>>(
+                        "/api/clients/maintenanceRequests",
+                        User
+                    ) ?? new List<MaintenanceRequestDto>();
+
+                    if (maintenanceRequests.Any())
+                        _logger.LogInformation("✅ [Index] Loaded {Count} maintenance requests", maintenanceRequests.Count);
+                    else
+                        _logger.LogWarning("⚠️ [Index] No maintenance requests found for this client.");
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to retrieve client projects via API.");
+                    _logger.LogError(ex, "🔥 [Index] Failed to retrieve maintenance requests via API.");
+                    maintenanceRequests = new List<MaintenanceRequestDto>();
+                }
+
+
+                // === 🏗 Get Client Projects ===
+                try
+                {
+                    _logger.LogInformation("🚀 [Index] Fetching Projects via API...");
+                    projects = await _apiClient.GetAsync<List<ProjectDto>>(
+                        "/api/clients/projects",
+                        User
+                    ) ?? new List<ProjectDto>();
+
+                    if (projects.Any())
+                        _logger.LogInformation("✅ [Index] Loaded {Count} projects", projects.Count);
+                    else
+                        _logger.LogWarning("⚠️ [Index] No projects found for this client.");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "🔥 [Index] Failed to retrieve client projects via API.");
                     projects = new List<ProjectDto>
                     {
                         new ProjectDto
@@ -83,15 +113,24 @@ namespace ICCMS_Web.Controllers
                     };
                 }
 
-                // === Get Client Quotations ===
+
+                // === 💼 Get Client Quotations ===
                 try
                 {
-                    quotations = await _apiClient.GetAsync<List<QuotationDto>>("/api/clients/quotations", User)
-                                ?? new List<QuotationDto>();
+                    _logger.LogInformation("🚀 [Index] Fetching Quotations via API...");
+                    quotations = await _apiClient.GetAsync<List<QuotationDto>>(
+                        "/api/clients/quotations",
+                        User
+                    ) ?? new List<QuotationDto>();
+
+                    if (quotations.Any())
+                        _logger.LogInformation("✅ [Index] Loaded {Count} quotations", quotations.Count);
+                    else
+                        _logger.LogWarning("⚠️ [Index] No quotations found for this client.");
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to retrieve client quotations via API.");
+                    _logger.LogError(ex, "🔥 [Index] Failed to retrieve client quotations via API.");
                     quotations = new List<QuotationDto>
                     {
                         new QuotationDto
@@ -105,7 +144,8 @@ namespace ICCMS_Web.Controllers
                 var viewModel = new ClientDashboardViewModel
                 {
                     Projects = projects,
-                    Quotations = quotations
+                    Quotations = quotations,
+                    MaintenanceRequests = maintenanceRequests
                 };
 
                 return View(viewModel);
@@ -140,33 +180,33 @@ namespace ICCMS_Web.Controllers
         }
 
 
-            public async Task<IActionResult> ProjectDetails(string id)
+        public async Task<IActionResult> ProjectDetails(string id)
+        {
+            try
             {
-                try
+                if (string.IsNullOrEmpty(id))
                 {
-                    if (string.IsNullOrEmpty(id))
-                    {
-                        TempData["ErrorMessage"] = "Invalid project ID.";
-                        return RedirectToAction("Index");
-                    }
-
-                    var project = await _apiClient.GetAsync<ProjectDto>($"/api/clients/project/{id}", User);
-
-                    if (project != null)
-                    {
-                        return View(project);
-                    }
-
-                    TempData["ErrorMessage"] = "Failed to fetch project details.";
+                    TempData["ErrorMessage"] = "Invalid project ID.";
                     return RedirectToAction("Index");
                 }
-                catch (Exception ex)
+
+                var project = await _apiClient.GetAsync<ProjectDto>($"/api/clients/project/{id}", User);
+
+                if (project != null)
                 {
-                    _logger.LogError(ex, "Error fetching project details for ID {Id}", id);
-                    TempData["ErrorMessage"] = $"Error: {ex.Message}";
-                    return RedirectToAction("Index");
+                    return View(project);
                 }
+
+                TempData["ErrorMessage"] = "Failed to fetch project details.";
+                return RedirectToAction("Index");
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching project details for ID {Id}", id);
+                TempData["ErrorMessage"] = $"Error: {ex.Message}";
+                return RedirectToAction("Index");
+            }
+        }
 
 
 
@@ -434,11 +474,83 @@ namespace ICCMS_Web.Controllers
             return File(fileBytes, "application/pdf", $"Quotation_{id}.pdf");
         }
 
+        [HttpPost]
+        public async Task<IActionResult> CreateMaintenanceRequest([FromBody] MaintenanceRequestDto request)
+        {
+            _logger.LogInformation("🧱 [CreateMaintenanceRequest] Triggered for project {ProjectId}", request.ProjectId);
+
+            try
+            {
+                // ✅ Validate input
+                if (string.IsNullOrWhiteSpace(request.ProjectId) || string.IsNullOrWhiteSpace(request.Description))
+                    return Json(new { success = false, error = "Project and Description are required." });
+
+                // 🧩 Fill required fields
+                request.MaintenanceRequestId = Guid.NewGuid().ToString("N");
+                request.Status = "Pending";
+                request.CreatedAt = DateTime.UtcNow;
+                request.RequestedBy = User.Identity?.Name ?? "Unknown Client";
+                request.MediaUrl ??= string.Empty;
+
+                // 🌐 Send to API (expects JSON response with maintenanceRequestId)
+                var created = await _apiClient.PostAsync<MaintenanceRequestDto>(
+                    "/api/clients/create/maintenanceRequest",
+                    request,
+                    User
+                );
+
+                if (created == null || string.IsNullOrEmpty(created.MaintenanceRequestId))
+                {
+                    _logger.LogWarning("❌ [CreateMaintenanceRequest] API returned null or invalid response for {ProjectId}", request.ProjectId);
+                    return Json(new { success = false, error = "Failed to create maintenance request." });
+                }
+
+                _logger.LogInformation("✅ [CreateMaintenanceRequest] Created successfully with ID {Id}", created.MaintenanceRequestId);
+                return Json(new { success = true, requestId = created.MaintenanceRequestId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🔥 [CreateMaintenanceRequest] Unexpected error");
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+
+        [HttpGet]
+        public async Task<IActionResult> GetMaintenanceRequests()
+        {
+            _logger.LogInformation("📡 [GetMaintenanceRequests] Fetching all maintenance requests for current client...");
+
+            try
+            {
+                var requests = await _apiClient.GetAsync<List<MaintenanceRequestDto>>(
+                    "/api/clients/maintenanceRequests",
+                    User
+                );
+
+                if (requests == null || !requests.Any())
+                {
+                    _logger.LogWarning("⚠️ [GetMaintenanceRequests] No maintenance requests found");
+                    return Json(new List<MaintenanceRequestDto>());
+                }
+
+                _logger.LogInformation("✅ [GetMaintenanceRequests] {Count} requests loaded", requests.Count);
+                return Json(requests);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🔥 [GetMaintenanceRequests] Failed to fetch requests");
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+
 
     }
 
     public class ClientDashboardViewModel
     {
+        public List<MaintenanceRequestDto>? MaintenanceRequests { get; set; }
         public List<ProjectDto> Projects { get; set; } = new List<ProjectDto>();
         public List<QuotationDto> Quotations { get; set; } = new List<QuotationDto>();
     }

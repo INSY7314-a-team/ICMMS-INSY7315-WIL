@@ -175,6 +175,9 @@ namespace ICCMS_API.Controllers
         [HttpGet("maintenanceRequest/{id}")]
         public async Task<ActionResult> GetMaintenanceRequest(string id)
         {
+            var currentId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            Console.WriteLine($"🔍 Current ClientId = {currentId}");
+
             try
             {
                 var maintenanceRequest =
@@ -215,7 +218,7 @@ namespace ICCMS_API.Controllers
                         "maintenanceRequests",
                         maintenanceRequest
                     );
-                return Ok(newMaintenanceRequest);
+                return Ok(new { maintenanceRequestId = newMaintenanceRequest });
             }
             catch (Exception ex)
             {
