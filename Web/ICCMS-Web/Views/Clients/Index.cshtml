@@ -192,6 +192,67 @@
   </div>
 </div>
 
+<!-- ===============================
+     New Maintenance Request Modal
+=============================== -->
+<div class="modal fade" id="maintenanceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content construction-border"
+         style="background-color: var(--secondary-bg); color: var(--text-light); border-radius: 12px;">
+      <div class="modal-header"
+           style="background: var(--primary-bg); border-bottom: 1px solid var(--accent-yellow);">
+        <h5 class="modal-title" style="color: var(--accent-yellow); font-weight: 600;">
+          <i class="fa-solid fa-plus-circle me-2"></i> New Maintenance Request
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="maintenanceForm" onsubmit="submitMaintenanceRequest(event)">
+          <div class="mb-3">
+            <label class="form-label">Project</label>
+            <select id="projectSelect" class="form-select">
+            <option value="">Select Project</option>
+            @foreach (var project in Model.Projects.Where(p => p.Status == "Completed"))
+            {
+                <option value="@project.ProjectId">@project.Name</option>
+            }
+            </select>
+
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Priority</label>
+            <select id="prioritySelect" class="form-select">
+              <option value="">Select Priority</option>
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea id="descriptionInput" class="form-control" rows="3"></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Attach Image (optional)</label>
+            <input type="file" id="mediaFile" class="form-control" accept="image/*">
+          </div>
+
+          <div class="text-end">
+            <button type="submit" class="btn btn-warning">
+              <i class="fa-solid fa-paper-plane me-2"></i> Submit Request
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- 🧱 Project Details Modal -->
 <div class="modal fade" id="projectDetailsModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
