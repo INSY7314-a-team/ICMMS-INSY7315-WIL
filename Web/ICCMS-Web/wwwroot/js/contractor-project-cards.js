@@ -1,9 +1,5 @@
 // contractor-project-cards.js - Project Cards Functionality
 
-document.addEventListener("DOMContentLoaded", function () {
-  initializeProjectCards();
-});
-
 function initializeProjectCards() {
   // Check if project cards exist
   const projectCards = document.querySelectorAll(".project-card-collapsible");
@@ -50,6 +46,10 @@ function initializeProjectCards() {
   addTaskActionHandlers();
 }
 
+document.addEventListener("DOMContentLoaded", function () {
+  initializeProjectCards();
+});
+
 function toggleProjectCard(projectId) {
   console.log(`Toggling project card: ${projectId}`);
   const projectCard = document.querySelector(
@@ -69,24 +69,28 @@ function toggleProjectCard(projectId) {
     return;
   }
 
-  const isExpanded = content.style.display !== "none";
+  // Determine expansion based on computed style rather than inline style only
+  const isExpanded = window.getComputedStyle(content).display !== "none";
 
   if (isExpanded) {
     // Collapse
     content.style.display = "none";
     projectCard.classList.remove("expanded");
-    collapseIcon.classList.remove("fa-chevron-up");
-    collapseIcon.classList.add("fa-chevron-down");
+    if (collapseIcon) {
+      collapseIcon.classList.remove("fa-chevron-up");
+      collapseIcon.classList.add("fa-chevron-down");
+    }
   } else {
     // Expand
     content.style.display = "block";
     projectCard.classList.add("expanded");
-    collapseIcon.classList.remove("fa-chevron-down");
-    collapseIcon.classList.add("fa-chevron-up");
-
-    // Load project details if not already loaded
-    loadProjectDetails(projectId);
+    if (collapseIcon) {
+      collapseIcon.classList.remove("fa-chevron-down");
+      collapseIcon.classList.add("fa-chevron-up");
+    }
   }
+  // Load project details if not already loaded
+  loadProjectDetails(projectId);
 }
 
 function loadProjectDetails(projectId) {
@@ -129,25 +133,28 @@ function sortProjects(sortBy) {
 }
 
 function getProjectDataFromDOM(projectCard) {
-  const header = projectCard.querySelector(".project-card-header");
-  const nameElement = header.querySelector(".project-name");
-  const budgetElement = header.querySelector(".project-budget");
-  const progressElement = header.querySelector(".project-progress");
-  const taskCountElement = header.querySelector(".task-count");
-  const overdueElement = header.querySelector(".overdue-count");
+  const container =
+    projectCard.querySelector(".project-card-header") || projectCard;
+  const nameElement = container.querySelector(".project-name");
+  const budgetElement = container.querySelector(".project-budget");
+  const progressElement = container.querySelector(".project-progress");
+  const taskCountElement = container.querySelector(".task-count");
+  const overdueElement = container.querySelector(".overdue-count");
 
   return {
     name: nameElement ? nameElement.textContent : "",
     budget: budgetElement
-      ? parseFloat(budgetElement.textContent.replace(/[^0-9.-]/g, ""))
+      ? parseFloat(budgetElement.textContent.replace(/[^0-9.-]/g, "")) || 0
       : 0,
     progress: progressElement
-      ? parseInt(progressElement.textContent.replace("%", ""))
+      ? parseInt(progressElement.textContent.replace(/\D+/g, ""), 10) || 0
       : 0,
     totalTasks: taskCountElement
-      ? parseInt(taskCountElement.textContent.split(" ")[0])
+      ? parseInt(taskCountElement.textContent, 10) || 0
       : 0,
-    overdueTasks: overdueElement ? parseInt(overdueElement.textContent) : 0,
+    overdueTasks: overdueElement
+      ? parseInt(overdueElement.textContent, 10) || 0
+      : 0,
   };
 }
 
@@ -397,8 +404,6 @@ function requestTaskCompletion(taskId) {
   if (modalElement) {
     const modal = new bootstrap.Modal(modalElement);
     modal.show();
-  } else {
-    showToast("Completion request modal not found", "error");
   }
 }
 
@@ -407,15 +412,23 @@ function viewProjectDetails(projectId) {
 
   // Create a modal to show project details
   const modal = createProjectDetailsModal(projectId);
+  if (!modal) {
+    showToast("Unable to create project details modal.", "error");
+    return;
+  }
   document.body.appendChild(modal);
 
   // Show the modal
-  const bsModal = new bootstrap.Modal(modal);
-  bsModal.show();
+  if (window.bootstrap && typeof bootstrap.Modal === "function") {
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+  } else {
+    showToast("Bootstrap JS not available to show modal.", "error");
+  }
 
   // Load tasks when modal is shown
   modal.addEventListener("shown.bs.modal", () => {
-    loadProjectTasks(projectId);
+    loadProjectTasks(projectId, modal);
   });
 
   // Remove modal from DOM when hidden

@@ -1,62 +1,72 @@
 // contractor-collapsible-tasks.js - Collapsible Task Cards Functionality
 
+function initializeCollapsibleTasks() {
+  // Add click handlers to all task card headers
+  document.querySelectorAll(".task-card-header").forEach((header) => {
+    // A11y: make header operable
+    header.setAttribute("role", "button");
+    header.setAttribute("tabindex", "0");
+    const container = header.closest(".task-card-collapsible");
+    if (container) {
+      const taskId = container.dataset.taskId;
+      const content = document.getElementById(`task-content-${taskId}`);
+      if (content) {
+        header.setAttribute("aria-controls", content.id);
+        header.setAttribute("aria-expanded", String(!content.hidden));
+      }
+    }
+
+    header.addEventListener("click", function (e) {
+      // Ignore clicks on interactive elements
+      if (
+        e.target.closest(
+          "a, button, [role='button'], input, select, textarea, .btn, .task-actions"
+        )
+      ) {
+        return;
+      }
+      const container = this.closest(".task-card-collapsible");
+      if (!container) return;
+      const taskId = container.dataset.taskId;
+      toggleTaskCard(taskId);
+    });
+  });
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   initializeCollapsibleTasks();
 });
 
-function initializeCollapsibleTasks() {
-  // Add click handlers to all task card headers
-  document.querySelectorAll(".task-card-header").forEach((header) => {
-    header.addEventListener("click", function (e) {
-      // Don't trigger if clicking on action buttons
-      if (e.target.closest(".btn") || e.target.closest(".task-actions")) {
-        return;
-      }
-
-      const taskId = this.closest(".task-card-collapsible").dataset.taskId;
-      toggleTaskCard(taskId);
-    });
-  });
-
-  // Add sort functionality
-  const sortSelect = document.getElementById("taskSortBy");
-  if (sortSelect) {
-    sortSelect.addEventListener("change", function () {
-      sortTasks(this.value);
-    });
-  }
-
-  // Add refresh functionality
-  const refreshBtn = document.getElementById("refreshTasksBtn");
-  if (refreshBtn) {
-    refreshBtn.addEventListener("click", function () {
-      refreshTasks();
-    });
-  }
-}
-
 function toggleTaskCard(taskId) {
   const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+  if (!taskCard) return;
   const content = document.getElementById(`task-content-${taskId}`);
+  if (!content) return;
   const collapseIcon = taskCard.querySelector(".task-collapse-icon i");
+  const header = taskCard.querySelector(".task-card-header");
 
-  if (!taskCard || !content) return;
-
-  const isExpanded = content.style.display !== "none";
+  const isExpanded = !content.hidden;
 
   if (isExpanded) {
     // Collapse
-    content.style.display = "none";
+    content.hidden = true;
     taskCard.classList.remove("expanded");
-    collapseIcon.classList.remove("fa-chevron-up");
-    collapseIcon.classList.add("fa-chevron-down");
+    if (collapseIcon) {
+      collapseIcon.classList.remove("fa-chevron-up");
+      collapseIcon.classList.add("fa-chevron-down");
+    }
+    if (header) header.setAttribute("aria-expanded", "false");
+    content.setAttribute("aria-hidden", "true");
   } else {
     // Expand
-    content.style.display = "block";
+    content.hidden = false;
     taskCard.classList.add("expanded");
-    collapseIcon.classList.remove("fa-chevron-down");
-    collapseIcon.classList.add("fa-chevron-up");
-
+    if (collapseIcon) {
+      collapseIcon.classList.remove("fa-chevron-down");
+      collapseIcon.classList.add("fa-chevron-up");
+    }
+    if (header) header.setAttribute("aria-expanded", "true");
+    content.setAttribute("aria-hidden", "false");
     // Load task details if not already loaded
     loadTaskDetails(taskId);
   }
@@ -66,6 +76,23 @@ function loadTaskDetails(taskId) {
   // This function can be used to load additional task details via AJAX
   // For now, the details are already rendered in the partial view
   console.log(`Loading details for task ${taskId}`);
+}
+
+function getTaskDataFromDOM(taskCard) {
+  const container = taskCard.querySelector(".task-card-header") || taskCard;
+  const nameElement = container.querySelector(".task-name");
+  const statusElement = container.querySelector(".task-status");
+  const priorityElement = container.querySelector(".task-priority");
+  const dueDateElement = container.querySelector(".task-due-date");
+  const projectElement = container.querySelector(".task-project");
+
+  return {
+    name: nameElement ? nameElement.textContent : "",
+    status: statusElement ? statusElement.textContent : "",
+    priority: priorityElement ? priorityElement.textContent : "",
+    dueDate: dueDateElement ? dueDateElement.textContent : "",
+    projectName: projectElement ? projectElement.textContent : "",
+  };
 }
 
 function sortTasks(sortBy) {
@@ -110,63 +137,41 @@ function sortTasks(sortBy) {
   });
 }
 
-function getTaskDataFromDOM(taskCard) {
-  const header = taskCard.querySelector(".task-card-header");
-  const nameElement = header.querySelector(".task-name");
-  const projectElement = header.querySelector(".task-project");
-  const statusElement = header.querySelector(".task-status-badge");
-  const priorityElement = header.querySelector(".task-priority-badge");
-
-  // Extract dates from the task card (you might need to adjust this based on your data structure)
-  const dateTimeElement = header.querySelector(".task-date-time span");
-  const dateText = dateTimeElement ? dateTimeElement.textContent : "";
-  const dates = dateText.split(" - ");
-
-  return {
-    name: nameElement ? nameElement.textContent : "",
-    projectName: projectElement
-      ? projectElement.textContent.replace("• ", "")
-      : "",
-    status: statusElement ? statusElement.textContent : "",
-    priority: priorityElement ? priorityElement.textContent : "",
-    dueDate: dates[1]
-      ? new Date(dates[1].split("/").reverse().join("-"))
-      : new Date(),
-    startDate: dates[0]
-      ? new Date(dates[0].split("/").reverse().join("-"))
-      : new Date(),
-  };
-}
-
 async function refreshTasks() {
   const refreshBtn = document.getElementById("refreshTasksBtn");
-  const originalText = refreshBtn.innerHTML;
-
+  const originalText = refreshBtn ? refreshBtn.innerHTML : null;
   try {
     // Show loading state
-    refreshBtn.innerHTML =
-      '<i class="fa-solid fa-spinner fa-spin"></i> Refreshing...';
-    refreshBtn.disabled = true;
-
-    // Make API call to refresh tasks
-    const response = await fetch("/Contractor/GetAssignedTasks");
-    if (!response.ok) {
-      throw new Error("Failed to refresh tasks");
+    if (refreshBtn) {
+      refreshBtn.innerHTML =
+        '<i class="fa-solid fa-spinner fa-spin"></i> Refreshing...';
+      refreshBtn.disabled = true;
     }
-
-    const tasks = await response.json();
-
-    // Update the tasks container with new data
-    // This would need to be implemented with server-side rendering
-    // For now, just reload the page
+    // Timeout + credentials
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const response = await fetch("/Contractor/GetAssignedTasks", {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      throw new Error(`Failed to refresh tasks (${response.status})`);
+    }
+    // We reload the page to reflect updates
+    await response.json().catch(() => null);
     window.location.reload();
   } catch (error) {
     console.error("Error refreshing tasks:", error);
     showToast("Failed to refresh tasks. Please try again.", "error");
   } finally {
     // Restore button state
-    refreshBtn.innerHTML = originalText;
-    refreshBtn.disabled = false;
+    if (refreshBtn) {
+      refreshBtn.innerHTML = originalText;
+      refreshBtn.disabled = false;
+    }
   }
 }
 

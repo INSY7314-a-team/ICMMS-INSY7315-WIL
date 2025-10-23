@@ -132,6 +132,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // Bind static controls once to prevent multiple event listeners
+  bindStaticControls();
 });
 
 // ===================================================
@@ -201,8 +204,9 @@ function collectItems() {
 
 // Add listeners for recalculation and deletion
 function bindRecalc() {
+  // Only bind row-level inputs to prevent accumulation on re-renders
   document
-    .querySelectorAll(".qty-input, .price-input, #qb-markupRate, #qb-taxRate")
+    .querySelectorAll(".qty-input, .price-input")
     .forEach((el) => el.addEventListener("input", recalcTotals));
 
   document.querySelectorAll(".btn-remove").forEach((btn) =>
@@ -212,6 +216,23 @@ function bindRecalc() {
       recalcTotals();
     })
   );
+}
+
+// Bind static controls once to prevent multiple event listeners
+function bindStaticControls() {
+  const markupRateEl = document.getElementById("qb-markupRate");
+  const taxRateEl = document.getElementById("qb-taxRate");
+
+  // Guard against multiple bindings using a custom property
+  if (markupRateEl && !markupRateEl._recalcBound) {
+    markupRateEl.addEventListener("input", recalcTotals);
+    markupRateEl._recalcBound = true;
+  }
+
+  if (taxRateEl && !taxRateEl._recalcBound) {
+    taxRateEl.addEventListener("input", recalcTotals);
+    taxRateEl._recalcBound = true;
+  }
 }
 
 // Recalculate subtotal, tax, grand total

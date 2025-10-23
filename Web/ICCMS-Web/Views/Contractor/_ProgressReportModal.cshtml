@@ -28,6 +28,7 @@
 
                 <!-- Progress Report Form -->
                 <form id="progressReportForm">
+                    @Html.AntiForgeryToken()
                     <input type="hidden" id="progressReportTaskId" name="taskId" />
 
                     <div class="mb-3">
@@ -108,17 +109,17 @@
     function openProgressReportModal(taskId) {
         const modal = new bootstrap.Modal(document.getElementById('progressReportModal'));
         modal.show();
+        // Reset form first
+        const formEl = document.getElementById('progressReportForm');
+        formEl.reset();
+        document.getElementById('documentPreview').style.display = 'none';
+        document.getElementById('documentList').innerHTML = '';
 
-        // Set task ID
+        // Set task ID AFTER reset
         document.getElementById('progressReportTaskId').value = taskId;
 
         // Load task details
-        loadTaskDetailsForProgressModal(taskId);
-
-        // Reset form
-        document.getElementById('progressReportForm').reset();
-        document.getElementById('documentPreview').style.display = 'none';
-        document.getElementById('documentList').innerHTML = '';
+        loadTaskDetailsForProgressModal(taskId); document.getElementById('documentList').innerHTML = '';
     }
 
     function loadTaskDetailsForProgressModal(taskId) {
@@ -148,61 +149,70 @@
             showToast('Please provide a work description', 'error');
             return;
         }
-
-        if (!hoursWorked || hoursWorked <= 0) {
-            showToast('Please enter valid hours worked', 'error');
+        if (!hoursWorked || hoursWorked < 0.1) {
+            showToast('Please enter hours worked (minimum 0.1)', 'error');
             return;
         }
+    }
 
-        // Show loading state
-        const submitBtn = document.getElementById('submitProgressReportBtn');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Submitting...';
-        submitBtn.disabled = true;
+    // Show loading state
+    const submitBtn = document.getElementById('submitProgressReportBtn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Submitting...';
+    submitBtn.disabled = true;
+    // Prepare progress report data
+    const progressPercentageInput = document.getElementById('progressPercentage').value;
+    const progressPercentage = progressPercentageInput !== ''
+        ? Math.max(0, Math.min(100, parseInt(progressPercentageInput, 10)))
+        : null;
+    const additionalNotes = document.getElementById('additionalNotes').value.trim() || null;
+    const progressReport = {
+        taskId: formData.get('taskId'),
+        description: description,
+        hoursWorked: hoursWorked,
+        status: 'Submitted',
+        progressPercentage: progressPercentage,
+        additionalNotes: additionalNotes,
+        attachedDocumentIds: [] // Will be populated after document upload
+    };
+    // Get antiforgery token
+    const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
-        // Prepare progress report data
-        const progressReport = {
-            taskId: formData.get('taskId'),
-            description: description,
-            hoursWorked: hoursWorked,
-            status: 'Submitted',
-            attachedDocumentIds: [] // Will be populated after document upload
-        };
+    // Submit progress report
+    fetch('/Contractor/SubmitProgressReport', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': token
+        },
+        body: JSON.stringify(progressReport)
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Progress report submitted successfully!', 'success');
 
-        // Submit progress report
-        fetch('/Contractor/SubmitProgressReport', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(progressReport)
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('Progress report submitted successfully!', 'success');
-
-                    // Close modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('progressReportModal'));
-                    if (modal) {
-                        modal.hide();
-                    }
-
-                    // Refresh task card
-                    refreshTaskCard(progressReport.taskId);
-                } else {
-                    showToast('Failed to submit progress report: ' + (data.error || 'Unknown error'), 'error');
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('progressReportModal'));
+                if (modal) {
+                    modal.hide();
                 }
-            })
-            .catch(error => {
-                console.error('Error submitting progress report:', error);
-                showToast('An error occurred while submitting the progress report', 'error');
-            })
-            .finally(() => {
-                // Reset button state
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            });
+
+                // Refresh task card
+                refreshTaskCard(progressReport.taskId);
+            } else {
+                showToast('Failed to submit progress report: ' + (data.error || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error submitting progress report:', error);
+            showToast('An error occurred while submitting the progress report', 'error');
+        })
+        .finally(() => {
+            // Reset button state
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        });
     }
 
     function refreshTaskCard(taskId) {
@@ -216,29 +226,38 @@
         }
     }
 
-    // Document preview functionality
-    document.getElementById('progressDocuments').addEventListener('change', function (e) {
-        const files = Array.from(e.target.files);
-        const preview = document.getElementById('documentPreview');
-        const list = document.getElementById('documentList');
+    files.forEach((file, index) => {
+        const item = document.createElement('div');
+        item.className = 'list-group-item d-flex justify-content-between align-items-center';
 
-        if (files.length > 0) {
-            preview.style.display = 'block';
-            list.innerHTML = '';
+        const left = document.createElement('div');
+        const icon = document.createElement('i');
+        icon.className = 'fa-solid fa-file me-2';
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = file.name;
+        const size = document.createElement('small');
+        size.className = 'text-muted ms-2';
+        size.textContent = `(${(file.size / 1024).toFixed(1)} KB)`;
+        left.append(icon, nameSpan, size);
 
-            files.forEach((file, index) => {
-                const item = document.createElement('div');
-                item.className = 'list-group-item d-flex justify-content-between align-items-center';
-                item.innerHTML = `
-                    <div>
-                        <i class="fa-solid fa-file me-2"></i>
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-sm btn-outline-danger';
+        btn.addEventListener('click', () => removeDocument(index));
+        const x = document.createElement('i');
+        x.className = 'fa-solid fa-times';
+        btn.appendChild(x);
+
+        item.append(left, btn);
+        list.appendChild(item);
+    });                        <i class="fa-solid fa-file me-2"></i>
                         <span>${file.name}</span>
                         <small class="text-muted ms-2">(${(file.size / 1024).toFixed(1)} KB)</small>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeDocument(${index})">
-                        <i class="fa-solid fa-times"></i>
-                    </button>
-                `;
+                    </div >
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeDocument(${index})">
+            <i class="fa-solid fa-times"></i>
+        </button>
+    `;
                 list.appendChild(item);
             });
         } else {
@@ -263,6 +282,6 @@
 
     // Toast functionality removed - using console logging instead
     function showToast(message, type = 'info') {
-        console.log(`📢 ${type.toUpperCase()}: ${message}`);
+        console.log(`📢 ${ type.toUpperCase() }: ${ message }`);
     }
 </script>

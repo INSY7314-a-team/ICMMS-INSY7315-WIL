@@ -141,8 +141,21 @@
                     document.getElementById('modalTaskDescription').textContent = task.description || 'No description provided';
                     document.getElementById('modalStartDate').textContent = new Date(task.startDate).toLocaleDateString();
                     document.getElementById('modalDueDate').textContent = new Date(task.dueDate).toLocaleDateString();
-                    document.getElementById('modalTaskStatus').innerHTML = `<span class="badge ${task.statusBadgeClass}">${task.status}</span>`;
-                    document.getElementById('modalTaskPriority').innerHTML = `<span class="badge priority-${task.priority.toLowerCase()}">${task.priority}</span>`;
+                    // Safe DOM creation for status badge
+                    const statusElement = document.getElementById('modalTaskStatus');
+                    statusElement.innerHTML = ''; // Clear existing content
+                    const statusSpan = document.createElement('span');
+                    statusSpan.className = `badge ${mapStatusToBadge(task.status)}`;
+                    statusSpan.textContent = String(task.status || 'Unknown');
+                    statusElement.appendChild(statusSpan);
+
+                    // Safe DOM creation for priority badge
+                    const priorityElement = document.getElementById('modalTaskPriority');
+                    priorityElement.innerHTML = ''; // Clear existing content
+                    const prioritySpan = document.createElement('span');
+                    prioritySpan.className = `badge ${mapPriorityToClass(task.priority)}`;
+                    prioritySpan.textContent = String(task.priority || 'Unknown');
+                    priorityElement.appendChild(prioritySpan);
 
                     // Update progress
                     document.getElementById('modalTaskProgress').style.width = `${task.progress}%`;
@@ -240,9 +253,8 @@
                             </div>
                             <div class="col-md-6">
                                 <small class="text-muted">Submitted By:</small>
-                                <div class="fw-bold">${report.submittedBy}</div>
-                            </div>
-                        </div>
+                               <div class="fw-bold">${escapeHtml(report.submittedBy || '')}</div>
+                            </div>                        </div>
                         ${report.reviewNotes ? `
                             <div class="mt-2 p-2 bg-light rounded">
                                 <small class="text-muted">Review Notes:</small>
@@ -296,6 +308,38 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // Safe status to badge class mapping
+    function mapStatusToBadge(status) {
+        const statusStr = String(status || '').toLowerCase();
+        const statusMap = {
+            'pending': 'bg-warning',
+            'in progress': 'bg-primary',
+            'in-progress': 'bg-primary',
+            'completed': 'bg-success',
+            'cancelled': 'bg-danger',
+            'cancelled': 'bg-danger',
+            'on hold': 'bg-secondary',
+            'on-hold': 'bg-secondary',
+            'review': 'bg-info',
+            'approved': 'bg-success',
+            'rejected': 'bg-danger'
+        };
+        return statusMap[statusStr] || 'bg-secondary'; // Default safe class
+    }
+
+    // Safe priority to CSS class mapping
+    function mapPriorityToClass(priority) {
+        const priorityStr = String(priority || '').toLowerCase();
+        const priorityMap = {
+            'low': 'priority-low',
+            'medium': 'priority-medium',
+            'high': 'priority-high',
+            'urgent': 'priority-urgent',
+            'critical': 'priority-critical'
+        };
+        return priorityMap[priorityStr] || 'priority-medium'; // Default safe class
     }
 
     // Toast functionality removed - using console logging instead

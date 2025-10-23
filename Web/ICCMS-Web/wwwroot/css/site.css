@@ -8,6 +8,7 @@
   --text-light: #ffffff;
   --text-dark: #1A1B25;
   --text-muted: #666666;
+  --border-color: rgba(255, 255, 255, 0.1);
 }
 
 /* === COMPACT DASHBOARD STYLING === */

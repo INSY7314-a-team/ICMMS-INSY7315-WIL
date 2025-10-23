@@ -297,9 +297,8 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-}
-
-.task-card .timeline-content {
+    background-color: #F7EC59; /* or vary by status */
+}.task-card .timeline-content {
     color: #FFFFFF !important;
 }
 

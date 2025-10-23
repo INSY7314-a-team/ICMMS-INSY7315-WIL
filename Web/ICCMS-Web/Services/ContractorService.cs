@@ -8,28 +8,32 @@ namespace ICCMS_Web.Services
     {
         private readonly IApiClient _apiClient;
         private readonly ILogger<ContractorService> _logger;
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ICurrentUserService _currentUserService;
 
         public ContractorService(
             IApiClient apiClient,
             ILogger<ContractorService> logger,
-            IHttpContextAccessor httpContextAccessor
+            ICurrentUserService currentUserService
         )
         {
             _apiClient = apiClient;
             _logger = logger;
-            _httpContextAccessor = httpContextAccessor;
+            _currentUserService = currentUserService;
         }
 
-        public async Task<ContractorDashboardViewModel> GetDashboardDataAsync(string userId)
+        public async Task<ContractorDashboardViewModel> GetDashboardDataAsync()
         {
             try
             {
-                _logger.LogInformation("Getting dashboard data for contractor {UserId}", userId);
+                var currentUserId = _currentUserService.GetCurrentUserId();
+                _logger.LogInformation(
+                    "Getting dashboard data for contractor {UserId}",
+                    currentUserId
+                );
 
                 // Get dashboard data from API
                 _logger.LogInformation("Calling API endpoint: /api/contractors/dashboard");
-                var currentUser = _httpContextAccessor.HttpContext?.User;
+                var currentUser = _currentUserService.GetCurrentUser();
                 var dashboardData = await _apiClient.GetAsync<object>(
                     "/api/contractors/dashboard",
                     currentUser
@@ -44,7 +48,7 @@ namespace ICCMS_Web.Services
                 {
                     _logger.LogWarning(
                         "No dashboard data returned for contractor {UserId}. This might be due to circuit breaker or API connectivity issues.",
-                        userId
+                        currentUserId
                     );
 
                     // Try to reset circuit breaker and retry once
@@ -56,7 +60,7 @@ namespace ICCMS_Web.Services
                         // Retry the request
                         dashboardData = await _apiClient.GetAsync<object>(
                             "/api/contractors/dashboard",
-                            currentUser
+                            _currentUserService.GetCurrentUser()
                         );
 
                         if (dashboardData == null)
@@ -205,17 +209,17 @@ namespace ICCMS_Web.Services
                 _logger.LogError(
                     ex,
                     "Error getting dashboard data for contractor {UserId}",
-                    userId
+                    _currentUserService.GetCurrentUserId()
                 );
                 return new ContractorDashboardViewModel();
             }
         }
 
-        public async Task<List<ContractorTaskDto>> GetAssignedTasksAsync(string userId)
+        public async Task<List<ContractorTaskDto>> GetAssignedTasksAsync()
         {
             try
             {
-                var currentUser = _httpContextAccessor.HttpContext?.User;
+                var currentUser = _currentUserService.GetCurrentUser();
                 var tasks = await _apiClient.GetAsync<List<ProjectTaskDto>>(
                     "/api/contractors/tasks/assigned",
                     currentUser
@@ -254,17 +258,17 @@ namespace ICCMS_Web.Services
                 _logger.LogError(
                     ex,
                     "Error getting assigned tasks for contractor {UserId}",
-                    userId
+                    _currentUserService.GetCurrentUserId()
                 );
                 return new List<ContractorTaskDto>();
             }
         }
 
-        public async Task<ContractorTaskDto?> GetTaskWithProjectAsync(string taskId, string userId)
+        public async Task<ContractorTaskDto?> GetTaskWithProjectAsync(string taskId)
         {
             try
             {
-                var currentUser = _httpContextAccessor.HttpContext?.User;
+                var currentUser = _currentUserService.GetCurrentUser();
                 var task = await _apiClient.GetAsync<ProjectTaskDto>(
                     $"/api/contractors/task/{taskId}",
                     currentUser
@@ -308,20 +312,17 @@ namespace ICCMS_Web.Services
                     ex,
                     "Error getting task {TaskId} for contractor {UserId}",
                     taskId,
-                    userId
+                    _currentUserService.GetCurrentUserId()
                 );
                 return null;
             }
         }
 
-        public async Task<ProgressReportDto> SubmitProgressReportAsync(
-            ProgressReportDto report,
-            string userId
-        )
+        public async Task<ProgressReportDto> SubmitProgressReportAsync(ProgressReportDto report)
         {
             try
             {
-                var currentUser = _httpContextAccessor.HttpContext?.User;
+                var currentUser = _currentUserService.GetCurrentUser();
                 var result = await _apiClient.PostAsync<ProgressReportDto>(
                     $"/api/contractors/task/{report.TaskId}/progress-report",
                     report,
@@ -340,23 +341,27 @@ namespace ICCMS_Web.Services
             }
         }
 
-        public async Task<object> RequestCompletionAsync(
+        public async Task<ContractorCompletionResultDto> RequestCompletionAsync(
             string taskId,
             string notes,
-            string? documentId,
-            string userId
+            string? documentId
         )
         {
             try
             {
                 var requestData = new { notes, documentId };
-                var currentUser = _httpContextAccessor.HttpContext?.User;
-                var result = await _apiClient.PutAsync<object>(
+                var currentUser = _currentUserService.GetCurrentUser();
+                var result = await _apiClient.PutAsync<ContractorCompletionResultDto>(
                     $"/api/contractors/task/{taskId}/request-completion",
                     requestData,
                     currentUser
                 );
-                return result ?? new { message = "Completion request submitted" };
+                return result
+                    ?? new ContractorCompletionResultDto
+                    {
+                        Message = "Completion request submitted",
+                        TaskId = taskId,
+                    };
             }
             catch (Exception ex)
             {
@@ -365,14 +370,11 @@ namespace ICCMS_Web.Services
             }
         }
 
-        public async Task<List<ProgressReportDto>> GetProgressReportsAsync(
-            string taskId,
-            string userId
-        )
+        public async Task<List<ProgressReportDto>> GetProgressReportsAsync(string taskId)
         {
             try
             {
-                var currentUser = _httpContextAccessor.HttpContext?.User;
+                var currentUser = _currentUserService.GetCurrentUser();
                 var reports = await _apiClient.GetAsync<List<ProgressReportDto>>(
                     $"/api/contractors/task/{taskId}/progress-reports",
                     currentUser
@@ -386,42 +388,43 @@ namespace ICCMS_Web.Services
             }
         }
 
-        public async Task<object> GetTaskProjectBudgetAsync(string taskId, string userId)
+        public async Task<ProjectBudgetDto> GetTaskProjectBudgetAsync(string taskId)
         {
             try
             {
-                var currentUser = _httpContextAccessor.HttpContext?.User;
-                var budget = await _apiClient.GetAsync<object>(
+                var currentUser = _currentUserService.GetCurrentUser();
+                var budget = await _apiClient.GetAsync<ProjectBudgetDto>(
                     $"/api/contractors/task/{taskId}/project-budget",
                     currentUser
                 );
                 return budget
-                    ?? new
+                    ?? new ProjectBudgetDto
                     {
-                        projectId = "",
-                        projectName = "Unknown",
-                        budgetPlanned = 0m,
+                        ProjectId = "",
+                        ProjectName = "Unknown",
+                        BudgetPlanned = 0m,
                     };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting project budget for task {TaskId}", taskId);
-                return new
+                return new ProjectBudgetDto
                 {
-                    projectId = "",
-                    projectName = "Unknown",
-                    budgetPlanned = 0m,
+                    ProjectId = "",
+                    ProjectName = "Unknown",
+                    BudgetPlanned = 0m,
                 };
             }
         }
 
-        private string GetStatusBadgeClass(string status)
+        private string GetStatusBadgeClass(string? status)
         {
-            return status.ToLower() switch
+            var s = status?.Trim().ToLowerInvariant();
+            return s switch
             {
                 "pending" => "badge-secondary",
                 "in progress" or "inprogress" => "badge-warning",
-                "awaiting approval" => "badge-info",
+                "awaiting approval" or "awaitingapproval" => "badge-info",
                 "completed" => "badge-success",
                 "overdue" => "badge-danger",
                 _ => "badge-light",

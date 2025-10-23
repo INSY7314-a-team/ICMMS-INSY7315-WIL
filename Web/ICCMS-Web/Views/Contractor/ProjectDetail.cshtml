@@ -34,9 +34,10 @@
                     @Model.Status
                 </div>
                 <div class="progress-info">
-                    <span class="progress-percentage">@Model.OverallProgress%</span>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: @Model.OverallProgress%"></div>
+                    <span class="progress-percentage">@($"{Model.OverallProgress}%")</span>
+                    <div class="progress-bar" role="progressbar" aria-valuenow="@Model.OverallProgress"
+                        aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-fill" style="width: @($"{Model.OverallProgress}%")"></div>
                     </div>
                 </div>
             </div>
@@ -164,7 +165,8 @@
                             </span>
                         </div>
                         <div class="task-item-right">
-                            <span class="task-item-status @task.Status.Replace(" ", "-").ToLower()">@task.Status</span>
+                            <span
+                                class="task-item-priority @task.Priority.Replace(" ", "-").ToLowerInvariant()">@task.Priority</span>
                             <span class="task-item-priority priority-@task.Priority.ToLower()">@task.Priority</span>
                             @if (task.IsOverdue)
                             {

@@ -17,10 +17,10 @@ namespace ICCMS_Web.Models
         public string Description { get; set; } = string.Empty;
 
         [JsonPropertyName("budgetPlanned")]
-        public double BudgetPlanned { get; set; }
+        public decimal BudgetPlanned { get; set; }
 
         [JsonPropertyName("budgetActual")]
-        public double BudgetActual { get; set; }
+        public decimal BudgetActual { get; set; }
 
         [JsonPropertyName("status")]
         public string Status { get; set; } = string.Empty;

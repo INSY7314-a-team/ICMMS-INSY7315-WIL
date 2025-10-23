@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Security.Claims;
 using ICCMS_Web.Models;
@@ -14,7 +15,7 @@ public class UpdateTaskStatusRequest
 
 namespace ICCMS_Web.Controllers
 {
-    [Authorize(Roles = "Contractor,Tester")]
+    [Authorize(Roles = "Contractor")]
     public class ContractorController : Controller
     {
         private readonly IContractorService _contractorService;
@@ -103,12 +104,25 @@ namespace ICCMS_Web.Controllers
                 {
                     _logger.LogWarning("No user ID found for contractor dashboard");
                     ViewBag.ErrorMessage = "Authentication error. Please log in again.";
-                    return View("Error");
+                    return View(
+                        "Error",
+                        new ErrorViewModel { RequestId = HttpContext.TraceIdentifier }
+                    );
                 }
 
                 _logger.LogInformation("Loading contractor dashboard for user {UserId}", userId);
 
-                var dashboardData = await _contractorService.GetDashboardDataAsync(userId);
+                var dashboardData = await _contractorService.GetDashboardDataAsync();
+
+                if (dashboardData == null)
+                {
+                    _logger.LogWarning("Dashboard data was null for {UserId}", userId);
+                    ViewBag.ErrorMessage = "No dashboard data available.";
+                    return View(
+                        "Error",
+                        new ErrorViewModel { RequestId = HttpContext.TraceIdentifier }
+                    );
+                }
 
                 _logger.LogInformation(
                     "Dashboard loaded with {TotalTasks} tasks for contractor {UserId}",
@@ -122,7 +136,10 @@ namespace ICCMS_Web.Controllers
             {
                 _logger.LogError(ex, "Error loading contractor dashboard");
                 ViewBag.ErrorMessage = "Failed to load dashboard. Please try again later.";
-                return View("Error");
+                return View(
+                    "Error",
+                    new ErrorViewModel { RequestId = HttpContext.TraceIdentifier }
+                );
             }
         }
 
@@ -139,14 +156,20 @@ namespace ICCMS_Web.Controllers
                 {
                     _logger.LogWarning("No user ID found for project detail");
                     ViewBag.ErrorMessage = "Authentication error. Please log in again.";
-                    return View("Error");
+                    return View(
+                        "Error",
+                        new ErrorViewModel { RequestId = HttpContext.TraceIdentifier }
+                    );
                 }
 
                 if (string.IsNullOrEmpty(projectId))
                 {
                     _logger.LogWarning("No project ID provided for project detail");
                     ViewBag.ErrorMessage = "Project ID is required.";
-                    return View("Error");
+                    return View(
+                        "Error",
+                        new ErrorViewModel { RequestId = HttpContext.TraceIdentifier }
+                    );
                 }
 
                 _logger.LogInformation(
@@ -161,20 +184,28 @@ namespace ICCMS_Web.Controllers
                 {
                     _logger.LogWarning("User not authenticated for project detail");
                     ViewBag.ErrorMessage = "Authentication error. Please log in again.";
-                    return View("Error");
+                    return View(
+                        "Error",
+                        new ErrorViewModel { RequestId = HttpContext.TraceIdentifier }
+                    );
                 }
 
                 // Get tasks for this project first
-                var tasks = await _apiClient.GetAsync<List<ContractorTaskDto>>(
+                var tasksResponse = await _apiClient.GetAsync<PaginatedResponse<ContractorTaskDto>>(
                     "/api/contractors/tasks/assigned",
                     currentUser
                 );
+
+                var tasks = tasksResponse?.Data ?? new List<ContractorTaskDto>();
 
                 if (tasks == null || !tasks.Any())
                 {
                     _logger.LogWarning("No tasks found for user {UserId}", userId);
                     ViewBag.ErrorMessage = "No tasks found.";
-                    return View("Error");
+                    return View(
+                        "Error",
+                        new ErrorViewModel { RequestId = HttpContext.TraceIdentifier }
+                    );
                 }
 
                 var projectTasks = tasks.Where(t => t.ProjectId == projectId).ToList();
@@ -186,23 +217,56 @@ namespace ICCMS_Web.Controllers
                         userId
                     );
                     ViewBag.ErrorMessage = "No tasks found for this project.";
-                    return View("Error");
+                    return View(
+                        "Error",
+                        new ErrorViewModel { RequestId = HttpContext.TraceIdentifier }
+                    );
                 }
 
-                // Get project information from the first task (since all tasks in the project will have the same project info)
-                var firstTask = projectTasks.First();
+                // Get the first task to extract project information
+                var firstTask = projectTasks.FirstOrDefault();
+                if (firstTask == null)
+                {
+                    _logger.LogWarning("No valid task found in project tasks");
+                    ViewBag.ErrorMessage = "No valid task data found.";
+                    return View(
+                        "Error",
+                        new ErrorViewModel { RequestId = HttpContext.TraceIdentifier }
+                    );
+                }
+
+                // Safely extract project information with null checks
+                var extractedProjectId = !string.IsNullOrEmpty(firstTask.ProjectId)
+                    ? firstTask.ProjectId
+                    : projectId;
+                var projectName = !string.IsNullOrEmpty(firstTask.ProjectId)
+                    ? $"Project {firstTask.ProjectId.Substring(0, Math.Min(8, firstTask.ProjectId.Length))}"
+                    : "Unknown Project";
+
+                // Safely calculate dates with null checks
+                var startDates = projectTasks
+                    .Where(t => t.StartDate != default(DateTime))
+                    .Select(t => t.StartDate)
+                    .ToList();
+                var dueDates = projectTasks
+                    .Where(t => t.DueDate != default(DateTime))
+                    .Select(t => t.DueDate)
+                    .ToList();
+
+                var minStartDate = startDates.Any() ? startDates.Min() : DateTime.UtcNow;
+                var maxDueDate = dueDates.Any() ? dueDates.Max() : DateTime.UtcNow.AddDays(30);
 
                 // Create ProjectDetailDto from the task data
                 var projectDetails = new ProjectDetailDto
                 {
-                    ProjectId = firstTask.ProjectId,
-                    Name = $"Project {firstTask.ProjectId.Substring(0, 8)}", // Use a truncated project ID as name
-                    Description = $"Project tasks for {firstTask.ProjectId}",
+                    ProjectId = extractedProjectId,
+                    Name = projectName,
+                    Description = $"Project tasks for {extractedProjectId}",
                     BudgetPlanned = 0, // Default values since we don't have project budget info
                     BudgetActual = 0,
                     Status = "Active", // Default status
-                    StartDate = projectTasks.Min(t => t.StartDate),
-                    EndDatePlanned = projectTasks.Max(t => t.DueDate),
+                    StartDate = minStartDate,
+                    EndDatePlanned = maxDueDate,
                     EndDateActual = null,
                     CompletionPhase = null,
                     ClientId = "",
@@ -211,18 +275,24 @@ namespace ICCMS_Web.Controllers
                     ProjectManagerName = "Project Manager", // Default PM name
                     Tasks = projectTasks,
                     TotalTasks = projectTasks.Count,
-                    CompletedTasks = projectTasks.Count(t => t.Status == "Completed"),
-                    InProgressTasks = projectTasks.Count(t => t.Status == "In Progress"),
-                    PendingTasks = projectTasks.Count(t => t.Status == "Pending"),
+                    CompletedTasks = projectTasks.Count(t =>
+                        !string.IsNullOrEmpty(t.Status) && t.Status == "Completed"
+                    ),
+                    InProgressTasks = projectTasks.Count(t =>
+                        !string.IsNullOrEmpty(t.Status) && t.Status == "In Progress"
+                    ),
+                    PendingTasks = projectTasks.Count(t =>
+                        !string.IsNullOrEmpty(t.Status) && t.Status == "Pending"
+                    ),
                     OverdueTasks = projectTasks.Count(t => t.IsOverdue),
                     OverallProgress = projectTasks.Any()
-                        ? (int)projectTasks.Average(t => t.Progress)
+                        ? (int)projectTasks.Where(t => t.Progress >= 0).Average(t => t.Progress)
                         : 0,
                 };
 
                 _logger.LogInformation(
                     "Project detail loaded for project {ProjectId} with {TaskCount} tasks",
-                    projectId,
+                    extractedProjectId,
                     projectDetails.Tasks?.Count ?? 0
                 );
 
@@ -236,7 +306,10 @@ namespace ICCMS_Web.Controllers
                     projectId
                 );
                 ViewBag.ErrorMessage = "Failed to load project details. Please try again later.";
-                return View("Error");
+                return View(
+                    "Error",
+                    new ErrorViewModel { RequestId = HttpContext.TraceIdentifier }
+                );
             }
         }
 
@@ -254,13 +327,13 @@ namespace ICCMS_Web.Controllers
                     return Unauthorized(new { error = "User ID not found" });
                 }
 
-                var tasks = await _contractorService.GetAssignedTasksAsync(userId);
+                var tasks = await _contractorService.GetAssignedTasksAsync();
                 return Json(tasks);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting assigned tasks");
-                return StatusCode(500, new { error = ex.Message });
+                return StatusCode(500, new { error = "Internal server error" });
             }
         }
 
@@ -278,7 +351,7 @@ namespace ICCMS_Web.Controllers
                     return Unauthorized(new { error = "User ID not found" });
                 }
 
-                var task = await _contractorService.GetTaskWithProjectAsync(taskId, userId);
+                var task = await _contractorService.GetTaskWithProjectAsync(taskId);
                 if (task == null)
                 {
                     return NotFound(new { error = "Task not found" });
@@ -409,7 +482,7 @@ namespace ICCMS_Web.Controllers
                 report.SubmittedAt = DateTime.UtcNow;
                 report.Status = "Submitted";
 
-                var result = await _contractorService.SubmitProgressReportAsync(report, userId);
+                var result = await _contractorService.SubmitProgressReportAsync(report);
 
                 _logger.LogInformation(
                     "Progress report submitted for task {TaskId} by contractor {UserId}",
@@ -430,7 +503,9 @@ namespace ICCMS_Web.Controllers
         /// Request completion of a task
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> RequestCompletion([FromBody] object requestData)
+        public async Task<IActionResult> RequestCompletion(
+            [FromBody] RequestCompletionRequest request
+        )
         {
             try
             {
@@ -440,32 +515,26 @@ namespace ICCMS_Web.Controllers
                     return Unauthorized(new { error = "User ID not found" });
                 }
 
-                // Parse request data
-                var json = System.Text.Json.JsonSerializer.Serialize(requestData);
-                var data =
-                    System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(json);
-
-                var taskId = data.GetProperty("taskId").GetString();
-                var notes = data.GetProperty("notes").GetString() ?? "";
-                var documentId = data.TryGetProperty("documentId", out var docElement)
-                    ? docElement.GetString()
-                    : null;
-
-                if (string.IsNullOrEmpty(taskId))
+                if (!ModelState.IsValid)
                 {
-                    return BadRequest(new { error = "Task ID is required" });
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Count > 0)
+                        .ToDictionary(
+                            kvp => kvp.Key,
+                            kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        );
+                    return BadRequest(new { error = "Validation failed", errors });
                 }
 
                 var result = await _contractorService.RequestCompletionAsync(
-                    taskId,
-                    notes,
-                    documentId,
-                    userId
+                    request.TaskId,
+                    request.Notes ?? "",
+                    request.DocumentId
                 );
 
                 _logger.LogInformation(
                     "Completion requested for task {TaskId} by contractor {UserId}",
-                    taskId,
+                    request.TaskId,
                     userId
                 );
 
@@ -492,7 +561,7 @@ namespace ICCMS_Web.Controllers
                     return Unauthorized(new { error = "User ID not found" });
                 }
 
-                var reports = await _contractorService.GetProgressReportsAsync(taskId, userId);
+                var reports = await _contractorService.GetProgressReportsAsync(taskId);
                 return Json(reports);
             }
             catch (Exception ex)
@@ -516,7 +585,7 @@ namespace ICCMS_Web.Controllers
                     return Unauthorized(new { error = "User ID not found" });
                 }
 
-                var budget = await _contractorService.GetTaskProjectBudgetAsync(taskId, userId);
+                var budget = await _contractorService.GetTaskProjectBudgetAsync(taskId);
                 return Json(budget);
             }
             catch (Exception ex)

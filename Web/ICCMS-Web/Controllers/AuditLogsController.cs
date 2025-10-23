@@ -37,17 +37,16 @@ namespace ICCMS_Web.Controllers
                     return View(new AuditLogsViewModel());
                 }
 
-                // Clear any existing headers to avoid conflicts
-                _httpClient.DefaultRequestHeaders.Clear();
-
-                // Set authorization header
-                _httpClient.DefaultRequestHeaders.Authorization =
+                // Create request message with authorization header
+                var request = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    $"{_apiBaseUrl}/api/auditlogs?limit=1000"
+                );
+                request.Headers.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", firebaseToken);
 
                 // Get audit logs from API
-                var response = await _httpClient.GetAsync(
-                    $"{_apiBaseUrl}/api/auditlogs?limit=1000"
-                );
+                var response = await _httpClient.SendAsync(request);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -58,9 +57,16 @@ namespace ICCMS_Web.Controllers
                     );
 
                     // Get all users to populate full names
-                    var usersResponse = await _httpClient.GetAsync(
+                    var usersRequest = new HttpRequestMessage(
+                        HttpMethod.Get,
                         $"{_apiBaseUrl}/api/admin/users"
                     );
+                    usersRequest.Headers.Authorization =
+                        new System.Net.Http.Headers.AuthenticationHeaderValue(
+                            "Bearer",
+                            firebaseToken
+                        );
+                    var usersResponse = await _httpClient.SendAsync(usersRequest);
                     var usersDict = new Dictionary<string, string>();
 
                     if (usersResponse.IsSuccessStatusCode)
@@ -174,9 +180,16 @@ namespace ICCMS_Web.Controllers
                         .ToList();
 
                     // Get available log types from all logs (need to fetch all logs for this)
-                    var allLogsResponse = await _httpClient.GetAsync(
+                    var allLogsRequest = new HttpRequestMessage(
+                        HttpMethod.Get,
                         $"{_apiBaseUrl}/api/auditlogs?limit=1000"
                     );
+                    allLogsRequest.Headers.Authorization =
+                        new System.Net.Http.Headers.AuthenticationHeaderValue(
+                            "Bearer",
+                            firebaseToken
+                        );
+                    var allLogsResponse = await _httpClient.SendAsync(allLogsRequest);
                     var availableLogTypes = new List<string>();
 
                     if (allLogsResponse.IsSuccessStatusCode)

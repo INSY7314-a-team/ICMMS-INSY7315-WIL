@@ -203,6 +203,47 @@ namespace ICCMS_API.Controllers
             );
         }
 
+        [HttpGet("debug/tasks")]
+        public async Task<ActionResult<object>> DebugTasks()
+        {
+            try
+            {
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+
+                var taskAssignments = tasks
+                    .Select(t => new
+                    {
+                        TaskId = t.TaskId,
+                        AssignedTo = t.AssignedTo,
+                        ProjectId = t.ProjectId,
+                        Name = t.Name,
+                        Status = t.Status,
+                    })
+                    .ToList();
+
+                var uniqueAssignments = tasks
+                    .Select(t => t.AssignedTo)
+                    .Distinct()
+                    .Where(a => !string.IsNullOrEmpty(a))
+                    .ToList();
+
+                return Ok(
+                    new
+                    {
+                        totalTasks = tasks.Count,
+                        totalProjects = projects.Count,
+                        uniqueAssignments = uniqueAssignments,
+                        sampleTasks = taskAssignments.Take(10).ToList(),
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
         [HttpGet("dashboard")]
         public async Task<ActionResult<object>> GetDashboard()
         {
@@ -225,9 +266,28 @@ namespace ICCMS_API.Controllers
                 var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
                 Console.WriteLine($"[ContractorsController] Found {tasks.Count} total tasks");
 
+                // Debug: Log all task assignments to see what's in the database
+                Console.WriteLine("[ContractorsController] All task assignments:");
+                foreach (var task in tasks.Take(10)) // Log first 10 tasks
+                {
+                    Console.WriteLine(
+                        $"[ContractorsController] Task {task.TaskId}: AssignedTo='{task.AssignedTo}', ProjectId='{task.ProjectId}', Name='{task.Name}'"
+                    );
+                }
+
                 var contractorTasks = tasks.Where(t => t.AssignedTo == contractorId).ToList();
                 Console.WriteLine(
                     $"[ContractorsController] Found {contractorTasks.Count} tasks for contractor {contractorId}"
+                );
+
+                // Debug: Log all unique AssignedTo values to see what contractors exist
+                var uniqueAssignments = tasks
+                    .Select(t => t.AssignedTo)
+                    .Distinct()
+                    .Where(a => !string.IsNullOrEmpty(a))
+                    .ToList();
+                Console.WriteLine(
+                    $"[ContractorsController] Unique AssignedTo values: {string.Join(", ", uniqueAssignments)}"
                 );
 
                 // Get projects for these tasks
@@ -276,7 +336,10 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpGet("tasks/assigned")]
-        public async Task<ActionResult<List<ProjectTask>>> GetAssignedTasks()
+        public async Task<ActionResult<PaginatedResponse<ProjectTask>>> GetAssignedTasks(
+            int page = 1,
+            int pageSize = 20
+        )
         {
             try
             {
@@ -286,13 +349,56 @@ namespace ICCMS_API.Controllers
                     return Unauthorized(new { error = "Contractor ID not found" });
                 }
 
-                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
-                var contractorTasks = tasks
-                    .Where(t => t.AssignedTo == contractorId)
-                    .OrderBy(t => t.DueDate)
-                    .ToList();
+                // Validate pagination parameters
+                if (page < 1)
+                    page = 1;
+                if (pageSize < 1 || pageSize > 100)
+                    pageSize = 20;
 
-                return Ok(contractorTasks);
+                Console.WriteLine(
+                    $"[ContractorsController] Looking for tasks assigned to contractor: {contractorId}"
+                );
+
+                var filters = new Dictionary<string, object> { { "assignedto", contractorId } };
+
+                // Debug: First get all tasks to see what's available
+                var allTasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                Console.WriteLine(
+                    $"[ContractorsController] Total tasks in database: {allTasks.Count}"
+                );
+
+                // Debug: Show some sample tasks and their assignments
+                var sampleTasks = allTasks.Take(5).ToList();
+                foreach (var task in sampleTasks)
+                {
+                    Console.WriteLine(
+                        $"[ContractorsController] Sample task: {task.TaskId}, AssignedTo: '{task.AssignedTo}', ProjectId: '{task.ProjectId}'"
+                    );
+                }
+
+                var tasks = await _firebaseService.GetCollectionWithFiltersAsync<ProjectTask>(
+                    "tasks",
+                    filters,
+                    page,
+                    pageSize,
+                    "dueDate",
+                    false // Order by dueDate ascending (earliest first)
+                );
+
+                var totalCount = await _firebaseService.GetCollectionCountAsync<ProjectTask>(
+                    "tasks",
+                    filters
+                );
+
+                var response = new PaginatedResponse<ProjectTask>
+                {
+                    Data = tasks,
+                    Page = page,
+                    PageSize = pageSize,
+                    TotalCount = totalCount,
+                };
+
+                return Ok(response);
             }
             catch (Exception ex)
             {
@@ -319,16 +425,20 @@ namespace ICCMS_API.Controllers
                 }
                 if (task.AssignedTo != contractorId)
                 {
-                    return Unauthorized(new { error = "You are not assigned to this task" });
+                    return Forbid();
                 }
 
-                var progressReports = await _firebaseService.GetCollectionAsync<ProgressReport>(
-                    "progressReports"
-                );
-                var taskReports = progressReports
-                    .Where(pr => pr.TaskId == taskId)
-                    .OrderByDescending(pr => pr.SubmittedAt)
-                    .ToList();
+                // Filter progress reports at database level
+                var filters = new Dictionary<string, object> { { "taskid", taskId } };
+                var taskReports =
+                    await _firebaseService.GetCollectionWithFiltersAsync<ProgressReport>(
+                        "progressReports",
+                        filters,
+                        1,
+                        1000, // Get all reports for this task
+                        "SubmittedAt",
+                        true // Order by SubmittedAt descending
+                    );
 
                 return Ok(taskReports);
             }
@@ -418,7 +528,14 @@ namespace ICCMS_API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = ex.Message });
+                return StatusCode(
+                    500,
+                    new
+                    {
+                        error = "An error occurred while submitting completion request",
+                        details = ex.Message,
+                    }
+                );
             }
         }
 
@@ -441,7 +558,7 @@ namespace ICCMS_API.Controllers
                 }
                 if (task.AssignedTo != contractorId)
                 {
-                    return Unauthorized(new { error = "You are not assigned to this task" });
+                    return Forbid();
                 }
 
                 // Get project budget

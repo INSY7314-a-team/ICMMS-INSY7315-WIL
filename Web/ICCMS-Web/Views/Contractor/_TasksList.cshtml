@@ -7,10 +7,12 @@
         {
             <div class="task-card-collapsible" data-task-id="@task.TaskId">
                 <!-- Task Header (Always Visible) -->
-                <div class="task-card-header" onclick="toggleTaskCard('@task.TaskId')">
+                <div class="task-card-header" role="button" tabindex="0" aria-controls="task-content-@task.TaskId"
+                    aria-expanded="false" onclick="toggleTaskCard('@task.TaskId')"
+                    onkeydown="if (event.key === 'Enter' || event.key === ' ') { toggleTaskCard('@task.TaskId'); }">
                     <div class="task-header-left">
                         <div class="task-date-time">
-                            <i class="fa-solid fa-calendar-alt"></i>
+                            <i class="fa-solid fa-calendar-days"></i>
                             <span>@task.StartDate.ToString("dd/MM/yyyy") - @task.DueDate.ToString("dd/MM/yyyy")</span>
                         </div>
                         <div class="task-summary">
@@ -55,66 +57,78 @@
                         </div>
 
                         <div class="task-detail-section">
-                            <h6><i class="fa-solid fa-chart-line"></i> Progress</h6>
                             <div class="progress-container">
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: @task.Progress%"></div>
+                                <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                                    aria-valuenow="@(Math.Min(Math.Max(task.Progress, 0), 100))"
+                                    aria-label="Task progress for @task.Name">
+                                    <div class="progress-fill" style="width: @(Math.Min(Math.Max(task.Progress, 0), 100))%">
+                                    </div>
+                                    {
+                                    <div class="overdue-warning">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                        <span>This task is overdue by @Math.Abs(task.DaysUntilDue)
+                                            day@(Math.Abs(task.DaysUntilDue) == 1 ? "" : "s")</span>
+                                    </div>
+                                    } <span class="progress-text">@task.Progress% Complete</span>
                                 </div>
-                                <span class="progress-text">@task.Progress% Complete</span>
+                                @if (task.IsOverdue)
+                                {
+                                    <div class="overdue-warning">
+                                        @if (task.Status == "Pending")
+                                        {
+                                            <button type="button" class="btn btn-sm btn-warning start-task-btn"
+                                                data-task-id="@task.TaskId">
+                                                <i class="fa-solid fa-play"></i> Start Task
+                                            </button>
+                                        }
+                                        <button type="button" class="btn btn-sm btn-info view-details-btn" data-bs-toggle="modal"
+                                            data-bs-target="#taskDetailsModal" data-task-id="@task.TaskId">
+                                            <i class="fa-solid fa-eye"></i> View Details
+                                        </button>
+                                        @if (task.CanSubmitProgress && task.Status != "Pending")
+                                        {
+                                            <button type="button" class="btn btn-sm btn-primary submit-progress-btn"
+                                                data-bs-toggle="modal" data-bs-target="#progressReportModal"
+                                                data-task-id="@task.TaskId">
+                                                <i class="fa-solid fa-upload"></i> Submit Progress
+                                            </button>
+                                        }
+                                        @if (task.CanRequestCompletion && task.Status != "Pending")
+                                        {
+                                            <button type="button" class="btn btn-sm btn-success request-completion-btn"
+                                                data-bs-toggle="modal" data-bs-target="#completionRequestModal"
+                                                data-task-id="@task.TaskId">
+                                                <i class="fa-solid fa-check"></i> Request Completion
+                                            </button>
+                                        }
+                                    </div>
+                                }
                             </div>
-                            @if (task.IsOverdue)
-                            {
-                                <div class="overdue-warning">
-                                    <i class="fa-solid fa-exclamation-triangle"></i>
-                                    <span>This task is overdue by @task.DaysUntilDue days</span>
-                                </div>
                             }
-                        </div>
-
-                        <div class="task-detail-section">
-                            <h6><i class="fa-solid fa-tools"></i> Actions</h6>
-                            <div class="task-actions">
-                                @if (task.Status == "Pending")
-                                {
-                                    <button class="btn btn-sm btn-warning start-task-btn" data-task-id="@task.TaskId">
-                                        <i class="fa-solid fa-play"></i> Start Task
-                                    </button>
-                                }
-                                <button class="btn btn-sm btn-info view-details-btn" data-bs-toggle="modal"
-                                    data-bs-target="#taskDetailsModal" data-task-id="@task.TaskId">
-                                    <i class="fa-solid fa-eye"></i> View Details
+                            @if (task.CanRequestCompletion && task.Status != "Pending")
+                            {
+                                <button class="btn btn-sm btn-success request-completion-btn" data-bs-toggle="modal"
+                                    data-bs-target="#completionRequestModal" data-task-id="@task.TaskId">
+                                    <i class="fa-solid fa-check"></i> Request Completion
                                 </button>
-                                @if (task.CanSubmitProgress && task.Status != "Pending")
-                                {
-                                    <button class="btn btn-sm btn-primary submit-progress-btn" data-bs-toggle="modal"
-                                        data-bs-target="#progressReportModal" data-task-id="@task.TaskId">
-                                        <i class="fa-solid fa-upload"></i> Submit Progress
-                                    </button>
-                                }
-                                @if (task.CanRequestCompletion && task.Status != "Pending")
-                                {
-                                    <button class="btn btn-sm btn-success request-completion-btn" data-bs-toggle="modal"
-                                        data-bs-target="#completionRequestModal" data-task-id="@task.TaskId">
-                                        <i class="fa-solid fa-check"></i> Request Completion
-                                    </button>
-                                }
-                            </div>
+                            }
                         </div>
                     </div>
                 </div>
             </div>
-        }
+        
     }
-    else
-    {
-        <div class="no-tasks-message">
-            <div class="text-center py-5">
-                <i class="fa-solid fa-clipboard-list fa-3x text-muted mb-3"></i>
-                <h4 class="text-muted">No tasks assigned</h4>
-                <p class="text-muted">
-                    You don't have any tasks assigned yet. Contact your project manager for task assignments.
-                </p>
-            </div>
+}
+else
+{
+    <div class="no-tasks-message">
+        <div class="text-center py-5">
+            <i class="fa-solid fa-clipboard-list fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No tasks assigned</h4>
+            <p class="text-muted">
+                You don't have any tasks assigned yet. Contact your project manager for task assignments.
+            </p>
         </div>
-    }
+    </div>
+}
 </div>

@@ -148,6 +148,13 @@
     padding: 1.5rem;
     background-color: #2A2B35;
     border-radius: 0 0 8px 8px;
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease;
+}
+
+.project-card-collapsible.expanded .project-card-content {
+    max-height: 2000px;
     animation: slideDown 0.3s ease;
 }
 
@@ -504,7 +511,7 @@
 
 .modal-dialog.modal-lg {
     max-width: 800px;
-    width: 800px;
+    width: min(90vw, 800px);
 }
 
 /* Ensure modal doesn't cause layout issues */

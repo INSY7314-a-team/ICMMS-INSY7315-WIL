@@ -27,9 +27,9 @@
                 </div>
 
                 <!-- Completion Request Form -->
-                <form id="completionRequestForm">
+                <form id="completionRequestForm" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
                     <input type="hidden" id="completionRequestTaskId" name="taskId" />
-
                     <div class="mb-3">
                         <label for="completionNotes" class="form-label fw-bold">
                             <i class="fa-solid fa-comment me-1"></i>Completion Summary <span
@@ -136,157 +136,170 @@
         modal.show();
 
         // Set task ID
-        document.getElementById('completionRequestTaskId').value = taskId;
+        function openCompletionRequestModal(taskId) {
+            const modalEl = document.getElementById('completionRequestModal');
+            const form = document.getElementById('completionRequestForm');
+            // Reset first, then set values
+            form.reset();
+            document.getElementById('completionDocumentPreview').style.display = 'none';
+            document.getElementById('completionDocumentList').innerHTML = '';
+            document.getElementById('completionRequestTaskId').value = taskId;
+            // Local-date default (avoids UTC offset issues)
+            const dateInput = document.getElementById('completionDate');
+            if ('valueAsDate' in dateInput) {
+                dateInput.valueAsDate = new Date();
+            } else {
+                const d = new Date();
+                d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+                dateInput.value = d.toISOString().split('T')[0];
+            }
+            loadTaskDetailsForCompletionModal(taskId);
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        }
+        function loadTaskDetailsForCompletionModal(taskId) {
+            fetch(`/Contractor/GetTaskDetails?taskId=${encodeURIComponent(taskId)}`)
+                .then(response => response.json())
+                .then(task => {
+                    if (task) {
+                        document.getElementById('modalTaskName').textContent = task.name;
+                        document.getElementById('modalProjectName').textContent = task.projectName;
+                        document.getElementById('modalTaskDescription').textContent = task.description || 'No description provided';
+                        async function submitCompletionRequest() {
+                            const form = document.getElementById('completionRequestForm');
+                            const formData = new FormData(form);
 
-        // Load task details
-        loadTaskDetailsForCompletionModal(taskId);
+                            // Validate required fields
+                            const notes = document.getElementById('completionNotes').value.trim();
+                            const documents = document.getElementById('completionDocuments').files;
 
-        // Reset form
-        document.getElementById('completionRequestForm').reset();
-        document.getElementById('completionDocumentPreview').style.display = 'none';
-        document.getElementById('completionDocumentList').innerHTML = '';
+                            if (!notes) {
+                                showToast('Please provide a completion summary', 'error');
+                                return;
+                            }
 
-        // Set default completion date to today
-        document.getElementById('completionDate').value = new Date().toISOString().split('T')[0];
-    }
+                            if (documents.length === 0) {
+                                showToast('Please upload at least one completion document', 'error');
+                                return;
+                            }
 
-    function loadTaskDetailsForCompletionModal(taskId) {
-        fetch(`/Contractor/GetTaskDetails?taskId=${encodeURIComponent(taskId)}`)
-            .then(response => response.json())
-            .then(task => {
-                if (task) {
-                    document.getElementById('modalTaskName').textContent = task.name;
-                    document.getElementById('modalProjectName').textContent = task.projectName;
-                    document.getElementById('modalTaskDescription').textContent = task.description || 'No description provided';
-                }
-            })
-            .catch(error => {
-                console.error('Failed to load task details:', error);
+                            // Validate checkboxes
+                            const qualityStandards = document.getElementById('qualityStandards').checked;
+                            const safetyCompliance = document.getElementById('safetyCompliance').checked;
+                            const clientSatisfaction = document.getElementById('clientSatisfaction').checked;
+
+                            if (!qualityStandards || !safetyCompliance || !clientSatisfaction) {
+                                showToast('Please confirm all quality checklist items', 'error');
+                                return;
+                            }
+
+                            // Show loading state
+                            const submitBtn = document.getElementById('submitCompletionRequestBtn');
+                            const originalText = submitBtn.innerHTML;
+                            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Submitting...';
+                            submitBtn.disabled = true;
+
+                            // Normalize values into multipart payload
+                            formData.set('notes', notes);
+                            formData.set('finalHours', (parseFloat(formData.get('finalHours')) || 0).toString());
+                            formData.set('qualityStandards', qualityStandards ? 'true' : 'false');
+                            formData.set('safetyCompliance', safetyCompliance ? 'true' : 'false');
+                            formData.set('clientSatisfaction', clientSatisfaction ? 'true' : 'false');
+
+                            // Ensure files are included
+                            formData.delete('documents');
+                            Array.from(documents).forEach(f => formData.append('documents', f));
+
+                            try {
+                                const response = await fetch('/Contractor/RequestCompletion', {
+                                    method: 'POST',
+                                    // Let the browser set Content-Type (with boundary)
+                                    body: formData
+                                });
+                                if (!response.ok) {
+                                    const text = await response.text();
+                                    throw new Error(text || `HTTP ${response.status}`);
+                                }
+                                const data = await response.json().catch(() => ({}));
+                                if (data.success) {
+                                    showToast('Completion request submitted successfully! Your project manager will review it shortly.', 'success');
+
+                                    // Close modal
+                                    const modal = bootstrap.Modal.getInstance(document.getElementById('completionRequestModal'));
+                                    if (modal) {
+                                        modal.hide();
+                                    }
+
+                                    // Refresh task card
+                                    refreshTaskCard(formData.get('taskId'));
+                                } else {
+                                    showToast('Failed to submit completion request: ' + (data.error || 'Unknown error'), 'error');
+                                }
+                            } catch (error) {
+                                console.error('Error submitting completion request:', error);
+                                showToast('An error occurred while submitting the completion request', 'error');
+                            } finally {
+                                // Reset button state
+                                submitBtn.innerHTML = originalText;
+                                submitBtn.disabled = false;
+                            }
+                        }                    // Reset button state
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                    });
+        }
+
+        function refreshTaskCard(taskId) {
+            // Reload the task card to show updated information
+            const taskCard = document.getElementById(`task-${taskId}`);
+            if (taskCard) {
+                // Trigger a page refresh or reload the task data
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            }
+        }
+
+        // Document preview functionality
+        document.getElementById('completionDocuments').addEventListener('change', function (e) {
+            const files = Array.from(e.target.files);
+            const preview = document.getElementById('completionDocumentPreview');
+            const list = document.getElementById('completionDocumentList');
+
+            if (files.length > 0) {
+                preview.style.display = 'block';
+                files.forEach((file, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+                    // Build left section: icon, filename, and size
+                    const left = document.createElement('div');
+                    const icon = document.createElement('i');
+                    icon.className = 'fa-solid fa-file me-2';
+                    const name = document.createElement('span');
+                    name.textContent = file.name;
+                    const size = document.createElement('small');
+                    size.className = 'text-muted ms-2';
+                    size.textContent = `(${(file.size / 1024).toFixed(1)} KB)`;
+                    left.append(icon, name, size);
+
+                    // Build remove button with event listener
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm btn-outline-danger';
+                    // Static HTML for icon only—no user data
+                    btn.innerHTML = '<i class="fa-solid fa-times"></i>';
+                    btn.addEventListener('click', () => removeCompletionDocument(index));
+
+                    // Assemble item
+                    item.append(left, btn);
+                    list.appendChild(item);
+                }); list.appendChild(item);
             });
+    } else {
+        preview.style.display = 'none';
     }
-
-    function submitCompletionRequest() {
-        const form = document.getElementById('completionRequestForm');
-        const formData = new FormData(form);
-
-        // Validate required fields
-        const notes = document.getElementById('completionNotes').value.trim();
-        const documents = document.getElementById('completionDocuments').files;
-
-        if (!notes) {
-            showToast('Please provide a completion summary', 'error');
-            return;
-        }
-
-        if (documents.length === 0) {
-            showToast('Please upload at least one completion document', 'error');
-            return;
-        }
-
-        // Validate checkboxes
-        const qualityStandards = document.getElementById('qualityStandards').checked;
-        const safetyCompliance = document.getElementById('safetyCompliance').checked;
-        const clientSatisfaction = document.getElementById('clientSatisfaction').checked;
-
-        if (!qualityStandards || !safetyCompliance || !clientSatisfaction) {
-            showToast('Please confirm all quality checklist items', 'error');
-            return;
-        }
-
-        // Show loading state
-        const submitBtn = document.getElementById('submitCompletionRequestBtn');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Submitting...';
-        submitBtn.disabled = true;
-
-        // Prepare completion request data
-        const completionRequest = {
-            taskId: formData.get('taskId'),
-            notes: notes,
-            completionDate: formData.get('completionDate'),
-            finalHours: parseFloat(formData.get('finalHours')) || 0,
-            qualityStandards: qualityStandards,
-            safetyCompliance: safetyCompliance,
-            clientSatisfaction: clientSatisfaction,
-            documentId: null // Will be populated after document upload
-        };
-
-        // Submit completion request
-        fetch('/Contractor/RequestCompletion', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(completionRequest)
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('Completion request submitted successfully! Your project manager will review it shortly.', 'success');
-
-                    // Close modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('completionRequestModal'));
-                    if (modal) {
-                        modal.hide();
-                    }
-
-                    // Refresh task card
-                    refreshTaskCard(completionRequest.taskId);
-                } else {
-                    showToast('Failed to submit completion request: ' + (data.error || 'Unknown error'), 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error submitting completion request:', error);
-                showToast('An error occurred while submitting the completion request', 'error');
-            })
-            .finally(() => {
-                // Reset button state
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            });
-    }
-
-    function refreshTaskCard(taskId) {
-        // Reload the task card to show updated information
-        const taskCard = document.getElementById(`task-${taskId}`);
-        if (taskCard) {
-            // Trigger a page refresh or reload the task data
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-        }
-    }
-
-    // Document preview functionality
-    document.getElementById('completionDocuments').addEventListener('change', function (e) {
-        const files = Array.from(e.target.files);
-        const preview = document.getElementById('completionDocumentPreview');
-        const list = document.getElementById('completionDocumentList');
-
-        if (files.length > 0) {
-            preview.style.display = 'block';
-            list.innerHTML = '';
-
-            files.forEach((file, index) => {
-                const item = document.createElement('div');
-                item.className = 'list-group-item d-flex justify-content-between align-items-center';
-                item.innerHTML = `
-                    <div>
-                        <i class="fa-solid fa-file me-2"></i>
-                        <span>${file.name}</span>
-                        <small class="text-muted ms-2">(${(file.size / 1024).toFixed(1)} KB)</small>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCompletionDocument(${index})">
-                        <i class="fa-solid fa-times"></i>
-                    </button>
-                `;
-                list.appendChild(item);
-            });
-        } else {
-            preview.style.display = 'none';
-        }
-    });
+        });
 
     function removeCompletionDocument(index) {
         const input = document.getElementById('completionDocuments');

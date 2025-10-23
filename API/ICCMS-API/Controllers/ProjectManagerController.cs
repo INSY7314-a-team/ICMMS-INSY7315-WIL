@@ -1367,18 +1367,40 @@ namespace ICCMS_API.Controllers
                     return NotFound(new { error = "Progress report not found" });
                 }
 
-                // Update report status
-                report.Status = "Approved";
-                report.ReviewedBy = pmId;
-                report.ReviewedAt = DateTime.UtcNow;
+                // Ensure this report belongs to a project managed by the caller
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    report.ProjectId
+                );
+                if (project == null || project.ProjectManagerId != pmId)
+                {
+                    return Forbid();
+                }
 
+                // Idempotency and state preconditions
+                if (report.Status == "Approved")
+                {
+                    return Ok(report);
+                }
+
+                // Update the report status
+                report.Status = "Approved";
+                report.ReviewedAt = DateTime.UtcNow;
+                report.ReviewedBy = pmId;
                 await _firebaseService.UpdateDocumentAsync("progressReports", id, report);
 
                 return Ok(report);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = ex.Message });
+                return StatusCode(
+                    500,
+                    new
+                    {
+                        error = "An error occurred while approving progress report",
+                        details = ex.Message,
+                    }
+                );
             }
         }
 
@@ -1403,6 +1425,26 @@ namespace ICCMS_API.Controllers
                 if (report == null)
                 {
                     return NotFound(new { error = "Progress report not found" });
+                }
+
+                // ownership guard
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    report.ProjectId
+                );
+                if (project == null || project.ProjectManagerId != pmId)
+                {
+                    return Forbid();
+                }
+                // idempotent reject
+                if (report.Status == "Rejected")
+                {
+                    return Ok(report);
+                }
+                // only allow rejecting from Submitted state
+                if (report.Status != "Submitted")
+                {
+                    return Conflict(new { error = "Only 'Submitted' reports can be rejected." });
                 }
 
                 // Update report status
@@ -1438,6 +1480,16 @@ namespace ICCMS_API.Controllers
                     return NotFound(new { error = "Task not found" });
                 }
 
+                // Verify the task belongs to a project managed by this PM
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    task.ProjectId
+                );
+                if (project == null || project.ProjectManagerId != pmId)
+                {
+                    return Forbid();
+                }
+
                 // Update task status to completed
                 task.Status = "Completed";
                 task.CompletedDate = DateTime.UtcNow;
@@ -1448,7 +1500,14 @@ namespace ICCMS_API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = ex.Message });
+                return StatusCode(
+                    500,
+                    new
+                    {
+                        error = "An error occurred while approving task completion",
+                        details = ex.Message,
+                    }
+                );
             }
         }
 
@@ -1472,8 +1531,25 @@ namespace ICCMS_API.Controllers
                     return NotFound(new { error = "Task not found" });
                 }
 
-                // Revert task status back to In Progress
+                // Verify that the calling PM actually owns the parent project
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    task.ProjectId
+                );
+                if (project == null || project.ProjectManagerId != pmId)
+                {
+                    return Forbid();
+                }
+
+                // Idempotency: if it’s already In Progress, just return it
+                if (task.Status == "In Progress")
+                {
+                    return Ok(task);
+                }
+
+                // Revert task status back to In Progress and clear any completion timestamp
                 task.Status = "In Progress";
+                task.CompletedDate = null;
 
                 await _firebaseService.UpdateDocumentAsync("tasks", taskId, task);
 

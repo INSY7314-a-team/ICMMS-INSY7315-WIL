@@ -139,16 +139,16 @@ function startTask(taskId) {
     .then((tasks) => {
       console.log("Received tasks:", tasks);
       console.log("Looking for taskId:", taskId);
-      const task = tasks.find((t) => t.taskId === taskId);
+      const list = Array.isArray(tasks) ? tasks : [];
+      const task = list.find((t) => String(t.taskId) === String(taskId));
       if (!task) {
         console.error(
           "Available task IDs:",
-          tasks.map((t) => t.taskId)
+          list.map((t) => t.taskId)
         );
         throw new Error("Task not found in assigned tasks");
       }
       console.log("Found task:", task);
-
       return fetch(`/Contractor/UpdateTaskStatus`, {
         method: "PUT",
         headers: {
@@ -215,40 +215,45 @@ function showSuccessMessage(message) {
   // Create a simple success notification
   const notification = document.createElement("div");
   notification.className = "alert alert-success position-fixed";
+  notification.setAttribute("role", "status");
+  notification.setAttribute("aria-live", "polite");
   notification.style.cssText =
     "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
   notification.innerHTML = `
         <div class="d-flex align-items-center">
-            <i class="fa-solid fa-check-circle me-2"></i>
-            <span>${message}</span>
+            <i class="fa-solid fa-check-circle me-2" aria-hidden="true"></i>
+            <span class="msg"></span>
         </div>
     `;
 
   document.body.appendChild(notification);
+  notification.querySelector(".msg").textContent = String(message);
 
   // Remove after 3 seconds
   setTimeout(() => {
     notification.remove();
-  }, 3000);
-}
-
-function showErrorMessage(message) {
-  // Create a simple error notification
-  const notification = document.createElement("div");
-  notification.className = "alert alert-danger position-fixed";
-  notification.style.cssText =
-    "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
-  notification.innerHTML = `
+    function showErrorMessage(message) {
+      // Create a simple error notification
+      const notification = document.createElement("div");
+      notification.className = "alert alert-danger position-fixed";
+      notification.setAttribute("role", "alert");
+      notification.setAttribute("aria-live", "assertive");
+      notification.style.cssText =
+        "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
+      notification.innerHTML = `
         <div class="d-flex align-items-center">
-            <i class="fa-solid fa-exclamation-circle me-2"></i>
-            <span>${message}</span>
+            <i class="fa-solid fa-exclamation-circle me-2" aria-hidden="true"></i>
+            <span class="msg"></span>
         </div>
     `;
 
-  document.body.appendChild(notification);
+      document.body.appendChild(notification);
+      notification.querySelector(".msg").textContent = String(message);
 
-  // Remove after 5 seconds
-  setTimeout(() => {
-    notification.remove();
+      // Remove after 5 seconds
+      setTimeout(() => {
+        notification.remove();
+      }, 5000);
+    }
   }, 5000);
 }

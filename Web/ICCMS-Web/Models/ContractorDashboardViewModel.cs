@@ -21,11 +21,12 @@ namespace ICCMS_Web.Models
         // Helper methods
         public string GetStatusBadgeClass(string status)
         {
-            return status.ToLower() switch
+            var key = status?.Trim().ToLowerInvariant();
+            return key switch
             {
                 "pending" => "badge-secondary",
-                "in progress" or "inprogress" => "badge-warning",
-                "awaiting approval" => "badge-info",
+                "in progress" or "inprogress" or "in-progress" => "badge-warning",
+                "awaiting approval" or "awaiting-approval" or "awaitingapproval" => "badge-info",
                 "completed" => "badge-success",
                 "overdue" => "badge-danger",
                 _ => "badge-light",

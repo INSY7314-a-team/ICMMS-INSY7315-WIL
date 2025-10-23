@@ -1,4 +1,4 @@
-﻿@* ================================================
+﻿﻿@* ================================================
    _Layout.cshtml — Protend-Style Responsive Shell
    For ICCMS Web (Project Manager / Admin / Tester)
    ================================================ *@
@@ -252,10 +252,15 @@
                     }
                     if (User.IsInRole("Contractor") || User.IsInRole("Tester"))
                     {
-                        <li><a asp-controller="Contractor" asp-action="Dashboard"><i
-                                    class="fa-solid fa-hard-hat"></i><span>My Tasks</span></a></li>
-                    }
-                    if (User.IsInRole("Admin"))
+                        <li>
+                            <a asp-controller="Contractor"
+                               asp-action="Dashboard"
+                               aria-label="My Tasks">
+                                <i class="fa-solid fa-helmet-safety" aria-hidden="true"></i>
+                                <span>My Tasks</span>
+                            </a>
+                        </li>
+                    }                    if (User.IsInRole("Admin"))
                     {
                         <li><a asp-controller="SystemOverview" asp-action="Index"><i class="fa-solid fa-tachometer-alt"></i><span>System Overview</span></a>
                         </li>

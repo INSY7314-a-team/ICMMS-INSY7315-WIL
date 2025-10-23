@@ -298,6 +298,12 @@ namespace ICCMS_Web.Services
 
         public void ResetCircuitBreaker(string endpoint)
         {
+            if (string.IsNullOrWhiteSpace(endpoint))
+            {
+                _logger.LogWarning("ResetCircuitBreaker called with empty endpoint.");
+                return;
+            }
+
             lock (_failureCounts)
             {
                 _logger.LogInformation(

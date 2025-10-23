@@ -93,11 +93,11 @@
 }
 
 .stat-card .stat-icon.in-progress {
-    background: #6BF178;
+    background: #0dcaf0;
 }
 
 .stat-card .stat-icon.completed {
-    background: #6BF178;
+    background: #198754;
 }
 
 .stat-card .stat-icon.overdue {
@@ -250,9 +250,8 @@
 }
 
 .filters-container {
-    color: #1A1B25;
+    color: #FFFFFF;
 }
-
 .filter-group {
     margin-bottom: 30px;
     padding-bottom: 20px;
@@ -551,14 +550,16 @@
     border-radius: 8px;
     margin-bottom: 0;
     transition: all 0.3s ease;
+.project-card-link {
+    background: var(--secondary-bg);
+    border-radius: 8px;
+    transition: all 0.3s ease;
     width: 100%;
     text-decoration: none;
     color: inherit;
     display: block;
     margin-bottom: 1rem;
-}
-
-.project-card-link:hover {
+}.project-card-link:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(247, 236, 89, 0.2);
     text-decoration: none;
@@ -941,4 +942,4 @@
 .btn-xs.btn-success:hover {
     background: #157347 !important;
     color: #fff !important;
-}
+}}

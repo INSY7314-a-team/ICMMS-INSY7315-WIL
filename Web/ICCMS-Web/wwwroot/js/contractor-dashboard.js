@@ -51,7 +51,8 @@ function setupSearchHandlers() {
 
   if (clearSearchBtn) {
     clearSearchBtn.addEventListener("click", function () {
-      searchInput.value = "";
+      const inputEl = document.getElementById("searchInput");
+      if (inputEl) inputEl.value = "";
       currentFilters.search = "";
       performSearch();
     });
@@ -206,12 +207,13 @@ function createTaskCard(task) {
   card.setAttribute("data-task-name", task.name);
   card.setAttribute("data-task-status", task.status);
 
-  // Calculate derived values
-  const isOverdue =
-    task.dueDate < new Date().toISOString() && task.status !== "Completed";
+  // Calculate derived values with proper Date object comparison
+  const dueDate = new Date(task.dueDate);
+  const currentDate = new Date();
+  const isOverdue = dueDate < currentDate && task.status !== "Completed";
   const daysUntilDue = Math.max(
     0,
-    Math.ceil((new Date(task.dueDate) - new Date()) / (1000 * 60 * 60 * 24))
+    Math.ceil((dueDate - currentDate) / (1000 * 60 * 60 * 24))
   );
   const statusBadgeClass = getStatusBadgeClass(task.status);
   const canSubmitProgress =
@@ -219,194 +221,360 @@ function createTaskCard(task) {
   const canRequestCompletion =
     task.status === "In Progress" || task.status === "InProgress";
 
-  card.innerHTML = `
-        <div class="card-header">
-            <div class="d-flex justify-content-between align-items-start">
-                <div class="flex-grow-1">
-                    <h6 class="card-title mb-1 fw-bold">${escapeHtml(
-                      task.name
-                    )}</h6>
-                    <p class="card-subtitle small mb-0">${escapeHtml(
-                      task.projectName || "Unknown Project"
-                    )}</p>
-                </div>
-                <div class="text-end d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" title="View details"
-                        onclick="openTaskDetails('${task.taskId}')">
-                        <i class="fa-solid fa-chevron-down"></i>
-                    </button>
-                    <span class="status-badge ${statusBadgeClass}">${
-    task.status
-  }</span>
-                </div>
-            </div>
-        </div>
-        <div class="card-body">
-            ${
-              task.description
-                ? `
-                <p class="card-text small mb-3">
-                    ${escapeHtml(
-                      task.description.length > 100
-                        ? task.description.substring(0, 100) + "..."
-                        : task.description
-                    )}
-                </p>
-            `
-                : ""
-            }
-            <div class="row g-2 mb-3">
-                <div class="col-12">
-                    <div class="stat-item mb-2">
-                        <small>Start Date: <span>${new Date(
-                          task.startDate
-                        ).toLocaleDateString()}</span></small>
-                    </div>
-                </div>
-                <div class="col-12">
-                    <div class="stat-item mb-2">
-                        <small>Due Date: <span class="${
-                          isOverdue ? "text-danger fw-bold" : ""
-                        }">${new Date(
-    task.dueDate
-  ).toLocaleDateString()}</span></small>
-                    </div>
-                </div>
-                <div class="col-12">
-                    <div class="stat-item mb-2">
-                        <small>Project Budget: <span>R ${(
-                          task.projectBudget || 0
-                        ).toLocaleString()}</span></small>
-                    </div>
-                </div>
-            </div>
-            <div class="mb-3">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <small class="progress-label">Task Progress:</small>
-                    <small class="progress-percentage">${
-                      task.progress || 0
-                    }%</small>
-                </div>
-                <div class="progress">
-                    <div class="progress-bar" role="progressbar" style="width: ${
-                      task.progress || 0
-                    }%;" 
-                         aria-valuenow="${
-                           task.progress || 0
-                         }" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-            </div>
-            <div class="task-meta mb-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="priority-badge priority-${(
-                      task.priority || "medium"
-                    ).toLowerCase()}">
-                        <i class="fa-solid fa-flag me-1"></i>${
-                          task.priority || "Medium"
-                        }
-                    </span>
-                    ${
-                      isOverdue
-                        ? `
-                        <span class="overdue-badge">
-                            <i class="fa-solid fa-exclamation-triangle me-1"></i>Overdue
-                        </span>
-                    `
-                        : daysUntilDue <= 3 && daysUntilDue > 0
-                        ? `
-                        <span class="due-soon-badge">
-                            <i class="fa-solid fa-clock me-1"></i>Due in ${daysUntilDue} day(s)
-                        </span>
-                    `
-                        : ""
-                    }
-                </div>
-            </div>
-        </div>
-        <div class="card-footer">
-            <div class="action-buttons">
-                ${
-                  canSubmitProgress
-                    ? `
-                    <button type="button" class="btn-action btn-primary" onclick="openProgressReportModal('${task.taskId}')"
-                        title="Submit progress report">
-                        <i class="fa-solid fa-file-lines me-1"></i>Submit Progress
-                    </button>
-                `
-                    : task.status === "Awaiting Approval"
-                    ? `
-                    <button type="button" class="btn-action btn-info" disabled title="Awaiting PM approval">
-                        <i class="fa-solid fa-hourglass-half me-1"></i>Awaiting Approval
-                    </button>
-                `
-                    : task.status === "Completed"
-                    ? `
-                    <button type="button" class="btn-action btn-success" disabled title="Task completed">
-                        <i class="fa-solid fa-check-circle me-1"></i>Completed
-                    </button>
-                `
-                    : canRequestCompletion
-                    ? `
-                    <button type="button" class="btn-action btn-primary" onclick="openCompletionRequestModal('${task.taskId}')"
-                        title="Request task completion">
-                        <i class="fa-solid fa-check me-1"></i>Request Completion
-                    </button>
-                `
-                    : `
-                    <button type="button" class="btn-action btn-secondary" disabled title="Task not started">
-                        <i class="fa-solid fa-clock me-1"></i>Not Started
-                    </button>
-                `
-                }
-                <div class="dropdown">
-                    <button class="btn-action btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <i class="fa-solid fa-ellipsis-v"></i>
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#" onclick="openTaskDetails('${
-                          task.taskId
-                        }')">
-                            <i class="fa-solid fa-eye me-2"></i>View Details
-                        </a></li>
-                        ${
-                          canSubmitProgress
-                            ? `
-                            <li><a class="dropdown-item" href="#" onclick="openProgressReportModal('${task.taskId}')">
-                                <i class="fa-solid fa-file-lines me-2"></i>Submit Progress
-                            </a></li>
-                        `
-                            : ""
-                        }
-                        ${
-                          canRequestCompletion
-                            ? `
-                            <li><a class="dropdown-item" href="#" onclick="openCompletionRequestModal('${task.taskId}')">
-                                <i class="fa-solid fa-check me-2"></i>Request Completion
-                            </a></li>
-                        `
-                            : ""
-                        }
-                        <li><a class="dropdown-item" href="#" onclick="viewTaskBudget('${
-                          task.taskId
-                        }')">
-                            <i class="fa-solid fa-dollar-sign me-2"></i>View Budget
-                        </a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    `;
+  // Clamp progress to 0-100 range
+  const clampedProgress = Math.max(0, Math.min(100, task.progress || 0));
+
+  // Get safe priority class
+  const priorityClass = getPriorityClass(task.priority);
+
+  // Build card structure using DOM methods for security
+  const cardHeader = document.createElement("div");
+  cardHeader.className = "card-header";
+
+  const headerContent = document.createElement("div");
+  headerContent.className = "d-flex justify-content-between align-items-start";
+
+  const headerLeft = document.createElement("div");
+  headerLeft.className = "flex-grow-1";
+
+  const cardTitle = document.createElement("h6");
+  cardTitle.className = "card-title mb-1 fw-bold";
+  cardTitle.textContent = task.name;
+
+  const cardSubtitle = document.createElement("p");
+  cardSubtitle.className = "card-subtitle small mb-0";
+  cardSubtitle.textContent = task.projectName || "Unknown Project";
+
+  headerLeft.appendChild(cardTitle);
+  headerLeft.appendChild(cardSubtitle);
+
+  const headerRight = document.createElement("div");
+  headerRight.className = "text-end d-flex align-items-center gap-2";
+
+  const viewDetailsBtn = document.createElement("button");
+  viewDetailsBtn.type = "button";
+  viewDetailsBtn.className = "btn btn-sm btn-outline-secondary";
+  viewDetailsBtn.title = "View details";
+  const chevronIcon = document.createElement("i");
+  chevronIcon.className = "fa-solid fa-chevron-down";
+  viewDetailsBtn.appendChild(chevronIcon);
+  viewDetailsBtn.addEventListener("click", () => openTaskDetails(task.taskId));
+
+  const statusBadge = document.createElement("span");
+  statusBadge.className = `status-badge ${statusBadgeClass}`;
+  statusBadge.textContent = task.status;
+
+  headerRight.appendChild(viewDetailsBtn);
+  headerRight.appendChild(statusBadge);
+
+  headerContent.appendChild(headerLeft);
+  headerContent.appendChild(headerRight);
+  cardHeader.appendChild(headerContent);
+
+  // Card body
+  const cardBody = document.createElement("div");
+  cardBody.className = "card-body";
+
+  if (task.description) {
+    const descriptionP = document.createElement("p");
+    descriptionP.className = "card-text small mb-3";
+    const descriptionText =
+      task.description.length > 100
+        ? task.description.substring(0, 100) + "..."
+        : task.description;
+    descriptionP.textContent = descriptionText;
+    cardBody.appendChild(descriptionP);
+  }
+
+  // Stats row
+  const statsRow = document.createElement("div");
+  statsRow.className = "row g-2 mb-3";
+
+  const startDateCol = document.createElement("div");
+  startDateCol.className = "col-12";
+  const startDateItem = document.createElement("div");
+  startDateItem.className = "stat-item mb-2";
+  const startDateText = document.createElement("small");
+  startDateText.textContent = "Start Date: ";
+  const startDateSpan = document.createElement("span");
+  startDateSpan.textContent = new Date(task.startDate).toLocaleDateString();
+  startDateText.appendChild(startDateSpan);
+  startDateItem.appendChild(startDateText);
+  startDateCol.appendChild(startDateItem);
+
+  const dueDateCol = document.createElement("div");
+  dueDateCol.className = "col-12";
+  const dueDateItem = document.createElement("div");
+  dueDateItem.className = "stat-item mb-2";
+  const dueDateText = document.createElement("small");
+  const dueDateSpan = document.createElement("span");
+  if (isOverdue) {
+    dueDateSpan.className = "text-danger fw-bold";
+  }
+  dueDateSpan.textContent = new Date(task.dueDate).toLocaleDateString();
+  dueDateText.textContent = "Due Date: ";
+  dueDateText.appendChild(dueDateSpan);
+  dueDateItem.appendChild(dueDateText);
+  dueDateCol.appendChild(dueDateItem);
+
+  const budgetCol = document.createElement("div");
+  budgetCol.className = "col-12";
+  const budgetItem = document.createElement("div");
+  budgetItem.className = "stat-item mb-2";
+  const budgetText = document.createElement("small");
+  budgetText.textContent = "Project Budget: ";
+  const budgetSpan = document.createElement("span");
+  budgetSpan.textContent = `R ${(task.projectBudget || 0).toLocaleString()}`;
+  budgetText.appendChild(budgetSpan);
+  budgetItem.appendChild(budgetText);
+  budgetCol.appendChild(budgetItem);
+
+  statsRow.appendChild(startDateCol);
+  statsRow.appendChild(dueDateCol);
+  statsRow.appendChild(budgetCol);
+  cardBody.appendChild(statsRow);
+
+  // Progress section
+  const progressSection = document.createElement("div");
+  progressSection.className = "mb-3";
+
+  const progressHeader = document.createElement("div");
+  progressHeader.className =
+    "d-flex justify-content-between align-items-center mb-1";
+
+  const progressLabel = document.createElement("small");
+  progressLabel.className = "progress-label";
+  progressLabel.textContent = "Task Progress:";
+
+  const progressPercentage = document.createElement("small");
+  progressPercentage.className = "progress-percentage";
+  progressPercentage.textContent = `${clampedProgress}%`;
+
+  progressHeader.appendChild(progressLabel);
+  progressHeader.appendChild(progressPercentage);
+
+  const progressBarContainer = document.createElement("div");
+  progressBarContainer.className = "progress";
+
+  const progressBar = document.createElement("div");
+  progressBar.className = "progress-bar";
+  progressBar.setAttribute("role", "progressbar");
+  progressBar.style.width = `${clampedProgress}%`;
+  progressBar.setAttribute("aria-valuenow", clampedProgress.toString());
+  progressBar.setAttribute("aria-valuemin", "0");
+  progressBar.setAttribute("aria-valuemax", "100");
+
+  progressBarContainer.appendChild(progressBar);
+  progressSection.appendChild(progressHeader);
+  progressSection.appendChild(progressBarContainer);
+  cardBody.appendChild(progressSection);
+
+  // Task meta
+  const taskMeta = document.createElement("div");
+  taskMeta.className = "task-meta mb-3";
+
+  const metaContent = document.createElement("div");
+  metaContent.className = "d-flex justify-content-between align-items-center";
+
+  const priorityBadge = document.createElement("span");
+  priorityBadge.className = `priority-badge ${priorityClass}`;
+  const flagIcon = document.createElement("i");
+  flagIcon.className = "fa-solid fa-flag me-1";
+  priorityBadge.appendChild(flagIcon);
+  priorityBadge.appendChild(document.createTextNode(task.priority || "Medium"));
+
+  metaContent.appendChild(priorityBadge);
+
+  if (isOverdue) {
+    const overdueBadge = document.createElement("span");
+    overdueBadge.className = "overdue-badge";
+    const warningIcon = document.createElement("i");
+    warningIcon.className = "fa-solid fa-exclamation-triangle me-1";
+    overdueBadge.appendChild(warningIcon);
+    overdueBadge.appendChild(document.createTextNode("Overdue"));
+    metaContent.appendChild(overdueBadge);
+  } else if (daysUntilDue <= 3 && daysUntilDue > 0) {
+    const dueSoonBadge = document.createElement("span");
+    dueSoonBadge.className = "due-soon-badge";
+    const clockIcon = document.createElement("i");
+    clockIcon.className = "fa-solid fa-clock me-1";
+    dueSoonBadge.appendChild(clockIcon);
+    dueSoonBadge.appendChild(
+      document.createTextNode(`Due in ${daysUntilDue} day(s)`)
+    );
+    metaContent.appendChild(dueSoonBadge);
+  }
+
+  taskMeta.appendChild(metaContent);
+  cardBody.appendChild(taskMeta);
+
+  // Card footer
+  const cardFooter = document.createElement("div");
+  cardFooter.className = "card-footer";
+
+  const actionButtons = document.createElement("div");
+  actionButtons.className = "action-buttons";
+
+  // Main action button
+  const mainActionBtn = document.createElement("button");
+  mainActionBtn.type = "button";
+  mainActionBtn.className = "btn-action";
+
+  if (canSubmitProgress) {
+    mainActionBtn.className += " btn-primary";
+    mainActionBtn.title = "Submit progress report";
+    const fileIcon = document.createElement("i");
+    fileIcon.className = "fa-solid fa-file-lines me-1";
+    mainActionBtn.appendChild(fileIcon);
+    mainActionBtn.appendChild(document.createTextNode("Submit Progress"));
+    mainActionBtn.addEventListener("click", () =>
+      openProgressReportModal(task.taskId)
+    );
+  } else if (task.status === "Awaiting Approval") {
+    mainActionBtn.className += " btn-info";
+    mainActionBtn.disabled = true;
+    mainActionBtn.title = "Awaiting PM approval";
+    const hourglassIcon = document.createElement("i");
+    hourglassIcon.className = "fa-solid fa-hourglass-half me-1";
+    mainActionBtn.appendChild(hourglassIcon);
+    mainActionBtn.appendChild(document.createTextNode("Awaiting Approval"));
+  } else if (task.status === "Completed") {
+    mainActionBtn.className += " btn-success";
+    mainActionBtn.disabled = true;
+    mainActionBtn.title = "Task completed";
+    const checkIcon = document.createElement("i");
+    checkIcon.className = "fa-solid fa-check-circle me-1";
+    mainActionBtn.appendChild(checkIcon);
+    mainActionBtn.appendChild(document.createTextNode("Completed"));
+  } else if (canRequestCompletion) {
+    mainActionBtn.className += " btn-primary";
+    mainActionBtn.title = "Request task completion";
+    const checkIcon = document.createElement("i");
+    checkIcon.className = "fa-solid fa-check me-1";
+    mainActionBtn.appendChild(checkIcon);
+    mainActionBtn.appendChild(document.createTextNode("Request Completion"));
+    mainActionBtn.addEventListener("click", () =>
+      openCompletionRequestModal(task.taskId)
+    );
+  } else {
+    mainActionBtn.className += " btn-secondary";
+    mainActionBtn.disabled = true;
+    mainActionBtn.title = "Task not started";
+    const clockIcon = document.createElement("i");
+    clockIcon.className = "fa-solid fa-clock me-1";
+    mainActionBtn.appendChild(clockIcon);
+    mainActionBtn.appendChild(document.createTextNode("Not Started"));
+  }
+
+  actionButtons.appendChild(mainActionBtn);
+
+  // Dropdown menu
+  const dropdown = document.createElement("div");
+  dropdown.className = "dropdown";
+
+  const dropdownToggle = document.createElement("button");
+  dropdownToggle.className = "btn-action btn-secondary dropdown-toggle";
+  dropdownToggle.type = "button";
+  dropdownToggle.setAttribute("data-bs-toggle", "dropdown");
+  const ellipsisIcon = document.createElement("i");
+  ellipsisIcon.className = "fa-solid fa-ellipsis-v";
+  dropdownToggle.appendChild(ellipsisIcon);
+
+  const dropdownMenu = document.createElement("ul");
+  dropdownMenu.className = "dropdown-menu";
+
+  // View Details item
+  const viewDetailsItem = document.createElement("li");
+  const viewDetailsLink = document.createElement("a");
+  viewDetailsLink.className = "dropdown-item";
+  viewDetailsLink.href = "#";
+  const eyeIcon = document.createElement("i");
+  eyeIcon.className = "fa-solid fa-eye me-2";
+  viewDetailsLink.appendChild(eyeIcon);
+  viewDetailsLink.appendChild(document.createTextNode("View Details"));
+  viewDetailsLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    openTaskDetails(task.taskId);
+  });
+  viewDetailsItem.appendChild(viewDetailsLink);
+  dropdownMenu.appendChild(viewDetailsItem);
+
+  // Submit Progress item (if applicable)
+  if (canSubmitProgress) {
+    const submitProgressItem = document.createElement("li");
+    const submitProgressLink = document.createElement("a");
+    submitProgressLink.className = "dropdown-item";
+    submitProgressLink.href = "#";
+    const fileIcon = document.createElement("i");
+    fileIcon.className = "fa-solid fa-file-lines me-2";
+    submitProgressLink.appendChild(fileIcon);
+    submitProgressLink.appendChild(document.createTextNode("Submit Progress"));
+    submitProgressLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      openProgressReportModal(task.taskId);
+    });
+    submitProgressItem.appendChild(submitProgressLink);
+    dropdownMenu.appendChild(submitProgressItem);
+  }
+
+  // Request Completion item (if applicable)
+  if (canRequestCompletion) {
+    const requestCompletionItem = document.createElement("li");
+    const requestCompletionLink = document.createElement("a");
+    requestCompletionLink.className = "dropdown-item";
+    requestCompletionLink.href = "#";
+    const checkIcon = document.createElement("i");
+    checkIcon.className = "fa-solid fa-check me-2";
+    requestCompletionLink.appendChild(checkIcon);
+    requestCompletionLink.appendChild(
+      document.createTextNode("Request Completion")
+    );
+    requestCompletionLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      openCompletionRequestModal(task.taskId);
+    });
+    requestCompletionItem.appendChild(requestCompletionLink);
+    dropdownMenu.appendChild(requestCompletionItem);
+  }
+
+  // View Budget item
+  const viewBudgetItem = document.createElement("li");
+  const viewBudgetLink = document.createElement("a");
+  viewBudgetLink.className = "dropdown-item";
+  viewBudgetLink.href = "#";
+  const dollarIcon = document.createElement("i");
+  dollarIcon.className = "fa-solid fa-dollar-sign me-2";
+  viewBudgetLink.appendChild(dollarIcon);
+  viewBudgetLink.appendChild(document.createTextNode("View Budget"));
+  viewBudgetLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    viewTaskBudget(task.taskId);
+  });
+  viewBudgetItem.appendChild(viewBudgetLink);
+  dropdownMenu.appendChild(viewBudgetItem);
+
+  dropdown.appendChild(dropdownToggle);
+  dropdown.appendChild(dropdownMenu);
+  actionButtons.appendChild(dropdown);
+
+  cardFooter.appendChild(actionButtons);
+
+  // Assemble the card
+  card.appendChild(cardHeader);
+  card.appendChild(cardBody);
+  card.appendChild(cardFooter);
 
   return card;
 }
 
-// Get status badge class
 function getStatusBadgeClass(status) {
-  switch (status.toLowerCase()) {
+  const s = String(status || "").toLowerCase();
+  switch (s) {
     case "pending":
       return "badge-secondary";
     case "in progress":
     case "inprogress":
+    case "in-progress":
       return "badge-warning";
     case "awaiting approval":
       return "badge-info";
@@ -416,6 +584,25 @@ function getStatusBadgeClass(status) {
       return "badge-danger";
     default:
       return "badge-light";
+  }
+}
+
+// Safe priority class mapping to prevent CSS injection
+function getPriorityClass(priority) {
+  const p = String(priority || "").toLowerCase();
+  switch (p) {
+    case "low":
+      return "priority-low";
+    case "medium":
+      return "priority-medium";
+    case "high":
+      return "priority-high";
+    case "urgent":
+      return "priority-urgent";
+    case "critical":
+      return "priority-critical";
+    default:
+      return "priority-medium"; // Default to medium priority
   }
 }
 

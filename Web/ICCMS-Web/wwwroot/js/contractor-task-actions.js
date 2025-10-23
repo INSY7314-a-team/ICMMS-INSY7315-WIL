@@ -4,6 +4,82 @@ console.log("🚀 Contractor Task Actions JavaScript loaded!");
 // Global variables
 let currentTaskId = null;
 
+// Helper function to get anti-forgery token
+function getAntiForgeryToken() {
+  // Try to get token from input field first
+  const tokenInput = document.querySelector(
+    'input[name="__RequestVerificationToken"]'
+  );
+  if (tokenInput) {
+    return tokenInput.value;
+  }
+
+  // Try to get token from meta tag
+  const tokenMeta = document.querySelector(
+    'meta[name="__RequestVerificationToken"]'
+  );
+  if (tokenMeta) {
+    return tokenMeta.getAttribute("content");
+  }
+
+  // Try alternative meta tag name
+  const tokenMetaAlt = document.querySelector('meta[name="csrf-token"]');
+  if (tokenMetaAlt) {
+    return tokenMetaAlt.getAttribute("content");
+  }
+
+  console.warn("Anti-forgery token not found");
+  return null;
+}
+
+// Upload documents helper function
+async function uploadDocuments(inputId) {
+  const fileInput = document.getElementById(inputId);
+  if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+    return [];
+  }
+
+  const formData = new FormData();
+
+  // Append all files to FormData
+  for (let i = 0; i < fileInput.files.length; i++) {
+    formData.append("files", fileInput.files[i]);
+  }
+
+  // Get anti-forgery token
+  const token = getAntiForgeryToken();
+  const headers = {};
+
+  if (token) {
+    headers["RequestVerificationToken"] = token;
+  }
+
+  try {
+    const response = await fetch("/Contractor/UploadDocuments", {
+      method: "POST",
+      headers: headers,
+      credentials: "same-origin",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.success && data.documentIds) {
+      return data.documentIds;
+    } else {
+      throw new Error(data.error || "Upload failed");
+    }
+  } catch (error) {
+    console.error("Error uploading documents:", error);
+    showToast("Failed to upload documents: " + error.message, "error");
+    throw error;
+  }
+}
+
 // Initialize task actions
 function initializeTaskActions() {
   console.log("Initializing contractor task actions...");
@@ -309,7 +385,7 @@ function renderProgressReportsTimeline(reports) {
 }
 
 // Submit progress report
-function submitProgressReport() {
+async function submitProgressReport() {
   const form = document.getElementById("progressReportForm");
   if (!form) return;
 
@@ -338,62 +414,76 @@ function submitProgressReport() {
     '<i class="fa-solid fa-spinner fa-spin me-1"></i>Submitting...';
   submitBtn.disabled = true;
 
-  // Prepare progress report data
-  const progressReport = {
-    taskId: formData.get("taskId"),
-    description: description,
-    hoursWorked: hoursWorked,
-    status: "Submitted",
-    attachedDocumentIds: [], // Will be populated after document upload
-  };
+  try {
+    // Upload documents first
+    const attachedDocumentIds = await uploadDocuments("progressDocuments");
 
-  // Submit progress report
-  fetch("/Contractor/SubmitProgressReport", {
-    method: "POST",
-    headers: {
+    // Prepare progress report data
+    const progressReport = {
+      taskId: formData.get("taskId"),
+      description: description,
+      hoursWorked: hoursWorked,
+      status: "Submitted",
+      attachedDocumentIds: attachedDocumentIds,
+    };
+
+    // Submit progress report
+    const token = getAntiForgeryToken();
+    const headers = {
       "Content-Type": "application/json",
-    },
-    body: JSON.stringify(progressReport),
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      if (data.success) {
-        showToast("Progress report submitted successfully!", "success");
+    };
 
-        // Close modal
-        const modal = bootstrap.Modal.getInstance(
-          document.getElementById("progressReportModal")
-        );
-        if (modal) {
-          modal.hide();
-        }
+    if (token) {
+      headers["RequestVerificationToken"] = token;
+    }
 
-        // Refresh task card
-        refreshTaskCard(progressReport.taskId);
-      } else {
-        showToast(
-          "Failed to submit progress report: " +
-            (data.error || "Unknown error"),
-          "error"
-        );
+    const response = await fetch("/Contractor/SubmitProgressReport", {
+      method: "POST",
+      headers: headers,
+      credentials: "same-origin",
+      body: JSON.stringify(progressReport),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.success) {
+      showToast("Progress report submitted successfully!", "success");
+
+      // Close modal
+      const modal = bootstrap.Modal.getInstance(
+        document.getElementById("progressReportModal")
+      );
+      if (modal) {
+        modal.hide();
       }
-    })
-    .catch((error) => {
-      console.error("Error submitting progress report:", error);
+
+      // Refresh task card
+      refreshTaskCard(progressReport.taskId);
+    } else {
       showToast(
-        "An error occurred while submitting the progress report",
+        "Failed to submit progress report: " + (data.error || "Unknown error"),
         "error"
       );
-    })
-    .finally(() => {
-      // Reset button state
-      submitBtn.innerHTML = originalText;
-      submitBtn.disabled = false;
-    });
+    }
+  } catch (error) {
+    console.error("Error submitting progress report:", error);
+    showToast(
+      "An error occurred while submitting the progress report",
+      "error"
+    );
+  } finally {
+    // Reset button state
+    submitBtn.innerHTML = originalText;
+    submitBtn.disabled = false;
+  }
 }
 
 // Submit completion request
-function submitCompletionRequest() {
+async function submitCompletionRequest() {
   const form = document.getElementById("completionRequestForm");
   if (!form) return;
 
@@ -431,64 +521,79 @@ function submitCompletionRequest() {
     '<i class="fa-solid fa-spinner fa-spin me-1"></i>Submitting...';
   submitBtn.disabled = true;
 
-  // Prepare completion request data
-  const completionRequest = {
-    taskId: formData.get("taskId"),
-    notes: notes,
-    completionDate: formData.get("completionDate"),
-    finalHours: parseFloat(formData.get("finalHours")) || 0,
-    qualityStandards: qualityStandards,
-    safetyCompliance: safetyCompliance,
-    clientSatisfaction: clientSatisfaction,
-    documentId: null, // Will be populated after document upload
-  };
+  try {
+    // Upload documents first
+    const documentIds = await uploadDocuments("completionDocuments");
 
-  // Submit completion request
-  fetch("/Contractor/RequestCompletion", {
-    method: "POST",
-    headers: {
+    // Prepare completion request data
+    const completionRequest = {
+      taskId: formData.get("taskId"),
+      notes: notes,
+      completionDate: formData.get("completionDate"),
+      finalHours: parseFloat(formData.get("finalHours")) || 0,
+      qualityStandards: qualityStandards,
+      safetyCompliance: safetyCompliance,
+      clientSatisfaction: clientSatisfaction,
+      documentId: documentIds[0] ?? null,
+    };
+
+    // Submit completion request
+    const token = getAntiForgeryToken();
+    const headers = {
       "Content-Type": "application/json",
-    },
-    body: JSON.stringify(completionRequest),
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      if (data.success) {
-        showToast(
-          "Completion request submitted successfully! Your project manager will review it shortly.",
-          "success"
-        );
+    };
 
-        // Close modal
-        const modal = bootstrap.Modal.getInstance(
-          document.getElementById("completionRequestModal")
-        );
-        if (modal) {
-          modal.hide();
-        }
+    if (token) {
+      headers["RequestVerificationToken"] = token;
+    }
 
-        // Refresh task card
-        refreshTaskCard(completionRequest.taskId);
-      } else {
-        showToast(
-          "Failed to submit completion request: " +
-            (data.error || "Unknown error"),
-          "error"
-        );
-      }
-    })
-    .catch((error) => {
-      console.error("Error submitting completion request:", error);
+    const response = await fetch("/Contractor/RequestCompletion", {
+      method: "POST",
+      headers: headers,
+      credentials: "same-origin",
+      body: JSON.stringify(completionRequest),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.success) {
       showToast(
-        "An error occurred while submitting the completion request",
+        "Completion request submitted successfully! Your project manager will review it shortly.",
+        "success"
+      );
+
+      // Close modal
+      const modal = bootstrap.Modal.getInstance(
+        document.getElementById("completionRequestModal")
+      );
+      if (modal) {
+        modal.hide();
+      }
+
+      // Refresh task card
+      refreshTaskCard(completionRequest.taskId);
+    } else {
+      showToast(
+        "Failed to submit completion request: " +
+          (data.error || "Unknown error"),
         "error"
       );
-    })
-    .finally(() => {
-      // Reset button state
-      submitBtn.innerHTML = originalText;
-      submitBtn.disabled = false;
-    });
+    }
+  } catch (error) {
+    console.error("Error submitting completion request:", error);
+    showToast(
+      "An error occurred while submitting the completion request",
+      "error"
+    );
+  } finally {
+    // Reset button state
+    submitBtn.innerHTML = originalText;
+    submitBtn.disabled = false;
+  }
 }
 
 // Start a task (update status from Pending to In Progress)
@@ -558,11 +663,19 @@ function startTask(taskId) {
 
       // Now update the task
       // Use the Web controller endpoint which handles authentication properly
+      const token = getAntiForgeryToken();
+      const headers = {
+        "Content-Type": "application/json",
+      };
+
+      if (token) {
+        headers["RequestVerificationToken"] = token;
+      }
+
       return fetch(`/Contractor/UpdateTaskStatus`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: headers,
+        credentials: "same-origin",
         body: JSON.stringify({
           taskId: taskId,
           status: "In Progress",

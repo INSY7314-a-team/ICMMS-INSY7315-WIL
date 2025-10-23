@@ -24,7 +24,7 @@
             <div class="col-lg-2 col-md-4 col-sm-6">
                 <div class="stat-card compact">
                     <div class="stat-icon">
-                        <i class="fa-solid fa-tasks"></i>
+                        <i class="fa-solid fa-list-check"></i>
                     </div>
                     <div class="stat-content">
                         <h4 class="stat-number">@Model.TotalTasks</h4>
@@ -57,7 +57,7 @@
             <div class="col-lg-2 col-md-4 col-sm-6">
                 <div class="stat-card compact">
                     <div class="stat-icon completed">
-                        <i class="fa-solid fa-check-circle"></i>
+                        <i class="fa-solid fa-circle-check"></i>
                     </div>
                     <div class="stat-content">
                         <h4 class="stat-number">@Model.CompletedTasks</h4>
@@ -68,7 +68,7 @@
             <div class="col-lg-2 col-md-4 col-sm-6">
                 <div class="stat-card compact">
                     <div class="stat-icon overdue">
-                        <i class="fa-solid fa-exclamation-triangle"></i>
+                        <i class="fa-solid fa-triangle-exclamation"></i>
                     </div>
                     <div class="stat-content">
                         <h4 class="stat-number">@Model.OverdueTasks</h4>
@@ -87,7 +87,7 @@
         <div class="section-header-content">
             <h3 class="section-title">
                 <i class="fa-solid fa-folder-open me-2"></i>My Projects
-                <span class="badge badge-secondary">@Model.Projects.Count</span>
+                <span class="badge bg-secondary">@(Model?.Projects?.Count ?? 0)</span>
             </h3>
             <div class="section-actions">
                 <div class="sort-controls">
@@ -101,17 +101,15 @@
                     </select>
                 </div>
                 <button class="dashboard-btn" id="refreshProjectsBtn">
-                    <i class="fa-solid fa-refresh"></i> Refresh
+                    <i class="fa-solid fa-arrows-rotate"></i> Refresh
                 </button>
             </div>
         </div>
     </div>
 
     <div id="projectsContainer" class="projects-container">
-        @await Html.PartialAsync("_ProjectsList", Model.Projects)
+        @await Html.PartialAsync("_ProjectsList", Model?.Projects ?? new List<ContractorProjectCardDto>())
     </div>
-</div>
-</div>
 </div>
 
 <!-- Include dashboard CSS directly -->
@@ -134,31 +132,31 @@
 
         function toggleFilters() {
             const panel = document.getElementById('filtersPanel');
-            const toggleText = document.getElementById('filterToggleText');
-            const toggleIcon = document.getElementById('filterToggleIcon');
+            function toggleFilters() {
+                const panel = document.getElementById('filtersPanel');
+                const toggleText = document.getElementById('filterToggleText');
+                const toggleIcon = document.getElementById('filterToggleIcon');
+                if (!panel || !toggleText || !toggleIcon) return;
 
-            if (panel.style.display === 'none') {
-                panel.style.display = 'block';
-                toggleText.textContent = 'Hide Filters';
-                toggleIcon.classList.remove('fa-chevron-down');
-                toggleIcon.classList.add('fa-chevron-up');
-            } else {
-                panel.style.display = 'none';
-                toggleText.textContent = 'Show Filters';
-                toggleIcon.classList.remove('fa-chevron-up');
-                toggleIcon.classList.add('fa-chevron-down');
-            }
-        }
-
-        async function applyAdvancedFilters() {
-            try {
+                if (panel.style.display === 'none') {
+                    panel.style.display = 'block';
+                    toggleText.textContent = 'Hide Filters';
+                    toggleIcon.classList.remove('fa-chevron-down');
+                    toggleIcon.classList.add('fa-chevron-up');
+                } else {
+                    panel.style.display = 'none';
+                    toggleText.textContent = 'Show Filters';
+                    toggleIcon.classList.remove('fa-chevron-up');
+                    toggleIcon.classList.add('fa-chevron-down');
+                }
+            } try {
                 const status = document.querySelector('.status-filter-btn.active')?.getAttribute('data-status') || '';
-                const startDateFrom = document.getElementById('startDateFrom').value;
-                const startDateTo = document.getElementById('startDateTo').value;
-                const dueDateFrom = document.getElementById('dueDateFrom').value;
-                const dueDateTo = document.getElementById('dueDateTo').value;
-                const sortBy = document.getElementById('sortBy').value;
-                const sortOrder = document.getElementById('sortOrder').value;
+                const startDateFrom = document.getElementById('startDateFrom')?.value || '';
+                const startDateTo = document.getElementById('startDateTo')?.value || '';
+                const dueDateFrom = document.getElementById('dueDateFrom')?.value || '';
+                const dueDateTo = document.getElementById('dueDateTo')?.value || '';
+                const sortBy = document.getElementById('sortBy')?.value || '';
+                const sortOrder = document.getElementById('sortOrder')?.value || '';
 
                 const params = new URLSearchParams();
                 if (status && status !== 'All') params.set('status', status);
@@ -169,7 +167,9 @@
                 if (sortBy) params.set('sortBy', sortBy);
                 if (sortOrder) params.set('sortOrder', sortOrder);
 
-                const res = await fetch(`/Contractor/GetAssignedTasks?${params.toString()}`);
+                const baseUrl = '@Url.Action("GetAssignedTasks", "Contractor")';
+                const url = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+                const res = await fetch(url);
                 if (!res.ok) throw new Error('Filter failed');
                 const tasks = await res.json();
 
@@ -187,12 +187,19 @@
         }
 
         async function clearAdvancedFilters() {
-            document.getElementById('startDateFrom').value = '';
-            document.getElementById('startDateTo').value = '';
-            document.getElementById('dueDateFrom').value = '';
-            document.getElementById('dueDateTo').value = '';
-            document.getElementById('sortBy').value = 'dueDate';
-            document.getElementById('sortOrder').value = 'asc';
+            const startDateFromEl = document.getElementById('startDateFrom');
+            const startDateToEl = document.getElementById('startDateTo');
+            const dueDateFromEl = document.getElementById('dueDateFrom');
+            const dueDateToEl = document.getElementById('dueDateTo');
+            const sortByEl = document.getElementById('sortBy');
+            const sortOrderEl = document.getElementById('sortOrder');
+
+            if (startDateFromEl) startDateFromEl.value = '';
+            if (startDateToEl) startDateToEl.value = '';
+            if (dueDateFromEl) dueDateFromEl.value = '';
+            if (dueDateToEl) dueDateToEl.value = '';
+            if (sortByEl) sortByEl.value = 'dueDate';
+            if (sortOrderEl) sortOrderEl.value = 'asc';
 
             // Remove active status filter
             document.querySelectorAll('.status-filter-btn').forEach(btn => {
@@ -200,7 +207,8 @@
             });
 
             try {
-                const res = await fetch('/Contractor/GetAssignedTasks');
+                const baseUrl = '@Url.Action("GetAssignedTasks", "Contractor")';
+                const res = await fetch(baseUrl);
                 if (!res.ok) throw new Error('Clear filters failed');
                 const tasks = await res.json();
                 console.log('All tasks:', tasks);

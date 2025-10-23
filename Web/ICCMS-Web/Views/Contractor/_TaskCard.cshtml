@@ -7,6 +7,23 @@
     var statusBadgeClass = Model.StatusBadgeClass;
     var canSubmitProgress = Model.CanSubmitProgress;
     var canRequestCompletion = Model.CanRequestCompletion;
+    
+    // Clamp progress value to 0-100 range to prevent CSS injection and out-of-range values
+    var progressValue = Math.Min(Math.Max(Convert.ToDouble(Model.Progress), 0), 100);
+    
+    // Calculate hours progress with floating-point division and proper handling of EstimatedHours == 0
+    double hoursProgressPercent;
+    if (Model.EstimatedHours > 0)
+    {
+        hoursProgressPercent = (Convert.ToDouble(Model.ActualHours) / Convert.ToDouble(Model.EstimatedHours)) * 100;
+        hoursProgressPercent = Math.Max(0, Math.Min(100, hoursProgressPercent));
+    }
+    else
+    {
+        // If EstimatedHours == 0, set to 100% if ActualHours > 0, otherwise 0%
+        hoursProgressPercent = Model.ActualHours > 0 ? 100 : 0;
+    }
+    var hoursProgress = Convert.ToInt32(hoursProgressPercent);
 }
 
 <div id="task-@Model.TaskId" class="task-card card h-100 construction-border-thin"
@@ -66,10 +83,10 @@
         <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-1">
                 <small class="progress-label">Task Progress:</small>
-                <small class="progress-percentage">@Model.Progress%</small>
+                <small class="progress-percentage">@progressValue%</small>
             </div>
             <div class="progress">
-                <div class="progress-bar" role="progressbar" style="width: @Model.Progress%;" aria-valuenow="@Model.Progress"
+                <div class="progress-bar" role="progressbar" style="width: @progressValue%;" aria-valuenow="@progressValue"
                     aria-valuemin="0" aria-valuemax="100"></div>
             </div>
         </div>
@@ -84,12 +101,14 @@
                 </div>
                 <div class="progress">
                     <div class="progress-bar bg-info" role="progressbar" 
-                         style="width: @(Model.EstimatedHours > 0 ? (Model.ActualHours / Model.EstimatedHours * 100) : 0)%" 
-                         aria-valuenow="@Model.ActualHours" aria-valuemin="0" aria-valuemax="@Model.EstimatedHours"></div>
+                         style="width: @hoursProgress%" 
+                         aria-valuenow="@Math.Max(0, Math.Min(Model.ActualHours, Model.EstimatedHours > 0 ? Model.EstimatedHours : Model.ActualHours))" 
+                         aria-valuemin="0" 
+                         aria-valuemax="@(Model.EstimatedHours > 0 ? Model.EstimatedHours : Math.Max(1, Model.ActualHours))"></div>
                 </div>
             </div>
         }
-
+        
         <!-- Priority and Status Info -->
         <div class="task-meta mb-3">
             <div class="d-flex justify-content-between align-items-center">
@@ -248,18 +267,21 @@
                 }
                 container.dataset.loaded = 'true';
             })
-            .catch(error => {
-                console.error('Failed to load progress reports:', error);
-                container.innerHTML = '<div class="text-danger">Failed to load progress reports</div>';
-            });
-    }
-
-    function renderProgressReports(reports) {
         return reports.map(report => {
-            const statusClass = report.status === 'Approved' ? 'success' : 
-                              report.status === 'Rejected' ? 'danger' : 'warning';
-            const statusIcon = report.status === 'Approved' ? 'fa-check-circle' : 
-                              report.status === 'Rejected' ? 'fa-times-circle' : 'fa-clock';
+            // Normalize and guard the incoming status value
+            const statusText = typeof report.status === 'string' ? report.status : 'Pending';
+            
+            // Whitelist-supported status-to-class mappings; default to 'secondary' for unknown values
+            const statusClass =
+                statusText === 'Approved' ? 'success' :
+                statusText === 'Rejected' ? 'danger' :
+                statusText === 'Pending'  ? 'warning' : 'secondary';
+
+            // Whitelist-supported status-to-icon mappings; default to 'fa-circle-info' for unknown values
+            const statusIcon =
+                statusText === 'Approved' ? 'fa-check-circle' :
+                statusText === 'Rejected' ? 'fa-times-circle' :
+                statusText === 'Pending'  ? 'fa-clock' : 'fa-circle-info';
             
             return `
                 <div class="progress-report-item mb-3 p-3 border rounded">
@@ -268,6 +290,13 @@
                             <h6 class="mb-1">${escapeHtml(report.description || 'No description')}</h6>
                             <small class="text-muted">
                                 <i class="fa-solid fa-clock me-1"></i>
+                                ${new Date(report.submittedAt).toLocaleDateString()}
+                            </small>
+                        </div>
+                        <span class="badge bg-${statusClass}">
+                            <i class="fa-solid ${statusIcon} me-1"></i>${escapeHtml(statusText)}
+                `;
+        });                                <i class="fa-solid fa-clock me-1"></i>
                                 ${new Date(report.submittedAt).toLocaleDateString()}
                             </small>
                         </div>
@@ -297,36 +326,97 @@
     }
 
     function openProgressReportModal(taskId) {
-        const modal = new bootstrap.Modal(document.getElementById('progressReportModal'));
+        // Validate required DOM elements exist
+        const modalElement = document.getElementById('progressReportModal');
+        const taskIdInput = document.getElementById('progressReportTaskId');
+        
+        if (!modalElement) {
+            console.warn('Progress report modal element not found');
+            return;
+        }
+        
+        if (!taskIdInput) {
+            console.warn('Progress report task ID input element not found');
+            return;
+        }
+        
+        if (!taskId) {
+            console.warn('Task ID is required for progress report modal');
+            return;
+        }
+        
+        const modal = new bootstrap.Modal(modalElement);
         modal.show();
         
         // Set task ID in the form
-        document.getElementById('progressReportTaskId').value = taskId;
+        taskIdInput.value = taskId;
         
         // Load task details for context
         loadTaskDetailsForModal(taskId);
     }
 
     function openCompletionRequestModal(taskId) {
-        const modal = new bootstrap.Modal(document.getElementById('completionRequestModal'));
+        // Validate required DOM elements exist
+        const modalElement = document.getElementById('completionRequestModal');
+        const taskIdInput = document.getElementById('completionRequestTaskId');
+        
+        if (!modalElement) {
+            console.warn('Completion request modal element not found');
+            return;
+        }
+        
+        if (!taskIdInput) {
+            console.warn('Completion request task ID input element not found');
+            return;
+        }
+        
+        if (!taskId) {
+            console.warn('Task ID is required for completion request modal');
+            return;
+        }
+        
+        const modal = new bootstrap.Modal(modalElement);
         modal.show();
         
         // Set task ID in the form
-        document.getElementById('completionRequestTaskId').value = taskId;
+        taskIdInput.value = taskId;
         
         // Load task details for context
         loadTaskDetailsForModal(taskId);
     }
 
     function loadTaskDetailsForModal(taskId) {
+        if (!taskId) {
+            console.warn('Task ID is required for loading task details');
+            return;
+        }
+        
         fetch(`/Contractor/GetTaskDetails?taskId=${encodeURIComponent(taskId)}`)
             .then(response => response.json())
             .then(task => {
                 if (task) {
-                    // Update modal with task details
-                    document.getElementById('modalTaskName').textContent = task.name;
-                    document.getElementById('modalProjectName').textContent = task.projectName;
-                    document.getElementById('modalTaskDescription').textContent = task.description || 'No description provided';
+                    // Validate required DOM elements exist before updating
+                    const taskNameElement = document.getElementById('modalTaskName');
+                    const projectNameElement = document.getElementById('modalProjectName');
+                    const taskDescriptionElement = document.getElementById('modalTaskDescription');
+                    
+                    if (taskNameElement) {
+                        taskNameElement.textContent = task.name;
+                    } else {
+                        console.warn('Modal task name element not found');
+                    }
+                    
+                    if (projectNameElement) {
+                        projectNameElement.textContent = task.projectName;
+                    } else {
+                        console.warn('Modal project name element not found');
+                    }
+                    
+                    if (taskDescriptionElement) {
+                        taskDescriptionElement.textContent = task.description || 'No description provided';
+                    } else {
+                        console.warn('Modal task description element not found');
+                    }
                 }
             })
             .catch(error => {
