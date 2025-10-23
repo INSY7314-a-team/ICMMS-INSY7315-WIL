@@ -32,10 +32,12 @@
     </div>
 
     <div class="card-footer d-flex justify-content-between align-items-center">
-        <a href="@Url.Action("QuotationDetails", "Clients", new { id = Model.QuotationId })"
-           class="btn btn-action btn-primary">
-           <i class="fa-solid fa-eye me-1"></i> View Details
-        </a>
+        <button type="button" 
+                class="btn btn-action btn-primary"
+                onclick="openQuotationDetails('@Model.QuotationId')">
+            <i class="fa-solid fa-eye me-1"></i> View Details
+        </button>
+
 
         @if (Model.Status?.ToLower() == "pending")
         {

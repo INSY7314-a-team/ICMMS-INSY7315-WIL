@@ -219,10 +219,7 @@ namespace ICCMS_Web.Controllers
                     return RedirectToAction("Index");
                 }
 
-                var request = await _apiClient.GetAsync<MaintenanceRequestDto>(
-                    $"/api/clients/maintenanceRequest/{id}",
-                    User
-                );
+                var request = await _apiClient.GetAsync<MaintenanceRequestDto>($"/api/maintenanceRequest/{id}", User);
 
                 if (request != null)
                 {
@@ -605,6 +602,104 @@ namespace ICCMS_Web.Controllers
             _logger.LogInformation("✅ Upload succeeded: {Body}", body);
             return Ok(body);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> MaintenanceRequestDetailsPartial(string id)
+        {
+            _logger.LogInformation("🟡 [ClientsController] Entered MaintenanceRequestDetailsPartial() with ID: {Id}", id);
+
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                _logger.LogWarning("⚠️ [ClientsController] No ID provided to MaintenanceRequestDetailsPartial()");
+                return BadRequest("Missing request ID");
+            }
+
+            try
+            {
+                _logger.LogInformation("📡 [ClientsController] Calling API endpoint for maintenance request...");
+                var endpoint = $"/api/clients/maintenanceRequest/{id}";
+                _logger.LogInformation("➡️ [ClientsController] Full API path: {Endpoint}", endpoint);
+
+                var request = await _apiClient.GetAsync<MaintenanceRequestDto>(endpoint, User);
+                _logger.LogInformation("🧾 [ClientsController] Retrieved model: {@Request}", request);
+
+
+                if (request == null)
+                {
+                    _logger.LogWarning("❌ [ClientsController] API returned NULL for ID: {Id}", id);
+                    return NotFound($"Maintenance request not found for ID {id}");
+                }
+
+                _logger.LogInformation("✅ [ClientsController] Maintenance request retrieved successfully for ID: {Id}", id);
+                return PartialView("_MaintenanceRequestDetailsPartial", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🔥 [ClientsController] Exception in MaintenanceRequestDetailsPartial() for ID: {Id}", id);
+                return StatusCode(500, "Error fetching maintenance details");
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ProjectDetailsPartial(string id)
+        {
+            _logger.LogInformation("🟡 [ClientsController] Entered ProjectDetailsPartial() with ID: {Id}", id);
+
+            if (string.IsNullOrWhiteSpace(id))
+                return BadRequest("Missing project ID");
+
+            try
+            {
+                var endpoint = $"/api/clients/project/{id}";
+                _logger.LogInformation("➡️ [ClientsController] Full API path: {Endpoint}", endpoint);
+
+                var project = await _apiClient.GetAsync<ProjectDto>(endpoint, User);
+
+                if (project == null)
+                {
+                    _logger.LogWarning("❌ [ClientsController] API returned NULL for project ID {Id}", id);
+                    return NotFound($"Project not found for ID {id}");
+                }
+
+                _logger.LogInformation("✅ [ClientsController] Project retrieved successfully for ID: {Id}", id);
+                return PartialView("_ProjectDetailsPartial", project);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🔥 [ClientsController] Exception in ProjectDetailsPartial() for ID: {Id}", id);
+                return StatusCode(500, "Error fetching project details");
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> QuotationDetailsPartial(string id)
+        {
+            _logger.LogInformation("🧾 [ClientsController] Fetching quotation partial for ID: {Id}", id);
+
+            if (string.IsNullOrWhiteSpace(id))
+                return BadRequest("Missing quotation ID");
+
+            try
+            {
+                var endpoint = $"/api/clients/quotation/{id}";
+                var quotation = await _apiClient.GetAsync<QuotationDto>(endpoint, User);
+
+                if (quotation == null)
+                {
+                    _logger.LogWarning("❌ No quotation found for ID: {Id}", id);
+                    return NotFound();
+                }
+
+                _logger.LogInformation("✅ Quotation retrieved successfully: {Id}", id);
+                return PartialView("_QuotationDetailsPartial", quotation);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🔥 Error retrieving quotation {Id}", id);
+                return StatusCode(500, "Failed to load quotation details");
+            }
+        }
+
 
 
     }

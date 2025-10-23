@@ -173,78 +173,62 @@
 
 
 <!-- ===============================
-     Maintenance Request Modal
+     Maintenance Request Details Modal
 =============================== -->
-<div class="modal fade" id="maintenanceModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content construction-border"
-             style="background-color: var(--secondary-bg); color: var(--text-light); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-             
-            <div class="modal-header"
-                 style="background: var(--primary-bg); border-bottom: 1px solid var(--accent-yellow); border-radius: 12px 12px 0 0; padding: 1.25rem;">
-                <h5 class="modal-title" style="color: var(--accent-yellow); font-weight: 600;">
-                    <i class="fa-solid fa-screwdriver-wrench me-2"></i>New Maintenance Request
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"
-                        style="filter: brightness(0) invert(1);"></button>
-            </div>
-
-            <div class="modal-body" style="padding: 1.5rem;">
-                <form id="createMaintenanceForm" onsubmit="return submitMaintenanceRequest(event)">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Select Completed Project</label>
-                        <select id="projectSelect" class="form-select" required>
-                            <option value="">-- Select --</option>
-                            @foreach (var p in Model.Projects.Where(p => p.Status?.ToLower() == "completed"))
-                            {
-                                <option value="@p.ProjectId">@p.Name (@p.ProjectId)</option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Priority</label>
-                        <select id="prioritySelect" class="form-select" required>
-                            <option>Low</option>
-                            <option selected>Medium</option>
-                            <option>High</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Description</label>
-                        <textarea id="descriptionInput" class="form-control" rows="3" required></textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Attach Photo (optional)</label>
-                        <input type="file" id="mediaFile" class="form-control" accept="image/*" />
-                    </div>
-                </form>
-            </div>
-
-            <div class="modal-footer"
-                 style="background: var(--primary-bg); border-top: 1px solid var(--accent-yellow); border-radius: 0 0 12px 12px; padding: 1.25rem;">
-                <div class="d-flex justify-content-between align-items-center w-100">
-                    <div class="text-muted" style="font-size: 0.9rem;">
-                        <i class="fa-solid fa-info-circle me-1"></i>Submit only once per maintenance issue
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"
-                                style="border: 1px solid var(--text-muted); color: var(--text-light); padding: 8px 16px; border-radius: 6px;">
-                            Cancel
-                        </button>
-                        <button type="submit" class="btn"
-                                style="background: linear-gradient(135deg, var(--accent-yellow), var(--accent-green)); color: var(--text-dark); border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600;"
-                                onclick="document.getElementById('createMaintenanceForm').requestSubmit()">
-                            <i class="fa-solid fa-paper-plane me-1"></i>Submit Request
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="modal fade" id="maintenanceDetailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content construction-border"
+         style="background-color: var(--secondary-bg); color: var(--text-light); border-radius: 12px;">
+      <div class="modal-header" style="background: var(--primary-bg); border-bottom: 1px solid var(--accent-yellow);">
+        <h5 class="modal-title" style="color: var(--accent-yellow); font-weight: 600;">
+          <i class="fa-solid fa-wrench me-2"></i> Maintenance Request Details
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="maintenanceDetailsBody">
+        <p class="text-center py-3 text-muted">Loading...</p>
+      </div>
     </div>
+  </div>
 </div>
+
+<!-- 🧱 Project Details Modal -->
+<div class="modal fade" id="projectDetailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content construction-border"
+         style="background-color: var(--secondary-bg); color: var(--text-light); border-radius: 12px;">
+      <div class="modal-header" style="background: var(--primary-bg); border-bottom: 1px solid var(--accent-yellow);">
+        <h5 class="modal-title" style="color: var(--accent-yellow); font-weight: 600;">
+          <i class="fa-solid fa-building me-2"></i> Project Details
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="projectDetailsBody">
+        <p class="text-center py-3 text-muted">Loading...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 🧾 Quotation Details Modal -->
+<div class="modal fade" id="quotationDetailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content construction-border"
+         style="background-color: var(--secondary-bg); color: var(--text-light); border-radius: 12px;">
+      <div class="modal-header" style="background: var(--primary-bg); border-bottom: 1px solid var(--accent-yellow);">
+        <h5 class="modal-title" style="color: var(--accent-yellow); font-weight: 600;">
+          <i class="fa-solid fa-file-invoice-dollar me-2"></i> Quotation Details
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="quotationDetailsBody">
+        <p class="text-center py-3 text-muted">Loading...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 
 <!-- ===============================
      Image Preview Modal
@@ -439,6 +423,108 @@
             alert("Error: " + err.message);
         }
 }
+
+
+async function openMaintenanceDetails(requestId) {
+    console.log("📂 Opening maintenance details modal for:", requestId);
+
+    const modal = new bootstrap.Modal(document.getElementById("maintenanceDetailsModal"));
+    const body = document.getElementById("maintenanceDetailsBody");
+    body.innerHTML = "<p class='text-center py-3 text-muted'>Loading...</p>";
+
+    try {
+        const res = await fetch(`/Clients/MaintenanceRequestDetailsPartial/${requestId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        body.innerHTML = await res.text();
+        modal.show();
+    } catch (err) {
+        console.error("❌ Failed to load details:", err);
+        body.innerHTML = "<p class='text-danger text-center'>Failed to load details.</p>";
+        modal.show();
+    }
+}
+
+async function openProjectDetails(projectId) {
+    console.log("🏗 Opening project details for:", projectId);
+    const modalElement = document.getElementById("projectDetailsModal");
+    const body = document.getElementById("projectDetailsBody");
+    if (!modalElement) {
+        console.error("❌ Modal element not found in DOM");
+        return;
+    }
+
+    const modal = new bootstrap.Modal(modalElement);
+    body.innerHTML = "<p class='text-center py-3 text-muted'>Loading...</p>";
+
+    try {
+        const res = await fetch(`/Clients/ProjectDetailsPartial/${projectId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        body.innerHTML = await res.text();
+        modal.show();
+    } catch (err) {
+        console.error("❌ Failed to load project details:", err);
+        body.innerHTML = "<p class='text-danger text-center'>Failed to load details.</p>";
+        modal.show();
+    }
+}
+
+async function openQuotationDetails(quotationId) {
+    console.log("📄 Opening quotation details for:", quotationId);
+
+    const modalEl = document.getElementById("quotationDetailsModal");
+    const body = document.getElementById("quotationDetailsBody");
+    if (!modalEl) {
+        console.error("❌ quotationDetailsModal missing in DOM");
+        return;
+    }
+
+    const modal = new bootstrap.Modal(modalEl);
+    body.innerHTML = "<p class='text-center py-3 text-muted'>Loading...</p>";
+
+    try {
+        const res = await fetch(`/Clients/QuotationDetailsPartial/${quotationId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        body.innerHTML = await res.text();
+        modal.show();
+    } catch (err) {
+        console.error("❌ Failed to load quotation details:", err);
+        body.innerHTML = "<p class='text-danger text-center'>Failed to load details.</p>";
+        modal.show();
+    }
+}
+
+
+function closeDetailsPanel() {
+    const overlay = document.getElementById("dynamicDetailsOverlay");
+    if (!overlay) return;
+    const panel = overlay.querySelector(".details-panel");
+    panel.classList.remove("active");
+    setTimeout(() => overlay.remove(), 350);
+}
+
+    console.log("🧾 [Init] downloadQuotation script loaded");
+
+    function downloadQuotation(id) {
+        console.log("🧩 [downloadQuotation] Function triggered");
+        console.log("📦 [Param] Quotation ID received:", id);
+
+        if (!id) {
+            console.warn("⚠️ [downloadQuotation] No quotation ID provided");
+            alert("Quotation ID missing");
+            return;
+        }
+
+        const url = `/Clients/DownloadQuotation/${id}`;
+        console.log("🌐 [downloadQuotation] Navigating to:", url);
+
+        try {
+            window.location.href = url;
+            console.log("🚀 [downloadQuotation] Redirect initiated successfully");
+        } catch (err) {
+            console.error("🔥 [downloadQuotation] Redirect failed:", err);
+            alert("Failed to start download. See console for details.");
+        }
+    }
 
     </script>
 }
