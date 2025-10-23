@@ -257,7 +257,13 @@
                     }
                     if (User.IsInRole("Admin"))
                     {
+                        <li><a asp-controller="SystemOverview" asp-action="Index"><i class="fa-solid fa-tachometer-alt"></i><span>System Overview</span></a>
+                        </li>
                         <li><a asp-controller="Users" asp-action="Index"><i class="fa-solid fa-users"></i><span>Users</span></a>
+                        </li>
+                        <li><a asp-controller="AuditLogs" asp-action="Index"><i class="fa-solid fa-clipboard-list"></i><span>Audit Logs</span></a>
+                        </li>
+                        <li><a asp-controller="Messages" asp-action="Index"><i class="fa-solid fa-envelope"></i><span>Messages</span></a>
                         </li>
                         <li><a asp-controller="Data" asp-action="Index"><i class="fa-solid fa-database"></i><span>Database</span></a>
                         </li>
