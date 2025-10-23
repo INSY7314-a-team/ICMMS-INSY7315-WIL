@@ -1,0 +1,62 @@
+@model ICCMS_Web.Models.QuotationDto
+
+<div class="project-card construction-border-thin">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="card-title mb-1">Quotation #@Model.QuotationId</h5>
+            <p class="card-subtitle text-muted mb-0">@Model.Description</p>
+        </div>
+        <span class="badge bg-@(Model.Status?.ToLower() switch
+        {
+            "pending" => "warning",
+            "approved" => "success",
+            "rejected" => "danger",
+            "expired" => "secondary",
+            _ => "info"
+        })">@Model.Status</span>
+    </div>
+
+    <div class="card-body">
+        <div class="stat-item mb-2">
+            <small>Total Amount:</small>
+            <span class="fw-bold">R @Model.GrandTotal.ToString("N2")</span>
+        </div>
+        <div class="stat-item mb-2">
+            <small>Valid Until:</small>
+            <span>@Model.ValidUntil.ToString("MMM dd, yyyy")</span>
+        </div>
+        <div class="stat-item mb-2">
+            <small>Created:</small>
+            <span>@Model.CreatedAt.ToString("MMM dd, yyyy")</span>
+        </div>
+    </div>
+
+    <div class="card-footer d-flex justify-content-between align-items-center">
+        <a href="@Url.Action("QuotationDetails", "Clients", new { id = Model.QuotationId })"
+           class="btn btn-action btn-primary">
+           <i class="fa-solid fa-eye me-1"></i> View Details
+        </a>
+
+        @if (Model.Status?.ToLower() == "pending")
+        {
+            <div class="btn-group">
+                <form method="post" action="@Url.Action("ApproveQuotation", "Clients")" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="quotationId" value="@Model.QuotationId" />
+                    <button type="submit" class="btn btn-sm btn-success"
+                            onclick="return confirm('Approve this quotation?')">
+                        <i class="fas fa-check me-1"></i> Approve
+                    </button>
+                </form>
+                <form method="post" action="@Url.Action("RejectQuotation", "Clients")" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="quotationId" value="@Model.QuotationId" />
+                    <button type="submit" class="btn btn-sm btn-danger"
+                            onclick="return confirm('Reject this quotation?')">
+                        <i class="fas fa-times me-1"></i> Reject
+                    </button>
+                </form>
+            </div>
+        }
+    </div>
+</div>

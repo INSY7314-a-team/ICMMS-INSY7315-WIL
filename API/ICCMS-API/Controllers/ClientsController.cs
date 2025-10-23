@@ -4,6 +4,8 @@ using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using System.Linq;
+
 namespace ICCMS_API.Controllers
 {
     [ApiController]
@@ -12,11 +14,18 @@ namespace ICCMS_API.Controllers
     public class ClientsController : ControllerBase
     {
         private readonly IFirebaseService _firebaseService;
+        private readonly ISupabaseService _supabaseService;
 
-        public ClientsController(IFirebaseService firebaseService)
+        public ClientsController(
+            IFirebaseService firebaseService,
+            ISupabaseService supabaseService
+        )
         {
             _firebaseService = firebaseService;
+            _supabaseService = supabaseService;
         }
+
+
 
         [HttpGet("projects")]
         public async Task<ActionResult<List<Project>>> GetProjects()
@@ -203,6 +212,8 @@ namespace ICCMS_API.Controllers
             }
         }
 
+
+
         [HttpPost("create/maintenanceRequest")]
         public async Task<ActionResult> CreateMaintenanceRequest([FromBody] MaintenanceRequest maintenanceRequest)
         {
@@ -212,11 +223,10 @@ namespace ICCMS_API.Controllers
                 maintenanceRequest.Status = "Pending";
                 maintenanceRequest.CreatedAt = DateTime.UtcNow;
 
-                // ✅ Use existing ID if provided, else generate one
                 if (string.IsNullOrWhiteSpace(maintenanceRequest.MaintenanceRequestId))
                     maintenanceRequest.MaintenanceRequestId = Guid.NewGuid().ToString("N");
 
-                // ✅ Use your existing Firestore service method
+                // ✅ Save maintenance request
                 await _firebaseService.AddDocumentWithIdAsync(
                     "maintenanceRequests",
                     maintenanceRequest.MaintenanceRequestId,
@@ -224,6 +234,22 @@ namespace ICCMS_API.Controllers
                 );
 
                 Console.WriteLine($"✅ Created maintenance request with Firestore ID = {maintenanceRequest.MaintenanceRequestId}");
+
+                // ✅ Update linked project status to Maintenance
+                if (!string.IsNullOrWhiteSpace(maintenanceRequest.ProjectId))
+                {
+                    var project = await _firebaseService.GetDocumentAsync<Project>("projects", maintenanceRequest.ProjectId);
+                    if (project != null)
+                    {
+                        project.Status = "Maintenance";
+                        await _firebaseService.UpdateDocumentAsync("projects", maintenanceRequest.ProjectId, project);
+                        Console.WriteLine($"🔧 Updated project {maintenanceRequest.ProjectId} status to 'Maintenance'");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"⚠️ Project {maintenanceRequest.ProjectId} not found — skipping status update");
+                    }
+                }
 
                 return Ok(new { maintenanceRequestId = maintenanceRequest.MaintenanceRequestId });
             }
@@ -233,6 +259,7 @@ namespace ICCMS_API.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
 
 
 

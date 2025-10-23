@@ -576,6 +576,36 @@ namespace ICCMS_Web.Controllers
         }
 
 
+        [HttpPost]
+        public async Task<IActionResult> UploadDocument(IFormFile file, string projectId, string description)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("No file uploaded");
+
+            using var content = new MultipartFormDataContent();
+            var fileContent = new StreamContent(file.OpenReadStream());
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+            content.Add(fileContent, "file", file.FileName);
+            content.Add(new StringContent(projectId ?? ""), "projectId");
+            content.Add(new StringContent(description ?? ""), "description");
+
+            var apiUrl = $"{_apiBaseUrl}/api/Documents/upload";
+            _logger.LogInformation("📤 Forwarding document upload to {ApiUrl}", apiUrl);
+
+            using var client = _httpClientFactory.CreateClient();
+            var response = await client.PostAsync(apiUrl, content);
+
+            var body = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("❌ Upload failed with status {Status}: {Body}", response.StatusCode, body);
+                return StatusCode((int)response.StatusCode, body);
+            }
+
+            _logger.LogInformation("✅ Upload succeeded: {Body}", body);
+            return Ok(body);
+        }
+
 
     }
 
