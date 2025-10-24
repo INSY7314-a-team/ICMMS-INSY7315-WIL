@@ -1,4 +1,6 @@
 using DinkToPdf;
+using DinkToPdf;
+using DinkToPdf.Contracts;
 using DinkToPdf.Contracts;
 using ICCMS_Web.Services;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
@@ -10,6 +12,11 @@ var builder = WebApplication.CreateBuilder(args);
 // ===================================================
 
 // HTTP + API
+builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30); // 30 second timeout
+    client.DefaultRequestHeaders.Add("User-Agent", "ICCMS-Web/1.0");
+});
 builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30); // 30 second timeout
@@ -70,7 +77,27 @@ builder
             options.LogoutPath = "/Auth/Logout";
             options.ExpireTimeSpan = TimeSpan.FromHours(8);
             options.SlidingExpiration = true;
+            builder
+                .Services.AddAuthentication(options =>
+                {
+                    options.DefaultAuthenticateScheme = "Cookies";
+                    options.DefaultSignInScheme = "Cookies";
+                    options.DefaultChallengeScheme = "Cookies";
+                })
+                .AddCookie(
+                    "Cookies",
+                    options =>
+                    {
+                        // NOTE: redirect paths must align with actual controllers
+                        options.LoginPath = "/Auth/Login";
+                        options.LogoutPath = "/Auth/Logout";
+                        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+                        options.SlidingExpiration = true;
 
+                        // Optional: friendly redirect if unauthorized
+                        options.AccessDeniedPath = "/Auth/AccessDenied";
+                    }
+                );
             // Optional: friendly redirect if unauthorized
             options.AccessDeniedPath = "/Auth/AccessDenied";
         }
@@ -82,6 +109,10 @@ builder
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+    options.AddPolicy(
+        "ProjectManagerOnly",
+        policy => policy.RequireRole("Project Manager", "Tester")
+    );
     options.AddPolicy(
         "ProjectManagerOnly",
         policy => policy.RequireRole("Project Manager", "Tester")
@@ -117,6 +148,7 @@ app.UseAuthorization();
 // ===================================================
 // 🏠 ROUTING
 // ===================================================
+app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 
 // ===================================================

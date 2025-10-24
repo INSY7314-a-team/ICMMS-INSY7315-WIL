@@ -4,6 +4,8 @@ using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using System.Linq;
+
 namespace ICCMS_API.Controllers
 {
     [ApiController]
@@ -12,11 +14,18 @@ namespace ICCMS_API.Controllers
     public class ClientsController : ControllerBase
     {
         private readonly IFirebaseService _firebaseService;
+        private readonly ISupabaseService _supabaseService;
 
-        public ClientsController(IFirebaseService firebaseService)
+        public ClientsController(
+            IFirebaseService firebaseService,
+            ISupabaseService supabaseService
+        )
         {
             _firebaseService = firebaseService;
+            _supabaseService = supabaseService;
         }
+
+
 
         [HttpGet("projects")]
         public async Task<ActionResult<List<Project>>> GetProjects()
@@ -175,6 +184,9 @@ namespace ICCMS_API.Controllers
         [HttpGet("maintenanceRequest/{id}")]
         public async Task<ActionResult> GetMaintenanceRequest(string id)
         {
+            var currentId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            Console.WriteLine($"🔍 Current ClientId = {currentId}");
+
             try
             {
                 var maintenanceRequest =
@@ -200,28 +212,56 @@ namespace ICCMS_API.Controllers
             }
         }
 
+
+
         [HttpPost("create/maintenanceRequest")]
-        public async Task<ActionResult> CreateMaintenanceRequest(
-            [FromBody] MaintenanceRequest maintenanceRequest
-        )
+        public async Task<ActionResult> CreateMaintenanceRequest([FromBody] MaintenanceRequest maintenanceRequest)
         {
             try
             {
                 maintenanceRequest.ClientId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 maintenanceRequest.Status = "Pending";
                 maintenanceRequest.CreatedAt = DateTime.UtcNow;
-                var newMaintenanceRequest =
-                    await _firebaseService.AddDocumentAsync<MaintenanceRequest>(
-                        "maintenanceRequests",
-                        maintenanceRequest
-                    );
-                return Ok(newMaintenanceRequest);
+
+                if (string.IsNullOrWhiteSpace(maintenanceRequest.MaintenanceRequestId))
+                    maintenanceRequest.MaintenanceRequestId = Guid.NewGuid().ToString("N");
+
+                // ✅ Save maintenance request
+                await _firebaseService.AddDocumentWithIdAsync(
+                    "maintenanceRequests",
+                    maintenanceRequest.MaintenanceRequestId,
+                    maintenanceRequest
+                );
+
+                Console.WriteLine($"✅ Created maintenance request with Firestore ID = {maintenanceRequest.MaintenanceRequestId}");
+
+                // ✅ Update linked project status to Maintenance
+                if (!string.IsNullOrWhiteSpace(maintenanceRequest.ProjectId))
+                {
+                    var project = await _firebaseService.GetDocumentAsync<Project>("projects", maintenanceRequest.ProjectId);
+                    if (project != null)
+                    {
+                        project.Status = "Maintenance";
+                        await _firebaseService.UpdateDocumentAsync("projects", maintenanceRequest.ProjectId, project);
+                        Console.WriteLine($"🔧 Updated project {maintenanceRequest.ProjectId} status to 'Maintenance'");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"⚠️ Project {maintenanceRequest.ProjectId} not found — skipping status update");
+                    }
+                }
+
+                return Ok(new { maintenanceRequestId = maintenanceRequest.MaintenanceRequestId });
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"🔥 Error creating maintenance request: {ex.Message}");
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
+
+
 
         [HttpPost("pay/invoice/{id}")]
         public async Task<ActionResult> PayInvoice(string id, [FromBody] Payment payment)

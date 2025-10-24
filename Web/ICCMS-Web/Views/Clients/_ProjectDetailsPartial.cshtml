@@ -1,0 +1,156 @@
+@model ICCMS_Web.Models.ProjectDto
+
+<div class="container-fluid py-3">
+
+    <!-- 🔹 Project Header -->
+    <div class="card border-0 shadow-sm mb-4 rounded-3"
+         style="background: var(--primary-bg); color: var(--accent-yellow);">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="fw-bold mb-1">
+                    <i class="fa-solid fa-building me-2"></i> Project Details
+                </h5>
+                <p class="text-light small mb-0">
+                    Project ID: <span class="text-warning">@Model.ProjectId</span>
+                </p>
+            </div>
+            @{
+                var statusColor = Model.Status?.ToLower() switch
+                {
+                    "active" => "success",
+                    "completed" => "primary",
+                    "on hold" => "warning",
+                    "cancelled" => "danger",
+                    _ => "secondary"
+                };
+            }
+            <span class="badge bg-@statusColor px-3 py-2 fs-6">@Model.Status</span>
+        </div>
+    </div>
+
+    <!-- 🔸 Information Card -->
+    <div class="card border-0 shadow-sm mb-4 rounded-3"
+         style="background: var(--secondary-bg); color: var(--text-light);">
+        <div class="card-header bg-transparent border-0 py-2">
+            <h6 class="fw-bold mb-0 text-gradient">
+                <i class="fa-solid fa-circle-info me-2 text-warning"></i>Project Information
+            </h6>
+        </div>
+        <div class="card-body small">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="text-muted small">Name</label>
+                    <p class="fw-semibold mb-0">@Model.Name</p>
+                </div>
+                <div class="col-md-6">
+                    <label class="text-muted small">Client</label>
+                    <p class="fw-semibold mb-0">@Model.ClientId</p>
+                </div>
+                <div class="col-12">
+                    <label class="text-muted small">Description</label>
+                    <p class="fw-normal mb-0">@Model.Description</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 💰 Budget Section -->
+    <div class="card border-0 shadow-sm mb-4 rounded-3"
+        style="background: var(--secondary-bg); color: var(--text-light);">
+        <div class="card-header bg-transparent border-0 py-2">
+            <h6 class="fw-bold mb-0 text-gradient">
+                <i class="fa-solid fa-money-bill-wave me-2 text-success"></i>Budget Information
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="text-muted small">Planned Budget</label>
+                    <h5 class="fw-bold text-warning mb-0">
+                        R @Model.BudgetPlanned.ToString("N0")
+                    </h5>
+                </div>
+                <div class="col-md-6">
+                    <label class="text-muted small">Actual Budget</label>
+                    <h5 class="fw-bold text-success mb-0">
+                        R @Model.BudgetActual.ToString("N0")
+                    </h5>
+                </div>
+
+                @if (Model.BudgetActual > 0)
+                {
+                    var variance = Model.BudgetActual - Model.BudgetPlanned;
+                    var varianceClass = variance >= 0 ? "danger" : "success";
+                    var varianceLabel = variance >= 0 ? "Over Budget" : "Under Budget";
+                    var varianceIcon = variance >= 0 ? "fa-arrow-up" : "fa-arrow-down";
+
+                    <div class="col-12">
+                        <div class="p-3 rounded bg-@varianceClass bg-opacity-25">
+                            <label class="text-muted small mb-1">Budget Variance</label>
+                            <h6 class="fw-semibold text-@varianceClass mb-0">
+                                <i class="fa-solid @varianceIcon me-2"></i>
+                                R @Math.Abs(variance).ToString("N0") — @varianceLabel
+                            </h6>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- 🕓 Project Timeline -->
+    <div class="card border-0 shadow-sm rounded-3"
+         style="background: var(--secondary-bg); color: var(--text-light);">
+        <div class="card-header bg-transparent border-0 py-2">
+            <h6 class="fw-bold mb-0 text-gradient">
+                <i class="fa-solid fa-calendar-alt me-2 text-info"></i>Project Timeline
+            </h6>
+        </div>
+        <div class="card-body small">
+            <ul class="list-group list-group-flush bg-transparent">
+                <li class="list-group-item bg-transparent border-0 px-0 py-1">
+                    <strong>Start Date:</strong>
+                    <span>@Model.StartDate.ToString("dd MMM yyyy")</span>
+                </li>
+                <li class="list-group-item bg-transparent border-0 px-0 py-1">
+                    <strong>Planned End:</strong>
+                    <span>@Model.EndDatePlanned.ToString("dd MMM yyyy")</span>
+                </li>
+                @if (Model.EndDateActual.HasValue)
+                {
+                    <li class="list-group-item bg-transparent border-0 px-0 py-1">
+                        <strong>Actual End:</strong>
+                        <span class="text-success">@Model.EndDateActual.Value.ToString("dd MMM yyyy")</span>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Match modal text color and gradient headings */
+    #projectDetailsModal .modal-body {
+        color: var(--text-light);
+        background: var(--secondary-bg);
+    }
+
+    #projectDetailsModal .list-group-item {
+        color: #f1f1f1 !important;
+        background-color: transparent !important;
+    }
+
+    #projectDetailsModal .list-group-item strong {
+        color: var(--accent-yellow) !important;
+    }
+
+    #projectDetailsModal .list-group-item span {
+        color: #ffffff !important;
+    }
+
+    .text-gradient {
+        background: linear-gradient(90deg, var(--accent-yellow), #fff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+</style>

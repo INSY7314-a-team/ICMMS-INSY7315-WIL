@@ -250,25 +250,9 @@
                         <li><a asp-controller="ProjectManager" asp-action="Dashboard"><i
                                     class="fa-solid fa-gauge"></i><span>Dashboard</span></a></li>
                     }
-                    if (User.IsInRole("Contractor") || User.IsInRole("Tester"))
+                    if (User.IsInRole("Admin"))
                     {
-                        <li>
-                            <a asp-controller="Contractor"
-                               asp-action="Dashboard"
-                               aria-label="My Tasks">
-                                <i class="fa-solid fa-helmet-safety" aria-hidden="true"></i>
-                                <span>My Tasks</span>
-                            </a>
-                        </li>
-                    }                    if (User.IsInRole("Admin"))
-                    {
-                        <li><a asp-controller="SystemOverview" asp-action="Index"><i class="fa-solid fa-tachometer-alt"></i><span>System Overview</span></a>
-                        </li>
                         <li><a asp-controller="Users" asp-action="Index"><i class="fa-solid fa-users"></i><span>Users</span></a>
-                        </li>
-                        <li><a asp-controller="AuditLogs" asp-action="Index"><i class="fa-solid fa-clipboard-list"></i><span>Audit Logs</span></a>
-                        </li>
-                        <li><a asp-controller="Messages" asp-action="Index"><i class="fa-solid fa-envelope"></i><span>Messages</span></a>
                         </li>
                         <li><a asp-controller="Data" asp-action="Index"><i class="fa-solid fa-database"></i><span>Database</span></a>
                         </li>
@@ -325,7 +309,6 @@
 
             @RenderBody()
         </main>
-
 
         <!-- ===== SCRIPTS ===== -->
         <script src="~/lib/jquery/dist/jquery.min.js"></script>
