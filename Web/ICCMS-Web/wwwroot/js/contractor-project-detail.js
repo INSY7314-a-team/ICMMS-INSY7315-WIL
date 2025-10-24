@@ -6,8 +6,10 @@ document.addEventListener("DOMContentLoaded", function () {
   // Initialize task filtering
   initializeTaskFilters();
 
-  // Initialize task actions
+  // Initialize task actions (including Start Task functionality)
   initializeTaskActions();
+
+  console.log("✅ Task actions initialized");
 });
 
 function initializeTaskFilters() {
@@ -54,11 +56,16 @@ function initializeTaskFilters() {
 }
 
 function initializeTaskActions() {
+  console.log("🔧 Initializing task actions...");
+
   // Start Task buttons
   document.addEventListener("click", function (e) {
+    console.log("🖱️ Click event detected on:", e.target);
     if (e.target.closest(".start-task-btn")) {
+      console.log("✅ Start task button clicked!");
       const button = e.target.closest(".start-task-btn");
       const taskId = button.getAttribute("data-task-id");
+      console.log("📋 Task ID:", taskId);
       if (taskId) {
         startTask(taskId);
       }
@@ -66,15 +73,15 @@ function initializeTaskActions() {
   });
 
   // View Details buttons
-  document.addEventListener("click", function (e) {
-    if (e.target.closest(".view-details-btn")) {
-      const button = e.target.closest(".view-details-btn");
-      const taskId = button.getAttribute("data-task-id");
-      if (taskId) {
-        viewTaskDetails(taskId);
-      }
-    }
-  });
+  // document.addEventListener("click", function (e) {
+  //   if (e.target.closest(".view-details-btn")) {
+  //     const button = e.target.closest(".view-details-btn");
+  //     const taskId = button.getAttribute("data-task-id");
+  //     if (taskId) {
+  //       viewTaskDetails(taskId);
+  //     }
+  //   }
+  // });
 
   // Submit Progress buttons
   document.addEventListener("click", function (e) {
@@ -103,8 +110,12 @@ function initializeTaskActions() {
 
 function startTask(taskId) {
   console.log("🎯 startTask called with taskId:", taskId);
+  console.log("🔍 Task ID type:", typeof taskId);
+  console.log("🔍 Task ID value:", taskId);
+
   if (!taskId) {
-    console.error("Task ID is required");
+    console.error("❌ Task ID is required");
+    showErrorMessage("Task ID is required");
     return;
   }
 
@@ -129,40 +140,23 @@ function startTask(taskId) {
     '<i class="fa-solid fa-spinner fa-spin me-1"></i>Starting...';
   startBtn.disabled = true;
 
-  fetch(`/Contractor/GetAssignedTasks`)
+  console.log("📡 Making direct UpdateTaskStatus request...");
+  fetch(`/Contractor/UpdateTaskStatus`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      taskId: taskId,
+      status: "In Progress",
+    }),
+  })
     .then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then((tasks) => {
-      console.log("Received tasks:", tasks);
-      console.log("Looking for taskId:", taskId);
-      const list = Array.isArray(tasks) ? tasks : [];
-      const task = list.find((t) => String(t.taskId) === String(taskId));
-      if (!task) {
-        console.error(
-          "Available task IDs:",
-          list.map((t) => t.taskId)
-        );
-        throw new Error("Task not found in assigned tasks");
-      }
-      console.log("Found task:", task);
-      return fetch(`/Contractor/UpdateTaskStatus`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          taskId: taskId,
-          status: "In Progress",
-        }),
-      });
-    })
-    .then((response) => {
+      console.log("📡 UpdateTaskStatus response status:", response.status);
+      console.log("📡 Response headers:", response.headers);
       if (!response.ok) {
         return response.text().then((text) => {
+          console.error("❌ UpdateTaskStatus failed:", text);
           throw new Error(
             `HTTP error! status: ${response.status}, message: ${text}`
           );
@@ -171,7 +165,7 @@ function startTask(taskId) {
       return response.json();
     })
     .then((data) => {
-      console.log("Task started successfully:", data);
+      console.log("✅ Task started successfully:", data);
 
       // Show success message
       showSuccessMessage("Task started successfully!");
@@ -190,12 +184,12 @@ function startTask(taskId) {
     });
 }
 
-function viewTaskDetails(taskId) {
-  console.log("🔍 Viewing details for task:", taskId);
+// function viewTaskDetails(taskId) {
+//   console.log("🔍 Viewing details for task:", taskId);
 
-  // This will be handled by the existing modal system
-  // The modal should already be initialized by the contractor-task-actions.js
-}
+//   // This will be handled by the existing modal system
+//   // The modal should already be initialized by the contractor-task-actions.js
+// }
 
 function submitTaskProgress(taskId) {
   console.log("📊 Submitting progress for task:", taskId);
@@ -232,28 +226,41 @@ function showSuccessMessage(message) {
   // Remove after 3 seconds
   setTimeout(() => {
     notification.remove();
-    function showErrorMessage(message) {
-      // Create a simple error notification
-      const notification = document.createElement("div");
-      notification.className = "alert alert-danger position-fixed";
-      notification.setAttribute("role", "alert");
-      notification.setAttribute("aria-live", "assertive");
-      notification.style.cssText =
-        "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
-      notification.innerHTML = `
-        <div class="d-flex align-items-center">
-            <i class="fa-solid fa-exclamation-circle me-2" aria-hidden="true"></i>
-            <span class="msg"></span>
-        </div>
-    `;
+  }, 3000);
+}
 
-      document.body.appendChild(notification);
-      notification.querySelector(".msg").textContent = String(message);
+function showErrorMessage(message) {
+  // Create a simple error notification
+  const notification = document.createElement("div");
+  notification.className = "alert alert-danger position-fixed";
+  notification.setAttribute("role", "alert");
+  notification.setAttribute("aria-live", "assertive");
+  notification.style.cssText =
+    "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
+  notification.innerHTML = `
+    <div class="d-flex align-items-center">
+        <i class="fa-solid fa-exclamation-circle me-2" aria-hidden="true"></i>
+        <span class="msg"></span>
+    </div>
+`;
 
-      // Remove after 5 seconds
-      setTimeout(() => {
-        notification.remove();
-      }, 5000);
-    }
+  document.body.appendChild(notification);
+  notification.querySelector(".msg").textContent = String(message);
+
+  // Remove after 5 seconds
+  setTimeout(() => {
+    notification.remove();
   }, 5000);
+}
+
+// Toast functionality for compatibility with contractor-task-actions.js
+function showToast(message, type = "info") {
+  if (type === "success") {
+    showSuccessMessage(message);
+  } else if (type === "error") {
+    showErrorMessage(message);
+  } else {
+    // For info type, use a simple console log or create a basic notification
+    console.log(`📢 ${type.toUpperCase()}: ${message}`);
+  }
 }

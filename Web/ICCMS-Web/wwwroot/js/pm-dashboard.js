@@ -255,7 +255,7 @@ function getCurrentStatusFilter() {
 
 // Project card actions
 function viewProjectDetails(projectId) {
-  window.location.href = `/ProjectManager/ProjectDetails/${projectId}`;
+  window.location.href = `/ProjectManager/ProjectDetail?projectId=${projectId}`;
 }
 
 function requestEstimate(projectId) {

@@ -15,5 +15,7 @@ namespace ICCMS_Web.Services
         );
         Task<List<ProgressReportDto>> GetProgressReportsAsync(string taskId);
         Task<ProjectBudgetDto> GetTaskProjectBudgetAsync(string taskId);
+        Task<CompletionReportDto> SubmitCompletionReportAsync(CompletionReportDto report);
+        Task<List<CompletionReportDto>> GetCompletionReportsAsync(string taskId);
     }
 }

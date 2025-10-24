@@ -14,197 +14,226 @@
 
 <div class="pm-dashboard-container">
     <!-- Header Section -->
-    <div class="dashboard-header construction-border">
+    <div class="dashboard-header">
         <h1 class="dashboard-title">
-            @User.Identity.Name Dashboard
+            <i class="fa-solid fa-user-tie me-2" style="color: #F7EC59;"></i>@User.Identity.Name Dashboard
         </h1>
-        <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Manage your projects and quotations </p>
+        <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Manage your projects and quotations</p>
+    </div>
+
+    <!-- Stats Summary Cards -->
+    <div class="stats-container">
+        <div class="row g-2 mb-3">
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.TotalProjects</h4>
+                        <p class="stat-label">Total Projects</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon pending">
+                        <i class="fa-solid fa-file-lines"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.DraftProjects.Count</h4>
+                        <p class="stat-label">Draft Projects</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon in-progress">
+                        <i class="fa-solid fa-play"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.ActiveProjects.Count</h4>
+                        <p class="stat-label">Active Projects</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon completed">
+                        <i class="fa-solid fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.OtherProjects.Count</h4>
+                        <p class="stat-label">Completed</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.TotalClients</h4>
+                        <p class="stat-label">Total Clients</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.TotalQuotes</h4>
+                        <p class="stat-label">Total Quotes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Search and Filter Controls -->
-    <div class="ProjectsContainer">
-        <div class="dashboard-controls">
-            <div class="search-section">
-                <div class="search-input-group">
-                    <input type="text" id="searchInput" class="search-input" placeholder="Search projects by name..."
-                        value="">
-                    <button type="button" id="searchBtn" class="search-btn">
-                        <i class="fa-solid fa-search"></i>
-                    </button>
-                    <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">
-                        <i class="fa-solid fa-times"></i>
-                    </button>
+    <div class="search-section">
+        <div class="search-input-group">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search projects by name..." value="">
+            <button type="button" id="searchBtn" class="search-btn">
+                <i class="fa-solid fa-search"></i>
+            </button>
+            <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Enhanced Filters Section -->
+    <div class="filter-section">
+        <div class="d-flex justify-content-center mb-3">
+            <button type="button" class="filter-toggle-btn" onclick="toggleFilters()">
+                <i class="fa-solid fa-sliders-h me-2"></i>
+                <span id="filterToggleText">Show Filters</span>
+                <i class="fa-solid fa-chevron-down ms-2" id="filterToggleIcon"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Enhanced Filters Panel -->
+    <div class="filters-panel construction-border-thin" id="filtersPanel" style="display: none;">
+        <div class="filters-container">
+            <!-- Quick Status Filters -->
+            <div class="filter-group">
+                <div class="filter-group-header">
+                    <h6 class="mb-0">Project Status</h6>
+                </div>
+                <div class="status-filters">
+                    @{
+                        var statuses = (Model.AvailableStatuses ?? new List<string>());
+                    }
+                    @{
+                        if (!statuses.Contains("Planning"))
+                        {
+                            statuses =
+                            statuses.Concat(new[] { "Planning" }).ToList();
+                        }
+                    }
+                    @foreach (var status in statuses)
+                    {
+                        var icon = status == "Draft" ? "fa-file-lines"
+                        : status == "Planning" ? "fa-project-diagram"
+                        : status == "Active" ? "fa-play"
+                        : status == "Completed" ? "fa-check-circle"
+                        : status == "Maintenance" ? "fa-wrench" : "fa-list";
+                        <a href="@Url.Action("Dashboard")" class="status-filter-btn" data-status="@status">
+                            <i class="fa-solid @icon me-2"></i>
+                            @status
+
+                        </a>
+                    }
                 </div>
             </div>
 
-            <!-- Enhanced Filters Section -->
-            <div class="filter-section">
-                <div class="d-flex justify-content-center mb-3">
-                    <button type="button" class="filter-toggle-btn" onclick="toggleFilters()">
-                        <i class="fa-solid fa-sliders-h me-2"></i>
-                        <span id="filterToggleText">Show Filters</span>
-                        <i class="fa-solid fa-chevron-down ms-2" id="filterToggleIcon"></i>
-                    </button>
+            <!-- Advanced Filters -->
+            <div class="filter-group">
+                <div class="filter-group-header">
+                    <h6 class="mb-0">Filters</h6>
                 </div>
-            </div>
-
-            <!-- Enhanced Filters Panel -->
-            <div class="filters-panel construction-border-thin" id="filtersPanel" style="display: none;">
-                <div class="filters-container">
-                    <!-- Quick Status Filters -->
-                    <div class="filter-group">
-                        <div class="filter-group-header">
-                            <h6 class="mb-0">Project Status</h6>
-                        </div>
-                        <div class="status-filters">
-                            @{
-                                var statuses = (Model.AvailableStatuses ?? new List<string>());
-                            }
-                            @{
-                                if (!statuses.Contains("Planning"))
-                                {
-                                    statuses =
-                                    statuses.Concat(new[] { "Planning" }).ToList();
-                                }
-                            }
-                            @foreach (var status in statuses)
-                            {
-                                var icon = status == "Draft" ? "fa-file-lines"
-                                : status == "Planning" ? "fa-project-diagram"
-                                : status == "Active" ? "fa-play"
-                                : status == "Completed" ? "fa-check-circle"
-                                : status == "Maintenance" ? "fa-wrench" : "fa-list";
-                                <a href="@Url.Action("Dashboard")" class="status-filter-btn" data-status="@status">
-                                    <i class="fa-solid @icon me-2"></i>
-                                    @status
-
-                                </a>
-                            }
-                        </div>
+                <div class="filter-item">
+                    <label class="filter-label">
+                        Client
+                    </label>
+                    <select class="filter-select" id="clientFilter">
+                        <option value="">All Clients</option>
+                        @foreach (var client in Model.Clients)
+                        {
+                            <option value="@client.UserId">
+                                @client.FullName
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="advanced-filters-grid">
+                    <div class="filter-item">
+                        <label class="filter-label">
+                            Start Date From
+                        </label>
+                        <input type="date" class="filter-input" id="startDateFrom" value="">
                     </div>
-
-                    <!-- Advanced Filters -->
-                    <div class="filter-group">
-                        <div class="filter-group-header">
-                            <h6 class="mb-0">Filters</h6>
-                        </div>
-                        <div class="filter-item">
-                            <label class="filter-label">
-                                Client
-                            </label>
-                            <select class="filter-select" id="clientFilter">
-                                <option value="">All Clients</option>
-                                @foreach (var client in Model.Clients)
-                                {
-                                    <option value="@client.UserId">
-                                        @client.FullName
-                                    </option>
-                                }
-                            </select>
-                        </div>
-                        <div class="advanced-filters-grid">
-                            <div class="filter-item">
-                                <label class="filter-label">
-                                    Start Date From
-                                </label>
-                                <input type="date" class="filter-input" id="startDateFrom" value="">
-                            </div>
-                            <div class="filter-item">
-                                <label class="filter-label">
-                                    Start Date To
-                                </label>
-                                <input type="date" class="filter-input" id="startDateTo" value="">
-                            </div>
-                        </div>
-                        <div class="advanced-filters-grid">
-                            <div class="filter-item">
-                                <label class="filter-label">
-                                    Budget Range
-                                </label>
-                                <div class="budget-range">
-                                    <input type="number" class="filter-input" id="budgetMin" placeholder="Min Budget"
-                                        value="">
-                                    <span class="range-separator">to</span>
-                                    <input type="number" class="filter-input" id="budgetMax" placeholder="Max Budget"
-                                        value="">
-                                </div>
-                            </div>
-                        </div>
+                    <div class="filter-item">
+                        <label class="filter-label">
+                            Start Date To
+                        </label>
+                        <input type="date" class="filter-input" id="startDateTo" value="">
                     </div>
-
-                    <!-- Filter Actions -->
-                    <div class="filter-actions">
-                        <button type="button" class="filter-action-btn primary" onclick="applyAdvancedFilters()">
-                            <i class="fa-solid fa-search me-2"></i>Apply Filters
-                        </button>
-                        <button type="button" class="filter-action-btn secondary" onclick="clearAdvancedFilters()">
-                            <i class="fa-solid fa-times me-2"></i>Clear All
-                        </button>
-                        <button type="button" class="filter-action-btn tertiary" onclick="toggleFilters()">
-                            <i class="fa-solid fa-chevron-up me-2"></i>Close
-                        </button>
+                </div>
+                <div class="advanced-filters-grid">
+                    <div class="filter-item">
+                        <label class="filter-label">
+                            Budget Range
+                        </label>
+                        <div class="budget-range">
+                            <input type="number" class="filter-input" id="budgetMin" placeholder="Min Budget" value="">
+                            <span class="range-separator">to</span>
+                            <input type="number" class="filter-input" id="budgetMax" placeholder="Max Budget" value="">
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Create Project Button -->
-            <div class="create-project-section text-center">
-                <button type="button" class="btn btn-warning btn-lg create-project-btn"
-                    onclick="openCreateProjectWizard()">
-                    <i class="fa-solid fa-plus me-2"></i>Create New Project
+            <!-- Filter Actions -->
+            <div class="filter-actions">
+                <button type="button" class="filter-action-btn primary" onclick="applyAdvancedFilters()">
+                    <i class="fa-solid fa-search me-2"></i>Apply Filters
+                </button>
+                <button type="button" class="filter-action-btn secondary" onclick="clearAdvancedFilters()">
+                    <i class="fa-solid fa-times me-2"></i>Clear All
+                </button>
+                <button type="button" class="filter-action-btn tertiary" onclick="toggleFilters()">
+                    <i class="fa-solid fa-chevron-up me-2"></i>Close
                 </button>
             </div>
         </div>
-        <!-- Draft Projects Section (Collapsible) -->
-        @if (Model.DraftProjects.Any())
-        {
-            <div id="draftSection" class="draft-projects-section">
-                <div class="section-header collapsible-header construction-border-thin" data-target="draftProjects">
-                    <h3 class="section-title">
-                        Draft Projects
-                        <span class="badge badge-secondary">@Model.DraftProjects.Count</span>
-                    </h3>
-                    <i class="fa-solid fa-chevron-up toggle-icon"></i>
-                </div>
-                <div class="draft-projects-content" id="draftProjects" style="display: block;">
-                    <div class="projects-grid" id="draftProjectsGrid">
-                        @foreach (var project in Model.DraftProjects)
-                        {
-                            // Get pre-processed data from ViewModel
-                            var projectDetails = Model.ProjectDetails.ContainsKey(project.ProjectId)
-                            ? Model.ProjectDetails[project.ProjectId]
-                            : new ICCMS_Web.Models.ProjectDetails();
+    </div>
 
-                            ViewBag.Phases = projectDetails.Phases;
-                            ViewBag.Tasks = projectDetails.Tasks;
-                            ViewBag.Estimate = projectDetails.Estimate;
-                            ViewBag.Progress = projectDetails.Progress;
-                            ViewBag.StatusBadgeClass = projectDetails.StatusBadgeClass;
-
-                            // Get client name
-                            var client = Model.Clients?.FirstOrDefault(c => c.UserId == project.ClientId);
-                            ViewBag.ClientName = client?.FullName ?? project.ClientId;
-
-                            @await Html.PartialAsync("_ProjectCard", project)
-                        }
-                    </div>
-                </div>
-            </div>
-        }
-
-        <!-- Main Projects Section -->
-        <div class="main-projects-section">
-            <div class="section-header construction-border-thin">
+    <!-- Create Project Button -->
+    <div class="create-project-section text-center">
+        <button type="button" class="btn btn-warning btn-lg create-project-btn" onclick="openCreateProjectWizard()">
+            <i class="fa-solid fa-plus me-2"></i>Create New Project
+        </button>
+    </div>
+    <!-- Draft Projects Section (Collapsible) -->
+    @if (Model.DraftProjects.Any())
+    {
+        <div id="draftSection" class="draft-projects-section">
+            <div class="section-header collapsible-header construction-border-thin" data-target="draftProjects">
                 <h3 class="section-title">
-                    Projects
-                    <span class="badge badge-secondary">@Model.FilteredProjects.Count</span>
+                    Draft Projects
+                    <span class="badge badge-secondary">@Model.DraftProjects.Count</span>
                 </h3>
+                <i class="fa-solid fa-chevron-up toggle-icon"></i>
             </div>
-
-            @if (Model.FilteredProjects.Any())
-            {
-                <div class="projects-grid" id="projectsGrid">
-                    @foreach (var project in Model.FilteredProjects)
+            <div class="draft-projects-content" id="draftProjects" style="display: block;">
+                <div class="projects-grid" id="draftProjectsGrid">
+                    @foreach (var project in Model.DraftProjects)
                     {
                         // Get pre-processed data from ViewModel
                         var projectDetails = Model.ProjectDetails.ContainsKey(project.ProjectId)
@@ -224,65 +253,94 @@
                         @await Html.PartialAsync("_ProjectCard", project)
                     }
                 </div>
+            </div>
+        </div>
+    }
 
-                <!-- Pagination -->
-                @if (Model.TotalPages > 1)
-                {
-                    <div class="pagination-container">
-                        <nav aria-label="Project pagination">
-                            <ul class="pagination justify-content-center">
-                                <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
-                                    <a class="page-link" href="@Url.Action("Dashboard", new { page = Model.CurrentPage - 1 })">
-                                        <i class="fa-solid fa-chevron-left"></i>
-                                    </a>
-                                </li>
+    <!-- Main Projects Section -->
+    <div class="section-header">
+        <h3 class="section-title">
+            Projects
+            <span class="badge badge-secondary">@Model.FilteredProjects.Count</span>
+        </h3>
+    </div>
 
-                                @for (int i = Math.Max(1, Model.CurrentPage - 2); i <= Math.Min(Model.TotalPages,
-                                                        Model.CurrentPage + 2); i++)
-                                {
-                                    <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
-                                        <a class="page-link" href="@Url.Action("Dashboard", new { page = i })">@i</a>
-                                    </li>
-                                }
-
-                                <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
-                                    <a class="page-link" href="@Url.Action("Dashboard", new { page = Model.CurrentPage + 1 })">
-                                        <i class="fa-solid fa-chevron-right"></i>
-                                    </a>
-                                </li>
-                            </ul>
-                        </nav>
-                        <div class="pagination-info">
-                            Showing @((Model.CurrentPage - 1) * Model.PageSize + 1) to @(Math.Min(Model.CurrentPage *
-                            Model.PageSize, Model.TotalProjects)) of @Model.TotalProjects projects
-                    </div>
-                </div>
-                        }
-            }
-            else
+    @if (Model.FilteredProjects.Any())
+    {
+        <div class="projects-grid" id="projectsGrid">
+            @foreach (var project in Model.FilteredProjects)
             {
-                <div class="no-projects-message">
-                    <div class="text-center py-5">
-                        <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
-                        <h4 class="text-muted">No projects found</h4>
-                        <p class="text-muted">
-                            <span>No projects available.</span>
-                        </p>
-                        @if (false)
-                        {
-                            <button type="button" class="btn btn-outline-primary" onclick="clearSearch()">
-                                <i class="fa-solid fa-times"></i> Clear Search
-                            </button>
-                        }
-                    </div>
-                </div>
+                // Get pre-processed data from ViewModel
+                var projectDetails = Model.ProjectDetails.ContainsKey(project.ProjectId)
+                ? Model.ProjectDetails[project.ProjectId]
+                : new ICCMS_Web.Models.ProjectDetails();
+
+                ViewBag.Phases = projectDetails.Phases;
+                ViewBag.Tasks = projectDetails.Tasks;
+                ViewBag.Estimate = projectDetails.Estimate;
+                ViewBag.Progress = projectDetails.Progress;
+                ViewBag.StatusBadgeClass = projectDetails.StatusBadgeClass;
+
+                // Get client name
+                var client = Model.Clients?.FirstOrDefault(c => c.UserId == project.ClientId);
+                ViewBag.ClientName = client?.FullName ?? project.ClientId;
+
+                @await Html.PartialAsync("_ProjectCard", project)
             }
         </div>
 
-    </div>
-</div>
+        <!-- Pagination -->
+        @if (Model.TotalPages > 1)
+        {
+            <div class="pagination-container">
+                <nav aria-label="Project pagination">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                            <a class="page-link" href="@Url.Action("Dashboard", new { page = Model.CurrentPage - 1 })">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </a>
+                        </li>
 
+                        @for (int i = Math.Max(1, Model.CurrentPage - 2); i <= Math.Min(Model.TotalPages,
+                                        Model.CurrentPage + 2); i++)
+                        {
+                            <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                <a class="page-link" href="@Url.Action("Dashboard", new { page = i })">@i</a>
+                            </li>
+                        }
 
+                        <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                            <a class="page-link" href="@Url.Action("Dashboard", new { page = Model.CurrentPage + 1 })">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                <div class="pagination-info">
+                    Showing @((Model.CurrentPage - 1) * Model.PageSize + 1) to @(Math.Min(Model.CurrentPage *
+                    Model.PageSize, Model.TotalProjects)) of @Model.TotalProjects projects
+            </div>
+        </div>
+        }
+    }
+    else
+    {
+        <div class="no-projects-message">
+            <div class="text-center py-5">
+                <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No projects found</h4>
+                <p class="text-muted">
+                    <span>No projects available.</span>
+                </p>
+                @if (false)
+                {
+                    <button type="button" class="btn btn-outline-primary" onclick="clearSearch()">
+                        <i class="fa-solid fa-times"></i> Clear Search
+                    </button>
+                }
+            </div>
+        </div>
+    }
 </div>
 
 <!-- Include dashboard CSS directly -->

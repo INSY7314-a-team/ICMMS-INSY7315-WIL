@@ -122,11 +122,32 @@ namespace ICCMS_Web.Services
                             contractorTask.Status
                         );
                         contractorTask.CanSubmitProgress =
-                            contractorTask.Status == "In Progress"
-                            || contractorTask.Status == "InProgress";
+                            contractorTask.Status.Equals(
+                                "In Progress",
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                            || contractorTask.Status.Equals(
+                                "InProgress",
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                            || contractorTask.Status.Equals(
+                                "In-Progress",
+                                StringComparison.OrdinalIgnoreCase
+                            );
+
                         contractorTask.CanRequestCompletion =
-                            contractorTask.Status == "In Progress"
-                            || contractorTask.Status == "InProgress";
+                            contractorTask.Status.Equals(
+                                "In Progress",
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                            || contractorTask.Status.Equals(
+                                "InProgress",
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                            || contractorTask.Status.Equals(
+                                "In-Progress",
+                                StringComparison.OrdinalIgnoreCase
+                            );
 
                         tasks.Add(contractorTask);
                     }
@@ -220,38 +241,26 @@ namespace ICCMS_Web.Services
             try
             {
                 var currentUser = _currentUserService.GetCurrentUser();
-                var tasks = await _apiClient.GetAsync<List<ProjectTaskDto>>(
+                _logger.LogInformation("🔍 Getting assigned tasks for user");
+
+                var response = await _apiClient.GetAsync<PaginatedResponse<ContractorTaskDto>>(
                     "/api/contractors/tasks/assigned",
                     currentUser
                 );
-                if (tasks == null)
-                    return new List<ContractorTaskDto>();
 
-                return tasks
-                    .Select(task => new ContractorTaskDto
-                    {
-                        TaskId = task.TaskId,
-                        ProjectId = task.ProjectId,
-                        Name = task.Name,
-                        Description = task.Description,
-                        AssignedTo = task.AssignedTo,
-                        Priority = task.Priority,
-                        Status = task.Status,
-                        StartDate = task.StartDate,
-                        DueDate = task.DueDate,
-                        CompletedDate = task.CompletedDate,
-                        Progress = task.Progress,
-                        EstimatedHours = task.EstimatedHours,
-                        ActualHours = task.ActualHours,
-                        IsOverdue = task.DueDate < DateTime.UtcNow && task.Status != "Completed",
-                        DaysUntilDue = Math.Max(0, (task.DueDate - DateTime.UtcNow).Days),
-                        StatusBadgeClass = GetStatusBadgeClass(task.Status),
-                        CanSubmitProgress =
-                            task.Status == "In Progress" || task.Status == "InProgress",
-                        CanRequestCompletion =
-                            task.Status == "In Progress" || task.Status == "InProgress",
-                    })
-                    .ToList();
+                _logger.LogInformation(
+                    "📡 API response received: {Response}",
+                    response != null ? "Success" : "Null"
+                );
+
+                if (response == null || response.Data == null)
+                {
+                    _logger.LogWarning("❌ No tasks returned from API");
+                    return new List<ContractorTaskDto>();
+                }
+
+                _logger.LogInformation("✅ Found {Count} assigned tasks", response.Data.Count);
+                return response.Data;
             }
             catch (Exception ex)
             {
@@ -268,13 +277,29 @@ namespace ICCMS_Web.Services
         {
             try
             {
+                Console.WriteLine(
+                    $"[ContractorService] 🔍 Getting task details for taskId: {taskId}"
+                );
                 var currentUser = _currentUserService.GetCurrentUser();
+                Console.WriteLine(
+                    $"[ContractorService] 👤 Current user: {currentUser?.Identity?.Name}"
+                );
+
+                Console.WriteLine(
+                    $"[ContractorService] 📡 Calling API: /api/contractors/task/{taskId}"
+                );
                 var task = await _apiClient.GetAsync<ProjectTaskDto>(
                     $"/api/contractors/task/{taskId}",
                     currentUser
                 );
+
                 if (task == null)
+                {
+                    Console.WriteLine($"[ContractorService] ❌ Task not found in API response");
                     return null;
+                }
+
+                Console.WriteLine($"[ContractorService] ✅ Task found: {task.Name}");
 
                 var project = await _apiClient.GetAsync<ProjectDto>(
                     $"/api/projectmanager/project/{task.ProjectId}",
@@ -301,13 +326,21 @@ namespace ICCMS_Web.Services
                     IsOverdue = task.DueDate < DateTime.UtcNow && task.Status != "Completed",
                     DaysUntilDue = Math.Max(0, (task.DueDate - DateTime.UtcNow).Days),
                     StatusBadgeClass = GetStatusBadgeClass(task.Status),
-                    CanSubmitProgress = task.Status == "In Progress" || task.Status == "InProgress",
+                    CanSubmitProgress =
+                        task.Status.Equals("In Progress", StringComparison.OrdinalIgnoreCase)
+                        || task.Status.Equals("InProgress", StringComparison.OrdinalIgnoreCase)
+                        || task.Status.Equals("In-Progress", StringComparison.OrdinalIgnoreCase),
                     CanRequestCompletion =
-                        task.Status == "In Progress" || task.Status == "InProgress",
+                        task.Status.Equals("In Progress", StringComparison.OrdinalIgnoreCase)
+                        || task.Status.Equals("InProgress", StringComparison.OrdinalIgnoreCase)
+                        || task.Status.Equals("In-Progress", StringComparison.OrdinalIgnoreCase),
                 };
             }
             catch (Exception ex)
             {
+                Console.WriteLine(
+                    $"[ContractorService] ❌ Error getting task details: {ex.Message}"
+                );
                 _logger.LogError(
                     ex,
                     "Error getting task {TaskId} for contractor {UserId}",
@@ -367,6 +400,63 @@ namespace ICCMS_Web.Services
             {
                 _logger.LogError(ex, "Error requesting completion for task {TaskId}", taskId);
                 throw;
+            }
+        }
+
+        public async Task<CompletionReportDto> SubmitCompletionReportAsync(
+            CompletionReportDto report
+        )
+        {
+            try
+            {
+                var currentUser = _currentUserService.GetCurrentUser();
+                var result = await _apiClient.PutAsync<CompletionReportDto>(
+                    $"/api/contractors/task/{report.TaskId}/request-completion",
+                    report,
+                    currentUser
+                );
+                return result ?? report;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error submitting completion report for task {TaskId}",
+                    report.TaskId
+                );
+                throw;
+            }
+        }
+
+        public async Task<List<CompletionReportDto>> GetCompletionReportsAsync(string taskId)
+        {
+            try
+            {
+                _logger.LogInformation(
+                    "🔍 GetCompletionReportsAsync called for task {TaskId}",
+                    taskId
+                );
+                var currentUser = _currentUserService.GetCurrentUser();
+                _logger.LogInformation(
+                    "🔍 Current user: {UserId}",
+                    currentUser?.Identity?.Name ?? "null"
+                );
+
+                var reports = await _apiClient.GetAsync<List<CompletionReportDto>>(
+                    $"/api/contractors/task/{taskId}/completion-reports",
+                    currentUser
+                );
+
+                _logger.LogInformation(
+                    "🔍 API client returned {Count} completion reports",
+                    reports?.Count ?? 0
+                );
+                return reports ?? new List<CompletionReportDto>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting completion reports for task {TaskId}", taskId);
+                return new List<CompletionReportDto>();
             }
         }
 

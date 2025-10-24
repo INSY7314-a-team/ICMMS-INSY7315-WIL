@@ -1,0 +1,432 @@
+@model ICCMS_Web.Models.PMProjectDetailViewModel
+
+@{
+    ViewData["Title"] = $"Project: {Model.Project.Name}";
+    Layout = "_Layout";
+}
+
+<div class="pm-project-detail-container">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="@Url.Action("Dashboard", "ProjectManager")" class="text-decoration-none">
+                    <i class="fa-solid fa-home"></i> Dashboard
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                <i class="fa-solid fa-project-diagram"></i> @Model.Project.Name
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Project Information Header -->
+    <div class="row mb-4 pm-project-header">
+        <div class="col-md-8">
+            <h4 class="mb-2">@Model.Project.Name</h4>
+            <p class="mb-1">Project ID: <span>@Model.Project.ProjectId</span></p>
+            <p class="mb-0">Description: <span>@Model.Project.Description</span></p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="mb-2">
+                <span class="badge @Model.GetStatusBadgeClass(Model.Project.Status) me-2">@Model.Project.Status</span>
+                <span class="badge pm-badge-secondary">@Model.OverallProgress% Complete</span>
+            </div>
+            <small>
+                <i class="fa-solid fa-calendar me-1"></i>
+                <span>@Model.Project.StartDate.ToString("dd MMM yyyy")</span> -
+                <span>@Model.Project.EndDatePlanned.ToString("dd MMM yyyy")</span>
+            </small>
+        </div>
+    </div>
+
+    <!-- Progress Section -->
+    <div class="row mb-4 pm-progress-section">
+        <div class="col-md-6">
+            <h6 class="mb-2">Project Progress</h6>
+            <div class="progress mb-2 pm-progress">
+                <div class="progress-bar pm-progress-bar" role="progressbar"
+                    style="width: @($"{Model.OverallProgress}%")" aria-valuenow="@Model.OverallProgress"
+                    aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <small>@($"{Model.OverallProgress}%") Complete</small>
+        </div>
+        <div class="col-md-6">
+            <h6 class="mb-2">Task Completion</h6>
+            <div class="progress mb-2 pm-progress">
+                <div class="progress-bar bg-info pm-progress-bar" role="progressbar"
+                    style="width: @(Model.TotalTasks > 0 ? (Model.CompletedTasks * 100 / Model.TotalTasks) : 0)%"></div>
+            </div>
+            <small>@Model.CompletedTasks / @Model.TotalTasks tasks completed</small>
+        </div>
+    </div>
+
+    <!-- Budget Information -->
+    <div class="row mb-4 pm-budget-section">
+        <div class="col-12">
+            <h6 class="mb-2">Budget Information</h6>
+            <div class="card pm-budget-card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <small>Planned Budget</small>
+                            <div class="fw-bold">@Model.Project.BudgetPlanned.ToString("C")</div>
+                        </div>
+                        <div class="col-md-4">
+                            <small>Actual Budget</small>
+                            <div class="fw-bold">@Model.Project.BudgetActual.ToString("C")</div>
+                        </div>
+                        <div class="col-md-4">
+                            <small>Variance</small>
+                            <div
+                                class="fw-bold @(Model.Project.BudgetActual > Model.Project.BudgetPlanned ? "pm-budget-variance-over" : "pm-budget-variance-under")">
+                                @((Model.Project.BudgetActual - Model.Project.BudgetPlanned).ToString("C"))
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Statistics -->
+    <div class="row mb-4 pm-stats-section">
+        <div class="col-12">
+            <h6 class="mb-2">Project Statistics</h6>
+            <div class="card pm-stats-card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-2">
+                            <small>Total Tasks</small>
+                            <div class="fw-bold">@Model.TotalTasks</div>
+                        </div>
+                        <div class="col-md-2">
+                            <small>Pending</small>
+                            <div class="fw-bold pm-stats-pending">@Model.PendingTasks</div>
+                        </div>
+                        <div class="col-md-2">
+                            <small>In Progress</small>
+                            <div class="fw-bold pm-stats-in-progress">@Model.InProgressTasks</div>
+                        </div>
+                        <div class="col-md-2">
+                            <small>Completed</small>
+                            <div class="fw-bold pm-stats-completed">@Model.CompletedTasks</div>
+                        </div>
+                        <div class="col-md-2">
+                            <small>Overdue</small>
+                            <div class="fw-bold pm-stats-overdue">@Model.OverdueTasks</div>
+                        </div>
+                        <div class="col-md-2">
+                            <small>Phases</small>
+                            <div class="fw-bold">@Model.TotalPhases</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Phases Section -->
+    <div class="mb-4 pm-phases-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">
+                <i class="fa-solid fa-layer-group me-2"></i>Project Phases
+                <span class="badge pm-badge-secondary">@Model.Phases.Count</span>
+            </h6>
+            <button class="btn btn-sm pm-btn-primary" data-bs-toggle="modal" data-bs-target="#phaseFormModal"
+                id="addPhaseBtn">
+                <i class="fa-solid fa-plus me-1"></i>Add Phase
+            </button>
+        </div>
+
+        <div id="phasesContainer">
+            @foreach (var phase in Model.Phases)
+            {
+                <div class="card mb-3 pm-phase-card" data-phase-id="@phase.PhaseId">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6 class="mb-1">@phase.Name</h6>
+                                <p class="mb-1">@phase.Description</p>
+                                <div class="mb-2">
+                                    <span class="badge @Model.GetStatusBadgeClass(phase.Status) me-2">@phase.Status</span>
+                                    <span class="badge pm-badge-secondary me-2">
+                                        <i class="fa-solid fa-tasks me-1"></i>@Model.GetTasksForPhase(phase.PhaseId).Count tasks
+                                    </span>
+                                    <small>
+                                        <i class="fa-solid fa-calendar me-1"></i>
+                                        @phase.StartDate.ToString("dd MMM yyyy") - @phase.EndDate.ToString("dd MMM yyyy")
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="mb-2">
+                                    <button class="btn btn-sm pm-btn-outline-primary edit-phase-btn me-1"
+                                        data-phase-id="@phase.PhaseId">
+                                        <i class="fa-solid fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm pm-btn-outline-danger delete-phase-btn"
+                                        data-phase-id="@phase.PhaseId">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="progress mb-1 pm-progress">
+                                    <div class="progress-bar pm-progress-bar"
+                                        style="width: @(Model.GetPhaseProgress(phase.PhaseId))%"></div>
+                                </div>
+                                <small>@(Model.GetPhaseProgress(phase.PhaseId))% Complete</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Tasks Section -->
+    <div class="mb-4 pm-tasks-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">
+                <i class="fa-solid fa-tasks me-2"></i>Project Tasks
+                <span class="badge pm-badge-secondary">@Model.Tasks.Count</span>
+            </h6>
+            <button class="btn btn-sm pm-btn-primary" data-bs-toggle="modal" data-bs-target="#taskFormModal"
+                id="addTaskBtn">
+                <i class="fa-solid fa-plus me-1"></i>Add Task
+            </button>
+        </div>
+
+        <div id="tasksContainer">
+            @foreach (var task in Model.Tasks)
+            {
+                <div class="card mb-3 pm-task-card @(Model.IsTaskOverdue(task) ? "overdue" : "")"
+                    data-task-id="@task.TaskId" data-phase-id="@task.PhaseId">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6 class="mb-1">@task.Name</h6>
+                                <p class="mb-1">@task.Description</p>
+                                <div class="mb-2">
+                                    <span class="badge @Model.GetTaskStatusBadgeClass(task.Status) me-2">@task.Status</span>
+                                    <span
+                                        class="badge @Model.GetPriorityBadgeClass(task.Priority) me-2">@task.Priority</span>
+                                    <span class="badge pm-badge-secondary me-2">
+                                        <i class="fa-solid fa-layer-group me-1"></i>@(Model.Phases.FirstOrDefault(p => p.PhaseId == task.PhaseId)?.Name ?? "Unknown Phase")
+                                    </span>
+                                    <small>
+                                        <i class="fa-solid fa-calendar me-1"></i>
+                                        @task.StartDate.ToString("dd MMM yyyy") - @task.DueDate.ToString("dd MMM yyyy")
+                                    </small>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small>Assigned To</small>
+                                        <div class="fw-bold">@Model.GetContractorName(task.AssignedTo)</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small>Estimated Hours</small>
+                                        <div class="fw-bold">@task.EstimatedHours hours</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="mb-2">
+                                    <button class="btn btn-sm pm-btn-outline-primary edit-task-btn me-1"
+                                        data-task-id="@task.TaskId">
+                                        <i class="fa-solid fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm pm-btn-outline-danger delete-task-btn"
+                                        data-task-id="@task.TaskId">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="progress mb-1 pm-progress">
+                                    <div class="progress-bar pm-progress-bar" style="width: @(task.Progress)%"></div>
+                                </div>
+                                <small>@(task.Progress)% Complete</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Pending Approvals Section -->
+    <div class="mb-4 pm-approvals-section">
+        <h6 class="mb-3">
+            <i class="fa-solid fa-clipboard-check me-2"></i>Task Reports
+        </h6>
+
+        <ul class="nav nav-tabs pm-nav-tabs" id="approvalTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="progress-reports-tab" data-bs-toggle="tab"
+                    data-bs-target="#progress-reports" type="button" role="tab">
+                    Progress Reports (Auto-Approved) <span
+                        class="badge bg-success">@Model.PendingProgressReports.Count</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="task-completions-tab" data-bs-toggle="tab"
+                    data-bs-target="#task-completions" type="button" role="tab">
+                    Task Completions <span class="badge bg-primary">@Model.TasksAwaitingCompletion.Count</span>
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="approvalTabsContent">
+            <!-- Progress Reports Tab -->
+            <div class="tab-pane fade show active" id="progress-reports" role="tabpanel">
+                <div class="mt-3">
+                    @if (Model.PendingProgressReports.Any())
+                    {
+                        @foreach (var report in Model.PendingProgressReports)
+                        {
+                            <div class="card mb-3 pm-approval-card">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <h6 class="mb-1">Progress Report - @Model.GetContractorName(report.SubmittedBy)</h6>
+                                            <small>Submitted: @report.SubmittedAt.ToString("dd MMM yyyy HH:mm")</small>
+                                            <div class="mt-2">
+                                                <p class="mb-1"><strong>Hours Worked:</strong> @report.HoursWorked</p>
+                                                <p class="mb-1"><strong>Description:</strong> @report.Description</p>
+                                                @if (report.AttachedDocumentIds != null && report.AttachedDocumentIds.Any())
+                                                {
+                                                    <div class="mb-1">
+                                                        <strong>Attachments:</strong>
+                                                        <div class="mt-1">
+                                                            @for (int i = 0; i < report.AttachedDocumentIds.Count; i++)
+                                                            {
+                                                                <button class="btn btn-sm btn-outline-primary me-1 mb-1 view-attachment-btn" 
+                                                                        data-document-id="@report.AttachedDocumentIds[i]"
+                                                                        data-report-type="progress"
+                                                                        data-report-id="@report.ProgressReportId">
+                                                                    <i class="fa-solid fa-paperclip me-1"></i>Document @(i + 1)
+                                                                </button>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                }
+                                                @if (!string.IsNullOrEmpty(report.ReviewNotes))
+                                                {
+                                                    <p class="mb-0"><strong>Review Notes:</strong> @report.ReviewNotes</p>
+                                                }
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 text-end">
+                                            <span class="badge bg-success">
+                                                <i class="fa-solid fa-check me-1"></i>Auto-Approved
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="pm-empty-state">
+                            <i class="fa-solid fa-clipboard-check fa-3x mb-3"></i>
+                            <p>No pending progress reports</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Task Completions Tab -->
+            <div class="tab-pane fade" id="task-completions" role="tabpanel">
+                <div class="mt-3">
+                    @if (Model.TasksAwaitingCompletion.Any())
+                    {
+                        @foreach (var task in Model.TasksAwaitingCompletion)
+                        {
+                            <div class="card mb-3 pm-approval-card">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <h6 class="mb-1">@task.Name</h6>
+                                            <small>Assigned to: @Model.GetContractorName(task.AssignedTo)</small>
+                                            <div class="mt-2">
+                                                <p class="mb-1"><strong>Progress:</strong> @task.Progress%</p>
+                                                <p class="mb-0"><strong>Due Date:</strong> @task.DueDate.ToString("dd MMM yyyy")
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 text-end">
+                                            <button class="btn btn-sm btn-outline-info view-completion-details-btn me-2"
+                                                data-task-id="@task.TaskId">
+                                                <i class="fa-solid fa-eye me-1"></i>View Details
+                                            </button>
+                                            <button class="btn btn-sm pm-btn-success approve-completion-btn me-2"
+                                                data-task-id="@task.TaskId">
+                                                <i class="fa-solid fa-check me-1"></i>Approve
+                                            </button>
+                                            <button class="btn btn-sm pm-btn-danger reject-completion-btn"
+                                                data-task-id="@task.TaskId">
+                                                <i class="fa-solid fa-times me-1"></i>Reject
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="pm-empty-state">
+                            <i class="fa-solid fa-tasks fa-3x mb-3"></i>
+                            <p>No tasks awaiting completion approval</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Modals -->
+@await Html.PartialAsync("_PhaseFormModal")
+@await Html.PartialAsync("_TaskFormModal")
+@await Html.PartialAsync("_ProgressReportReviewModal")
+@await Html.PartialAsync("_TaskCompletionReviewModal")
+
+<!-- Document Viewer Modal -->
+<div class="modal fade" id="documentViewerModal" tabindex="-1" aria-labelledby="documentViewerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="documentViewerModalLabel">
+                    <i class="fa-solid fa-file me-2"></i>Document Viewer
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="documentViewerContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading document...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="downloadDocumentBtn">
+                    <i class="fa-solid fa-download me-1"></i>Download
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include CSS -->
+<link rel="stylesheet" href="~/css/pm-project-detail.css" />
+
+<!-- Include JavaScript -->
+<script src="~/js/pm-project-detail.js"></script>
+<script src="~/js/pm-phase-management.js"></script>
+<script src="~/js/pm-task-management.js"></script>
+<script src="~/js/pm-approval-actions.js"></script>

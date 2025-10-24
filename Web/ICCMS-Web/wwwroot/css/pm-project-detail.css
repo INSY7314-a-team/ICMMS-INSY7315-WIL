@@ -1,0 +1,605 @@
+/* PM Project Detail Page Styles - Following Design System */
+
+:root {
+  --primary-bg: #1a1b25; /* Dark navy - main background */
+  --secondary-bg: #2a2b35; /* Lighter dark - card backgrounds */
+  --accent-yellow: #f7ec59; /* Construction yellow - primary CTA */
+  --accent-red: #ff5964; /* Alert/overdue color */
+  --accent-green: #198754; /* Success/completed color */
+  --accent-cyan: #0dcaf0; /* Info/in-progress color */
+  --text-primary: #ffffff; /* Primary text - always white */
+  --text-secondary: #ffffff; /* Secondary text - white with different font weight */
+  --text-muted: #ffffff; /* Muted text - white with opacity */
+  --text-dark: #1a1b25; /* Text on light backgrounds */
+  --border-primary: rgba(247, 236, 89, 0.2); /* Default borders */
+  --border-active: #f7ec59; /* Active/focus borders */
+}
+
+.pm-project-detail-container {
+    background-color: var(--primary-bg);
+    min-height: 100vh;
+    padding: 20px;
+    color: var(--text-primary);
+}
+
+/* Breadcrumb Navigation */
+.pm-project-detail-container .breadcrumb {
+    background: transparent;
+    padding: 0;
+}
+
+.pm-project-detail-container .breadcrumb-item a {
+    color: var(--accent-yellow);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.pm-project-detail-container .breadcrumb-item a:hover {
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-decoration-color: var(--accent-yellow);
+}
+
+.pm-project-detail-container .breadcrumb-item.active {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* Project Information Header */
+.pm-project-header h4 {
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 1.5rem;
+}
+
+.pm-project-header p {
+    color: var(--text-muted);
+    opacity: 0.9;
+    margin-bottom: 0.25rem;
+    font-weight: 400;
+}
+
+.pm-project-header p span {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.pm-project-header small {
+    color: var(--text-muted);
+    opacity: 0.8;
+    font-weight: 400;
+}
+
+/* Progress Section */
+.pm-progress-section h6 {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.pm-progress-section small {
+    color: var(--text-muted);
+    opacity: 0.8;
+    font-weight: 400;
+}
+
+/* Budget Information */
+.pm-budget-section h6 {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.pm-budget-card {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.pm-budget-card:hover {
+    border-color: var(--border-active);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.pm-budget-card .card-body {
+    padding: 1.5rem;
+}
+
+.pm-budget-card small {
+    color: var(--text-muted);
+    opacity: 0.8;
+    font-weight: 400;
+}
+
+.pm-budget-card .fw-bold {
+    color: var(--accent-yellow);
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.pm-budget-variance-over {
+    color: var(--accent-red) !important;
+}
+
+.pm-budget-variance-under {
+    color: var(--accent-green) !important;
+}
+
+/* Project Statistics */
+.pm-stats-section h6 {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.pm-stats-card {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.pm-stats-card:hover {
+    border-color: var(--border-active);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.pm-stats-card .card-body {
+    padding: 1.5rem;
+}
+
+.pm-stats-card small {
+    color: var(--text-muted);
+    opacity: 0.8;
+    font-weight: 400;
+}
+
+.pm-stats-card .fw-bold {
+    color: var(--accent-yellow);
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.pm-stats-pending {
+    color: #ffc107 !important;
+}
+
+.pm-stats-in-progress {
+    color: var(--accent-cyan) !important;
+}
+
+.pm-stats-completed {
+    color: var(--accent-green) !important;
+}
+
+.pm-stats-overdue {
+    color: var(--accent-red) !important;
+}
+
+/* Phases Section */
+.pm-phases-section h6 {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.pm-phases-section .d-flex {
+    align-items: center;
+}
+
+.pm-phases-section .btn {
+    white-space: nowrap;
+}
+
+.pm-phase-card {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.pm-phase-card:hover {
+    border-color: var(--border-active);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+.pm-phase-card .card-body {
+    padding: 1.5rem;
+}
+
+.pm-phase-card h6 {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.pm-phase-card p {
+    color: var(--text-muted);
+    opacity: 0.9;
+    font-weight: 400;
+}
+
+.pm-phase-card small {
+    color: var(--text-muted);
+    opacity: 0.8;
+    font-weight: 400;
+}
+
+/* Tasks Section */
+.pm-tasks-section h6 {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.pm-tasks-section .d-flex {
+    align-items: center;
+}
+
+.pm-tasks-section .btn {
+    white-space: nowrap;
+}
+
+.pm-task-card {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.pm-task-card:hover {
+    border-color: var(--border-active);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+.pm-task-card.overdue {
+    border-color: var(--accent-red);
+    box-shadow: 0 0 12px rgba(255, 89, 100, 0.3);
+}
+
+.pm-task-card .card-body {
+    padding: 1.5rem;
+}
+
+.pm-task-card h6 {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.pm-task-card p {
+    color: var(--text-muted);
+    opacity: 0.9;
+    font-weight: 400;
+}
+
+.pm-task-card small {
+    color: var(--text-muted);
+    opacity: 0.8;
+    font-weight: 400;
+}
+
+.pm-task-card .fw-bold {
+    color: var(--accent-yellow);
+    font-weight: 700;
+}
+
+/* Pending Approvals Section */
+.pm-approvals-section h6 {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.pm-approval-card {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.pm-approval-card:hover {
+    border-color: var(--border-active);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+.pm-approval-card .card-body {
+    padding: 1.5rem;
+}
+
+.pm-approval-card h6 {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.pm-approval-card p {
+    color: var(--text-muted);
+    opacity: 0.9;
+    font-weight: 400;
+}
+
+.pm-approval-card small {
+    color: var(--text-muted);
+    opacity: 0.8;
+    font-weight: 400;
+}
+
+/* Buttons - Following Design System */
+.pm-btn-primary {
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    border: 2px solid var(--accent-yellow);
+    border-radius: 25px;
+    font-weight: 700;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+}
+
+.pm-btn-primary:hover {
+    background: var(--text-primary);
+    color: var(--text-dark);
+    box-shadow: 0 8px 20px rgba(247, 236, 89, 0.5);
+    transform: translateY(-2px);
+}
+
+.pm-btn-outline-primary {
+    background: var(--primary-bg);
+    color: var(--text-primary);
+    border: 2px solid var(--accent-yellow);
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+}
+
+.pm-btn-outline-primary:hover {
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    transform: translateY(-2px);
+}
+
+.pm-btn-outline-danger {
+    background: transparent;
+    color: var(--accent-red);
+    border: 2px solid var(--accent-red);
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+}
+
+.pm-btn-outline-danger:hover {
+    background: var(--accent-red);
+    color: var(--text-primary);
+    transform: translateY(-2px);
+}
+
+.pm-btn-success {
+    background: var(--accent-green);
+    border: 2px solid var(--accent-green);
+    color: var(--text-primary);
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+}
+
+.pm-btn-success:hover {
+    background: var(--text-primary);
+    color: var(--accent-green);
+    transform: translateY(-2px);
+}
+
+.pm-btn-danger {
+    background: var(--accent-red);
+    border: 2px solid var(--accent-red);
+    color: var(--text-primary);
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+}
+
+.pm-btn-danger:hover {
+    background: var(--text-primary);
+    color: var(--accent-red);
+    transform: translateY(-2px);
+}
+
+/* Progress Bars */
+.pm-progress {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    height: 8px;
+}
+
+.pm-progress-bar {
+    background: var(--accent-yellow);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    height: 100%;
+}
+
+.pm-progress-bar.bg-info {
+    background: var(--accent-cyan);
+    height: 100%;
+}
+
+/* Ensure all progress bars fill full height */
+.progress {
+    height: 8px;
+}
+
+.progress-bar {
+    height: 100%;
+}
+
+/* Specific progress bar fixes for phase and task cards */
+.pm-phase-card .progress,
+.pm-task-card .progress {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.pm-phase-card .progress-bar,
+.pm-task-card .progress-bar {
+    height: 100%;
+    background: var(--accent-yellow);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.pm-phase-card .progress-bar.bg-info,
+.pm-task-card .progress-bar.bg-info {
+    background: var(--accent-cyan);
+}
+
+/* Badges */
+.pm-badge-secondary {
+    background: rgba(108, 117, 125, 0.2);
+    color: var(--text-primary);
+    border: 1px solid rgba(108, 117, 125, 0.3);
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+/* Tabs */
+.pm-nav-tabs .nav-link {
+    color: var(--text-muted);
+    opacity: 0.8;
+    border-color: var(--border-primary);
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.pm-nav-tabs .nav-link.active {
+    color: var(--accent-yellow);
+    background-color: transparent;
+    border-color: var(--accent-yellow);
+    font-weight: 600;
+}
+
+.pm-nav-tabs .nav-link:hover {
+    color: var(--text-primary);
+    border-color: var(--border-active);
+}
+
+/* Empty State */
+.pm-empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.pm-empty-state i {
+    color: var(--text-muted);
+    opacity: 0.3;
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.pm-empty-state p {
+    color: var(--text-muted);
+    opacity: 0.8;
+    font-weight: 400;
+}
+
+/* Additional Design System Enhancements */
+.pm-project-detail-container .card {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+}
+
+.pm-project-detail-container .card:hover {
+    border-color: var(--border-active);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+.pm-project-detail-container .badge {
+    font-weight: 500;
+    border-radius: 6px;
+}
+
+.pm-project-detail-container .badge.bg-success {
+    background: rgba(25, 135, 84, 0.2) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(25, 135, 84, 0.3);
+}
+
+.pm-project-detail-container .badge.bg-primary {
+    background: rgba(13, 202, 240, 0.2) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(13, 202, 240, 0.3);
+}
+
+.pm-project-detail-container .badge.bg-warning {
+    background: rgba(255, 193, 7, 0.2) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.pm-project-detail-container .badge.bg-danger {
+    background: rgba(220, 53, 69, 0.2) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.pm-project-detail-container .badge.bg-info {
+    background: rgba(13, 202, 240, 0.2) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(13, 202, 240, 0.3);
+}
+
+.pm-project-detail-container .badge.bg-secondary {
+    background: rgba(108, 117, 125, 0.2) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(108, 117, 125, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .pm-project-detail-container {
+        padding: 1rem;
+    }
+    
+    .pm-phase-card,
+    .pm-task-card,
+    .pm-approval-card {
+        margin-bottom: 1rem;
+    }
+    
+    .pm-btn-primary,
+    .pm-btn-outline-primary,
+    .pm-btn-outline-danger,
+    .pm-btn-success,
+    .pm-btn-danger {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Stack buttons on mobile for better layout */
+    .pm-phases-section .d-flex,
+    .pm-tasks-section .d-flex {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .pm-phases-section .btn,
+    .pm-tasks-section .btn {
+        align-self: flex-end;
+    }
+}
+

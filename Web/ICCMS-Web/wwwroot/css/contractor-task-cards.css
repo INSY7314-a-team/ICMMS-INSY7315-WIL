@@ -1,11 +1,28 @@
 /* Contractor Task Card Styling - Dark Theme Matching Project Cards */
 
+/* === ICCMS COLOR PALETTE === */
+:root {
+  --primary-bg: #1a1b25;
+  --secondary-bg: #2a2b35;
+  --accent-yellow: #f7ec59;
+  --accent-red: #ff5964;
+  --accent-green: #198754;
+  --accent-cyan: #0dcaf0;
+  --text-primary: #ffffff;
+  --text-secondary: #ffffff;
+  --text-muted: #ffffff;
+  --text-dark: #1a1b25;
+  --border-primary: rgba(247, 236, 89, 0.2);
+  --border-active: #f7ec59;
+}
+
 .task-card {
-    background-color: #2A2B35 !important;
+    background-color: var(--secondary-bg) !important;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     height: 100%;
+    color: var(--text-primary);
 }
 
 .task-card:hover {
@@ -15,13 +32,13 @@
 
 /* Card Header */
 .task-card .card-header {
-    background: #1A1B25 !important;
+    background: var(--primary-bg) !important;
     border-radius: 8px 8px 0 0 !important;
     padding: 1.25rem;
 }
 
 .task-card .card-title {
-    color: #FFFFFF !important;
+    color: var(--text-primary) !important;
     font-size: 1.1rem;
     font-weight: 600;
     margin-bottom: 0.25rem;
@@ -29,7 +46,7 @@
 }
 
 .task-card .card-subtitle {
-    color: #CCCCCC !important;
+    color: var(--text-primary) !important;
     font-size: 0.85rem;
     margin-bottom: 0;
 }
@@ -44,8 +61,8 @@
 }
 
 .task-card .status-badge.badge-secondary {
-    background-color: #6C757D !important;
-    color: #FFFFFF !important;
+    background-color: rgba(108, 117, 125, 0.2) !important;
+    color: var(--text-primary) !important;
 }
 
 .task-card .status-badge.badge-warning {
@@ -55,7 +72,7 @@
 
 .task-card .status-badge.badge-info {
     background-color: #17A2B8 !important;
-    color: #FFFFFF !important;
+    color: var(--text-primary) !important;
 }
 
 .task-card .status-badge.badge-success {
@@ -65,18 +82,18 @@
 
 .task-card .status-badge.badge-danger {
     background-color: #FF5964 !important;
-    color: #FFFFFF !important;
+    color: var(--text-primary) !important;
 }
 
 /* Card Body */
 .task-card .card-body {
-    background-color: #2A2B35 !important;
-    color: #FFFFFF !important;
+    background-color: var(--secondary-bg) !important;
+    color: var(--text-primary) !important;
     padding: 1.5rem;
 }
 
 .task-card .card-text {
-    color: #CCCCCC !important;
+    color: var(--text-primary) !important;
     font-size: 0.9rem;
     line-height: 1.4;
     margin-bottom: 1rem;
@@ -91,19 +108,19 @@
 }
 
 .task-card .stat-item small {
-    color: #CCCCCC !important;
+    color: var(--text-primary) !important;
     font-size: 0.8rem;
 }
 
 .task-card .stat-item span {
-    color: #FFFFFF !important;
+    color: var(--text-primary) !important;
     font-weight: 500;
 }
 
 /* Progress Bar */
 .task-card .progress {
     height: 8px;
-    background-color: #1A1B25 !important;
+    background-color: var(--primary-bg) !important;
     border-radius: 4px;
     overflow: hidden;
 }
@@ -115,13 +132,13 @@
 }
 
 .task-card .progress-label {
-    color: #CCCCCC !important;
+    color: var(--text-primary) !important;
     font-size: 0.8rem;
     margin-bottom: 0.25rem;
 }
 
 .task-card .progress-percentage {
-    color: #FFFFFF !important;
+    color: var(--text-primary) !important;
     font-weight: 600;
     font-size: 0.8rem;
 }
@@ -133,7 +150,7 @@
 
 .task-card .time-tracking .progress {
     height: 4px;
-    background-color: #1A1B25 !important;
+    background-color: var(--primary-bg) !important;
 }
 
 .task-card .time-tracking .progress-bar {
@@ -164,12 +181,12 @@
 
 .task-card .priority-badge.priority-high {
     background-color: #FF5964 !important;
-    color: #FFFFFF !important;
+    color: var(--text-primary) !important;
 }
 
 .task-card .overdue-badge {
     background-color: #FF5964 !important;
-    color: #FFFFFF !important;
+    color: var(--text-primary) !important;
     font-size: 0.7rem;
     padding: 0.2rem 0.4rem;
     border-radius: 4px;
@@ -191,13 +208,13 @@
 }
 
 .task-card .progress-reports-info small {
-    color: #CCCCCC !important;
+    color: var(--text-primary) !important;
     font-size: 0.75rem;
 }
 
 /* Card Footer */
 .task-card .card-footer {
-    background-color: #1A1B25 !important;
+    background-color: var(--primary-bg) !important;
     border-radius: 0 0 8px 8px !important;
     padding: 1.25rem;
 }
@@ -228,14 +245,14 @@
 }
 
 .task-card .btn-action.btn-secondary {
-    background-color: #6C757D !important;
-    color: #FFFFFF !important;
+    background-color: rgba(108, 117, 125, 0.2) !important;
+    color: var(--text-primary) !important;
     min-width: 80px;
 }
 
 .task-card .btn-action.btn-info {
     background-color: #17A2B8 !important;
-    color: #FFFFFF !important;
+    color: var(--text-primary) !important;
     flex: 1;
 }
 
@@ -257,20 +274,20 @@
 
 /* Dropdown styling */
 .task-card .dropdown-menu {
-    background-color: #1A1B25 !important;
+    background-color: var(--primary-bg) !important;
     border: 1px solid #F7EC59 !important;
     border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
 .task-card .dropdown-item {
-    color: #FFFFFF !important;
+    color: var(--text-primary) !important;
     padding: 0.5rem 1rem;
     font-size: 0.8rem;
 }
 
 .task-card .dropdown-item:hover {
-    background-color: #2A2B35 !important;
+    background-color: var(--secondary-bg) !important;
     color: #F7EC59 !important;
 }
 
@@ -282,15 +299,15 @@
 
 /* Progress Reports Timeline */
 .task-card .progress-report-item {
-    background-color: #1A1B25 !important;
+    background-color: var(--primary-bg) !important;
     border: 1px solid rgba(247, 236, 89, 0.2) !important;
-    color: #FFFFFF !important;
+    color: var(--text-primary) !important;
 }
 
 .task-card .timeline-item {
-    background-color: #1A1B25 !important;
+    background-color: var(--primary-bg) !important;
     border: 1px solid rgba(247, 236, 89, 0.2) !important;
-    color: #FFFFFF !important;
+    color: var(--text-primary) !important;
 }
 
 .task-card .timeline-marker {
@@ -299,7 +316,7 @@
     border-radius: 50%;
     background-color: #F7EC59; /* or vary by status */
 }.task-card .timeline-content {
-    color: #FFFFFF !important;
+    color: var(--text-primary) !important;
 }
 
 /* Responsive Design */

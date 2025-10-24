@@ -92,6 +92,8 @@ function initializeTaskActions() {
 
 // Setup modal event listeners
 function setupModalEventListeners() {
+  console.log("🔧 Setting up modal event listeners...");
+
   // Progress Report Modal
   const progressReportModal = document.getElementById("progressReportModal");
   if (progressReportModal) {
@@ -139,18 +141,23 @@ function setupModalEventListeners() {
   // Task Details Modal
   const taskDetailsModal = document.getElementById("taskDetailsModal");
   if (taskDetailsModal) {
+    console.log("✅ Task Details Modal found, setting up event listener");
     taskDetailsModal.addEventListener("show.bs.modal", function (event) {
+      console.log("🎭 Task Details Modal opening...");
       const button = event.relatedTarget;
       if (button) {
         const taskId =
           button.getAttribute("data-task-id") ||
           button.closest("[data-task-id]")?.getAttribute("data-task-id");
+        console.log("🔍 Task ID from button:", taskId);
         if (taskId) {
           currentTaskId = taskId;
           loadTaskDetailsForModal(taskId);
         }
       }
     });
+  } else {
+    console.log("❌ Task Details Modal not found!");
   }
 }
 
@@ -192,9 +199,17 @@ function loadTaskDetailsForCompletionModal(taskId) {
 
 // Load task details for modal
 function loadTaskDetailsForModal(taskId) {
+  console.log("🔄 Loading task details for taskId:", taskId);
   fetch(`/Contractor/GetTaskDetails?taskId=${encodeURIComponent(taskId)}`)
-    .then((response) => response.json())
+    .then((response) => {
+      console.log("📡 API Response status:", response.status);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
     .then((task) => {
+      console.log("📋 Task data received:", task);
       if (task) {
         // Update task information
         document.getElementById("modalTaskName").textContent = task.name;
@@ -250,8 +265,9 @@ function loadTaskDetailsForModal(taskId) {
       }
     })
     .catch((error) => {
-      console.error("Failed to load task details:", error);
-      showToast("Failed to load task details", "error");
+      console.error("❌ Failed to load task details:", error);
+      console.error("❌ Error details:", error.message);
+      showToast("Failed to load task details: " + error.message, "error");
     });
 }
 

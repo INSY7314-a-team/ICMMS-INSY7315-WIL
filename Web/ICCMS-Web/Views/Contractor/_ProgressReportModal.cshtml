@@ -5,283 +5,86 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="progressReportModalLabel">
-                    <i class="fa-solid fa-file-lines me-2"></i>Submit Progress Report
+                    <i class="fa-solid fa-chart-line me-2"></i>Submit Progress Report
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <!-- Task Context -->
-                <div class="task-context mb-4 p-3 bg-light rounded">
-                    <h6 class="text-muted mb-2">Task Information</h6>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <strong>Task:</strong> <span id="modalTaskName">Loading...</span>
-                        </div>
-                        <div class="col-md-6">
-                            <strong>Project:</strong> <span id="modalProjectName">Loading...</span>
-                        </div>
-                    </div>
-                    <div class="mt-2">
-                        <strong>Description:</strong> <span id="modalTaskDescription">Loading...</span>
-                    </div>
-                </div>
+            <form id="progressReportForm" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <input type="hidden" id="progressReportTaskId" name="taskId" value="" />
 
-                <!-- Progress Report Form -->
-                <form id="progressReportForm">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" id="progressReportTaskId" name="taskId" />
-
-                    <div class="mb-3">
-                        <label for="progressDescription" class="form-label fw-bold">
-                            <i class="fa-solid fa-comment me-1"></i>Work Description <span class="text-danger">*</span>
-                        </label>
-                        <textarea class="form-control" id="progressDescription" name="description" rows="4"
-                            placeholder="Describe the work completed, materials used, challenges faced, etc."
-                            required></textarea>
-                        <div class="form-text">Provide detailed information about the work completed in this session.
+                    <!-- Task Information -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Task Information</h6>
                         </div>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="hoursWorked" class="form-label fw-bold">
-                                <i class="fa-solid fa-clock me-1"></i>Hours Worked <span class="text-danger">*</span>
-                            </label>
-                            <input type="number" class="form-control" id="hoursWorked" name="hoursWorked" min="0.1"
-                                step="0.1" placeholder="0.0" required>
-                            <div class="form-text">Enter the number of hours worked on this task.</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="progressPercentage" class="form-label fw-bold">
-                                <i class="fa-solid fa-percentage me-1"></i>Progress Percentage
-                            </label>
-                            <div class="input-group">
-                                <input type="number" class="form-control" id="progressPercentage"
-                                    name="progressPercentage" min="0" max="100" step="1" placeholder="0">
-                                <span class="input-group-text">%</span>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h6 id="progressModalTaskName">Loading...</h6>
+                                    <p class="text-muted mb-1">Project: <span
+                                            id="progressModalProjectName">Loading...</span>
+                                    </p>
+                                    <p class="text-muted mb-0">Description: <span
+                                            id="progressModalTaskDescription">Loading...</span></p>
+                                </div>
                             </div>
-                            <div class="form-text">Optional: Estimated completion percentage for this task.</div>
                         </div>
                     </div>
 
+                    <!-- Progress Report Form -->
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="progressDescription" class="form-label">Work Description *</label>
+                            <textarea class="form-control" id="progressDescription" name="description" rows="4"
+                                placeholder="Describe the work completed..." required></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="hoursWorked" class="form-label">Hours Worked *</label>
+                            <input type="number" class="form-control" id="hoursWorked" name="hoursWorked" step="0.1"
+                                min="0.1" placeholder="0.0" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="progressPercentage" class="form-label">Progress Percentage</label>
+                            <input type="number" class="form-control" id="progressPercentage" name="progressPercentage"
+                                min="0" max="100" placeholder="0">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="additionalNotes" class="form-label">Additional Notes</label>
+                            <textarea class="form-control" id="additionalNotes" name="additionalNotes" rows="3"
+                                placeholder="Any additional notes or comments..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Document Upload -->
                     <div class="mb-3">
-                        <label for="progressDocuments" class="form-label fw-bold">
-                            <i class="fa-solid fa-paperclip me-1"></i>Supporting Documents
-                        </label>
+                        <label for="progressDocuments" class="form-label">Attach Documents (Optional)</label>
                         <input type="file" class="form-control" id="progressDocuments" name="documents" multiple
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg">
-                        <div class="form-text">
-                            Upload photos, documents, or other files that support your progress report.
-                            Supported formats: PDF, DOC, DOCX, JPG, PNG, DWG
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="additionalNotes" class="form-label fw-bold">
-                            <i class="fa-solid fa-sticky-note me-1"></i>Additional Notes
-                        </label>
-                        <textarea class="form-control" id="additionalNotes" name="additionalNotes" rows="2"
-                            placeholder="Any additional information, concerns, or requests for the project manager..."></textarea>
-                        <div class="form-text">Optional: Any additional information you'd like to share.</div>
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif">
+                        <div class="form-text">Supported formats: PDF, DOC, DOCX, JPG, PNG, GIF (Max 10MB each)</div>
                     </div>
 
                     <!-- Document Preview -->
-                    <div id="documentPreview" class="mb-3" style="display: none;">
-                        <label class="form-label fw-bold">Selected Documents</label>
+                    <div id="documentPreview" style="display: none;">
+                        <h6>Selected Documents:</h6>
                         <div id="documentList" class="list-group"></div>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fa-solid fa-times me-1"></i>Cancel
-                </button>
-                <button type="button" class="btn btn-primary" id="submitProgressReportBtn"
-                    onclick="submitProgressReport()">
-                    <i class="fa-solid fa-paper-plane me-1"></i>Submit Progress Report
-                </button>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submitProgressReportBtn">
+                        <i class="fa-solid fa-paper-plane me-1"></i>Submit Progress Report
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<script>
-    function openProgressReportModal(taskId) {
-        const modal = new bootstrap.Modal(document.getElementById('progressReportModal'));
-        modal.show();
-        // Reset form first
-        const formEl = document.getElementById('progressReportForm');
-        formEl.reset();
-        document.getElementById('documentPreview').style.display = 'none';
-        document.getElementById('documentList').innerHTML = '';
-
-        // Set task ID AFTER reset
-        document.getElementById('progressReportTaskId').value = taskId;
-
-        // Load task details
-        loadTaskDetailsForProgressModal(taskId); document.getElementById('documentList').innerHTML = '';
-    }
-
-    function loadTaskDetailsForProgressModal(taskId) {
-        fetch(`/Contractor/GetTaskDetails?taskId=${encodeURIComponent(taskId)}`)
-            .then(response => response.json())
-            .then(task => {
-                if (task) {
-                    document.getElementById('modalTaskName').textContent = task.name;
-                    document.getElementById('modalProjectName').textContent = task.projectName;
-                    document.getElementById('modalTaskDescription').textContent = task.description || 'No description provided';
-                }
-            })
-            .catch(error => {
-                console.error('Failed to load task details:', error);
-            });
-    }
-
-    function submitProgressReport() {
-        const form = document.getElementById('progressReportForm');
-        const formData = new FormData(form);
-
-        // Validate required fields
-        const description = document.getElementById('progressDescription').value.trim();
-        const hoursWorked = parseFloat(document.getElementById('hoursWorked').value);
-
-        if (!description) {
-            showToast('Please provide a work description', 'error');
-            return;
-        }
-        if (!hoursWorked || hoursWorked < 0.1) {
-            showToast('Please enter hours worked (minimum 0.1)', 'error');
-            return;
-        }
-    }
-
-    // Show loading state
-    const submitBtn = document.getElementById('submitProgressReportBtn');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Submitting...';
-    submitBtn.disabled = true;
-    // Prepare progress report data
-    const progressPercentageInput = document.getElementById('progressPercentage').value;
-    const progressPercentage = progressPercentageInput !== ''
-        ? Math.max(0, Math.min(100, parseInt(progressPercentageInput, 10)))
-        : null;
-    const additionalNotes = document.getElementById('additionalNotes').value.trim() || null;
-    const progressReport = {
-        taskId: formData.get('taskId'),
-        description: description,
-        hoursWorked: hoursWorked,
-        status: 'Submitted',
-        progressPercentage: progressPercentage,
-        additionalNotes: additionalNotes,
-        attachedDocumentIds: [] // Will be populated after document upload
-    };
-    // Get antiforgery token
-    const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-
-    // Submit progress report
-    fetch('/Contractor/SubmitProgressReport', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'RequestVerificationToken': token
-        },
-        body: JSON.stringify(progressReport)
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('Progress report submitted successfully!', 'success');
-
-                // Close modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('progressReportModal'));
-                if (modal) {
-                    modal.hide();
-                }
-
-                // Refresh task card
-                refreshTaskCard(progressReport.taskId);
-            } else {
-                showToast('Failed to submit progress report: ' + (data.error || 'Unknown error'), 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error submitting progress report:', error);
-            showToast('An error occurred while submitting the progress report', 'error');
-        })
-        .finally(() => {
-            // Reset button state
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-        });
-    }
-
-    function refreshTaskCard(taskId) {
-        // Reload the task card to show updated information
-        const taskCard = document.getElementById(`task-${taskId}`);
-        if (taskCard) {
-            // Trigger a page refresh or reload the task data
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-        }
-    }
-
-    files.forEach((file, index) => {
-        const item = document.createElement('div');
-        item.className = 'list-group-item d-flex justify-content-between align-items-center';
-
-        const left = document.createElement('div');
-        const icon = document.createElement('i');
-        icon.className = 'fa-solid fa-file me-2';
-        const nameSpan = document.createElement('span');
-        nameSpan.textContent = file.name;
-        const size = document.createElement('small');
-        size.className = 'text-muted ms-2';
-        size.textContent = `(${(file.size / 1024).toFixed(1)} KB)`;
-        left.append(icon, nameSpan, size);
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'btn btn-sm btn-outline-danger';
-        btn.addEventListener('click', () => removeDocument(index));
-        const x = document.createElement('i');
-        x.className = 'fa-solid fa-times';
-        btn.appendChild(x);
-
-        item.append(left, btn);
-        list.appendChild(item);
-    });                        <i class="fa-solid fa-file me-2"></i>
-                        <span>${file.name}</span>
-                        <small class="text-muted ms-2">(${(file.size / 1024).toFixed(1)} KB)</small>
-                    </div >
-        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeDocument(${index})">
-            <i class="fa-solid fa-times"></i>
-        </button>
-    `;
-                list.appendChild(item);
-            });
-        } else {
-            preview.style.display = 'none';
-        }
-    });
-
-    function removeDocument(index) {
-        const input = document.getElementById('progressDocuments');
-        const dt = new DataTransfer();
-        const files = Array.from(input.files);
-
-        files.forEach((file, i) => {
-            if (i !== index) {
-                dt.items.add(file);
-            }
-        });
-
-        input.files = dt.files;
-        input.dispatchEvent(new Event('change'));
-    }
-
-    // Toast functionality removed - using console logging instead
-    function showToast(message, type = 'info') {
-        console.log(`📢 ${ type.toUpperCase() }: ${ message }`);
-    }
-</script>
+<!-- Progress Report Modal - Scripts moved to contractor-task-actions.js -->

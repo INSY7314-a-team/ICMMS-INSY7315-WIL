@@ -1,0 +1,250 @@
+<!-- Progress Report Review Modal -->
+<div class="modal fade" id="progressReportReviewModal" tabindex="-1" aria-labelledby="progressReportReviewModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="progressReportReviewModalLabel">
+                    <i class="fa-solid fa-clipboard-check me-2"></i>Review Progress Report
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="progressReportContent">
+                    <!-- Progress report details will be loaded here -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading progress report...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger me-2" id="rejectProgressBtn">
+                    <i class="fa-solid fa-times me-1"></i>Reject
+                </button>
+                <button type="button" class="btn btn-success" id="approveProgressBtn">
+                    <i class="fa-solid fa-check me-1"></i>Approve
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rejection Notes Modal -->
+<div class="modal fade" id="rejectionNotesModal" tabindex="-1" aria-labelledby="rejectionNotesModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rejectionNotesModalLabel">
+                    <i class="fa-solid fa-times-circle me-2"></i>Reject Progress Report
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="rejectionNotes" class="form-label">Rejection Notes</label>
+                    <textarea class="form-control" id="rejectionNotes" rows="4"
+                        placeholder="Please provide feedback on why this progress report is being rejected..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmRejectBtn">
+                    <i class="fa-solid fa-times me-1"></i>Reject Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const progressReportModal = document.getElementById('progressReportReviewModal');
+        const rejectionNotesModal = document.getElementById('rejectionNotesModal');
+        const progressReportContent = document.getElementById('progressReportContent');
+        const approveProgressBtn = document.getElementById('approveProgressBtn');
+        const rejectProgressBtn = document.getElementById('rejectProgressBtn');
+        const confirmRejectBtn = document.getElementById('confirmRejectBtn');
+        const rejectionNotes = document.getElementById('rejectionNotes');
+
+        let currentReportId = null;
+
+        // Handle approve button
+        approveProgressBtn.addEventListener('click', function () {
+            if (!currentReportId) return;
+
+            if (!confirm('Are you sure you want to approve this progress report?')) {
+                return;
+            }
+
+            approveProgressBtn.disabled = true;
+            approveProgressBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Approving...';
+
+            fetch(`/ProjectManager/ApproveProgressReport?reportId=${currentReportId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showSuccessMessage('Progress report approved successfully!');
+                        progressReportModal.hide();
+                        // Refresh approvals list
+                        if (typeof refreshApprovalsList === 'function') {
+                            refreshApprovalsList();
+                        }
+                    } else {
+                        showErrorMessage(data.error || 'Failed to approve progress report');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error approving progress report:', error);
+                    showErrorMessage('An error occurred while approving the progress report');
+                })
+                .finally(() => {
+                    approveProgressBtn.disabled = false;
+                    approveProgressBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Approve';
+                });
+        });
+
+        // Handle reject button
+        rejectProgressBtn.addEventListener('click', function () {
+            rejectionNotesModal.show();
+        });
+
+        // Handle confirm reject
+        confirmRejectBtn.addEventListener('click', function () {
+            if (!currentReportId) return;
+
+            const notes = rejectionNotes.value.trim();
+
+            confirmRejectBtn.disabled = true;
+            confirmRejectBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Rejecting...';
+
+            fetch(`/ProjectManager/RejectProgressReport?reportId=${currentReportId}&notes=${encodeURIComponent(notes)}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showSuccessMessage('Progress report rejected');
+                        rejectionNotesModal.hide();
+                        progressReportModal.hide();
+                        // Refresh approvals list
+                        if (typeof refreshApprovalsList === 'function') {
+                            refreshApprovalsList();
+                        }
+                    } else {
+                        showErrorMessage(data.error || 'Failed to reject progress report');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error rejecting progress report:', error);
+                    showErrorMessage('An error occurred while rejecting the progress report');
+                })
+                .finally(() => {
+                    confirmRejectBtn.disabled = false;
+                    confirmRejectBtn.innerHTML = '<i class="fa-solid fa-times me-1"></i>Reject Report';
+                });
+        });
+
+        // Reset rejection notes when modal is shown
+        rejectionNotesModal.addEventListener('show.bs.modal', function () {
+            rejectionNotes.value = '';
+        });
+
+        // Global function to show progress report (called from approval actions)
+        window.showProgressReport = function (reportId) {
+            currentReportId = reportId;
+            loadProgressReportDetails(reportId);
+            progressReportModal.show();
+        };
+
+        function loadProgressReportDetails(reportId) {
+            // Show loading state
+            progressReportContent.innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading progress report...</p>
+            </div>
+        `;
+
+            // In a real implementation, you would fetch the report details
+            // For now, we'll show a placeholder
+            setTimeout(() => {
+                progressReportContent.innerHTML = `
+                <div class="progress-report-details">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6>Report Information</h6>
+                            <p><strong>Report ID:</strong> ${reportId}</p>
+                            <p><strong>Submitted:</strong> <span id="reportSubmittedDate">Loading...</span></p>
+                            <p><strong>Status:</strong> <span class="badge bg-warning">Pending Review</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Contractor Information</h6>
+                            <p><strong>Submitted By:</strong> <span id="reportSubmittedBy">Loading...</span></p>
+                            <p><strong>Hours Worked:</strong> <span id="reportHoursWorked">Loading...</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6>Description</h6>
+                        <div class="card">
+                            <div class="card-body">
+                                <p id="reportDescription">Loading description...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6>Attachments</h6>
+                        <div id="reportAttachments">
+                            <p class="text-muted">No attachments</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            }, 500);
+        }
+    });
+
+    function showSuccessMessage(message) {
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-success position-fixed';
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fa-solid fa-check-circle me-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 3000);
+    }
+
+    function showErrorMessage(message) {
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-danger position-fixed';
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fa-solid fa-exclamation-circle me-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 5000);
+    }
+</script>

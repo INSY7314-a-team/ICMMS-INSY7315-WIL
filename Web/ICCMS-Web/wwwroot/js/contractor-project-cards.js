@@ -362,10 +362,7 @@ function viewTaskDetails(taskId) {
 function submitTaskProgress(taskId) {
   console.log(`Submitting progress for task ${taskId}`);
 
-  // Set current task ID for modal
-  if (typeof currentTaskId !== "undefined") {
-    currentTaskId = taskId;
-  }
+  // currentTaskId is managed by contractor-task-actions.js
 
   // Load task details for progress modal and open it
   if (typeof loadTaskDetailsForProgressModal === "function") {
@@ -387,10 +384,7 @@ function submitTaskProgress(taskId) {
 function requestTaskCompletion(taskId) {
   console.log(`Requesting completion for task ${taskId}`);
 
-  // Set current task ID for modal
-  if (typeof currentTaskId !== "undefined") {
-    currentTaskId = taskId;
-  }
+  // currentTaskId is managed by contractor-task-actions.js
 
   // Load task details for completion modal and open it
   if (typeof loadTaskDetailsForCompletionModal === "function") {

@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Security.Claims;
+using System.Text.Json;
 using ICCMS_Web.Models;
 using ICCMS_Web.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -239,6 +240,15 @@ namespace ICCMS_Web.Controllers
                 var extractedProjectId = !string.IsNullOrEmpty(firstTask.ProjectId)
                     ? firstTask.ProjectId
                     : projectId;
+
+                // Log project ID for debugging
+                _logger.LogInformation(
+                    "🔍 Project ID Debug - Original: {OriginalId}, Task ProjectId: {TaskProjectId}, Extracted: {ExtractedId}",
+                    projectId,
+                    firstTask.ProjectId,
+                    extractedProjectId
+                );
+
                 var projectName = !string.IsNullOrEmpty(firstTask.ProjectId)
                     ? $"Project {firstTask.ProjectId.Substring(0, Math.Min(8, firstTask.ProjectId.Length))}"
                     : "Unknown Project";
@@ -345,23 +355,30 @@ namespace ICCMS_Web.Controllers
         {
             try
             {
+                _logger.LogInformation("🔍 GetTaskDetails called for taskId: {TaskId}", taskId);
+
                 var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userId))
                 {
+                    _logger.LogWarning("❌ User ID not found");
                     return Unauthorized(new { error = "User ID not found" });
                 }
+
+                _logger.LogInformation("👤 User ID: {UserId}", userId);
 
                 var task = await _contractorService.GetTaskWithProjectAsync(taskId);
                 if (task == null)
                 {
+                    _logger.LogWarning("❌ Task not found for taskId: {TaskId}", taskId);
                     return NotFound(new { error = "Task not found" });
                 }
 
+                _logger.LogInformation("✅ Task found: {TaskName}", task.Name);
                 return Json(task);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting task details for {TaskId}", taskId);
+                _logger.LogError(ex, "❌ Error getting task details for {TaskId}", taskId);
                 return StatusCode(500, new { error = ex.Message });
             }
         }
@@ -399,23 +416,47 @@ namespace ICCMS_Web.Controllers
                     return Unauthorized(new { error = "User not authenticated" });
                 }
 
+                _logger.LogInformation("🔍 Getting assigned tasks for UpdateTaskStatus");
+
                 // Get the existing task first to ensure we have all required fields
-                var existingTasks = await _apiClient.GetAsync<List<ProjectTaskDto>>(
-                    $"/api/contractors/tasks/assigned",
-                    currentUser
+                var existingTasksResponse = await _apiClient.GetAsync<
+                    PaginatedResponse<ContractorTaskDto>
+                >($"/api/contractors/tasks/assigned", currentUser);
+
+                _logger.LogInformation(
+                    "📡 API response received: {Response}",
+                    existingTasksResponse != null ? "Success" : "Null"
                 );
 
-                if (existingTasks == null)
+                if (existingTasksResponse == null || existingTasksResponse.Data == null)
                 {
+                    _logger.LogWarning("❌ No tasks returned from API");
                     return StatusCode(500, new { error = "Failed to get task data" });
                 }
 
+                _logger.LogInformation(
+                    "✅ Found {Count} assigned tasks",
+                    existingTasksResponse.Data.Count
+                );
+
                 // Find the specific task
-                var taskToUpdate = existingTasks.FirstOrDefault(t => t.TaskId == request.TaskId);
+                var taskToUpdate = existingTasksResponse.Data.FirstOrDefault(t =>
+                    t.TaskId == request.TaskId
+                );
                 if (taskToUpdate == null)
                 {
+                    _logger.LogWarning(
+                        "❌ Task {TaskId} not found in assigned tasks",
+                        request.TaskId
+                    );
+                    _logger.LogWarning(
+                        "📋 Available task IDs: {TaskIds}",
+                        string.Join(", ", existingTasksResponse.Data.Select(t => t.TaskId))
+                    );
                     return NotFound(new { error = "Task not found" });
                 }
+
+                _logger.LogInformation("✅ Found task to update: {TaskName}", taskToUpdate.Name);
 
                 // Update only the status field
                 taskToUpdate.Status = request.Status;
@@ -548,6 +589,74 @@ namespace ICCMS_Web.Controllers
         }
 
         /// <summary>
+        /// Submit a completion report for a task
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> SubmitCompletionReport(
+            [FromBody] CompletionReportDto report
+        )
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { error = "User ID not found" });
+                }
+
+                if (string.IsNullOrEmpty(report.TaskId))
+                {
+                    return BadRequest(new { error = "Task ID is required" });
+                }
+
+                if (string.IsNullOrEmpty(report.CompletionSummary))
+                {
+                    return BadRequest(new { error = "Completion summary is required" });
+                }
+
+                if (report.FinalHours <= 0)
+                {
+                    return BadRequest(new { error = "Final hours must be greater than 0" });
+                }
+
+                // Set submission details
+                report.SubmittedBy = userId;
+                report.SubmittedAt = DateTime.UtcNow;
+                report.Status = "Submitted";
+
+                var result = await _contractorService.SubmitCompletionReportAsync(report);
+
+                _logger.LogInformation(
+                    "Completion report submitted for task {TaskId} by contractor {UserId}",
+                    report.TaskId,
+                    userId
+                );
+
+                return Json(
+                    new
+                    {
+                        success = true,
+                        report = result,
+                        message = "Completion report submitted successfully",
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error submitting completion report");
+                return StatusCode(
+                    500,
+                    new
+                    {
+                        success = false,
+                        error = ex.Message,
+                        message = "Failed to submit completion report",
+                    }
+                );
+            }
+        }
+
+        /// <summary>
         /// Get progress reports for a task
         /// </summary>
         [HttpGet]
@@ -567,6 +676,42 @@ namespace ICCMS_Web.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting progress reports for task {TaskId}", taskId);
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get completion reports for a task
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetCompletionReports(string taskId)
+        {
+            try
+            {
+                _logger.LogInformation(
+                    "🔍 GetCompletionReports endpoint called for task {TaskId}",
+                    taskId
+                );
+
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    _logger.LogWarning("User ID not found for completion reports request");
+                    return Unauthorized(new { error = "User ID not found" });
+                }
+
+                var reports = await _contractorService.GetCompletionReportsAsync(taskId);
+                _logger.LogInformation(
+                    "Retrieved {Count} completion reports for task {TaskId}",
+                    reports?.Count ?? 0,
+                    taskId
+                );
+
+                return Json(reports);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting completion reports for task {TaskId}", taskId);
                 return StatusCode(500, new { error = ex.Message });
             }
         }
