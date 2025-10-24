@@ -15,7 +15,9 @@ namespace ICCMS_API.Services
             string collection,
             Dictionary<string, object> filters,
             int page = 1,
-            int pageSize = 20
+            int pageSize = 20,
+            string orderBy = "StartDate",
+            bool orderDescending = true
         )
             where T : class;
         Task<int> GetCollectionCountAsync<T>(string collection, Dictionary<string, object> filters)
@@ -25,6 +27,13 @@ namespace ICCMS_API.Services
         Task AddDocumentWithIdAsync<T>(string collection, string documentId, T document)
             where T : class;
         Task UpdateDocumentAsync<T>(string collection, string documentId, T document)
+            where T : class;
+        Task<bool> UpdateDocumentConditionallyAsync<T>(
+            string collection,
+            string documentId,
+            T document,
+            Dictionary<string, object> conditions
+        )
             where T : class;
         Task DeleteDocumentAsync(string collection, string documentId);
     }
@@ -180,6 +189,65 @@ namespace ICCMS_API.Services
             }
         }
 
+        public async Task<bool> UpdateDocumentConditionallyAsync<T>(
+            string collection,
+            string documentId,
+            T document,
+            Dictionary<string, object> conditions
+        )
+            where T : class
+        {
+            try
+            {
+                Console.WriteLine($"Conditionally updating document: {collection}/{documentId}");
+
+                return await _firestoreDb.RunTransactionAsync(async transaction =>
+                {
+                    var docRef = _firestoreDb.Collection(collection).Document(documentId);
+                    var snapshot = await transaction.GetSnapshotAsync(docRef);
+
+                    if (!snapshot.Exists)
+                    {
+                        Console.WriteLine($"Document {documentId} does not exist");
+                        return false;
+                    }
+
+                    // Check all conditions
+                    foreach (var condition in conditions)
+                    {
+                        if (!snapshot.ContainsField(condition.Key))
+                        {
+                            Console.WriteLine(
+                                $"Document {documentId} does not contain field {condition.Key}"
+                            );
+                            return false;
+                        }
+
+                        var fieldValue = snapshot.GetValue<object>(condition.Key);
+                        if (!fieldValue?.Equals(condition.Value) == true)
+                        {
+                            Console.WriteLine(
+                                $"Condition failed: {condition.Key} = {fieldValue}, expected {condition.Value}"
+                            );
+                            return false;
+                        }
+                    }
+
+                    // All conditions met, perform the update
+                    transaction.Set(docRef, document);
+                    Console.WriteLine($"Conditional update successful for document: {documentId}");
+                    return true;
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"Error conditionally updating document {documentId}: {ex.Message}"
+                );
+                throw;
+            }
+        }
+
         public async Task DeleteDocumentAsync(string collection, string documentId)
         {
             try
@@ -199,7 +267,9 @@ namespace ICCMS_API.Services
             string collection,
             Dictionary<string, object> filters,
             int page = 1,
-            int pageSize = 20
+            int pageSize = 20,
+            string orderBy = "StartDate",
+            bool orderDescending = true
         )
             where T : class
         {
@@ -251,6 +321,12 @@ namespace ICCMS_API.Services
                                     filter.Value
                                 );
                                 break;
+                            case "assignedto":
+                                query = query.WhereEqualTo("assignedTo", filter.Value);
+                                break;
+                            case "taskid":
+                                query = query.WhereEqualTo("TaskId", filter.Value);
+                                break;
                             case "searchquery":
                                 // For text search, we'll need to implement a different approach
                                 // Firestore doesn't support full-text search natively
@@ -260,8 +336,15 @@ namespace ICCMS_API.Services
                     }
                 }
 
-                // Apply ordering and pagination
-                query = query.OrderByDescending("StartDate");
+                // Apply ordering
+                if (orderDescending)
+                {
+                    query = query.OrderByDescending(orderBy);
+                }
+                else
+                {
+                    query = query.OrderBy(orderBy);
+                }
 
                 // Get all results first (Firestore limitation - no direct offset support)
                 var snapshot = await query.GetSnapshotAsync();
@@ -351,6 +434,12 @@ namespace ICCMS_API.Services
                                     "startDatePlanned",
                                     filter.Value
                                 );
+                                break;
+                            case "assignedto":
+                                query = query.WhereEqualTo("assignedTo", filter.Value);
+                                break;
+                            case "taskid":
+                                query = query.WhereEqualTo("TaskId", filter.Value);
                                 break;
                         }
                     }

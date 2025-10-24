@@ -556,23 +556,36 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                Console.WriteLine($"[GetProject] Requesting project {id}");
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                Console.WriteLine($"[GetProject] Current user ID: {currentUserId}");
+
                 var project = await _firebaseService.GetDocumentAsync<Project>("projects", id);
                 if (project == null)
                 {
+                    Console.WriteLine($"[GetProject] Project {id} not found in database");
                     return NotFound(new { error = "Project not found" });
                 }
-                else if (
-                    project.ProjectManagerId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                )
+
+                Console.WriteLine(
+                    $"[GetProject] Project found - ProjectManagerId: {project.ProjectManagerId}"
+                );
+                if (project.ProjectManagerId != currentUserId)
                 {
+                    Console.WriteLine(
+                        $"[GetProject] Access denied - ProjectManagerId ({project.ProjectManagerId}) != CurrentUserId ({currentUserId})"
+                    );
                     return NotFound(
                         new { error = "You are not authorized to access this project" }
                     );
                 }
+
+                Console.WriteLine($"[GetProject] Access granted for project {id}");
                 return Ok(project);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[GetProject] Error: {ex.Message}");
                 return StatusCode(500, new { error = ex.Message });
             }
         }
@@ -1318,6 +1331,637 @@ namespace ICCMS_API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        // ===================== PROGRESS REPORT & COMPLETION APPROVAL ENDPOINTS =====================
+
+        [HttpGet("progress-reports/pending")]
+        public async Task<ActionResult<List<ProgressReport>>> GetPendingProgressReports()
+        {
+            try
+            {
+                var progressReports = await _firebaseService.GetCollectionAsync<ProgressReport>(
+                    "progressReports"
+                );
+                var pendingReports = progressReports
+                    .Where(pr => pr.Status == "Submitted")
+                    .OrderBy(pr => pr.SubmittedAt)
+                    .ToList();
+
+                return Ok(pendingReports);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("progress-report/{id}/approve")] // DEPRECATED: Progress reports are now auto-approved
+        public async Task<ActionResult<ProgressReport>> ApproveProgressReport(
+            string id,
+            [FromBody] object approvalData
+        )
+        {
+            try
+            {
+                var pmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(pmId))
+                {
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
+                var report = await _firebaseService.GetDocumentAsync<ProgressReport>(
+                    "progressReports",
+                    id
+                );
+                if (report == null)
+                {
+                    return NotFound(new { error = "Progress report not found" });
+                }
+
+                // Ensure this report belongs to a project managed by the caller
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    report.ProjectId
+                );
+                if (project == null || project.ProjectManagerId != pmId)
+                {
+                    return Forbid();
+                }
+
+                // Idempotency and state preconditions
+                if (report.Status == "Approved")
+                {
+                    return Ok(report);
+                }
+
+                // Update the report status
+                report.Status = "Approved";
+                report.ReviewedAt = DateTime.UtcNow;
+                report.ReviewedBy = pmId;
+                await _firebaseService.UpdateDocumentAsync("progressReports", id, report);
+
+                return Ok(report);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    new
+                    {
+                        error = "An error occurred while approving progress report",
+                        details = ex.Message,
+                    }
+                );
+            }
+        }
+
+        [HttpPut("progress-report/{id}/reject")] // DEPRECATED: Progress reports are now auto-approved
+        public async Task<ActionResult<ProgressReport>> RejectProgressReport(
+            string id,
+            [FromBody] object rejectionData
+        )
+        {
+            try
+            {
+                var pmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(pmId))
+                {
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
+                var report = await _firebaseService.GetDocumentAsync<ProgressReport>(
+                    "progressReports",
+                    id
+                );
+                if (report == null)
+                {
+                    return NotFound(new { error = "Progress report not found" });
+                }
+
+                // ownership guard
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    report.ProjectId
+                );
+                if (project == null || project.ProjectManagerId != pmId)
+                {
+                    return Forbid();
+                }
+                // idempotent reject
+                if (report.Status == "Rejected")
+                {
+                    return Ok(report);
+                }
+                // only allow rejecting from Submitted state
+                if (report.Status != "Submitted")
+                {
+                    return Conflict(new { error = "Only 'Submitted' reports can be rejected." });
+                }
+
+                // Update report status
+                report.Status = "Rejected";
+                report.ReviewedBy = pmId;
+                report.ReviewedAt = DateTime.UtcNow;
+                // Note: ReviewNotes would be extracted from rejectionData in a real implementation
+
+                await _firebaseService.UpdateDocumentAsync("progressReports", id, report);
+
+                return Ok(report);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("task/{taskId}/approve-completion")]
+        public async Task<ActionResult<ProjectTask>> ApproveTaskCompletion(string taskId)
+        {
+            try
+            {
+                var pmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(pmId))
+                {
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
+                var task = await _firebaseService.GetDocumentAsync<ProjectTask>("tasks", taskId);
+                if (task == null)
+                {
+                    return NotFound(new { error = "Task not found" });
+                }
+
+                // Verify the task belongs to a project managed by this PM
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    task.ProjectId
+                );
+                if (project == null || project.ProjectManagerId != pmId)
+                {
+                    return Forbid();
+                }
+
+                // Find and update the completion report for this task
+                var allCompletionReports =
+                    await _firebaseService.GetCollectionAsync<CompletionReport>(
+                        "completionReports"
+                    );
+                var completionReport = allCompletionReports
+                    .Where(r => r.TaskId == taskId && r.Status == "Submitted")
+                    .OrderByDescending(r => r.SubmittedAt)
+                    .FirstOrDefault();
+
+                if (completionReport != null)
+                {
+                    Console.WriteLine(
+                        $"[ApproveTaskCompletion] Found completion report {completionReport.CompletionReportId} for task {taskId}"
+                    );
+
+                    // Update the completion report status
+                    completionReport.Status = "Approved";
+                    completionReport.ReviewedAt = DateTime.UtcNow;
+                    completionReport.ReviewedBy = pmId;
+
+                    await _firebaseService.UpdateDocumentAsync(
+                        "completionReports",
+                        completionReport.CompletionReportId,
+                        completionReport
+                    );
+                    Console.WriteLine(
+                        $"[ApproveTaskCompletion] Updated completion report status to Approved"
+                    );
+                }
+                else
+                {
+                    Console.WriteLine(
+                        $"[ApproveTaskCompletion] No completion report found for task {taskId}"
+                    );
+                }
+
+                // Update task status to completed
+                task.Status = "Completed";
+                task.CompletedDate = DateTime.UtcNow;
+
+                await _firebaseService.UpdateDocumentAsync("tasks", taskId, task);
+                Console.WriteLine(
+                    $"[ApproveTaskCompletion] Updated task {taskId} status to Completed"
+                );
+
+                // Update task progress to 100% and phase progress
+                await UpdateTaskProgressToComplete(taskId);
+                await UpdatePhaseProgress(task.PhaseId);
+
+                return Ok(task);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    new
+                    {
+                        error = "An error occurred while approving task completion",
+                        details = ex.Message,
+                    }
+                );
+            }
+        }
+
+        [HttpPut("task/{taskId}/reject-completion")]
+        public async Task<ActionResult<ProjectTask>> RejectTaskCompletion(
+            string taskId,
+            [FromBody] object rejectionData
+        )
+        {
+            try
+            {
+                var pmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(pmId))
+                {
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
+                var task = await _firebaseService.GetDocumentAsync<ProjectTask>("tasks", taskId);
+                if (task == null)
+                {
+                    return NotFound(new { error = "Task not found" });
+                }
+
+                // Verify that the calling PM actually owns the parent project
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    task.ProjectId
+                );
+                if (project == null || project.ProjectManagerId != pmId)
+                {
+                    return Forbid();
+                }
+
+                // Idempotency: if it’s already In Progress, just return it
+                if (task.Status == "In Progress")
+                {
+                    return Ok(task);
+                }
+
+                // Revert task status back to In Progress and clear any completion timestamp
+                task.Status = "In Progress";
+                task.CompletedDate = null;
+
+                await _firebaseService.UpdateDocumentAsync("tasks", taskId, task);
+
+                // Recalculate phase progress since a task was rejected
+                await UpdatePhaseProgress(task.PhaseId);
+
+                return Ok(task);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("completion-reports")]
+        public async Task<ActionResult<List<CompletionReport>>> GetCompletionReports()
+        {
+            try
+            {
+                var pmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                Console.WriteLine($"[GetCompletionReports] PM ID: {pmId}");
+                if (string.IsNullOrEmpty(pmId))
+                {
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
+                // Get all projects managed by this PM
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                Console.WriteLine($"[GetCompletionReports] Found {projects.Count} total projects");
+                Console.WriteLine($"[GetCompletionReports] Current PM ID: {pmId}");
+
+                var pmProjects = projects.Where(p => p.ProjectManagerId == pmId).ToList();
+                Console.WriteLine(
+                    $"[GetCompletionReports] Found {pmProjects.Count} projects for PM {pmId}"
+                );
+
+                var projectIds = pmProjects.Select(p => p.ProjectId).ToList();
+                Console.WriteLine(
+                    $"[GetCompletionReports] PM project IDs: {string.Join(", ", projectIds)}"
+                );
+
+                // Get all completion reports and filter by project
+                var allCompletionReports =
+                    await _firebaseService.GetCollectionAsync<CompletionReport>(
+                        "completionReports"
+                    );
+                Console.WriteLine(
+                    $"[GetCompletionReports] Found {allCompletionReports.Count} total completion reports"
+                );
+
+                // Log all completion report project IDs
+                var allReportProjectIds = allCompletionReports
+                    .Select(r => r.ProjectId)
+                    .Distinct()
+                    .ToList();
+                Console.WriteLine(
+                    $"[GetCompletionReports] Completion report project IDs: {string.Join(", ", allReportProjectIds)}"
+                );
+
+                var pmCompletionReports = allCompletionReports
+                    .Where(r => projectIds.Contains(r.ProjectId))
+                    .OrderByDescending(r => r.SubmittedAt)
+                    .ToList();
+
+                Console.WriteLine(
+                    $"[GetCompletionReports] Found {pmCompletionReports.Count} completion reports for PM projects"
+                );
+
+                // If no completion reports found, check if there are orphaned reports
+                if (pmCompletionReports.Count == 0 && allCompletionReports.Count > 0)
+                {
+                    var orphanedReports = allCompletionReports
+                        .Where(r => !projectIds.Contains(r.ProjectId))
+                        .ToList();
+                    Console.WriteLine(
+                        $"[GetCompletionReports] Found {orphanedReports.Count} orphaned completion reports"
+                    );
+
+                    // Log details about orphaned reports for debugging
+                    foreach (var report in orphanedReports)
+                    {
+                        Console.WriteLine(
+                            $"[GetCompletionReports] Orphaned report: TaskId={report.TaskId}, ProjectId={report.ProjectId}, SubmittedBy={report.SubmittedBy}"
+                        );
+                    }
+                }
+
+                return Ok(pmCompletionReports);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("completion-report/{id}")]
+        public async Task<ActionResult<CompletionReport>> GetCompletionReport(string id)
+        {
+            try
+            {
+                var pmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(pmId))
+                {
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
+                var report = await _firebaseService.GetDocumentAsync<CompletionReport>(
+                    "completionReports",
+                    id
+                );
+                if (report == null)
+                {
+                    return NotFound(new { error = "Completion report not found" });
+                }
+
+                // Ensure this report belongs to a project managed by the caller
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    report.ProjectId
+                );
+                if (project == null || project.ProjectManagerId != pmId)
+                {
+                    return Forbid();
+                }
+
+                return Ok(report);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("completion-report/{id}/approve")]
+        public async Task<ActionResult<CompletionReport>> ApproveCompletionReport(
+            string id,
+            [FromBody] object approvalData
+        )
+        {
+            try
+            {
+                Console.WriteLine($"[ApproveCompletionReport] Approving completion report {id}");
+                var pmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                Console.WriteLine($"[ApproveCompletionReport] PM ID: {pmId}");
+                if (string.IsNullOrEmpty(pmId))
+                {
+                    Console.WriteLine($"[ApproveCompletionReport] No PM ID found");
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
+                var report = await _firebaseService.GetDocumentAsync<CompletionReport>(
+                    "completionReports",
+                    id
+                );
+                if (report == null)
+                {
+                    return NotFound(new { error = "Completion report not found" });
+                }
+
+                // Ensure this report belongs to a project managed by the caller
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    report.ProjectId
+                );
+                if (project == null || project.ProjectManagerId != pmId)
+                {
+                    return Forbid();
+                }
+
+                // Idempotency and state preconditions
+                if (report.Status == "Approved")
+                {
+                    return Ok(report);
+                }
+
+                // Update the report status
+                report.Status = "Approved";
+                report.ReviewedAt = DateTime.UtcNow;
+                report.ReviewedBy = pmId;
+                await _firebaseService.UpdateDocumentAsync("completionReports", id, report);
+
+                // Update the associated task status to "Completed"
+                var task = await _firebaseService.GetDocumentAsync<ProjectTask>(
+                    "tasks",
+                    report.TaskId
+                );
+                if (task != null)
+                {
+                    task.Status = "Completed";
+                    task.CompletedDate = DateTime.UtcNow;
+                    await _firebaseService.UpdateDocumentAsync("tasks", report.TaskId, task);
+                    Console.WriteLine(
+                        $"[ApproveCompletionReport] Updated task {report.TaskId} status to Completed"
+                    );
+
+                    // Update task progress to 100% and phase progress
+                    await UpdateTaskProgressToComplete(report.TaskId);
+                    await UpdatePhaseProgress(task.PhaseId);
+                }
+
+                return Ok(report);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("completion-report/{id}/reject")]
+        public async Task<ActionResult<CompletionReport>> RejectCompletionReport(
+            string id,
+            [FromBody] object rejectionData
+        )
+        {
+            try
+            {
+                var pmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(pmId))
+                {
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
+                var report = await _firebaseService.GetDocumentAsync<CompletionReport>(
+                    "completionReports",
+                    id
+                );
+                if (report == null)
+                {
+                    return NotFound(new { error = "Completion report not found" });
+                }
+
+                // Ensure this report belongs to a project managed by the caller
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    report.ProjectId
+                );
+                if (project == null || project.ProjectManagerId != pmId)
+                {
+                    return Forbid();
+                }
+
+                // Update report status
+                report.Status = "Rejected";
+                report.ReviewedBy = pmId;
+                report.ReviewedAt = DateTime.UtcNow;
+                // Note: ReviewNotes would be extracted from rejectionData in a real implementation
+
+                await _firebaseService.UpdateDocumentAsync("completionReports", id, report);
+
+                // Update the associated task status back to "In Progress"
+                var task = await _firebaseService.GetDocumentAsync<ProjectTask>(
+                    "tasks",
+                    report.TaskId
+                );
+                if (task != null)
+                {
+                    task.Status = "In Progress";
+                    await _firebaseService.UpdateDocumentAsync("tasks", report.TaskId, task);
+                    Console.WriteLine(
+                        $"[RejectCompletionReport] Updated task {report.TaskId} status to In Progress"
+                    );
+
+                    // Recalculate phase progress since a task was rejected
+                    await UpdatePhaseProgress(task.PhaseId);
+                }
+
+                return Ok(report);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        // Helper method to update task progress to 100% when completed
+        private async Task UpdateTaskProgressToComplete(string taskId)
+        {
+            try
+            {
+                var task = await _firebaseService.GetDocumentAsync<ProjectTask>("tasks", taskId);
+                if (task != null)
+                {
+                    task.Progress = 100;
+                    await _firebaseService.UpdateDocumentAsync("tasks", taskId, task);
+                    Console.WriteLine(
+                        $"[UpdateTaskProgressToComplete] Set task {taskId} progress to 100%"
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"[UpdateTaskProgressToComplete] Error updating task progress: {ex.Message}"
+                );
+            }
+        }
+
+        // Helper method to calculate and update phase progress
+        private async Task UpdatePhaseProgress(string phaseId)
+        {
+            try
+            {
+                // Get all tasks for this phase
+                var allTasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var phaseTasks = allTasks.Where(t => t.PhaseId == phaseId).ToList();
+
+                if (phaseTasks.Count == 0)
+                {
+                    Console.WriteLine($"[UpdatePhaseProgress] No tasks found for phase {phaseId}");
+                    return;
+                }
+
+                // Calculate progress: (completed tasks / total tasks) * 100
+                var completedTasks = phaseTasks.Count(t => t.Status == "Completed");
+                var progressPercentage = (int)
+                    Math.Round((double)completedTasks / phaseTasks.Count * 100);
+
+                Console.WriteLine(
+                    $"[UpdatePhaseProgress] Phase {phaseId}: {completedTasks}/{phaseTasks.Count} tasks completed = {progressPercentage}%"
+                );
+
+                // Update phase progress
+                var phase = await _firebaseService.GetDocumentAsync<Phase>("phases", phaseId);
+                if (phase != null)
+                {
+                    phase.Progress = progressPercentage;
+
+                    // Check if all tasks are completed to mark phase as complete
+                    if (completedTasks == phaseTasks.Count)
+                    {
+                        phase.Status = "Completed";
+                        Console.WriteLine(
+                            $"[UpdatePhaseProgress] Phase {phaseId} marked as Completed"
+                        );
+                    }
+                    else if (phase.Status == "Completed" && completedTasks < phaseTasks.Count)
+                    {
+                        // If phase was marked complete but not all tasks are done, revert status
+                        phase.Status = "In Progress";
+                        Console.WriteLine(
+                            $"[UpdatePhaseProgress] Phase {phaseId} reverted to In Progress"
+                        );
+                    }
+
+                    await _firebaseService.UpdateDocumentAsync("phases", phaseId, phase);
+                    Console.WriteLine(
+                        $"[UpdatePhaseProgress] Updated phase {phaseId} progress to {progressPercentage}%"
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"[UpdatePhaseProgress] Error updating phase progress: {ex.Message}"
+                );
             }
         }
     }

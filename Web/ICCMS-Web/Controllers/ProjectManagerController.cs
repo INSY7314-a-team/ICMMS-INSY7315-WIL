@@ -668,11 +668,15 @@ namespace ICCMS_Web.Controllers
             // ✅ Defensive check for missing estimateId
             if (string.IsNullOrWhiteSpace(estimateId))
             {
-                Console.WriteLine("❌ [QuotationsService] Missing estimateId for CreateFromEstimateAsync");
+                Console.WriteLine(
+                    "❌ [QuotationsService] Missing estimateId for CreateFromEstimateAsync"
+                );
                 return Task.FromResult<string?>(null);
             }
 
-            Console.WriteLine($"🚀 [QuotationsService] Creating quotation from estimate {estimateId}");
+            Console.WriteLine(
+                $"🚀 [QuotationsService] Creating quotation from estimate {estimateId}"
+            );
 
             // ✅ The API expects a simple request body (even if empty)
             var payload = new { note = "Auto-created from estimate" };
@@ -689,7 +693,10 @@ namespace ICCMS_Web.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateQuoteFromEstimate(string estimateId)
         {
-            _logger.LogInformation("🚀 [CreateQuoteFromEstimate] Triggered for EstimateId={EstimateId}", estimateId);
+            _logger.LogInformation(
+                "🚀 [CreateQuoteFromEstimate] Triggered for EstimateId={EstimateId}",
+                estimateId
+            );
 
             if (string.IsNullOrWhiteSpace(estimateId))
             {
@@ -704,20 +711,29 @@ namespace ICCMS_Web.Controllers
 
                 if (quotation == null)
                 {
-                    _logger.LogError("❌ Quotation creation failed for EstimateId={EstimateId}", estimateId);
+                    _logger.LogError(
+                        "❌ Quotation creation failed for EstimateId={EstimateId}",
+                        estimateId
+                    );
                     return StatusCode(500, new { error = "Failed to create quotation" });
                 }
 
-                _logger.LogInformation("✅ Quotation created successfully from EstimateId={EstimateId}", estimateId);
+                _logger.LogInformation(
+                    "✅ Quotation created successfully from EstimateId={EstimateId}",
+                    estimateId
+                );
                 return Json(new { success = true, quotation });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "💥 Exception while creating quotation from estimate {EstimateId}", estimateId);
+                _logger.LogError(
+                    ex,
+                    "💥 Exception while creating quotation from estimate {EstimateId}",
+                    estimateId
+                );
                 return StatusCode(500, new { error = ex.Message });
             }
         }
-
 
         /// <summary>
         /// Sends a quotation to the client (proxy to API via QuotationsService)
@@ -725,7 +741,10 @@ namespace ICCMS_Web.Controllers
         [HttpPost]
         public async Task<IActionResult> SendQuoteToClient(string quotationId)
         {
-            _logger.LogInformation("📬 [SendQuoteToClient] Triggered for quotation {QuotationId}", quotationId);
+            _logger.LogInformation(
+                "📬 [SendQuoteToClient] Triggered for quotation {QuotationId}",
+                quotationId
+            );
 
             try
             {
@@ -736,27 +755,42 @@ namespace ICCMS_Web.Controllers
                     return BadRequest(new { error = "Missing quotation ID." });
                 }
 
-                _logger.LogInformation("🧭 Attempting to send quotation {QuotationId} via QuotationsService...", quotationId);
+                _logger.LogInformation(
+                    "🧭 Attempting to send quotation {QuotationId} via QuotationsService...",
+                    quotationId
+                );
 
                 // ===== Call QuotationsService =====
                 var sent = await _quotationsService.SendToClientAsync(quotationId, User);
 
                 if (sent == null)
                 {
-                    _logger.LogWarning("❌ QuotationsService.SendToClientAsync returned null for {QuotationId}", quotationId);
-                    return StatusCode(500, new { error = "Send to client failed — service returned null." });
+                    _logger.LogWarning(
+                        "❌ QuotationsService.SendToClientAsync returned null for {QuotationId}",
+                        quotationId
+                    );
+                    return StatusCode(
+                        500,
+                        new { error = "Send to client failed — service returned null." }
+                    );
                 }
 
-                _logger.LogInformation("✅ Successfully sent quotation {QuotationId} to client.", quotationId);
+                _logger.LogInformation(
+                    "✅ Successfully sent quotation {QuotationId} to client.",
+                    quotationId
+                );
                 return Json(new { success = true });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "💥 Exception in SendQuoteToClient for quotation {QuotationId}", quotationId);
+                _logger.LogError(
+                    ex,
+                    "💥 Exception in SendQuoteToClient for quotation {QuotationId}",
+                    quotationId
+                );
                 return StatusCode(500, new { error = ex.Message });
             }
         }
-
 
         /// <summary>
         /// Step 3: Assign tasks to a project (after quote approval).
@@ -1560,7 +1594,10 @@ namespace ICCMS_Web.Controllers
         [HttpPost]
         public async Task<IActionResult> ApproveQuoteByPM([FromQuery] string quotationId)
         {
-            _logger.LogInformation("🚀 [ApproveQuoteByPM] Triggered for quotation {QuotationId}", quotationId);
+            _logger.LogInformation(
+                "🚀 [ApproveQuoteByPM] Triggered for quotation {QuotationId}",
+                quotationId
+            );
 
             try
             {
@@ -1571,15 +1608,27 @@ namespace ICCMS_Web.Controllers
                 }
 
                 // ✅ Use PostAsync and expect a generic JSON response (object)
-                var result = await _apiClient.PostAsync<object>($"/api/quotations/{quotationId}/pm-approve", new { }, User);
+                var result = await _apiClient.PostAsync<object>(
+                    $"/api/quotations/{quotationId}/pm-approve",
+                    new { },
+                    User
+                );
 
                 if (result == null)
                 {
-                    _logger.LogWarning("❌ API returned null response for quotation {QuotationId}", quotationId);
-                    return Json(new { success = false, message = "Approval failed or unauthorized." });
+                    _logger.LogWarning(
+                        "❌ API returned null response for quotation {QuotationId}",
+                        quotationId
+                    );
+                    return Json(
+                        new { success = false, message = "Approval failed or unauthorized." }
+                    );
                 }
 
-                _logger.LogInformation("✅ Quotation {QuotationId} approved successfully.", quotationId);
+                _logger.LogInformation(
+                    "✅ Quotation {QuotationId} approved successfully.",
+                    quotationId
+                );
                 return Json(new { success = true, data = result });
             }
             catch (Exception ex)
@@ -1589,9 +1638,345 @@ namespace ICCMS_Web.Controllers
             }
         }
 
-        
+        /// <summary>
+        /// Project detail page for Project Managers
+        /// Shows comprehensive project information, phases, tasks, and pending approvals
+        /// </summary>
+        [HttpGet]
+        [Route("ProjectManager/ProjectDetail")]
+        public async Task<IActionResult> ProjectDetail([FromQuery] string projectId)
+        {
+            _logger.LogInformation(
+                "=== [ProjectDetail] Loading project {ProjectId} ===",
+                projectId
+            );
 
+            try
+            {
+                if (string.IsNullOrEmpty(projectId))
+                {
+                    _logger.LogWarning("Missing projectId parameter");
+                    TempData["ErrorMessage"] = "Project ID is required.";
+                    return RedirectToAction("Dashboard");
+                }
 
+                // Get project details
+                _logger.LogInformation("Fetching project details for {ProjectId}", projectId);
 
+                ProjectDto project;
+                try
+                {
+                    project = await _apiClient.GetAsync<ProjectDto>(
+                        $"/api/projectmanager/project/{projectId}",
+                        User
+                    );
+                }
+                catch (Exception apiEx)
+                {
+                    _logger.LogError(
+                        apiEx,
+                        "API error fetching project {ProjectId}: {ErrorMessage}",
+                        projectId,
+                        apiEx.Message
+                    );
+                    TempData["ErrorMessage"] = $"Failed to fetch project details: {apiEx.Message}";
+                    return RedirectToAction("Dashboard");
+                }
+
+                if (project == null)
+                {
+                    _logger.LogWarning(
+                        "Project {ProjectId} not found - API returned null",
+                        projectId
+                    );
+                    TempData["ErrorMessage"] =
+                        $"Project {projectId} not found. The project may have been deleted or you may not have permission to view it.";
+                    return RedirectToAction("Dashboard");
+                }
+
+                _logger.LogInformation(
+                    "Successfully retrieved project {ProjectId}: {ProjectName}",
+                    projectId,
+                    project.Name
+                );
+
+                // Get project phases
+                _logger.LogInformation("Fetching phases for project {ProjectId}", projectId);
+                var phases =
+                    await _apiClient.GetAsync<List<PhaseDto>>(
+                        $"/api/projectmanager/project/{projectId}/phases",
+                        User
+                    ) ?? new List<PhaseDto>();
+
+                // Get project tasks
+                _logger.LogInformation("Fetching tasks for project {ProjectId}", projectId);
+                var tasks =
+                    await _apiClient.GetAsync<List<ProjectTaskDto>>(
+                        $"/api/projectmanager/project/{projectId}/tasks",
+                        User
+                    ) ?? new List<ProjectTaskDto>();
+
+                // Get pending progress reports
+                _logger.LogInformation("Fetching pending progress reports");
+                var pendingReports =
+                    await _apiClient.GetAsync<List<ProgressReportDto>>(
+                        "/api/projectmanager/progress-reports/pending",
+                        User
+                    ) ?? new List<ProgressReportDto>();
+
+                // Filter progress reports for this project
+                var projectPendingReports = pendingReports
+                    .Where(pr => pr.ProjectId == projectId)
+                    .ToList();
+
+                // Get tasks awaiting completion (tasks with status "Awaiting Approval")
+                var tasksAwaitingCompletion = tasks
+                    .Where(t => t.Status == "Awaiting Approval")
+                    .ToList();
+
+                // Get contractors for display names
+                var contractors =
+                    await _apiClient.GetAsync<List<UserDto>>("/api/users/contractors", User)
+                    ?? new List<UserDto>();
+
+                var contractorMap = contractors.ToDictionary(c => c.UserId, c => c);
+
+                // Get client information
+                var client = await _apiClient.GetAsync<UserDto>(
+                    $"/api/users/{project.ClientId}",
+                    User
+                );
+
+                // Calculate statistics
+                var totalTasks = tasks.Count;
+                var completedTasks = tasks.Count(t => t.Status == "Completed");
+                var inProgressTasks = tasks.Count(t => t.Status == "In Progress");
+                var pendingTasks = tasks.Count(t => t.Status == "Pending");
+                var overdueTasks = tasks.Count(t =>
+                    t.DueDate < DateTime.UtcNow && t.Status != "Completed"
+                );
+                var overallProgress = totalTasks > 0 ? (int)tasks.Average(t => t.Progress) : 0;
+
+                var totalPhases = phases.Count;
+                var completedPhases = phases.Count(p => p.Status == "Completed");
+
+                // Create view model
+                var viewModel = new PMProjectDetailViewModel
+                {
+                    Project = project,
+                    Phases = phases,
+                    Tasks = tasks,
+                    PendingProgressReports = projectPendingReports,
+                    TasksAwaitingCompletion = tasksAwaitingCompletion,
+                    ContractorMap = contractorMap,
+                    Client = client,
+                    TotalTasks = totalTasks,
+                    CompletedTasks = completedTasks,
+                    InProgressTasks = inProgressTasks,
+                    PendingTasks = pendingTasks,
+                    OverdueTasks = overdueTasks,
+                    OverallProgress = overallProgress,
+                    TotalPhases = totalPhases,
+                    CompletedPhases = completedPhases,
+                };
+
+                _logger.LogInformation(
+                    "✅ Project detail loaded for {ProjectName} with {TaskCount} tasks, {PhaseCount} phases",
+                    project.Name,
+                    totalTasks,
+                    totalPhases
+                );
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading project detail for {ProjectId}", projectId);
+                TempData["ErrorMessage"] =
+                    "Failed to load project details. Please try again later.";
+                return RedirectToAction("Dashboard");
+            }
+        }
+
+        // Progress report approval endpoints removed - reports are now auto-approved
+
+        /// <summary>
+        /// Approve task completion
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> ApproveTaskCompletion(string taskId)
+        {
+            try
+            {
+                var result = await _apiClient.PutAsync<ProjectTaskDto>(
+                    $"/api/projectmanager/task/{taskId}/approve-completion",
+                    new { },
+                    User
+                );
+
+                if (result == null)
+                {
+                    return Json(
+                        new { success = false, error = "Failed to approve task completion" }
+                    );
+                }
+
+                return Json(
+                    new { success = true, message = "Task completion approved successfully" }
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving task completion for {TaskId}", taskId);
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Reject task completion
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> RejectTaskCompletion(string taskId, string feedback = "")
+        {
+            try
+            {
+                var result = await _apiClient.PutAsync<ProjectTaskDto>(
+                    $"/api/projectmanager/task/{taskId}/reject-completion",
+                    new { feedback },
+                    User
+                );
+
+                if (result == null)
+                {
+                    return Json(
+                        new { success = false, error = "Failed to reject task completion" }
+                    );
+                }
+
+                return Json(new { success = true, message = "Task completion rejected" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rejecting task completion for {TaskId}", taskId);
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get completion reports for PM review
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetCompletionReports()
+        {
+            try
+            {
+                var reports = await _apiClient.GetAsync<List<CompletionReportDto>>(
+                    "/api/projectmanager/completion-reports",
+                    User
+                );
+
+                return Json(reports ?? new List<CompletionReportDto>());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting completion reports");
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get specific completion report
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetCompletionReport(string id)
+        {
+            try
+            {
+                var report = await _apiClient.GetAsync<CompletionReportDto>(
+                    $"/api/projectmanager/completion-report/{id}",
+                    User
+                );
+
+                if (report == null)
+                {
+                    return Json(new { success = false, error = "Completion report not found" });
+                }
+
+                return Json(new { success = true, report });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting completion report {Id}", id);
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Approve completion report
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> ApproveCompletionReport(string id)
+        {
+            try
+            {
+                _logger.LogInformation("🔍 Approving completion report {Id}", id);
+                var result = await _apiClient.PutAsync<CompletionReportDto>(
+                    $"/api/projectmanager/task/{id}/approve-completion",
+                    new { },
+                    User
+                );
+                _logger.LogInformation(
+                    "🔍 API response for completion report {Id}: {Result}",
+                    id,
+                    result != null ? "Success" : "Null"
+                );
+
+                if (result == null)
+                {
+                    return Json(
+                        new { success = false, error = "Failed to approve completion report" }
+                    );
+                }
+
+                return Json(
+                    new { success = true, message = "Completion report approved successfully" }
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving completion report {Id}", id);
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Reject completion report
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> RejectCompletionReport(string id, string feedback = "")
+        {
+            try
+            {
+                var result = await _apiClient.PutAsync<CompletionReportDto>(
+                    $"/api/projectmanager/completion-report/{id}/reject",
+                    new { feedback },
+                    User
+                );
+
+                if (result == null)
+                {
+                    return Json(
+                        new { success = false, error = "Failed to reject completion report" }
+                    );
+                }
+
+                return Json(new { success = true, message = "Completion report rejected" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rejecting completion report {Id}", id);
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
     }
 }

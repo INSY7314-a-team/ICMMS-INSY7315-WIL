@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -35,6 +36,42 @@ namespace ICCMS_API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("task/{taskId}")]
+        public async Task<ActionResult<ProjectTask>> GetTaskDetails(string taskId)
+        {
+            Console.WriteLine($"[ContractorsController] GetTaskDetails called for task {taskId}");
+            try
+            {
+                var contractorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(contractorId))
+                {
+                    return Unauthorized(new { error = "Contractor ID not found" });
+                }
+
+                // Get the specific task
+                var task = await _firebaseService.GetDocumentAsync<ProjectTask>("tasks", taskId);
+                if (task == null)
+                {
+                    return NotFound(new { error = "Task not found" });
+                }
+
+                // Verify the task is assigned to this contractor
+                if (task.AssignedTo != contractorId)
+                {
+                    return Forbid("You are not authorized to view this task");
+                }
+
+                return Ok(task);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"[ContractorsController] Error getting task details: {ex.Message}"
+                );
+                return StatusCode(500, new { error = "Internal server error" });
             }
         }
 
@@ -181,6 +218,524 @@ namespace ICCMS_API.Controllers
                 }
                 await _firebaseService.DeleteDocumentAsync("documents", id);
                 return Ok(new { message = "Document deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        // ===================== CONTRACTOR DASHBOARD ENDPOINTS =====================
+
+        [HttpGet("health")]
+        public ActionResult<object> GetHealth()
+        {
+            return Ok(
+                new
+                {
+                    status = "healthy",
+                    timestamp = DateTime.UtcNow,
+                    message = "Contractor API is running",
+                }
+            );
+        }
+
+        [HttpGet("debug/tasks")]
+        public async Task<ActionResult<object>> DebugTasks()
+        {
+            try
+            {
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+
+                var taskAssignments = tasks
+                    .Select(t => new
+                    {
+                        TaskId = t.TaskId,
+                        AssignedTo = t.AssignedTo,
+                        ProjectId = t.ProjectId,
+                        Name = t.Name,
+                        Status = t.Status,
+                    })
+                    .ToList();
+
+                var uniqueAssignments = tasks
+                    .Select(t => t.AssignedTo)
+                    .Distinct()
+                    .Where(a => !string.IsNullOrEmpty(a))
+                    .ToList();
+
+                return Ok(
+                    new
+                    {
+                        totalTasks = tasks.Count,
+                        totalProjects = projects.Count,
+                        uniqueAssignments = uniqueAssignments,
+                        sampleTasks = taskAssignments.Take(10).ToList(),
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("dashboard")]
+        public async Task<ActionResult<object>> GetDashboard()
+        {
+            try
+            {
+                Console.WriteLine("[ContractorsController] Dashboard endpoint called");
+                var contractorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                Console.WriteLine($"[ContractorsController] Contractor ID: {contractorId}");
+
+                if (string.IsNullOrEmpty(contractorId))
+                {
+                    Console.WriteLine(
+                        "[ContractorsController] No contractor ID found, returning Unauthorized"
+                    );
+                    return Unauthorized(new { error = "Contractor ID not found" });
+                }
+
+                // Get all tasks assigned to this contractor
+                Console.WriteLine("[ContractorsController] Fetching tasks from Firestore...");
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                Console.WriteLine($"[ContractorsController] Found {tasks.Count} total tasks");
+
+                // Debug: Log all task assignments to see what's in the database
+                Console.WriteLine("[ContractorsController] All task assignments:");
+                foreach (var task in tasks.Take(10)) // Log first 10 tasks
+                {
+                    Console.WriteLine(
+                        $"[ContractorsController] Task {task.TaskId}: AssignedTo='{task.AssignedTo}', ProjectId='{task.ProjectId}', Name='{task.Name}'"
+                    );
+                }
+
+                var contractorTasks = tasks.Where(t => t.AssignedTo == contractorId).ToList();
+                Console.WriteLine(
+                    $"[ContractorsController] Found {contractorTasks.Count} tasks for contractor {contractorId}"
+                );
+
+                // Debug: Log all unique AssignedTo values to see what contractors exist
+                var uniqueAssignments = tasks
+                    .Select(t => t.AssignedTo)
+                    .Distinct()
+                    .Where(a => !string.IsNullOrEmpty(a))
+                    .ToList();
+                Console.WriteLine(
+                    $"[ContractorsController] Unique AssignedTo values: {string.Join(", ", uniqueAssignments)}"
+                );
+
+                // Get projects for these tasks
+                var projectIds = contractorTasks.Select(t => t.ProjectId).Distinct().ToList();
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var taskProjects = projects.Where(p => projectIds.Contains(p.ProjectId)).ToList();
+
+                // Get progress reports for these tasks
+                var progressReports = await _firebaseService.GetCollectionAsync<ProgressReport>(
+                    "progressReports"
+                );
+                var taskProgressReports = progressReports
+                    .Where(pr => contractorTasks.Any(t => t.TaskId == pr.TaskId))
+                    .ToList();
+
+                // Calculate stats
+                var totalTasks = contractorTasks.Count;
+                var completedTasks = contractorTasks.Count(t => t.Status == "Completed");
+                var inProgressTasks = contractorTasks.Count(t =>
+                    t.Status == "InProgress" || t.Status == "In Progress"
+                );
+                var overdueTasks = contractorTasks.Count(t =>
+                    t.DueDate < DateTime.UtcNow && t.Status != "Completed"
+                );
+
+                var response = new
+                {
+                    totalTasks,
+                    completedTasks,
+                    inProgressTasks,
+                    overdueTasks,
+                    tasks = contractorTasks,
+                    projects = taskProjects,
+                    progressReports = taskProgressReports,
+                };
+
+                Console.WriteLine(
+                    $"[ContractorsController] Returning dashboard data: {totalTasks} total tasks, {completedTasks} completed, {inProgressTasks} in progress, {overdueTasks} overdue"
+                );
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("tasks/assigned")]
+        public async Task<ActionResult<PaginatedResponse<ContractorTaskDto>>> GetAssignedTasks(
+            int page = 1,
+            int pageSize = 20
+        )
+        {
+            try
+            {
+                var contractorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(contractorId))
+                {
+                    return Unauthorized(new { error = "Contractor ID not found" });
+                }
+
+                // Validate pagination parameters
+                if (page < 1)
+                    page = 1;
+                if (pageSize < 1 || pageSize > 100)
+                    pageSize = 20;
+
+                Console.WriteLine(
+                    $"[ContractorsController] Looking for tasks assigned to contractor: {contractorId}"
+                );
+
+                var filters = new Dictionary<string, object> { { "assignedto", contractorId } };
+
+                // Debug: First get all tasks to see what's available
+                var allTasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                Console.WriteLine(
+                    $"[ContractorsController] Total tasks in database: {allTasks.Count}"
+                );
+
+                // Debug: Show some sample tasks and their assignments
+                var sampleTasks = allTasks.Take(5).ToList();
+                foreach (var task in sampleTasks)
+                {
+                    Console.WriteLine(
+                        $"[ContractorsController] Sample task: {task.TaskId}, AssignedTo: '{task.AssignedTo}', ProjectId: '{task.ProjectId}'"
+                    );
+                }
+
+                var tasks = await _firebaseService.GetCollectionWithFiltersAsync<ProjectTask>(
+                    "tasks",
+                    filters,
+                    page,
+                    pageSize,
+                    "dueDate",
+                    false // Order by dueDate ascending (earliest first)
+                );
+
+                var totalCount = await _firebaseService.GetCollectionCountAsync<ProjectTask>(
+                    "tasks",
+                    filters
+                );
+
+                // Convert ProjectTask objects to ContractorTaskDto objects with computed properties
+                var contractorTasks = tasks
+                    .Select(task => new ContractorTaskDto
+                    {
+                        TaskId = task.TaskId,
+                        ProjectId = task.ProjectId,
+                        Name = task.Name,
+                        Description = task.Description,
+                        AssignedTo = task.AssignedTo,
+                        Priority = task.Priority,
+                        Status = task.Status,
+                        StartDate = task.StartDate,
+                        DueDate = task.DueDate,
+                        CompletedDate = task.CompletedDate,
+                        Progress = task.Progress,
+                        EstimatedHours = task.EstimatedHours,
+                        ActualHours = task.ActualHours,
+                        IsOverdue = task.DueDate < DateTime.UtcNow && task.Status != "Completed",
+                        DaysUntilDue = Math.Max(0, (task.DueDate - DateTime.UtcNow).Days),
+                        CanSubmitProgress =
+                            task.Status?.Equals("In Progress", StringComparison.OrdinalIgnoreCase)
+                                == true
+                            || task.Status?.Equals("InProgress", StringComparison.OrdinalIgnoreCase)
+                                == true,
+                        CanRequestCompletion =
+                            task.Status?.Equals("In Progress", StringComparison.OrdinalIgnoreCase)
+                                == true
+                            || task.Status?.Equals("InProgress", StringComparison.OrdinalIgnoreCase)
+                                == true,
+                    })
+                    .ToList();
+
+                var response = new PaginatedResponse<ContractorTaskDto>
+                {
+                    Data = contractorTasks,
+                    Page = page,
+                    PageSize = pageSize,
+                    TotalCount = totalCount,
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("task/{taskId}/progress-reports")]
+        public async Task<ActionResult<List<ProgressReport>>> GetTaskProgressReports(string taskId)
+        {
+            try
+            {
+                var contractorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(contractorId))
+                {
+                    return Unauthorized(new { error = "Contractor ID not found" });
+                }
+
+                // Verify contractor is assigned to this task
+                var task = await _firebaseService.GetDocumentAsync<ProjectTask>("tasks", taskId);
+                if (task == null)
+                {
+                    return NotFound(new { error = "Task not found" });
+                }
+                if (task.AssignedTo != contractorId)
+                {
+                    return Forbid();
+                }
+
+                // Get all progress reports and filter in memory (avoids index requirement)
+                var allProgressReports = await _firebaseService.GetCollectionAsync<ProgressReport>(
+                    "progressReports"
+                );
+                var taskReports = allProgressReports
+                    .Where(r => r.TaskId == taskId)
+                    .OrderByDescending(r => r.SubmittedAt)
+                    .ToList();
+
+                return Ok(taskReports);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("task/{taskId}/progress-report")]
+        public async Task<ActionResult<ProgressReport>> SubmitProgressReport(
+            string taskId,
+            [FromBody] ProgressReport report
+        )
+        {
+            try
+            {
+                var contractorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(contractorId))
+                {
+                    return Unauthorized(new { error = "Contractor ID not found" });
+                }
+
+                // Verify contractor is assigned to this task
+                var task = await _firebaseService.GetDocumentAsync<ProjectTask>("tasks", taskId);
+                if (task == null)
+                {
+                    return NotFound(new { error = "Task not found" });
+                }
+                if (task.AssignedTo != contractorId)
+                {
+                    return Unauthorized(new { error = "You are not assigned to this task" });
+                }
+
+                // Log task details for debugging
+                Console.WriteLine(
+                    $"[SubmitProgressReport] Task details - TaskId: {task.TaskId}, ProjectId: {task.ProjectId}, AssignedTo: {task.AssignedTo}"
+                );
+
+                // Set report properties
+                report.ProgressReportId = Guid.NewGuid().ToString();
+                report.TaskId = taskId;
+                report.ProjectId = task.ProjectId;
+                report.SubmittedBy = contractorId;
+                report.SubmittedAt = DateTime.UtcNow;
+                report.Status = "Approved"; // Auto-approve progress reports
+                report.ReviewedBy = "System"; // Mark as auto-approved by system
+                report.ReviewedAt = DateTime.UtcNow;
+
+                await _firebaseService.AddDocumentWithIdAsync(
+                    "progressReports",
+                    report.ProgressReportId,
+                    report
+                );
+
+                return Ok(report);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("task/{taskId}/request-completion")]
+        public async Task<ActionResult<object>> RequestCompletion(
+            string taskId,
+            [FromBody] CompletionReport completionReport
+        )
+        {
+            try
+            {
+                var contractorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(contractorId))
+                {
+                    return Unauthorized(new { error = "Contractor ID not found" });
+                }
+
+                // Verify contractor is assigned to this task
+                var task = await _firebaseService.GetDocumentAsync<ProjectTask>("tasks", taskId);
+                if (task == null)
+                {
+                    return NotFound(new { error = "Task not found" });
+                }
+                if (task.AssignedTo != contractorId)
+                {
+                    return Unauthorized(new { error = "You are not assigned to this task" });
+                }
+
+                // Log task details for debugging
+                Console.WriteLine(
+                    $"[RequestCompletion] Task details - TaskId: {task.TaskId}, ProjectId: {task.ProjectId}, AssignedTo: {task.AssignedTo}"
+                );
+
+                // Set completion report properties
+                completionReport.CompletionReportId = Guid.NewGuid().ToString();
+                completionReport.TaskId = taskId;
+                completionReport.ProjectId = task.ProjectId;
+                Console.WriteLine(
+                    $"[RequestCompletion] Creating completion report for task {taskId} with project {task.ProjectId}"
+                );
+                completionReport.SubmittedBy = contractorId;
+                completionReport.SubmittedAt = DateTime.UtcNow;
+                completionReport.CompletionDate = completionReport.CompletionDate.ToUniversalTime();
+                completionReport.Status = "Submitted";
+
+                // Save the completion report
+                await _firebaseService.AddDocumentWithIdAsync(
+                    "completionReports",
+                    completionReport.CompletionReportId,
+                    completionReport
+                );
+
+                // Update task status to "Awaiting Approval"
+                task.Status = "Awaiting Approval";
+                await _firebaseService.UpdateDocumentAsync("tasks", taskId, task);
+
+                return Ok(
+                    new
+                    {
+                        message = "Completion request submitted successfully",
+                        taskId,
+                        completionReportId = completionReport.CompletionReportId,
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    new
+                    {
+                        error = "An error occurred while submitting completion request",
+                        details = ex.Message,
+                    }
+                );
+            }
+        }
+
+        [HttpGet("task/{taskId}/completion-reports")]
+        public async Task<ActionResult<List<CompletionReport>>> GetTaskCompletionReports(
+            string taskId
+        )
+        {
+            try
+            {
+                var contractorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(contractorId))
+                {
+                    return Unauthorized(new { error = "Contractor ID not found" });
+                }
+
+                // Verify contractor is assigned to this task
+                var task = await _firebaseService.GetDocumentAsync<ProjectTask>("tasks", taskId);
+                if (task == null)
+                {
+                    return NotFound(new { error = "Task not found" });
+                }
+                if (task.AssignedTo != contractorId)
+                {
+                    return Forbid();
+                }
+
+                // Get all completion reports and filter in memory (avoids index requirement)
+                Console.WriteLine(
+                    $"[ContractorsController] Getting completion reports for task {taskId}"
+                );
+                var allCompletionReports =
+                    await _firebaseService.GetCollectionAsync<CompletionReport>(
+                        "completionReports"
+                    );
+                Console.WriteLine(
+                    $"[ContractorsController] Found {allCompletionReports.Count} total completion reports"
+                );
+
+                var taskReports = allCompletionReports
+                    .Where(r => r.TaskId == taskId)
+                    .OrderByDescending(r => r.SubmittedAt)
+                    .ToList();
+
+                Console.WriteLine(
+                    $"[ContractorsController] Found {taskReports.Count} completion reports for task {taskId}"
+                );
+
+                return Ok(taskReports);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("task/{taskId}/project-budget")]
+        public async Task<ActionResult<object>> GetTaskProjectBudget(string taskId)
+        {
+            try
+            {
+                var contractorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(contractorId))
+                {
+                    return Unauthorized(new { error = "Contractor ID not found" });
+                }
+
+                // Verify contractor is assigned to this task
+                var task = await _firebaseService.GetDocumentAsync<ProjectTask>("tasks", taskId);
+                if (task == null)
+                {
+                    return NotFound(new { error = "Task not found" });
+                }
+                if (task.AssignedTo != contractorId)
+                {
+                    return Forbid();
+                }
+
+                // Get project budget
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    task.ProjectId
+                );
+                if (project == null)
+                {
+                    return NotFound(new { error = "Project not found" });
+                }
+
+                return Ok(
+                    new
+                    {
+                        projectId = project.ProjectId,
+                        projectName = project.Name,
+                        budgetPlanned = project.BudgetPlanned,
+                    }
+                );
             }
             catch (Exception ex)
             {

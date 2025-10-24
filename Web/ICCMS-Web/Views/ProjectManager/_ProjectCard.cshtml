@@ -42,9 +42,9 @@
             <div class="text-end d-flex align-items-center gap-2">
                 @if (!string.Equals(Model.Status, "Draft", StringComparison.OrdinalIgnoreCase))
                 {
-                    <button type="button" class="btn btn-sm btn-outline-secondary" title="Expand details"
-                        onclick="toggleProjectDetails('@Model.ProjectId')">
-                        <i class="fa-solid fa-chevron-down"></i>
+                    <button type="button" class="btn btn-sm btn-outline-primary" title="View details"
+                        onclick="viewProjectDetails('@Model.ProjectId')">
+                        <i class="fa-solid fa-eye"></i>
                     </button>
                 }
                 <span class="status-badge">@Model.Status</span>
@@ -260,7 +260,7 @@
     // Project card action functions
     function viewProjectDetails(projectId) {
         // Navigate to project details page
-        window.location.href = `/ProjectManager/ProjectDetails/${projectId}`;
+        window.location.href = `/ProjectManager/ProjectDetail?projectId=${projectId}`;
     }
 
     function editProject(projectId) {

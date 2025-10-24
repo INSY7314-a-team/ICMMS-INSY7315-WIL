@@ -48,6 +48,10 @@ artifacts/
 project.assets.json
 project.nuget.cache
 
+# .NET build output directories (obj/ folders contain PII)
+**/obj/
+**/bin/
+
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
 
