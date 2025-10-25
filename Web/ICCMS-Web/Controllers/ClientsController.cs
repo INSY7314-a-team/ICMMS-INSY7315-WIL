@@ -32,19 +32,22 @@ namespace ICCMS_Web.Controllers
         private readonly ILogger<ClientsController> _logger;
         private readonly IConfiguration _configuration;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IAuditLogService _auditLogService;
         private readonly string _apiBaseUrl;
 
         public ClientsController(
             IApiClient apiClient,
             ILogger<ClientsController> logger,
             IConfiguration configuration,
-            IHttpClientFactory httpClientFactory
+            IHttpClientFactory httpClientFactory,
+            IAuditLogService auditLogService
         )
         {
             _apiClient = apiClient;
             _logger = logger;
             _configuration = configuration;
             _httpClientFactory = httpClientFactory;
+            _auditLogService = auditLogService;
             _apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7136";
         }
 
@@ -313,6 +316,16 @@ namespace ICCMS_Web.Controllers
                         quotationId
                     );
                     TempData["SuccessMessage"] = "Quotation approved successfully.";
+
+                    // Log quotation approval
+                    var currentUserId =
+                        User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "unknown";
+                    await _auditLogService.LogQuotationActionAsync(
+                        quotationId,
+                        true,
+                        currentUserId,
+                        User
+                    );
                 }
                 else
                 {
@@ -368,6 +381,16 @@ namespace ICCMS_Web.Controllers
                         quotationId
                     );
                     TempData["SuccessMessage"] = "Quotation rejected successfully.";
+
+                    // Log quotation rejection
+                    var currentUserId =
+                        User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "unknown";
+                    await _auditLogService.LogQuotationActionAsync(
+                        quotationId,
+                        false,
+                        currentUserId,
+                        User
+                    );
                 }
                 else
                 {
@@ -658,6 +681,10 @@ namespace ICCMS_Web.Controllers
                 "✅ [Client-DownloadQuotation] PDF generated for quotation {Id}",
                 id
             );
+
+            // Log file download
+            await _auditLogService.LogFileDownloadAsync(id, $"Quotation_{id}.pdf", User);
+
             return File(fileBytes, "application/pdf", $"Quotation_{id}.pdf");
         }
 
@@ -711,6 +738,14 @@ namespace ICCMS_Web.Controllers
                     "✅ [CreateMaintenanceRequest] Created successfully with ID {Id}",
                     created.MaintenanceRequestId
                 );
+
+                // Log maintenance request creation
+                await _auditLogService.LogMaintenanceRequestAsync(
+                    created.MaintenanceRequestId,
+                    request.ProjectId,
+                    User
+                );
+
                 return Json(new { success = true, requestId = created.MaintenanceRequestId });
             }
             catch (Exception ex)
@@ -788,6 +823,10 @@ namespace ICCMS_Web.Controllers
             }
 
             _logger.LogInformation("✅ Upload succeeded: {Body}", body);
+
+            // Log file upload
+            await _auditLogService.LogFileUploadAsync("uploaded", file.FileName, projectId, User);
+
             return Ok(body);
         }
 

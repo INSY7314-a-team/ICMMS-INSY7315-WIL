@@ -24,6 +24,7 @@ namespace ICCMS_Web.Controllers
         private readonly IQuotationsService _quotationsService;
         private readonly IConfiguration _config;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IAuditLogService _auditLogService;
 
         public ProjectManagerController(
             IApiClient apiClient,
@@ -33,7 +34,8 @@ namespace ICCMS_Web.Controllers
             IDocumentsService documentsService,
             IQuotationsService quotationsService,
             IConfiguration config,
-            IHttpClientFactory httpClientFactory
+            IHttpClientFactory httpClientFactory,
+            IAuditLogService auditLogService
         )
         {
             _apiClient = apiClient;
@@ -44,6 +46,7 @@ namespace ICCMS_Web.Controllers
             _quotationsService = quotationsService;
             _config = config;
             _httpClientFactory = httpClientFactory;
+            _auditLogService = auditLogService;
         }
 
         /// <summary>
@@ -306,6 +309,14 @@ namespace ICCMS_Web.Controllers
                     created.ProjectId
                 );
                 TempData["SuccessMessage"] = $"Project '{created.Name}' created successfully.";
+
+                // Log project creation
+                await _auditLogService.LogProjectCreatedAsync(
+                    created.ProjectId,
+                    created.Name,
+                    User
+                );
+
                 return RedirectToAction("Dashboard");
             }
             catch (Exception ex)
@@ -550,6 +561,13 @@ namespace ICCMS_Web.Controllers
                 _logger.LogError("[ProcessBlueprint] Estimate service returned null");
                 return StatusCode(500, new { error = "Processing failed" });
             }
+
+            // Log blueprint processing
+            await _auditLogService.LogBlueprintProcessingAsync(
+                request.ProjectId,
+                request.BlueprintUrl,
+                User
+            );
 
             return Json(new { estimateId = estimate.EstimateId, total = estimate.TotalAmount });
         }
@@ -916,6 +934,14 @@ namespace ICCMS_Web.Controllers
                     created.Name,
                     created.ProjectId
                 );
+
+                // Log project creation
+                await _auditLogService.LogProjectCreatedAsync(
+                    created.ProjectId,
+                    created.Name,
+                    User
+                );
+
                 return Json(
                     new
                     {
@@ -964,6 +990,10 @@ namespace ICCMS_Web.Controllers
             {
                 return Json(new { success = false, error = "Failed to start draft" });
             }
+
+            // Log project creation for draft
+            await _auditLogService.LogProjectCreatedAsync(created.ProjectId, "Draft Project", User);
+
             return Json(new { success = true, projectId = created.ProjectId });
         }
 
@@ -982,6 +1012,14 @@ namespace ICCMS_Web.Controllers
             );
             if (updated == null)
                 return Json(new { success = false, error = "Autosave failed" });
+
+            // Log project update
+            await _auditLogService.LogProjectUpdatedAsync(
+                updated.ProjectId,
+                updated.Name ?? "Project",
+                User
+            );
+
             return Json(new { success = true, projectId = updated.ProjectId });
         }
 
@@ -1003,11 +1041,30 @@ namespace ICCMS_Web.Controllers
         {
             if (string.IsNullOrWhiteSpace(id))
                 return BadRequest(new { error = "Missing project id" });
+
             var result = await _apiClient.PostAsync<object>(
                 $"/api/projectmanager/projects/{id}/tasks-bulk",
                 tasks,
                 User
             );
+
+            // Log contractor assignments for tasks that have contractors assigned
+            if (result != null && tasks != null)
+            {
+                foreach (var task in tasks)
+                {
+                    if (!string.IsNullOrEmpty(task.AssignedTo))
+                    {
+                        await _auditLogService.LogContractorAssignmentAsync(
+                            task.TaskId,
+                            task.AssignedTo,
+                            id,
+                            User
+                        );
+                    }
+                }
+            }
+
             return Json(result ?? new { saved = 0 });
         }
 
@@ -1051,6 +1108,12 @@ namespace ICCMS_Web.Controllers
             }
 
             // 2. Set ProjectManagerId - This is MANDATORY
+            if (request.Project == null)
+            {
+                _logger.LogError("SaveProject: Project is null in request");
+                return Json(new { success = false, error = "Project data is missing" });
+            }
+
             request.Project.ProjectManagerId = currentUserId;
             _logger.LogInformation(
                 "SaveProject: Set ProjectManagerId to: {ProjectManagerId}",
@@ -1086,6 +1149,35 @@ namespace ICCMS_Web.Controllers
             {
                 _logger.LogError("SaveProject: API returned null");
                 return Json(new { success = false, error = "Failed to save project" });
+            }
+
+            // Log project creation or update
+            if (!string.IsNullOrEmpty(result.ProjectId))
+            {
+                if (isNew)
+                {
+                    _logger.LogInformation(
+                        "Attempting to log project creation for {ProjectId}",
+                        result.ProjectId
+                    );
+                    await _auditLogService.LogProjectCreatedAsync(
+                        result.ProjectId,
+                        request.Project.Name ?? "New Project",
+                        User
+                    );
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "Attempting to log project update for {ProjectId}",
+                        result.ProjectId
+                    );
+                    await _auditLogService.LogProjectUpdatedAsync(
+                        result.ProjectId,
+                        request.Project.Name ?? "Project",
+                        User
+                    );
+                }
             }
 
             return Json(
@@ -1204,6 +1296,14 @@ namespace ICCMS_Web.Controllers
                     "✅ AI Estimate created successfully for ProjectId={ProjectId}",
                     request.ProjectId
                 );
+
+                // Log blueprint processing
+                await _auditLogService.LogBlueprintProcessingAsync(
+                    request.ProjectId,
+                    request.BlueprintUrl,
+                    User
+                );
+
                 return Json(apiResponse);
             }
             catch (Exception ex)
@@ -1244,6 +1344,14 @@ namespace ICCMS_Web.Controllers
                     created.Name,
                     created.ProjectId
                 );
+
+                // Log project creation for draft
+                await _auditLogService.LogProjectCreatedAsync(
+                    created.ProjectId,
+                    created.Name ?? "Draft Project",
+                    User
+                );
+
                 return Json(
                     new
                     {
@@ -1293,6 +1401,14 @@ namespace ICCMS_Web.Controllers
                     updated.Name,
                     updated.ProjectId
                 );
+
+                // Log project update
+                await _auditLogService.LogProjectUpdatedAsync(
+                    updated.ProjectId,
+                    updated.Name ?? "Draft Project",
+                    User
+                );
+
                 return Json(
                     new
                     {

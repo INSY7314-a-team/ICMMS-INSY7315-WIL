@@ -23,18 +23,21 @@ namespace ICCMS_Web.Controllers
         private readonly ILogger<ContractorController> _logger;
         private readonly IApiClient _apiClient;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IAuditLogService _auditLogService;
 
         public ContractorController(
             IContractorService contractorService,
             ILogger<ContractorController> logger,
             IApiClient apiClient,
-            IHttpContextAccessor httpContextAccessor
+            IHttpContextAccessor httpContextAccessor,
+            IAuditLogService auditLogService
         )
         {
             _contractorService = contractorService;
             _logger = logger;
             _apiClient = apiClient;
             _httpContextAccessor = httpContextAccessor;
+            _auditLogService = auditLogService;
         }
 
         /// <summary>
@@ -480,6 +483,17 @@ namespace ICCMS_Web.Controllers
                     userId
                 );
 
+                // Log task start if status indicates task is being started
+                if (request.Status == "In Progress" || request.Status == "Started")
+                {
+                    await _auditLogService.LogTaskStartedAsync(
+                        request.TaskId,
+                        taskToUpdate.Name,
+                        taskToUpdate.ProjectId,
+                        User
+                    );
+                }
+
                 return Json(new { success = true, task = updatedTask });
             }
             catch (Exception ex)
@@ -530,6 +544,9 @@ namespace ICCMS_Web.Controllers
                     report.TaskId,
                     userId
                 );
+
+                // Log progress report submission
+                await _auditLogService.LogProgressReportAsync(report.TaskId, userId, User);
 
                 return Json(new { success = true, report = result });
             }
@@ -631,6 +648,9 @@ namespace ICCMS_Web.Controllers
                     report.TaskId,
                     userId
                 );
+
+                // Log completion report submission
+                await _auditLogService.LogCompletionReportAsync(report.TaskId, userId, User);
 
                 return Json(
                     new

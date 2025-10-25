@@ -7,7 +7,7 @@ namespace ICCMS_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin,Project Manager,Tester")] // Admin oversight, PM management, Tester access
+    [Authorize] // Allow all authenticated users to create audit logs
     public class AuditLogsController : ControllerBase
     {
         private readonly IFirebaseService _firebaseService;
@@ -68,6 +68,7 @@ namespace ICCMS_API.Controllers
 
         // GET: api/auditlogs?limit=200
         [HttpGet]
+        [Authorize(Roles = "Admin,Project Manager,Tester")]
         public async Task<ActionResult<List<AuditLog>>> GetAll([FromQuery] int limit = 200)
         {
             try
@@ -88,6 +89,7 @@ namespace ICCMS_API.Controllers
 
         // GET: api/auditlogs/{id}
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,Project Manager,Tester")]
         public async Task<ActionResult<AuditLog>> GetById(string id)
         {
             try
@@ -105,6 +107,7 @@ namespace ICCMS_API.Controllers
 
         // GET: api/auditlogs/search?userId=&logType=&entityId=&fromUtc=&toUtc=&limit=
         [HttpGet("search")]
+        [Authorize(Roles = "Admin,Project Manager,Tester")]
         public async Task<ActionResult<List<AuditLog>>> Search(
             [FromQuery] string? userId,
             [FromQuery] string? logType,
@@ -149,6 +152,7 @@ namespace ICCMS_API.Controllers
 
         // GET: api/auditlogs/by-entity/{entityId}
         [HttpGet("by-entity/{entityId}")]
+        [Authorize(Roles = "Admin,Project Manager,Tester")]
         public async Task<ActionResult<List<AuditLog>>> ByEntity(
             string entityId,
             [FromQuery] int limit = 200

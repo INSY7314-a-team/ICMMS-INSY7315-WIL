@@ -25,13 +25,15 @@ namespace ICCMS_Web.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly IConverter _pdfConverter;
         private readonly ICompositeViewEngine _viewEngine;
+        private readonly IAuditLogService _auditLogService;
 
         public QuotesController(
             IApiClient apiClient,
             ILogger<QuotesController> logger,
             IWebHostEnvironment env,
             IConverter pdfConverter,
-            ICompositeViewEngine viewEngine
+            ICompositeViewEngine viewEngine,
+            IAuditLogService auditLogService
         )
         {
             _apiClient = apiClient;
@@ -39,6 +41,7 @@ namespace ICCMS_Web.Controllers
             _env = env;
             _pdfConverter = pdfConverter;
             _viewEngine = viewEngine;
+            _auditLogService = auditLogService;
         }
 
         // ============================
@@ -999,6 +1002,10 @@ namespace ICCMS_Web.Controllers
                 .GeneratePdf();
 
             _logger.LogInformation("✅ PDF generated for quotation {Id}", id);
+
+            // Log file download
+            await _auditLogService.LogFileDownloadAsync(id, $"Quotation_{id}.pdf", User);
+
             return File(fileBytes, "application/pdf", $"Quotation_{id}.pdf");
         }
 

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using ICCMS_Web.Models;
+using ICCMS_Web.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -12,17 +13,20 @@ namespace ICCMS_Web.Controllers
         private readonly ILogger<AuthController> _logger;
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
+        private readonly IAuditLogService _auditLogService;
         private readonly string _apiBaseUrl;
 
         public AuthController(
             ILogger<AuthController> logger,
             HttpClient httpClient,
-            IConfiguration configuration
+            IConfiguration configuration,
+            IAuditLogService auditLogService
         )
         {
             _logger = logger;
             _httpClient = httpClient;
             _configuration = configuration;
+            _auditLogService = auditLogService;
 
             _apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7136";
             _logger.LogInformation("AuthController initialized. API base URL: {Url}", _apiBaseUrl);
@@ -120,6 +124,9 @@ namespace ICCMS_Web.Controllers
                         ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8),
                     }
                 );
+
+                // Log successful login
+                await _auditLogService.LogLoginSuccessAsync(user.UserId, user.Email, principal);
 
                 return Json(
                     new
