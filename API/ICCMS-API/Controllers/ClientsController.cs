@@ -65,13 +65,42 @@ namespace ICCMS_API.Controllers
                     .Distinct()
                     .ToList();
 
-                // Get all users to find Project Managers
+                // Get all users to find Project Managers, contractors, and other clients
                 var users = await _firebaseService.GetCollectionAsync<User>("users");
+
+                // Get Project Managers and Admins
                 var projectManagers = users
                     .Where(u =>
                         pmIds.Contains(u.UserId)
                         && (u.Role == "Project Manager" || u.Role == "Admin")
                     )
+                    .ToList();
+
+                // Get contractors working on client's projects
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var projectIds = clientProjects.Select(p => p.ProjectId).ToList();
+                var contractorTasks = tasks.Where(t => projectIds.Contains(t.ProjectId)).ToList();
+                var contractorIds = contractorTasks.Select(t => t.AssignedTo).Distinct().ToList();
+
+                var contractors = users
+                    .Where(u => contractorIds.Contains(u.UserId) && u.Role == "Contractor")
+                    .ToList();
+
+                // Get other clients (if any) - this might be rare but could happen
+                var otherClientIds = clientProjects
+                    .Where(p => !string.IsNullOrEmpty(p.ClientId) && p.ClientId != clientId)
+                    .Select(p => p.ClientId)
+                    .Distinct()
+                    .ToList();
+
+                var otherClients = users
+                    .Where(u => otherClientIds.Contains(u.UserId) && u.Role == "Client")
+                    .ToList();
+
+                // Combine all available users
+                var allAvailableUsers = projectManagers
+                    .Concat(contractors)
+                    .Concat(otherClients)
                     .Select(u => new
                     {
                         UserId = u.UserId,
@@ -81,7 +110,7 @@ namespace ICCMS_API.Controllers
                     })
                     .ToList();
 
-                return Ok(projectManagers);
+                return Ok(allAvailableUsers);
             }
             catch (Exception ex)
             {

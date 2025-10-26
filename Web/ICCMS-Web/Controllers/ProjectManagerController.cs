@@ -3,7 +3,6 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using ICCMS_Web.Helpers;
 using ICCMS_Web.Models;
 using ICCMS_Web.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -944,9 +943,6 @@ namespace ICCMS_Web.Controllers
                     quotationId
                 );
 
-                // Send message to client about the quotation
-                await SendQuoteSentMessageAsync(quotationId);
-
                 return Json(new { success = true });
             }
             catch (Exception ex)
@@ -1257,10 +1253,7 @@ namespace ICCMS_Web.Controllers
             }
 
             // Send automatic messages for new projects with assigned contractors
-            if (isNew && result.Status == "Planning" && request.Tasks != null)
-            {
-                await SendTaskAssignmentMessagesAsync(request.Project, request.Tasks);
-            }
+            if (isNew && result.Status == "Planning" && request.Tasks != null) { }
 
             return Json(
                 new
@@ -1813,128 +1806,6 @@ namespace ICCMS_Web.Controllers
         }
 
         /// <summary>
-        /// Send quote sent message to client
-        /// </summary>
-        private async Task SendQuoteSentMessageAsync(string quotationId)
-        {
-            try
-            {
-                // Get quotation details
-                var quotation = await _apiClient.GetAsync<QuotationDto>(
-                    $"/api/quotations/{quotationId}",
-                    User
-                );
-                if (quotation == null)
-                {
-                    _logger.LogWarning(
-                        "Could not find quotation {QuotationId} for messaging",
-                        quotationId
-                    );
-                    return;
-                }
-
-                // Get project details
-                var project = await _apiClient.GetAsync<ProjectDto>(
-                    $"/api/projectmanager/project/{quotation.ProjectId}",
-                    User
-                );
-                if (project == null)
-                {
-                    _logger.LogWarning(
-                        "Could not find project {ProjectId} for quotation messaging",
-                        quotation.ProjectId
-                    );
-                    return;
-                }
-
-                // Send message to client
-                await MessageHelper.SendQuoteSentMessageAsync(
-                    _messagingService,
-                    project.ClientId,
-                    project.ProjectId,
-                    project.Name,
-                    quotationId,
-                    (decimal)quotation.Total
-                );
-
-                _logger.LogInformation(
-                    "Sent quote sent message to client {ClientId} for quotation {QuotationId}",
-                    project.ClientId,
-                    quotationId
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Error sending quote sent message for quotation {QuotationId}",
-                    quotationId
-                );
-            }
-        }
-
-        /// <summary>
-        /// Send task assignment messages to contractors when a new project is created
-        /// </summary>
-        private async Task SendTaskAssignmentMessagesAsync(
-            ProjectDto project,
-            List<ProjectTaskDto> tasks
-        )
-        {
-            try
-            {
-                var assignedContractors = new HashSet<string>();
-
-                // Collect all unique contractors assigned to tasks
-                foreach (var task in tasks)
-                {
-                    if (
-                        !string.IsNullOrEmpty(task.AssignedTo)
-                        && !assignedContractors.Contains(task.AssignedTo)
-                    )
-                    {
-                        assignedContractors.Add(task.AssignedTo);
-                    }
-                }
-
-                // Send messages to each assigned contractor
-                foreach (var contractorId in assignedContractors)
-                {
-                    var contractorTasks = tasks.Where(t => t.AssignedTo == contractorId).ToList();
-
-                    // Send a message for each task
-                    foreach (var task in contractorTasks)
-                    {
-                        await MessageHelper.SendTaskAssignmentMessageAsync(
-                            _messagingService,
-                            contractorId,
-                            project.ProjectId,
-                            project.Name,
-                            task.Name,
-                            task.Description ?? "No description provided",
-                            task.StartDate,
-                            task.DueDate
-                        );
-                    }
-                }
-
-                _logger.LogInformation(
-                    "Sent task assignment messages to {Count} contractors for project {ProjectId}",
-                    assignedContractors.Count,
-                    project.ProjectId
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Error sending task assignment messages for project {ProjectId}",
-                    project.ProjectId
-                );
-            }
-        }
-
-        /// <summary>
         /// Create a new task
         /// </summary>
         [HttpPost]
@@ -2170,18 +2041,6 @@ namespace ICCMS_Web.Controllers
                     );
                     return;
                 }
-
-                // Send workflow message to contractor
-                await MessageHelper.SendTaskAssignmentMessageAsync(
-                    _messagingService,
-                    task.AssignedTo,
-                    task.ProjectId,
-                    project.Name,
-                    task.Name,
-                    task.Description ?? "No description provided",
-                    task.StartDate,
-                    task.DueDate
-                );
 
                 _logger.LogInformation(
                     "Sent task assignment workflow message to contractor {ContractorId} for task {TaskId}",

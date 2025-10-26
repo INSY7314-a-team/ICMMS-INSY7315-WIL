@@ -271,145 +271,16 @@ namespace ICCMS_Web.Services
             if (senderRole == "Project Manager")
                 return true;
 
-            // Contractors and Clients can only message PM and Admin
+            // Contractors and Clients can message PM, Admin, and other users in their projects
             if (senderRole == "Contractor" || senderRole == "Client")
             {
-                return receiverRole == "Admin" || receiverRole == "Project Manager";
+                return receiverRole == "Admin"
+                    || receiverRole == "Project Manager"
+                    || receiverRole == "Contractor"
+                    || receiverRole == "Client";
             }
 
             return false;
-        }
-
-        public async Task<bool> SendSystemMessageAsync(
-            string receiverId,
-            string projectId,
-            string subject,
-            string content
-        )
-        {
-            try
-            {
-                var currentUser = GetCurrentUser();
-                if (currentUser == null)
-                {
-                    _logger.LogWarning("No authenticated user found for sending system message");
-                    return false;
-                }
-
-                // For system messages, use the current user as sender
-                var currentUserId = currentUser.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(currentUserId))
-                {
-                    _logger.LogWarning(
-                        "No user ID found in current user claims for system message"
-                    );
-                    return false;
-                }
-
-                var messageRequest = new CreateMessageRequest
-                {
-                    SenderId = currentUserId,
-                    ReceiverId = receiverId,
-                    ProjectId = projectId,
-                    Subject = subject,
-                    Content = content,
-                    MessageType = "direct",
-                    ThreadParticipants = new List<string> { currentUserId, receiverId },
-                };
-
-                var result = await _apiClient.PostAsync<string>(
-                    "/api/messages",
-                    messageRequest,
-                    currentUser
-                );
-
-                if (!string.IsNullOrEmpty(result))
-                {
-                    _logger.LogInformation(
-                        "System message sent successfully to {ReceiverId}",
-                        receiverId
-                    );
-                    return true;
-                }
-
-                _logger.LogWarning("Failed to send system message to {ReceiverId}", receiverId);
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error sending system message to {ReceiverId}", receiverId);
-                return false;
-            }
-        }
-
-        public async Task<bool> SendWorkflowMessageAsync(
-            string receiverId,
-            string projectId,
-            string subject,
-            string content,
-            string messageType
-        )
-        {
-            try
-            {
-                var currentUser = GetCurrentUser();
-                if (currentUser == null)
-                {
-                    _logger.LogWarning("No authenticated user found for sending workflow message");
-                    return false;
-                }
-
-                // For workflow messages, use the current user as sender
-                var currentUserId = currentUser.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(currentUserId))
-                {
-                    _logger.LogWarning(
-                        "No user ID found in current user claims for workflow message"
-                    );
-                    return false;
-                }
-
-                // Create a simple workflow message object that matches the API expectations
-                var workflowMessage = new
-                {
-                    WorkflowType = messageType,
-                    EntityId = projectId,
-                    EntityType = "project",
-                    Action = "notification",
-                    ProjectId = projectId,
-                    Recipients = new[] { receiverId },
-                    Subject = subject,
-                    Content = content,
-                    Priority = "normal",
-                    IsSystemGenerated = true,
-                };
-
-                var result = await _apiClient.PostAsync<object>(
-                    "/api/messages/workflow",
-                    workflowMessage,
-                    currentUser
-                );
-
-                if (result != null)
-                {
-                    _logger.LogInformation(
-                        "Workflow message sent successfully to {ReceiverId} with type {MessageType}",
-                        receiverId,
-                        messageType
-                    );
-                    return true;
-                }
-                else
-                {
-                    _logger.LogError("Failed to send workflow message to {ReceiverId}", receiverId);
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error sending workflow message to {ReceiverId}", receiverId);
-                return false;
-            }
         }
 
         private ClaimsPrincipal? GetCurrentUser()

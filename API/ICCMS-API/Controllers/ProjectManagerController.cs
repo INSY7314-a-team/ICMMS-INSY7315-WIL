@@ -14,11 +14,17 @@ namespace ICCMS_API.Controllers
     {
         private readonly IAuthService _authService;
         private readonly IFirebaseService _firebaseService;
+        private readonly IWorkflowMessageService _workflowMessageService;
 
-        public ProjectManagerController(IAuthService authService, IFirebaseService firebaseService)
+        public ProjectManagerController(
+            IAuthService authService,
+            IFirebaseService firebaseService,
+            IWorkflowMessageService workflowMessageService
+        )
         {
             _authService = authService;
             _firebaseService = firebaseService;
+            _workflowMessageService = workflowMessageService;
         }
 
         [HttpGet("projects")]
@@ -1042,6 +1048,21 @@ namespace ICCMS_API.Controllers
             {
                 task.ProjectId = projectId;
                 await _firebaseService.AddDocumentWithIdAsync("tasks", task.TaskId, task);
+
+                // Send workflow notification if task is assigned to someone
+                if (!string.IsNullOrEmpty(task.AssignedTo))
+                {
+                    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                    if (!string.IsNullOrEmpty(currentUserId))
+                    {
+                        await _workflowMessageService.SendTaskAssignmentNotificationAsync(
+                            task.TaskId,
+                            task.AssignedTo,
+                            currentUserId
+                        );
+                    }
+                }
+
                 return Ok(task);
             }
             catch (Exception ex)
@@ -1153,7 +1174,28 @@ namespace ICCMS_API.Controllers
                         new { error = "You are not authorized to update this task" }
                     );
                 }
+
+                // Check if task assignment has changed
+                var assignmentChanged = existingTask.AssignedTo != task.AssignedTo;
+                var wasUnassigned = string.IsNullOrEmpty(existingTask.AssignedTo);
+                var isNowAssigned = !string.IsNullOrEmpty(task.AssignedTo);
+
                 await _firebaseService.UpdateDocumentAsync("tasks", id, task);
+
+                // Send workflow notification if task assignment changed
+                if (assignmentChanged && isNowAssigned)
+                {
+                    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                    if (!string.IsNullOrEmpty(currentUserId))
+                    {
+                        await _workflowMessageService.SendTaskAssignmentNotificationAsync(
+                            task.TaskId,
+                            task.AssignedTo,
+                            currentUserId
+                        );
+                    }
+                }
+
                 return Ok(task);
             }
             catch (Exception ex)
@@ -1805,6 +1847,16 @@ namespace ICCMS_API.Controllers
                     // Update task progress to 100% and phase progress
                     await UpdateTaskProgressToComplete(report.TaskId);
                     await UpdatePhaseProgress(task.PhaseId);
+
+                    // Send workflow notification about task completion
+                    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                    if (!string.IsNullOrEmpty(currentUserId))
+                    {
+                        await _workflowMessageService.SendTaskCompletionNotificationAsync(
+                            report.TaskId,
+                            report.SubmittedBy
+                        );
+                    }
                 }
 
                 return Ok(report);

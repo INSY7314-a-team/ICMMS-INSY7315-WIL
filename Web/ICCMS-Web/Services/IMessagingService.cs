@@ -39,26 +39,5 @@ namespace ICCMS_Web.Services
         /// Validate if a user can send a message to another user based on communication hierarchy
         /// </summary>
         bool CanUserSendMessage(string senderRole, string receiverRole);
-
-        /// <summary>
-        /// Send a system message (automated workflow message)
-        /// </summary>
-        Task<bool> SendSystemMessageAsync(
-            string receiverId,
-            string projectId,
-            string subject,
-            string content
-        );
-
-        /// <summary>
-        /// Send a workflow message with specific message type
-        /// </summary>
-        Task<bool> SendWorkflowMessageAsync(
-            string receiverId,
-            string projectId,
-            string subject,
-            string content,
-            string messageType
-        );
     }
 }

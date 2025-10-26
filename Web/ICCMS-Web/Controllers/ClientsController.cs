@@ -8,7 +8,6 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using DinkToPdf;
 using DinkToPdf.Contracts;
-using ICCMS_Web.Helpers;
 using ICCMS_Web.Models;
 using ICCMS_Web.Models;
 using ICCMS_Web.Services;
@@ -317,9 +316,6 @@ namespace ICCMS_Web.Controllers
                         quotationId
                     );
                     TempData["SuccessMessage"] = "Quotation approved successfully.";
-
-                    // Send message to PM about quote approval
-                    await SendQuoteApprovedMessageAsync(quotationId);
                 }
                 else
                 {
@@ -375,9 +371,6 @@ namespace ICCMS_Web.Controllers
                         quotationId
                     );
                     TempData["SuccessMessage"] = "Quotation rejected successfully.";
-
-                    // Send message to PM about quote rejection
-                    await SendQuoteRejectedMessageAsync(quotationId);
                 }
                 else
                 {
@@ -933,147 +926,6 @@ namespace ICCMS_Web.Controllers
             {
                 _logger.LogError(ex, "🔥 Error retrieving quotation {Id}", id);
                 return StatusCode(500, "Failed to load quotation details");
-            }
-        }
-
-        /// <summary>
-        /// Send quote approved message to PM
-        /// </summary>
-        private async Task SendQuoteApprovedMessageAsync(string quotationId)
-        {
-            try
-            {
-                // Get quotation details
-                var quotation = await _apiClient.GetAsync<QuotationDto>(
-                    $"/api/quotations/{quotationId}",
-                    User
-                );
-                if (quotation == null)
-                {
-                    _logger.LogWarning(
-                        "Could not find quotation {QuotationId} for messaging",
-                        quotationId
-                    );
-                    return;
-                }
-
-                // Get project details
-                var project = await _apiClient.GetAsync<ProjectDto>(
-                    $"/api/projectmanager/project/{quotation.ProjectId}",
-                    User
-                );
-                if (project == null)
-                {
-                    _logger.LogWarning(
-                        "Could not find project {ProjectId} for quotation messaging",
-                        quotation.ProjectId
-                    );
-                    return;
-                }
-
-                // Get current client details
-                var currentUserId = MessageHelper.GetCurrentUserId(User);
-                var clientUser = await MessageHelper.GetUserDetailsAsync(
-                    _httpClient,
-                    _apiBaseUrl,
-                    currentUserId ?? ""
-                );
-                var clientName = clientUser?.FullName ?? "Client";
-
-                // Send message to PM
-                await MessageHelper.SendQuoteApprovedMessageAsync(
-                    _messagingService,
-                    project.ProjectManagerId,
-                    project.ProjectId,
-                    project.Name,
-                    clientName,
-                    quotationId,
-                    (decimal)quotation.Total
-                );
-
-                _logger.LogInformation(
-                    "Sent quote approved message to PM {PMId} for quotation {QuotationId}",
-                    project.ProjectManagerId,
-                    quotationId
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Error sending quote approved message for quotation {QuotationId}",
-                    quotationId
-                );
-            }
-        }
-
-        /// <summary>
-        /// Send quote rejected message to PM
-        /// </summary>
-        private async Task SendQuoteRejectedMessageAsync(string quotationId)
-        {
-            try
-            {
-                // Get quotation details
-                var quotation = await _apiClient.GetAsync<QuotationDto>(
-                    $"/api/quotations/{quotationId}",
-                    User
-                );
-                if (quotation == null)
-                {
-                    _logger.LogWarning(
-                        "Could not find quotation {QuotationId} for messaging",
-                        quotationId
-                    );
-                    return;
-                }
-
-                // Get project details
-                var project = await _apiClient.GetAsync<ProjectDto>(
-                    $"/api/projectmanager/project/{quotation.ProjectId}",
-                    User
-                );
-                if (project == null)
-                {
-                    _logger.LogWarning(
-                        "Could not find project {ProjectId} for quotation messaging",
-                        quotation.ProjectId
-                    );
-                    return;
-                }
-
-                // Get current client details
-                var currentUserId = MessageHelper.GetCurrentUserId(User);
-                var clientUser = await MessageHelper.GetUserDetailsAsync(
-                    _httpClient,
-                    _apiBaseUrl,
-                    currentUserId ?? ""
-                );
-                var clientName = clientUser?.FullName ?? "Client";
-
-                // Send message to PM
-                await MessageHelper.SendQuoteRejectedMessageAsync(
-                    _messagingService,
-                    project.ProjectManagerId,
-                    project.ProjectId,
-                    project.Name,
-                    clientName,
-                    quotationId
-                );
-
-                _logger.LogInformation(
-                    "Sent quote rejected message to PM {PMId} for quotation {QuotationId}",
-                    project.ProjectManagerId,
-                    quotationId
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Error sending quote rejected message for quotation {QuotationId}",
-                    quotationId
-                );
             }
         }
     }

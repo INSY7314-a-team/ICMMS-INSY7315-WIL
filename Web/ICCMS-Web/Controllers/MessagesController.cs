@@ -366,122 +366,78 @@ namespace ICCMS_Web.Controllers
             {
                 _logger.LogInformation("Getting workflow messages for user {UserId}", userId);
 
-                // Get messages using IApiClient with proper authentication
-                var allMessages = await _apiClient.GetAsync<List<MessageDto>>(
-                    $"/api/messages/user/{userId}",
+                // Get workflow messages using the dedicated workflow endpoint
+                var workflowMessages = await _apiClient.GetAsync<List<WorkflowMessageDto>>(
+                    $"/api/messages/user/{userId}/workflow",
                     User
                 );
 
-                if (allMessages != null)
+                if (workflowMessages != null && workflowMessages.Any())
                 {
                     _logger.LogInformation(
-                        "Deserialized {Count} total messages from messages API",
-                        allMessages.Count
+                        "Deserialized {Count} workflow messages from workflow API",
+                        workflowMessages.Count
                     );
 
-                    // Log all message types for debugging
-                    var messageTypes = allMessages
-                        .GroupBy(m => m.MessageType)
-                        .Select(g => new { Type = g.Key, Count = g.Count() })
-                        .ToList();
-                    _logger.LogInformation(
-                        "Message types found: {MessageTypes}",
-                        string.Join(", ", messageTypes.Select(mt => $"{mt.Type}: {mt.Count}"))
-                    );
-
-                    // Log some sample messages for debugging
-                    var sampleMessages = allMessages
+                    // Log some sample workflow messages for debugging
+                    var sampleMessages = workflowMessages
                         .Take(3)
-                        .Select(m => new
+                        .Select(wm => new
                         {
-                            MessageId = m.MessageId,
-                            MessageType = m.MessageType,
-                            ReceiverId = m.ReceiverId,
-                            SenderId = m.SenderId,
-                            Subject = m.Subject,
+                            WorkflowMessageId = wm.WorkflowMessageId,
+                            WorkflowType = wm.WorkflowType,
+                            Subject = wm.Subject,
+                            RecipientsCount = wm.Recipients.Count,
                         })
                         .ToList();
                     _logger.LogInformation(
-                        "Sample messages: {SampleMessages}",
+                        "Sample workflow messages: {SampleMessages}",
                         string.Join(
                             " | ",
-                            sampleMessages.Select(sm => $"{sm.MessageType}:{sm.ReceiverId}")
+                            sampleMessages.Select(sm =>
+                                $"{sm.WorkflowType}:{sm.RecipientsCount} recipients"
+                            )
                         )
                     );
 
                     _logger.LogInformation("Current user ID: {UserId}", userId);
 
-                    // Check if there are any messages for this user
-                    var userMessages = allMessages.Where(m => m.ReceiverId == userId).ToList();
-                    _logger.LogInformation(
-                        "Found {Count} messages for user {UserId}",
-                        userMessages.Count,
-                        userId
-                    );
-
-                    // Filter for workflow messages where user is the receiver
-                    var userWorkflowMessages = allMessages
-                        .Where(m => m.MessageType == "workflow" && m.ReceiverId == userId)
+                    // Convert workflow messages to ThreadDto format
+                    var workflowThreads = workflowMessages
+                        .Select(wm => new ThreadDto
+                        {
+                            ThreadId = wm.WorkflowMessageId,
+                            Subject = wm.Subject,
+                            ProjectId = wm.ProjectId,
+                            ProjectName = "", // Will be populated from project data if needed
+                            MessageCount = 1, // Each workflow message is a single message
+                            LastMessageAt = wm.CreatedAt,
+                            CreatedAt = wm.CreatedAt,
+                            LastMessageSenderName = "System",
+                            LastMessagePreview =
+                                wm.Content.Length > 50
+                                    ? wm.Content.Substring(0, 47) + "..."
+                                    : wm.Content,
+                            Participants = wm.Recipients,
+                            ParticipantNames = new List<string>(),
+                            ThreadType = "workflow",
+                            HasUnreadMessages = false, // Workflow messages are always considered read
+                            UnreadCount = 0,
+                            IsActive = false,
+                        })
+                        .OrderByDescending(t => t.LastMessageAt)
                         .ToList();
 
                     _logger.LogInformation(
-                        "Found {Count} workflow messages for user {UserId} from messages API",
-                        userWorkflowMessages.Count,
+                        "Returning {Count} workflow threads for user {UserId}",
+                        workflowThreads.Count,
                         userId
                     );
-
-                    if (userWorkflowMessages.Any())
-                    {
-                        // Group messages by thread
-                        var threadGroups = userWorkflowMessages.GroupBy(m => m.ThreadId).ToList();
-
-                        _logger.LogInformation(
-                            "Found {Count} workflow message threads for user {UserId}",
-                            threadGroups.Count,
-                            userId
-                        );
-
-                        // Convert to ThreadDto format and return immediately
-                        var realWorkflowThreads = threadGroups
-                            .Select(group => new ThreadDto
-                            {
-                                ThreadId = group.Key,
-                                Subject = group.First().Subject,
-                                ProjectId = group.First().ProjectId,
-                                ProjectName = "", // Will be populated from project data if needed
-                                MessageCount = group.Count(),
-                                LastMessageAt = group.Max(m => m.SentAt),
-                                CreatedAt = group.Min(m => m.SentAt),
-                                LastMessageSenderName = "System",
-                                LastMessagePreview =
-                                    group.OrderByDescending(m => m.SentAt).First().Content.Length
-                                    > 50
-                                        ? group
-                                            .OrderByDescending(m => m.SentAt)
-                                            .First()
-                                            .Content.Substring(0, 47) + "..."
-                                        : group.OrderByDescending(m => m.SentAt).First().Content,
-                                Participants = new List<string> { userId },
-                                ParticipantNames = new List<string>(),
-                                ThreadType = "workflow",
-                                HasUnreadMessages = group.Any(m => !m.IsRead),
-                                UnreadCount = group.Count(m => !m.IsRead),
-                                IsActive = false,
-                            })
-                            .OrderByDescending(t => t.LastMessageAt)
-                            .ToList();
-
-                        _logger.LogInformation(
-                            "Returning {Count} real workflow threads for user {UserId}",
-                            realWorkflowThreads.Count,
-                            userId
-                        );
-                        return realWorkflowThreads;
-                    }
+                    return workflowThreads;
                 }
                 else
                 {
-                    _logger.LogWarning("ApiClient returned null for workflow messages");
+                    _logger.LogWarning("ApiClient returned null or empty for workflow messages");
                 }
             }
             catch (Exception ex)
@@ -633,42 +589,50 @@ namespace ICCMS_Web.Controllers
                 {
                     _logger.LogInformation("Using contractor-specific endpoint for users");
                     var contractorUsers = await _apiClient.GetAsync<List<object>>(
-                        "/api/contractor/messaging/available-users",
+                        "/api/contractors/messaging/available-users",
                         User
                     );
-                    if (contractorUsers != null)
+                    if (contractorUsers != null && contractorUsers.Any())
                     {
                         allUsers = contractorUsers
                             .Select(u => new UserDto
                             {
-                                UserId = ((JsonElement)u).GetProperty("UserId").GetString() ?? "",
-                                FullName =
-                                    ((JsonElement)u).GetProperty("FullName").GetString() ?? "",
-                                Role = ((JsonElement)u).GetProperty("Role").GetString() ?? "",
-                                Email = ((JsonElement)u).GetProperty("Email").GetString() ?? "",
+                                UserId = GetPropertyValue(u, "UserId") ?? "",
+                                FullName = GetPropertyValue(u, "FullName") ?? "",
+                                Role = GetPropertyValue(u, "Role") ?? "",
+                                Email = GetPropertyValue(u, "Email") ?? "",
                             })
                             .ToList();
+                    }
+                    else
+                    {
+                        _logger.LogInformation(
+                            "No contractor users returned from API or empty array"
+                        );
                     }
                 }
                 else if (userRole == "Client")
                 {
                     _logger.LogInformation("Using client-specific endpoint for users");
                     var clientUsers = await _apiClient.GetAsync<List<object>>(
-                        "/api/client/messaging/available-users",
+                        "/api/clients/messaging/available-users",
                         User
                     );
-                    if (clientUsers != null)
+                    if (clientUsers != null && clientUsers.Any())
                     {
                         allUsers = clientUsers
                             .Select(u => new UserDto
                             {
-                                UserId = ((JsonElement)u).GetProperty("UserId").GetString() ?? "",
-                                FullName =
-                                    ((JsonElement)u).GetProperty("FullName").GetString() ?? "",
-                                Role = ((JsonElement)u).GetProperty("Role").GetString() ?? "",
-                                Email = ((JsonElement)u).GetProperty("Email").GetString() ?? "",
+                                UserId = GetPropertyValue(u, "UserId") ?? "",
+                                FullName = GetPropertyValue(u, "FullName") ?? "",
+                                Role = GetPropertyValue(u, "Role") ?? "",
+                                Email = GetPropertyValue(u, "Email") ?? "",
                             })
                             .ToList();
+                    }
+                    else
+                    {
+                        _logger.LogInformation("No client users returned from API or empty array");
                     }
                 }
                 else
@@ -792,44 +756,52 @@ namespace ICCMS_Web.Controllers
                 {
                     _logger.LogInformation("Using contractor-specific endpoint for projects");
                     var contractorProjects = await _apiClient.GetAsync<List<object>>(
-                        "/api/contractor/messaging/available-projects",
+                        "/api/contractors/messaging/available-projects",
                         User
                     );
-                    if (contractorProjects != null)
+                    if (contractorProjects != null && contractorProjects.Any())
                     {
                         allProjects = contractorProjects
                             .Select(p => new ProjectDto
                             {
-                                ProjectId =
-                                    ((JsonElement)p).GetProperty("ProjectId").GetString() ?? "",
-                                Name = ((JsonElement)p).GetProperty("Name").GetString() ?? "",
-                                Description =
-                                    ((JsonElement)p).GetProperty("Description").GetString() ?? "",
-                                Status = ((JsonElement)p).GetProperty("Status").GetString() ?? "",
+                                ProjectId = GetPropertyValue(p, "ProjectId") ?? "",
+                                Name = GetPropertyValue(p, "Name") ?? "",
+                                Description = GetPropertyValue(p, "Description") ?? "",
+                                Status = GetPropertyValue(p, "Status") ?? "",
                             })
                             .ToList();
+                    }
+                    else
+                    {
+                        _logger.LogInformation(
+                            "No contractor projects returned from API or empty array"
+                        );
                     }
                 }
                 else if (userRole == "Client")
                 {
                     _logger.LogInformation("Using client-specific endpoint for projects");
                     var clientProjects = await _apiClient.GetAsync<List<object>>(
-                        "/api/client/messaging/available-projects",
+                        "/api/clients/messaging/available-projects",
                         User
                     );
-                    if (clientProjects != null)
+                    if (clientProjects != null && clientProjects.Any())
                     {
                         allProjects = clientProjects
                             .Select(p => new ProjectDto
                             {
-                                ProjectId =
-                                    ((JsonElement)p).GetProperty("ProjectId").GetString() ?? "",
-                                Name = ((JsonElement)p).GetProperty("Name").GetString() ?? "",
-                                Description =
-                                    ((JsonElement)p).GetProperty("Description").GetString() ?? "",
-                                Status = ((JsonElement)p).GetProperty("Status").GetString() ?? "",
+                                ProjectId = GetPropertyValue(p, "ProjectId") ?? "",
+                                Name = GetPropertyValue(p, "Name") ?? "",
+                                Description = GetPropertyValue(p, "Description") ?? "",
+                                Status = GetPropertyValue(p, "Status") ?? "",
                             })
                             .ToList();
+                    }
+                    else
+                    {
+                        _logger.LogInformation(
+                            "No client projects returned from API or empty array"
+                        );
                     }
                 }
                 else
@@ -853,26 +825,20 @@ namespace ICCMS_Web.Controllers
 
                 var filteredProjects = new List<ProjectDto>();
 
+                // Get user projects once to avoid infinite loops
+                List<ProjectDto> userProjects = new List<ProjectDto>();
+                if (userRole == "Contractor" || userRole == "Client")
+                {
+                    userProjects = await GetUserProjects(currentUserId, userRole);
+                }
+
                 foreach (var project in allProjects)
                 {
                     // For Contractors and Clients, only show projects they're associated with
                     if (userRole == "Contractor" || userRole == "Client")
                     {
-                        _logger.LogInformation(
-                            "Checking if {Role} user {UserId} is associated with project {ProjectId} ({ProjectName})",
-                            userRole,
-                            currentUserId,
-                            project.ProjectId,
-                            project.Name
-                        );
-
-                        if (
-                            await IsUserAssociatedWithProject(
-                                currentUserId,
-                                project.ProjectId,
-                                userRole
-                            )
-                        )
+                        // Check if user is associated with this project
+                        if (userProjects.Any(p => p.ProjectId == project.ProjectId))
                         {
                             filteredProjects.Add(project);
                             _logger.LogInformation(
@@ -975,12 +941,12 @@ namespace ICCMS_Web.Controllers
         private async Task<bool> IsUserAssociatedWithProject(
             string userId,
             string projectId,
-            string userRole
+            string userRole,
+            List<ProjectDto> userProjects
         )
         {
             try
             {
-                var userProjects = await GetUserProjects(userId, userRole);
                 return userProjects.Any(p => p.ProjectId == projectId);
             }
             catch (Exception ex)
@@ -999,23 +965,17 @@ namespace ICCMS_Web.Controllers
         {
             try
             {
-                _logger.LogInformation(
-                    "Getting projects for {Role} user {UserId}",
-                    userRole,
-                    userId
-                );
+                // Get projects for user
 
                 if (userRole == "Contractor")
                 {
-                    // Get projects where contractor has tasks
-                    _logger.LogInformation(
-                        "Calling contractor projects API: /api/contractor/projects/{UserId}",
-                        userId
-                    );
+                    // Get projects where contractor has tasks using the correct endpoint
+                    // Call contractor projects API
                     var contractorProjects = await _apiClient.GetAsync<List<ProjectDto>>(
-                        $"/api/contractor/projects/{userId}",
+                        "/api/contractors/projects",
                         User
                     );
+
                     var result = contractorProjects ?? new List<ProjectDto>();
                     _logger.LogInformation(
                         "Contractor {UserId} has {Count} projects",
@@ -1074,6 +1034,27 @@ namespace ICCMS_Web.Controllers
                     userRole
                 );
                 return new List<ProjectDto>();
+            }
+        }
+
+        private string? GetPropertyValue(object obj, string propertyName)
+        {
+            try
+            {
+                if (obj is JsonElement jsonElement)
+                {
+                    return jsonElement.GetProperty(propertyName).GetString();
+                }
+                else
+                {
+                    // Handle regular objects using reflection
+                    var property = obj.GetType().GetProperty(propertyName);
+                    return property?.GetValue(obj)?.ToString();
+                }
+            }
+            catch
+            {
+                return null;
             }
         }
     }

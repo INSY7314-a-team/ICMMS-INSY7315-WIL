@@ -15,11 +15,17 @@ namespace ICCMS_API.Controllers
     {
         private readonly IAuthService _authService;
         private readonly IFirebaseService _firebaseService;
+        private readonly IWorkflowMessageService _workflowMessageService;
 
-        public ContractorsController(IAuthService authService, IFirebaseService firebaseService)
+        public ContractorsController(
+            IAuthService authService,
+            IFirebaseService firebaseService,
+            IWorkflowMessageService workflowMessageService
+        )
         {
             _authService = authService;
             _firebaseService = firebaseService;
+            _workflowMessageService = workflowMessageService;
         }
 
         [HttpGet("Project/Tasks")]
@@ -274,13 +280,45 @@ namespace ICCMS_API.Controllers
                     .Distinct()
                     .ToList();
 
-                // Get all users to find Project Managers
+                // Get all users to find Project Managers, other contractors, and clients
                 var users = await _firebaseService.GetCollectionAsync<User>("users");
+
+                // Get Project Managers and Admins
                 var projectManagers = users
                     .Where(u =>
                         pmIds.Contains(u.UserId)
                         && (u.Role == "Project Manager" || u.Role == "Admin")
                     )
+                    .ToList();
+
+                // Get other contractors working on the same projects
+                var otherContractorTasks = tasks
+                    .Where(t => projectIds.Contains(t.ProjectId) && t.AssignedTo != contractorId)
+                    .ToList();
+                var otherContractorIds = otherContractorTasks
+                    .Select(t => t.AssignedTo)
+                    .Distinct()
+                    .ToList();
+
+                var otherContractors = users
+                    .Where(u => otherContractorIds.Contains(u.UserId) && u.Role == "Contractor")
+                    .ToList();
+
+                // Get clients of the projects
+                var clientIds = contractorProjects
+                    .Where(p => !string.IsNullOrEmpty(p.ClientId))
+                    .Select(p => p.ClientId)
+                    .Distinct()
+                    .ToList();
+
+                var clients = users
+                    .Where(u => clientIds.Contains(u.UserId) && u.Role == "Client")
+                    .ToList();
+
+                // Combine all available users
+                var allAvailableUsers = projectManagers
+                    .Concat(otherContractors)
+                    .Concat(clients)
                     .Select(u => new
                     {
                         UserId = u.UserId,
@@ -290,7 +328,7 @@ namespace ICCMS_API.Controllers
                     })
                     .ToList();
 
-                return Ok(projectManagers);
+                return Ok(allAvailableUsers);
             }
             catch (Exception ex)
             {
@@ -331,6 +369,43 @@ namespace ICCMS_API.Controllers
                         Status = p.Status,
                     })
                     .ToList();
+
+                return Ok(contractorProjects);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("projects")]
+        public async Task<ActionResult<List<Project>>> GetProjects()
+        {
+            try
+            {
+                var contractorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(contractorId))
+                {
+                    return Unauthorized("Contractor ID not found");
+                }
+
+                // Get all projects where this contractor has tasks
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var contractorTasks = tasks.Where(t => t.AssignedTo == contractorId).ToList();
+                var projectIds = contractorTasks.Select(t => t.ProjectId).Distinct().ToList();
+
+                if (!projectIds.Any())
+                {
+                    return Ok(new List<Project>());
+                }
+
+                // Get the projects
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var contractorProjects = projects
+                    .Where(p => projectIds.Contains(p.ProjectId))
+                    .ToList();
+
+                // Return the projects
 
                 return Ok(contractorProjects);
             }
@@ -660,6 +735,16 @@ namespace ICCMS_API.Controllers
                     report
                 );
 
+                // Send workflow notification to project manager
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(currentUserId))
+                {
+                    await _workflowMessageService.SendProgressReportNotificationAsync(
+                        report.ProgressReportId,
+                        currentUserId
+                    );
+                }
+
                 return Ok(report);
             }
             catch (Exception ex)
@@ -720,6 +805,16 @@ namespace ICCMS_API.Controllers
                 // Update task status to "Awaiting Approval"
                 task.Status = "Awaiting Approval";
                 await _firebaseService.UpdateDocumentAsync("tasks", taskId, task);
+
+                // Send workflow notification to project manager
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(currentUserId))
+                {
+                    await _workflowMessageService.SendCompletionRequestNotificationAsync(
+                        taskId,
+                        currentUserId
+                    );
+                }
 
                 return Ok(
                     new

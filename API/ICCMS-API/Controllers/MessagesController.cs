@@ -377,6 +377,28 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpGet("user/{userId}/workflow")]
+        public async Task<ActionResult<List<WorkflowMessage>>> GetWorkflowMessagesByUser(
+            string userId
+        )
+        {
+            try
+            {
+                var workflowMessages = await _firebaseService.GetCollectionAsync<WorkflowMessage>(
+                    "workflow-messages"
+                );
+                var userWorkflowMessages = workflowMessages
+                    .Where(wm => wm.Recipients.Contains(userId))
+                    .OrderByDescending(wm => wm.CreatedAt)
+                    .ToList();
+                return Ok(userWorkflowMessages);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
         [HttpGet("project/{projectId}")]
         public async Task<ActionResult<List<Message>>> GetMessagesByProject(string projectId)
         {

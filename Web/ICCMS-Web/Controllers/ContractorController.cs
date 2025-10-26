@@ -3,7 +3,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Text.Json;
-using ICCMS_Web.Helpers;
 using ICCMS_Web.Models;
 using ICCMS_Web.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -494,12 +493,6 @@ namespace ICCMS_Web.Controllers
                     userId
                 );
 
-                // Send message to PM when task is completed
-                if (request.Status == "Completed")
-                {
-                    await SendTaskCompletedMessageAsync(updatedTask, userId);
-                }
-
                 return Json(new { success = true, task = updatedTask });
             }
             catch (Exception ex)
@@ -551,9 +544,6 @@ namespace ICCMS_Web.Controllers
                     userId
                 );
 
-                // Send message to PM about progress report
-                await SendProgressReportMessageAsync(report, userId);
-
                 return Json(new { success = true, report = result });
             }
             catch (Exception ex)
@@ -601,9 +591,6 @@ namespace ICCMS_Web.Controllers
                     request.TaskId,
                     userId
                 );
-
-                // Send message to PM about completion request
-                await SendCompletionRequestMessageAsync(request.TaskId, userId);
 
                 return Json(new { success = true, result });
             }
@@ -763,212 +750,6 @@ namespace ICCMS_Web.Controllers
             {
                 _logger.LogError(ex, "Error getting project budget for task {TaskId}", taskId);
                 return StatusCode(500, new { error = ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// Send task completed message to PM
-        /// </summary>
-        private async Task SendTaskCompletedMessageAsync(ProjectTaskDto task, string contractorId)
-        {
-            try
-            {
-                // Get project details
-                var project = await _apiClient.GetAsync<ProjectDto>(
-                    $"/api/projectmanager/project/{task.ProjectId}",
-                    User
-                );
-                if (project == null)
-                {
-                    _logger.LogWarning(
-                        "Could not find project {ProjectId} for task completion messaging",
-                        task.ProjectId
-                    );
-                    return;
-                }
-
-                // Get contractor details
-                var contractorUser = await MessageHelper.GetUserDetailsAsync(
-                    _httpClient,
-                    _apiBaseUrl,
-                    contractorId
-                );
-                var contractorName = contractorUser?.FullName ?? "Contractor";
-
-                // Send message to PM
-                await MessageHelper.SendTaskCompletedMessageAsync(
-                    _messagingService,
-                    project.ProjectManagerId,
-                    project.ProjectId,
-                    project.Name,
-                    contractorName,
-                    task.Name
-                );
-
-                _logger.LogInformation(
-                    "Sent task completed message to PM {PMId} for task {TaskId}",
-                    project.ProjectManagerId,
-                    task.TaskId
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Error sending task completed message for task {TaskId}",
-                    task.TaskId
-                );
-            }
-        }
-
-        /// <summary>
-        /// Send progress report message to PM
-        /// </summary>
-        private async Task SendProgressReportMessageAsync(
-            ProgressReportDto report,
-            string contractorId
-        )
-        {
-            try
-            {
-                // Get task details
-                var task = await _apiClient.GetAsync<ProjectTaskDto>(
-                    $"/api/contractors/task/{report.TaskId}",
-                    User
-                );
-                if (task == null)
-                {
-                    _logger.LogWarning(
-                        "Could not find task {TaskId} for progress report messaging",
-                        report.TaskId
-                    );
-                    return;
-                }
-
-                // Get project details
-                var project = await _apiClient.GetAsync<ProjectDto>(
-                    $"/api/projectmanager/project/{task.ProjectId}",
-                    User
-                );
-                if (project == null)
-                {
-                    _logger.LogWarning(
-                        "Could not find project {ProjectId} for progress report messaging",
-                        task.ProjectId
-                    );
-                    return;
-                }
-
-                // Get contractor details
-                var contractorUser = await MessageHelper.GetUserDetailsAsync(
-                    _httpClient,
-                    _apiBaseUrl,
-                    contractorId
-                );
-                var contractorName = contractorUser?.FullName ?? "Contractor";
-
-                // Calculate progress percentage (this is a simplified calculation)
-                var progressPercentage = Math.Min(
-                    100,
-                    (int)(
-                        (report.HoursWorked / (task.EstimatedHours > 0 ? task.EstimatedHours : 1.0))
-                        * 100
-                    )
-                );
-
-                // Send message to PM
-                await MessageHelper.SendProgressReportMessageAsync(
-                    _messagingService,
-                    project.ProjectManagerId,
-                    project.ProjectId,
-                    project.Name,
-                    contractorName,
-                    task.Name,
-                    progressPercentage
-                );
-
-                _logger.LogInformation(
-                    "Sent progress report message to PM {PMId} for task {TaskId}",
-                    project.ProjectManagerId,
-                    report.TaskId
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Error sending progress report message for task {TaskId}",
-                    report.TaskId
-                );
-            }
-        }
-
-        /// <summary>
-        /// Send completion request message to PM
-        /// </summary>
-        private async Task SendCompletionRequestMessageAsync(string taskId, string contractorId)
-        {
-            try
-            {
-                // Get task details
-                var task = await _apiClient.GetAsync<ProjectTaskDto>(
-                    $"/api/contractors/task/{taskId}",
-                    User
-                );
-                if (task == null)
-                {
-                    _logger.LogWarning(
-                        "Could not find task {TaskId} for completion request messaging",
-                        taskId
-                    );
-                    return;
-                }
-
-                // Get project details
-                var project = await _apiClient.GetAsync<ProjectDto>(
-                    $"/api/projectmanager/project/{task.ProjectId}",
-                    User
-                );
-                if (project == null)
-                {
-                    _logger.LogWarning(
-                        "Could not find project {ProjectId} for completion request messaging",
-                        task.ProjectId
-                    );
-                    return;
-                }
-
-                // Get contractor details
-                var contractorUser = await MessageHelper.GetUserDetailsAsync(
-                    _httpClient,
-                    _apiBaseUrl,
-                    contractorId
-                );
-                var contractorName = contractorUser?.FullName ?? "Contractor";
-
-                // Send message to PM
-                await MessageHelper.SendCompletionRequestMessageAsync(
-                    _messagingService,
-                    project.ProjectManagerId,
-                    project.ProjectId,
-                    project.Name,
-                    contractorName,
-                    task.Name
-                );
-
-                _logger.LogInformation(
-                    "Sent completion request message to PM {PMId} for task {TaskId}",
-                    project.ProjectManagerId,
-                    taskId
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Error sending completion request message for task {TaskId}",
-                    taskId
-                );
             }
         }
     }
