@@ -31,8 +31,15 @@ namespace ICCMS_API.Services
                     workflowMessage
                 );
 
-                // Send the workflow message
-                await SendWorkflowMessageAsync(workflowMessage);
+                // Update status to sent
+                workflowMessage.Status = "sent";
+                workflowMessage.SentAt = DateTime.UtcNow;
+
+                await _firebaseService.UpdateDocumentAsync(
+                    "workflow-messages",
+                    messageId,
+                    workflowMessage
+                );
 
                 return messageId;
             }

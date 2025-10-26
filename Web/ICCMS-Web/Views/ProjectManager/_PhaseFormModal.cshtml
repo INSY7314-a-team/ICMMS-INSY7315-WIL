@@ -96,13 +96,14 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const phaseForm = document.getElementById('phaseForm');
-        const phaseModal = document.getElementById('phaseFormModal');
+        const phaseModalElement = document.getElementById('phaseFormModal');
+        const phaseModal = new bootstrap.Modal(phaseModalElement);
         const phaseModalTitle = document.getElementById('phaseModalTitle');
         const savePhaseBtnText = document.getElementById('savePhaseBtnText');
         const savePhaseBtn = document.getElementById('savePhaseBtn');
 
         // Reset form when modal is shown
-        phaseModal.addEventListener('show.bs.modal', function () {
+        phaseModalElement.addEventListener('show.bs.modal', function () {
             resetPhaseForm();
         });
 
@@ -220,6 +221,11 @@
 
             return isValid;
         }
+
+        // Global function to show phase modal
+        window.showPhaseModal = function () {
+            phaseModal.show();
+        };
 
         // Global function to edit phase (called from phase management)
         window.editPhase = function (phaseId) {

@@ -103,7 +103,7 @@
     letter-spacing: 0.5px;
 }
 
-.task-status-badge.not-started {
+.task-status-badge.pending {
     background-color: var(--primary-bg);
     color: var(--text-primary);
 }

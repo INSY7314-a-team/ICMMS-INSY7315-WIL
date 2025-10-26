@@ -61,48 +61,52 @@ namespace ICCMS_API.Controllers
             try
             {
                 var messages = await _firebaseService.GetCollectionAsync<Message>("messages");
-                
+
                 // Apply filters
                 if (!string.IsNullOrEmpty(messageType))
                 {
-                    messages = messages.Where(m => m.MessageType.Equals(messageType, StringComparison.OrdinalIgnoreCase)).ToList();
+                    messages = messages
+                        .Where(m =>
+                            m.MessageType.Equals(messageType, StringComparison.OrdinalIgnoreCase)
+                        )
+                        .ToList();
                 }
-                
+
                 if (!string.IsNullOrEmpty(projectId))
                 {
                     messages = messages.Where(m => m.ProjectId == projectId).ToList();
                 }
-                
+
                 if (!string.IsNullOrEmpty(senderId))
                 {
                     messages = messages.Where(m => m.SenderId == senderId).ToList();
                 }
-                
+
                 if (!string.IsNullOrEmpty(receiverId))
                 {
                     messages = messages.Where(m => m.ReceiverId == receiverId).ToList();
                 }
-                
+
                 if (!string.IsNullOrEmpty(threadId))
                 {
                     messages = messages.Where(m => m.ThreadId == threadId).ToList();
                 }
-                
+
                 if (isRead.HasValue)
                 {
                     messages = messages.Where(m => m.IsRead == isRead.Value).ToList();
                 }
-                
+
                 if (startDate.HasValue)
                 {
                     messages = messages.Where(m => m.SentAt >= startDate.Value).ToList();
                 }
-                
+
                 if (endDate.HasValue)
                 {
                     messages = messages.Where(m => m.SentAt <= endDate.Value).ToList();
                 }
-                
+
                 return Ok(messages.OrderByDescending(m => m.SentAt));
             }
             catch (Exception ex)
@@ -123,28 +127,32 @@ namespace ICCMS_API.Controllers
             try
             {
                 var threads = await _firebaseService.GetCollectionAsync<MessageThread>("threads");
-                
+
                 // Apply filters
                 if (!string.IsNullOrEmpty(projectId))
                 {
                     threads = threads.Where(t => t.ProjectId == projectId).ToList();
                 }
-                
+
                 if (!string.IsNullOrEmpty(threadType))
                 {
-                    threads = threads.Where(t => t.ThreadType.Equals(threadType, StringComparison.OrdinalIgnoreCase)).ToList();
+                    threads = threads
+                        .Where(t =>
+                            t.ThreadType.Equals(threadType, StringComparison.OrdinalIgnoreCase)
+                        )
+                        .ToList();
                 }
-                
+
                 if (startDate.HasValue)
                 {
                     threads = threads.Where(t => t.CreatedAt >= startDate.Value).ToList();
                 }
-                
+
                 if (endDate.HasValue)
                 {
                     threads = threads.Where(t => t.CreatedAt <= endDate.Value).ToList();
                 }
-                
+
                 return Ok(threads.Where(t => t.IsActive).OrderByDescending(t => t.LastMessageAt));
             }
             catch (Exception ex)
@@ -170,7 +178,9 @@ namespace ICCMS_API.Controllers
             try
             {
                 // Get all threads
-                var allThreads = await _firebaseService.GetCollectionAsync<MessageThread>("threads");
+                var allThreads = await _firebaseService.GetCollectionAsync<MessageThread>(
+                    "threads"
+                );
                 var activeThreads = allThreads.Where(t => t.IsActive).ToList();
 
                 // Get all users for name resolution
@@ -193,7 +203,9 @@ namespace ICCMS_API.Controllers
                 // Thread type filter
                 if (!string.IsNullOrEmpty(threadType) && threadType != "all")
                 {
-                    filteredThreads = filteredThreads.Where(t => t.ThreadType.Equals(threadType, StringComparison.OrdinalIgnoreCase));
+                    filteredThreads = filteredThreads.Where(t =>
+                        t.ThreadType.Equals(threadType, StringComparison.OrdinalIgnoreCase)
+                    );
                 }
 
                 // User filter (check if user is in participants)
@@ -205,7 +217,9 @@ namespace ICCMS_API.Controllers
                 // Date filters
                 if (startDate.HasValue)
                 {
-                    filteredThreads = filteredThreads.Where(t => t.LastMessageAt >= startDate.Value);
+                    filteredThreads = filteredThreads.Where(t =>
+                        t.LastMessageAt >= startDate.Value
+                    );
                 }
 
                 if (endDate.HasValue)
@@ -217,10 +231,15 @@ namespace ICCMS_API.Controllers
                 if (!string.IsNullOrEmpty(searchTerm))
                 {
                     var searchLower = searchTerm.ToLower();
-                    filteredThreads = filteredThreads.Where(t => 
-                        t.Subject.ToLower().Contains(searchLower) ||
-                        (projectsDict.ContainsKey(t.ProjectId) && projectsDict[t.ProjectId].ToLower().Contains(searchLower)) ||
-                        t.Participants.Any(p => usersDict.ContainsKey(p) && usersDict[p].ToLower().Contains(searchLower))
+                    filteredThreads = filteredThreads.Where(t =>
+                        t.Subject.ToLower().Contains(searchLower)
+                        || (
+                            projectsDict.ContainsKey(t.ProjectId)
+                            && projectsDict[t.ProjectId].ToLower().Contains(searchLower)
+                        )
+                        || t.Participants.Any(p =>
+                            usersDict.ContainsKey(p) && usersDict[p].ToLower().Contains(searchLower)
+                        )
                     );
                 }
 
@@ -228,21 +247,27 @@ namespace ICCMS_API.Controllers
                 if (!string.IsNullOrEmpty(readStatus) && readStatus != "all")
                 {
                     var threadsWithReadStatus = new List<MessageThread>();
-                    
+
                     foreach (var thread in filteredThreads.Take(100)) // Limit to 100 for performance
                     {
                         try
                         {
-                            var messages = await _firebaseService.GetCollectionAsync<Message>("messages");
-                            var threadMessages = messages.Where(m => m.ThreadId == thread.ThreadId).ToList();
-                            
+                            var messages = await _firebaseService.GetCollectionAsync<Message>(
+                                "messages"
+                            );
+                            var threadMessages = messages
+                                .Where(m => m.ThreadId == thread.ThreadId)
+                                .ToList();
+
                             if (threadMessages.Any())
                             {
                                 var hasUnreadMessages = threadMessages.Any(m => !m.IsRead);
                                 var allRead = threadMessages.All(m => m.IsRead);
-                                
-                                if ((readStatus == "unread" && hasUnreadMessages) || 
-                                    (readStatus == "read" && allRead))
+
+                                if (
+                                    (readStatus == "unread" && hasUnreadMessages)
+                                    || (readStatus == "read" && allRead)
+                                )
                                 {
                                     threadsWithReadStatus.Add(thread);
                                 }
@@ -254,12 +279,14 @@ namespace ICCMS_API.Controllers
                             continue;
                         }
                     }
-                    
+
                     filteredThreads = threadsWithReadStatus.AsQueryable();
                 }
 
                 // Order by last message date
-                var orderedThreads = filteredThreads.OrderByDescending(t => t.LastMessageAt).ToList();
+                var orderedThreads = filteredThreads
+                    .OrderByDescending(t => t.LastMessageAt)
+                    .ToList();
 
                 // Apply pagination
                 var totalCount = orderedThreads.Count;
@@ -273,29 +300,31 @@ namespace ICCMS_API.Controllers
                 var threadSummaries = new List<ThreadSummary>();
                 foreach (var thread in pagedThreads)
                 {
-                    var participantNames = thread.Participants
-                        .Where(p => usersDict.ContainsKey(p))
+                    var participantNames = thread
+                        .Participants.Where(p => usersDict.ContainsKey(p))
                         .Select(p => usersDict[p])
                         .ToList();
 
-                    var projectName = projectsDict.ContainsKey(thread.ProjectId) 
-                        ? projectsDict[thread.ProjectId] 
+                    var projectName = projectsDict.ContainsKey(thread.ProjectId)
+                        ? projectsDict[thread.ProjectId]
                         : "Unknown Project";
 
-                    threadSummaries.Add(new ThreadSummary
-                    {
-                        ThreadId = thread.ThreadId,
-                        Subject = thread.Subject,
-                        ProjectId = thread.ProjectId,
-                        ProjectName = projectName,
-                        ThreadType = thread.ThreadType,
-                        Participants = thread.Participants,
-                        ParticipantNames = participantNames,
-                        MessageCount = thread.MessageCount,
-                        LastMessageAt = thread.LastMessageAt,
-                        CreatedAt = thread.CreatedAt,
-                        IsActive = thread.IsActive
-                    });
+                    threadSummaries.Add(
+                        new ThreadSummary
+                        {
+                            ThreadId = thread.ThreadId,
+                            Subject = thread.Subject,
+                            ProjectId = thread.ProjectId,
+                            ProjectName = projectName,
+                            ThreadType = thread.ThreadType,
+                            Participants = thread.Participants,
+                            ParticipantNames = participantNames,
+                            MessageCount = thread.MessageCount,
+                            LastMessageAt = thread.LastMessageAt,
+                            CreatedAt = thread.CreatedAt,
+                            IsActive = thread.IsActive,
+                        }
+                    );
                 }
 
                 var response = new FilteredThreadsResponse
@@ -304,7 +333,7 @@ namespace ICCMS_API.Controllers
                     TotalCount = totalCount,
                     Page = page,
                     PageSize = pageSize,
-                    TotalPages = totalPages
+                    TotalPages = totalPages,
                 };
 
                 return Ok(response);
@@ -965,6 +994,30 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpGet("workflow/{workflowMessageId}")]
+        public async Task<ActionResult<WorkflowMessage>> GetWorkflowMessage(
+            string workflowMessageId
+        )
+        {
+            try
+            {
+                var workflowMessage = await _workflowService.GetWorkflowMessageAsync(
+                    workflowMessageId
+                );
+
+                if (workflowMessage == null)
+                {
+                    return NotFound(new { error = "Workflow message not found" });
+                }
+
+                return Ok(workflowMessage);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
         [HttpPost("workflow/quote-approval")]
         public async Task<ActionResult> SendQuoteApprovalNotification(
             [FromBody] QuoteApprovalRequest request
@@ -1069,6 +1122,38 @@ namespace ICCMS_API.Controllers
                 else
                 {
                     return BadRequest(new { error = "Failed to send system alert" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpPost("workflow")]
+        public async Task<ActionResult> CreateWorkflowMessage(
+            [FromBody] WorkflowMessage workflowMessage
+        )
+        {
+            try
+            {
+                var workflowMessageId = await _workflowService.CreateWorkflowMessageAsync(
+                    workflowMessage
+                );
+
+                if (!string.IsNullOrEmpty(workflowMessageId))
+                {
+                    return Ok(
+                        new
+                        {
+                            message = "Workflow message created successfully",
+                            workflowMessageId = workflowMessageId,
+                        }
+                    );
+                }
+                else
+                {
+                    return BadRequest(new { error = "Failed to create workflow message" });
                 }
             }
             catch (Exception ex)

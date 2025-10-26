@@ -240,6 +240,106 @@ namespace ICCMS_API.Controllers
             );
         }
 
+        [HttpGet("messaging/available-users")]
+        public async Task<ActionResult<List<object>>> GetAvailableUsersForMessaging()
+        {
+            try
+            {
+                var contractorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(contractorId))
+                {
+                    return Unauthorized("Contractor ID not found");
+                }
+
+                // Get all projects where this contractor has tasks
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var contractorTasks = tasks.Where(t => t.AssignedTo == contractorId).ToList();
+                var projectIds = contractorTasks.Select(t => t.ProjectId).Distinct().ToList();
+
+                if (!projectIds.Any())
+                {
+                    return Ok(new List<object>());
+                }
+
+                // Get all projects to find their Project Managers
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var contractorProjects = projects
+                    .Where(p => projectIds.Contains(p.ProjectId))
+                    .ToList();
+
+                // Get unique Project Manager IDs
+                var pmIds = contractorProjects
+                    .Where(p => !string.IsNullOrEmpty(p.ProjectManagerId))
+                    .Select(p => p.ProjectManagerId)
+                    .Distinct()
+                    .ToList();
+
+                // Get all users to find Project Managers
+                var users = await _firebaseService.GetCollectionAsync<User>("users");
+                var projectManagers = users
+                    .Where(u =>
+                        pmIds.Contains(u.UserId)
+                        && (u.Role == "Project Manager" || u.Role == "Admin")
+                    )
+                    .Select(u => new
+                    {
+                        UserId = u.UserId,
+                        FullName = u.FullName,
+                        Role = u.Role,
+                        Email = u.Email,
+                    })
+                    .ToList();
+
+                return Ok(projectManagers);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("messaging/available-projects")]
+        public async Task<ActionResult<List<object>>> GetAvailableProjectsForMessaging()
+        {
+            try
+            {
+                var contractorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(contractorId))
+                {
+                    return Unauthorized("Contractor ID not found");
+                }
+
+                // Get all projects where this contractor has tasks
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var contractorTasks = tasks.Where(t => t.AssignedTo == contractorId).ToList();
+                var projectIds = contractorTasks.Select(t => t.ProjectId).Distinct().ToList();
+
+                if (!projectIds.Any())
+                {
+                    return Ok(new List<object>());
+                }
+
+                // Get the projects
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var contractorProjects = projects
+                    .Where(p => projectIds.Contains(p.ProjectId))
+                    .Select(p => new
+                    {
+                        ProjectId = p.ProjectId,
+                        Name = p.Name,
+                        Description = p.Description,
+                        Status = p.Status,
+                    })
+                    .ToList();
+
+                return Ok(contractorProjects);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
         [HttpGet("debug/tasks")]
         public async Task<ActionResult<object>> DebugTasks()
         {
