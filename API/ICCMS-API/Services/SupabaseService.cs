@@ -78,13 +78,32 @@ public class SupabaseService : ISupabaseService
     {
         try
         {
+            Console.WriteLine($"SupabaseService.DownloadFileAsync called with bucket: {bucketName}, fileName: {fileName}");
+            
             var bucket = SupabaseClient.Storage.From(bucketName);
+            Console.WriteLine($"Got bucket reference for: {bucketName}");
+            
+            // First, let's check if the file exists by listing files
+            var allFiles = await bucket.List("");
+            var fileExists = allFiles.Any(f => f.Name == fileName);
+            Console.WriteLine($"File '{fileName}' exists in bucket: {fileExists}");
+            
+            if (!fileExists)
+            {
+                Console.WriteLine($"File '{fileName}' not found in bucket '{bucketName}'");
+                Console.WriteLine($"Available files: {string.Join(", ", allFiles.Select(f => f.Name))}");
+                return Array.Empty<byte>();
+            }
+            
             var result = await bucket.Download(fileName, null);
+            Console.WriteLine($"Download result: {(result != null ? $"{result.Length} bytes" : "null")}");
 
             return result ?? Array.Empty<byte>();
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"Error in SupabaseService.DownloadFileAsync: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
             throw new Exception($"Error downloading file from Supabase: {ex.Message}", ex);
         }
     }

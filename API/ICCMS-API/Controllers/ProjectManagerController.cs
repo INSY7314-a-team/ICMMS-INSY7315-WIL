@@ -9,7 +9,7 @@ namespace ICCMS_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Project Manager,Tester")] // Only project managers and testers can access this controller
+    [Authorize(Roles = "Admin,Project Manager,Tester")]
     public class ProjectManagerController : ControllerBase
     {
         private readonly IAuthService _authService;

@@ -3,12 +3,13 @@ using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using System.IO;
 
 namespace ICCMS_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize(Roles = "Admin,Project Manager,Client,Contractor,Tester")] // All authenticated users can access documents
+    [Authorize(Roles = "Admin,Project Manager,Client,Contractor,Tester")]
     public class DocumentsController : ControllerBase
     {
         private readonly ISupabaseService _supabaseService;
@@ -39,8 +40,68 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpGet("metadata")]
+        public async Task<ActionResult<List<Document>>> GetDocumentsMetadata([FromQuery] string? projectId = null)
+        {
+            try
+            {
+                var documents = await _firebaseService.GetCollectionAsync<Document>("documents");
+                Console.WriteLine($"Found {documents.Count} documents in Firebase");
+                
+                // Debug: Log the first document to see what we're getting
+                if (documents.Count > 0)
+                {
+                    var firstDoc = documents[0];
+                    Console.WriteLine($"First document details:");
+                    Console.WriteLine($"  DocumentId: '{firstDoc.DocumentId}'");
+                    Console.WriteLine($"  ProjectId: '{firstDoc.ProjectId}'");
+                    Console.WriteLine($"  FileName: '{firstDoc.FileName}'");
+                    Console.WriteLine($"  Status: '{firstDoc.Status}'");
+                    Console.WriteLine($"  FileSize: {firstDoc.FileSize}");
+                    Console.WriteLine($"  UploadedBy: '{firstDoc.UploadedBy}'");
+                    Console.WriteLine($"  UploadedAt: {firstDoc.UploadedAt}");
+                    Console.WriteLine($"  Description: '{firstDoc.Description}'");
+                    
+                    // Debug: Check if the values are actually populated
+                    Console.WriteLine($"Field population check:");
+                    Console.WriteLine($"  FileName is null or empty: {string.IsNullOrEmpty(firstDoc.FileName)}");
+                    Console.WriteLine($"  ProjectId is null or empty: {string.IsNullOrEmpty(firstDoc.ProjectId)}");
+                    Console.WriteLine($"  Status is null or empty: {string.IsNullOrEmpty(firstDoc.Status)}");
+                }
+                
+                // Filter by project if specified
+                if (!string.IsNullOrEmpty(projectId))
+                {
+                    documents = documents.Where(d => d.ProjectId == projectId).ToList();
+                    Console.WriteLine($"Filtered to {documents.Count} documents for project {projectId}");
+                }
+                
+                // Normalize URLs for all documents
+                foreach (var doc in documents)
+                {
+                    if (string.IsNullOrWhiteSpace(doc.FileUrl) && !string.IsNullOrWhiteSpace(doc.FileName))
+                    {
+                        var bucket = _supabaseService.SupabaseClient.Storage.From("upload");
+                        doc.FileUrl = bucket.GetPublicUrl(doc.FileName);
+                    }
+                    else if (!string.IsNullOrWhiteSpace(doc.FileUrl) && doc.FileUrl.Contains("icmms-storage"))
+                    {
+                        var bucket = _supabaseService.SupabaseClient.Storage.From("upload");
+                        doc.FileUrl = bucket.GetPublicUrl(doc.FileName);
+                    }
+                }
+                
+                return Ok(documents);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting documents metadata: {ex.Message}");
+                return StatusCode(500, ex.Message);
+            }
+        }
+
         [HttpGet("{fileName}")]
-        public async Task<ActionResult<byte[]>> GetDocument(string fileName)
+        public async Task<IActionResult> GetDocument(string fileName)
         {
             try
             {
@@ -48,14 +109,42 @@ namespace ICCMS_API.Controllers
                 var document = await _supabaseService.DownloadFileAsync("upload", fileName);
                 if (document == null || document.Length == 0)
                     return NotFound();
+                
                 Console.WriteLine($"Document found: {fileName}");
-                return Ok(document);
+                
+                // Determine content type based on file extension
+                var contentType = GetContentType(fileName);
+                
+                return File(document, contentType, fileName);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error getting document: {ex.Message}");
                 return StatusCode(500, ex.Message);
             }
+        }
+
+        private string GetContentType(string fileName)
+        {
+            var extension = Path.GetExtension(fileName).ToLowerInvariant();
+            return extension switch
+            {
+                ".pdf" => "application/pdf",
+                ".doc" => "application/msword",
+                ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ".xls" => "application/vnd.ms-excel",
+                ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ".ppt" => "application/vnd.ms-powerpoint",
+                ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                ".txt" => "text/plain",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".bmp" => "image/bmp",
+                ".zip" => "application/zip",
+                ".rar" => "application/x-rar-compressed",
+                _ => "application/octet-stream"
+            };
         }
 
         [HttpGet("project/{projectId}")]
@@ -358,12 +447,140 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpGet("debug-fields")]
+        public async Task<IActionResult> DebugDocumentFields()
+        {
+            try
+            {
+                Console.WriteLine("Debug fields endpoint called");
+                
+                // Get raw Firestore documents
+                var snapshot = await _firebaseService.GetRawCollectionAsync("documents");
+                Console.WriteLine($"Found {snapshot.Count} raw documents");
+                
+                if (snapshot.Count > 0)
+                {
+                    var firstDoc = snapshot.First();
+                    var fields = firstDoc.ToDictionary();
+                    
+                    Console.WriteLine($"First document ID: {firstDoc.Id}");
+                    Console.WriteLine($"Available fields: {string.Join(", ", fields.Keys)}");
+                    
+                    // Show each field and its value
+                    foreach (var field in fields)
+                    {
+                        Console.WriteLine($"Field '{field.Key}': {field.Value} (Type: {field.Value?.GetType().Name})");
+                    }
+                    
+                    return Ok(new
+                    {
+                        message = "Field debug successful",
+                        documentId = firstDoc.Id,
+                        availableFields = fields.Keys.ToList(),
+                        fieldDetails = fields.Select(f => new { 
+                            name = f.Key, 
+                            value = f.Value?.ToString(), 
+                            type = f.Value?.GetType().Name 
+                        }).ToList()
+                    });
+                }
+                else
+                {
+                    return Ok(new
+                    {
+                        message = "No documents found",
+                        documentCount = 0
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in debug fields endpoint: {ex.Message}");
+                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+            }
+        }
+
+        [HttpGet("test-metadata")]
+        public async Task<IActionResult> TestMetadata()
+        {
+            try
+            {
+                Console.WriteLine("Testing metadata endpoint...");
+                
+                var documents = await _firebaseService.GetCollectionAsync<Document>("documents");
+                Console.WriteLine($"Found {documents.Count} documents in Firebase");
+                
+                return Ok(new
+                {
+                    message = "Metadata endpoint working",
+                    documentCount = documents.Count,
+                    sampleDocument = documents.FirstOrDefault()
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error testing metadata: {ex.Message}");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("debug-bucket-files")]
+        public async Task<IActionResult> DebugBucketFiles()
+        {
+            try
+            {
+                Console.WriteLine("Debug bucket files endpoint called");
+                
+                var allFiles = await _supabaseService.ListFilesAsync("upload");
+                Console.WriteLine($"Found {allFiles.Count} files in upload bucket");
+                
+                return Ok(new
+                {
+                    message = "Bucket files debug successful",
+                    bucket = "upload",
+                    fileCount = allFiles.Count,
+                    files = allFiles
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in debug bucket files endpoint: {ex.Message}");
+                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+            }
+        }
+
         [HttpGet("test-file-access/{fileName}")]
         public async Task<IActionResult> TestFileAccess(string fileName)
         {
             try
             {
                 Console.WriteLine($"Testing file access for: {fileName}");
+
+                // First, let's list all files in the bucket to see what's actually there
+                var allFiles = await _supabaseService.ListFilesAsync("upload");
+                Console.WriteLine($"All files in upload bucket: {string.Join(", ", allFiles)}");
+
+                // Check if our specific file exists in the list
+                var fileExists = allFiles.Contains(fileName);
+                Console.WriteLine($"File '{fileName}' exists in bucket: {fileExists}");
+
+                if (!fileExists)
+                {
+                    // Try to find similar files
+                    var similarFiles = allFiles.Where(f => f.Contains(fileName.Split('_').Last())).ToList();
+                    Console.WriteLine($"Similar files found: {string.Join(", ", similarFiles)}");
+                    
+                    return NotFound(
+                        new
+                        {
+                            message = "File not found in bucket",
+                            fileName = fileName,
+                            bucket = "upload",
+                            allFiles = allFiles,
+                            similarFiles = similarFiles
+                        }
+                    );
+                }
 
                 // Try to download the file from upload bucket
                 var fileBytes = await _supabaseService.DownloadFileAsync("upload", fileName);
@@ -385,9 +602,10 @@ namespace ICCMS_API.Controllers
                     return NotFound(
                         new
                         {
-                            message = "File not found or empty",
+                            message = "File found but empty or download failed",
                             fileName = fileName,
                             bucket = "upload",
+                            allFiles = allFiles
                         }
                     );
                 }
@@ -395,6 +613,7 @@ namespace ICCMS_API.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"Error testing file access: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 return StatusCode(
                     500,
                     new
@@ -403,6 +622,7 @@ namespace ICCMS_API.Controllers
                         message = "Failed to access file",
                         fileName = fileName,
                         bucket = "upload",
+                        stackTrace = ex.StackTrace
                     }
                 );
             }

@@ -1,0 +1,715 @@
+@model ICCMS_Web.Models.DocumentsViewModel
+@{
+    ViewData["Title"] = "Documents Management";
+}
+
+<link href="~/css/documents-management.css?v=@DateTime.Now.Ticks" rel="stylesheet" />
+
+<div class="documents-container">
+    <!-- Dashboard Header -->
+    <div class="documents-dashboard-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="documents-dashboard-title">
+                    <i class="fas fa-folder-open"></i>
+                    Documents Management
+                </h1>
+                <p class="documents-dashboard-subtitle">
+                    Comprehensive document management system for all project files and assets
+                </p>
+            </div>
+            <div class="header-stats">
+                <div class="header-stat">
+                    <span class="stat-number">@Model.TotalDocuments</span>
+                    <span class="stat-label">Total Documents</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-4">
+            <div class="documents-stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h6 class="card-title">Approved Documents</h6>
+                    <div class="card-value">@Model.Documents.Count(d => d.IsApproved)</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="documents-stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <h6 class="card-title">Pending Review</h6>
+                    <div class="card-value">@Model.Documents.Count(d => !d.IsApproved)</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="documents-stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-project-diagram"></i>
+                </div>
+                <div class="stat-content">
+                    <h6 class="card-title">Active Projects</h6>
+                    <div class="card-value">@Model.Documents.Select(d => d.ProjectId).Distinct().Count()</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="documents-stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-hdd"></i>
+                </div>
+                <div class="stat-content">
+                    <h6 class="card-title">Total Storage</h6>
+                    <div class="card-value">@(Model.Documents.Sum(d => d.FileSize) / (1024 * 1024)) MB</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Card -->
+    <div class="documents-content-card">
+        <div class="documents-card-header">
+            <h5 class="documents-card-title">
+                <i class="fas fa-list"></i>
+                Document Library
+            </h5>
+        </div>
+
+        <!-- Search and Filters -->
+        <div style="padding: 25px;">
+            <div class="search-section">
+                <div class="search-input-group">
+                    <input type="text" id="searchTerm" class="search-input" placeholder="Search documents by name, description, or project..." value="@Model.CurrentSearchTerm">
+                    <button type="button" class="search-btn" onclick="applyFilters()">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <button type="button" class="clear-search-btn" onclick="clearFilters()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="advanced-filters-grid">
+                <div class="filter-item">
+                    <label class="filter-label">Project</label>
+                    <select id="projectFilter" class="filter-select">
+                        <option value="all">All Projects</option>
+                        @foreach (var project in Model.AvailableProjects)
+                        {
+                            if (Model.CurrentProjectFilter == project.Id)
+                            {
+                                <option value="@project.Id" selected>@project.Name</option>
+                            }
+                            else
+                            {
+                                <option value="@project.Id">@project.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Category</label>
+                    <select id="categoryFilter" class="filter-select">
+                        <option value="all">All Categories</option>
+                        @if (Model.CurrentCategoryFilter == "pdf")
+                        {
+                            <option value="pdf" selected>PDF Documents</option>
+                        }
+                        else
+                        {
+                            <option value="pdf">PDF Documents</option>
+                        }
+                        
+                        @if (Model.CurrentCategoryFilter == "image")
+                        {
+                            <option value="image" selected>Images</option>
+                        }
+                        else
+                        {
+                            <option value="image">Images</option>
+                        }
+                        
+                        @if (Model.CurrentCategoryFilter == "document")
+                        {
+                            <option value="document" selected>Documents</option>
+                        }
+                        else
+                        {
+                            <option value="document">Documents</option>
+                        }
+                        
+                        @if (Model.CurrentCategoryFilter == "other")
+                        {
+                            <option value="other" selected>Other Files</option>
+                        }
+                        else
+                        {
+                            <option value="other">Other Files</option>
+                        }
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Status</label>
+                    <select id="statusFilter" class="filter-select">
+                        <option value="all">All Status</option>
+                        <option value="approved">Approved</option>
+                        <option value="pending">Pending</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-actions">
+                <button type="button" class="filter-action-btn primary" onclick="applyFilters()">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
+                <button type="button" class="filter-action-btn secondary" onclick="clearFilters()">
+                    <i class="fas fa-times"></i> Clear All
+                </button>
+            </div>
+        </div>
+
+        <!-- Documents Table -->
+        <div class="documents-table-container">
+            @if (Model.Documents.Any())
+            {
+                <table class="documents-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 5%;">Type</th>
+                            <th style="width: 25%;">Document</th>
+                            <th style="width: 20%;">Project</th>
+                            <th style="width: 15%;">Uploaded By</th>
+                            <th style="width: 10%;">Size</th>
+                            <th style="width: 10%;">Status</th>
+                            <th style="width: 10%;">Date</th>
+                            <th style="width: 5%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var document in Model.Documents)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="document-icon">
+                                        @{
+                                            var fileExtension = System.IO.Path.GetExtension(document.FileName).ToLower();
+                                            var iconClass = fileExtension switch
+                                            {
+                                                ".pdf" => "fas fa-file-pdf",
+                                                ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" => "fas fa-file-image",
+                                                ".doc" or ".docx" => "fas fa-file-word",
+                                                ".xls" or ".xlsx" => "fas fa-file-excel",
+                                                ".ppt" or ".pptx" => "fas fa-file-powerpoint",
+                                                ".txt" => "fas fa-file-alt",
+                                                ".zip" or ".rar" => "fas fa-file-archive",
+                                                _ => "fas fa-file"
+                                            };
+                                        }
+                                        <i class="@iconClass"></i>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <div style="font-weight: 600; color: #FFFFFF; margin-bottom: 5px;">@document.FileName</div>
+                                        @if (!string.IsNullOrEmpty(document.Description))
+                                        {
+                                            <div style="font-size: 0.85rem; color: #B0B0B0;">@document.Description</div>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 500; color: #F7EC59;">@document.ProjectName</div>
+                                    <div style="font-size: 0.8rem; color: #B0B0B0; font-family: 'Courier New', monospace;">@document.ProjectId</div>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 500; color: #FFFFFF;">@document.UploadedBy</div>
+                                </td>
+                                <td>
+                                    <div style="color: #B0B0B0;">@FormatFileSize(document.FileSize)</div>
+                                </td>
+                                <td>
+                                    @if (document.IsApproved)
+                                    {
+                                        <span class="documents-badge approved">Approved</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="documents-badge pending">Pending</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div style="color: #B0B0B0; font-size: 0.85rem;">@document.UploadedAt.ToString("MMM dd, yyyy")</div>
+                                    <div style="color: #B0B0B0; font-size: 0.8rem;">@document.UploadedAt.ToString("HH:mm")</div>
+                                </td>
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="documents-btn documents-btn-sm documents-btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="dropdown-menu documents-dropdown-menu">
+                                            <li><a class="dropdown-item documents-dropdown-item" href="#" onclick="viewDocumentDetails('@document.FileName')">
+                                                <i class="fas fa-eye"></i> View Details
+                                            </a></li>
+                                            <li><a class="dropdown-item documents-dropdown-item" href="#" onclick="downloadDocument('@document.FileName')">
+                                                <i class="fas fa-download"></i> Download
+                                            </a></li>
+                                            @if (!document.IsApproved)
+                                            {
+                                                <li><a class="dropdown-item documents-dropdown-item" href="#" onclick="approveDocument('@document.FileName')">
+                                                    <i class="fas fa-check"></i> Approve
+                                                </a></li>
+                                            }
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item documents-dropdown-item" href="#" onclick="deleteDocument('@document.FileName')" style="color: #FF5964;">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </a></li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="documents-empty-state">
+                    <i class="fas fa-file-alt"></i>
+                    <h4>No Documents Found</h4>
+                    <p>No documents match your current filters or there are no documents in the system.</p>
+                </div>
+            }
+        </div>
+
+        <!-- Pagination -->
+        @if (Model.TotalPages > 1)
+        {
+            <div class="pagination-container">
+                <nav aria-label="Documents pagination">
+                    <ul class="pagination justify-content-center">
+                        @if (Model.CurrentPage > 1)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" href="@Url.Action("Index", new { page = Model.CurrentPage - 1, pageSize = Model.PageSize, projectFilter = Model.CurrentProjectFilter, categoryFilter = Model.CurrentCategoryFilter, searchTerm = Model.CurrentSearchTerm })">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+                        }
+
+                        @for (int i = Math.Max(1, Model.CurrentPage - 2); i <= Math.Min(Model.TotalPages, Model.CurrentPage + 2); i++)
+                        {
+                            <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                <a class="page-link" href="@Url.Action("Index", new { page = i, pageSize = Model.PageSize, projectFilter = Model.CurrentProjectFilter, categoryFilter = Model.CurrentCategoryFilter, searchTerm = Model.CurrentSearchTerm })">@i</a>
+                            </li>
+                        }
+
+                        @if (Model.CurrentPage < Model.TotalPages)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" href="@Url.Action("Index", new { page = Model.CurrentPage + 1, pageSize = Model.PageSize, projectFilter = Model.CurrentProjectFilter, categoryFilter = Model.CurrentCategoryFilter, searchTerm = Model.CurrentSearchTerm })">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+                <div class="pagination-info">
+                    Showing @((Model.CurrentPage - 1) * Model.PageSize + 1) to @(Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalDocuments)) of @Model.TotalDocuments documents
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+
+<!-- Document Details Modal -->
+<div class="modal fade documents-modal" id="documentDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-alt"></i>
+                    Document Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="documentDetailsContent">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <div class="modal-footer-content">
+                    <button type="button" class="documents-btn documents-btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                    <button type="button" class="documents-btn documents-btn-primary" id="downloadDocumentBtn" onclick="downloadDocumentFromModal()">
+                        <i class="fas fa-download"></i> Download
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+
+    function applyFilters() {
+        const searchTerm = document.getElementById('searchTerm').value;
+        const projectFilter = document.getElementById('projectFilter').value;
+        const categoryFilter = document.getElementById('categoryFilter').value;
+        const statusFilter = document.getElementById('statusFilter').value;
+
+        const url = new URL(window.location);
+        url.searchParams.set('searchTerm', searchTerm);
+        url.searchParams.set('projectFilter', projectFilter);
+        url.searchParams.set('categoryFilter', categoryFilter);
+        url.searchParams.set('statusFilter', statusFilter);
+        url.searchParams.set('page', '1');
+
+        window.location.href = url.toString();
+    }
+
+    function clearFilters() {
+        document.getElementById('searchTerm').value = '';
+        document.getElementById('projectFilter').value = 'all';
+        document.getElementById('categoryFilter').value = 'all';
+        document.getElementById('statusFilter').value = 'all';
+        applyFilters();
+    }
+
+    function viewDocumentDetails(fileName) {
+        console.log('viewDocumentDetails called with fileName:', fileName);
+        
+        // Create a proper JavaScript array from the model data
+        const documents = [
+            @foreach (var doc in Model.Documents)
+            {
+                <text>{
+                    FileName: "@Html.Raw(doc.FileName)",
+                    ProjectId: "@Html.Raw(doc.ProjectId)",
+                    ProjectName: "@Html.Raw(doc.ProjectName)",
+                    Description: "@Html.Raw(doc.Description)",
+                    UploadedBy: "@Html.Raw(doc.UploadedBy)",
+                    UploadedAt: "@doc.UploadedAt.ToString("yyyy-MM-dd HH:mm:ss")",
+                    FileSize: @doc.FileSize,
+                    ContentType: "@Html.Raw(doc.ContentType)",
+                    Category: "@Html.Raw(doc.Category)",
+                    IsApproved: @doc.IsApproved.ToString().ToLower(),
+                    ApprovedBy: "@Html.Raw(doc.ApprovedBy)",
+                    ApprovedAt: @(doc.ApprovedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "null")
+                },</text>
+            }
+        ];
+        
+        console.log('Available documents:', documents);
+        console.log('Number of documents:', documents.length);
+        
+        // Debug: Log the first document's properties
+        if (documents.length > 0) {
+            console.log('First document properties:', Object.keys(documents[0]));
+            console.log('First document values:', documents[0]);
+        }
+        
+        // Find the document by fileName
+        const foundDoc = documents.find(d => d.FileName === fileName);
+        console.log('Found document:', foundDoc);
+        
+        if (foundDoc) {
+            const content = generateDocumentDetailsContent(foundDoc);
+            document.getElementById('documentDetailsContent').innerHTML = content;
+            document.getElementById('downloadDocumentBtn').setAttribute('data-filename', fileName);
+            
+            const modal = new bootstrap.Modal(document.getElementById('documentDetailsModal'));
+            modal.show();
+        } else {
+            console.error('Document not found:', fileName);
+            console.error('Available file names:', documents.map(d => d.FileName));
+            alert('Document details not found for: ' + fileName);
+        }
+    }
+
+    function generateDocumentDetailsContent(doc) {
+        const fileExtension = doc.FileName.split('.').pop().toLowerCase();
+        const typeBadge = getTypeBadge(fileExtension);
+        const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileExtension);
+        const uploadDate = new Date(doc.UploadedAt);
+        const formattedDate = uploadDate.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        const formattedTime = uploadDate.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        return `
+            <div class="document-details-container">
+                <!-- Header Section -->
+                <div class="document-details-header">
+                    <div class="document-header-content">
+                        <div class="document-title-section">
+                            <div class="document-title">${doc.FileName}</div>
+                            <div class="document-meta-info">
+                                <span class="document-filename">${doc.FileName}</span>
+                                <span class="document-type-badge ${fileExtension}">${typeBadge}</span>
+                            </div>
+                        </div>
+                        <div class="document-status-section">
+                            <div class="status-indicator ${doc.IsApproved ? 'approved' : 'pending'}">
+                                <i class="fas fa-${doc.IsApproved ? 'check-circle' : 'clock'}"></i>
+                                <span>${doc.IsApproved ? 'Approved' : 'Pending'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Main Content Grid -->
+                <div class="document-content-grid">
+                    <!-- Left Column - Stats -->
+                    <div class="document-stats-column">
+                        <div class="stats-section">
+                            <h6 class="section-title">
+                                <i class="fas fa-chart-bar"></i>
+                                Document Information
+                            </h6>
+                            <div class="document-stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-weight-hanging"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-number">${formatFileSize(doc.FileSize)}</div>
+                                        <div class="stat-label">File Size</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-user-circle"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-number">${doc.UploadedBy}</div>
+                                        <div class="stat-label">Uploaded By</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-calendar-alt"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-number">${formattedDate}</div>
+                                        <div class="stat-label">Upload Date</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-number">${formattedTime}</div>
+                                        <div class="stat-label">Upload Time</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${doc.Description ? `
+                            <div class="description-section">
+                                <h6 class="section-title">
+                                    <i class="fas fa-align-left"></i>
+                                    Description
+                                </h6>
+                                <div class="description-content">
+                                    <p>${doc.Description}</p>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Right Column - Preview -->
+                    <div class="document-preview-column">
+                        <div class="preview-section">
+                            <h6 class="section-title">
+                                <i class="fas fa-eye"></i>
+                                Preview
+                            </h6>
+                            <div class="preview-container">
+                                ${isImage ? `
+                                    <div class="image-preview">
+                                        <img src="@Url.Action("Download", "Documents")?fileName=${encodeURIComponent(doc.FileName)}" 
+                                             alt="${doc.FileName}" 
+                                             class="preview-image"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <div class="preview-fallback" style="display: none;">
+                                            <i class="fas fa-image"></i>
+                                            <span>Preview not available</span>
+                                        </div>
+                                    </div>
+                                ` : `
+                                    <div class="file-preview">
+                                        <div class="preview-icon">
+                                            <i class="fas fa-file-${getFileIcon(fileExtension)}"></i>
+                                        </div>
+                                        <div class="preview-info">
+                                            <h6>${typeBadge} File</h6>
+                                            <p>Click download to view this file</p>
+                                        </div>
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                        
+                        <!-- Quick Actions -->
+                        <div class="quick-actions-section">
+                            <h6 class="section-title">
+                                <i class="fas fa-bolt"></i>
+                                Quick Actions
+                            </h6>
+                            <div class="quick-actions-grid">
+                                <button class="quick-action-btn primary" onclick="downloadDocument('${doc.FileName}')">
+                                    <i class="fas fa-download"></i>
+                                    <span>Download</span>
+                                </button>
+                                ${!doc.IsApproved ? `
+                                    <button class="quick-action-btn success" onclick="approveDocument('${doc.FileName}')">
+                                        <i class="fas fa-check"></i>
+                                        <span>Approve</span>
+                                    </button>
+                                ` : ''}
+                                <button class="quick-action-btn danger" onclick="deleteDocument('${doc.FileName}')">
+                                    <i class="fas fa-trash"></i>
+                                    <span>Delete</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function getTypeBadge(extension) {
+        switch (extension) {
+            case 'pdf': return 'PDF';
+            case 'jpg':
+            case 'jpeg':
+            case 'png':
+            case 'gif': return 'Image';
+            case 'doc':
+            case 'docx': return 'Document';
+            case 'xls':
+            case 'xlsx': return 'Spreadsheet';
+            case 'ppt':
+            case 'pptx': return 'Presentation';
+            default: return 'File';
+        }
+    }
+
+    function getFileIcon(extension) {
+        switch (extension) {
+            case 'pdf': return 'pdf';
+            case 'jpg':
+            case 'jpeg':
+            case 'png':
+            case 'gif':
+            case 'bmp':
+            case 'webp': return 'image';
+            case 'doc':
+            case 'docx': return 'word';
+            case 'xls':
+            case 'xlsx': return 'excel';
+            case 'ppt':
+            case 'pptx': return 'powerpoint';
+            case 'txt': return 'alt';
+            case 'zip':
+            case 'rar':
+            case '7z': return 'archive';
+            default: return '';
+        }
+    }
+
+    function downloadDocument(fileName) {
+        console.log('downloadDocument called with fileName:', fileName);
+        const downloadUrl = '@Url.Action("Download", "Documents")?fileName=' + encodeURIComponent(fileName);
+        console.log('Download URL:', downloadUrl);
+        window.open(downloadUrl, '_blank');
+    }
+
+    function downloadDocumentFromModal() {
+        const fileName = document.getElementById('downloadDocumentBtn').getAttribute('data-filename');
+        downloadDocument(fileName);
+    }
+
+    function deleteDocument(fileName) {
+        if (confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+            fetch('@Url.Action("Delete", "Documents")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ fileName: fileName })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Document deleted successfully');
+                    location.reload();
+                } else {
+                    alert('Deletion failed: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Deletion error occurred');
+            });
+        }
+    }
+
+    function approveDocument(fileName) {
+        if (confirm('Are you sure you want to approve this document?')) {
+            // This would need to be implemented in the API
+            alert('Document approval functionality needs to be implemented in the API');
+        }
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Event listeners for search and filters
+    document.getElementById('searchTerm').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            applyFilters();
+        }
+    });
+
+    document.getElementById('projectFilter').addEventListener('change', applyFilters);
+    document.getElementById('categoryFilter').addEventListener('change', applyFilters);
+    document.getElementById('statusFilter').addEventListener('change', applyFilters);
+</script>
+
+@functions {
+    private string FormatFileSize(long bytes)
+    {
+        if (bytes == 0) return "0 Bytes";
+        string[] sizes = { "Bytes", "KB", "MB", "GB" };
+        int i = (int)Math.Floor(Math.Log(bytes) / Math.Log(1024));
+        return Math.Round(bytes / Math.Pow(1024, i), 2) + " " + sizes[i];
+    }
+}

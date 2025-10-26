@@ -2,6 +2,7 @@ using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Google.Cloud.Firestore;
 using Microsoft.Extensions.Configuration;
+using ICCMS_API.Models;
 
 namespace ICCMS_API.Services
 {
@@ -11,6 +12,7 @@ namespace ICCMS_API.Services
             where T : class;
         Task<List<T>> GetCollectionAsync<T>(string collection)
             where T : class;
+        Task<List<DocumentSnapshot>> GetRawCollectionAsync(string collection);
         Task<List<T>> GetCollectionWithFiltersAsync<T>(
             string collection,
             Dictionary<string, object> filters,
@@ -125,13 +127,115 @@ namespace ICCMS_API.Services
             {
                 Console.WriteLine($"Getting collection: {collection}");
                 var snapshot = await _firestoreDb.Collection(collection).GetSnapshotAsync();
-                var result = snapshot.Documents.Select(doc => doc.ConvertTo<T>()).ToList();
+                Console.WriteLine($"Retrieved {snapshot.Documents.Count} documents from Firestore");
+                
+                var result = new List<T>();
+                foreach (var doc in snapshot.Documents)
+                {
+                    try
+                    {
+                        Console.WriteLine($"Converting document {doc.Id} to {typeof(T).Name}");
+                        
+                        // Debug: Show what fields are available in the document
+                        var fields = doc.ToDictionary();
+                        Console.WriteLine($"Available fields in document {doc.Id}: {string.Join(", ", fields.Keys)}");
+                        
+                        T converted;
+                        Console.WriteLine($"Checking if type {typeof(T).Name} equals Document type");
+                        Console.WriteLine($"typeof(T) == typeof(Document): {typeof(T) == typeof(Document)}");
+                        Console.WriteLine($"typeof(T).Name: {typeof(T).Name}");
+                        Console.WriteLine($"typeof(Document).Name: {typeof(Document).Name}");
+                        
+                        if (typeof(T) == typeof(Document) || typeof(T).Name == "Document")
+                        {
+                            // Always use manual conversion for Document objects since ConvertTo<T> returns default values
+                            Console.WriteLine($"Using manual conversion for Document object {doc.Id}");
+                            
+                            // Debug: Log the actual field values being extracted
+                            var projectId = doc.GetValue<string>("projectId") ?? "";
+                            var fileName = doc.GetValue<string>("fileName") ?? "";
+                            var status = doc.GetValue<string>("status") ?? "";
+                            var fileType = doc.GetValue<string>("fileType") ?? "";
+                            var fileSize = doc.GetValue<long>("fileSize");
+                            var fileUrl = doc.GetValue<string>("fileUrl") ?? "";
+                            var uploadedBy = doc.GetValue<string>("uploadedBy") ?? "";
+                            var uploadedAt = doc.GetValue<DateTime>("uploadedAt");
+                            var description = doc.GetValue<string>("description") ?? "";
+                            
+                            Console.WriteLine($"Manual conversion field values for {doc.Id}:");
+                            Console.WriteLine($"  ProjectId: '{projectId}'");
+                            Console.WriteLine($"  FileName: '{fileName}'");
+                            Console.WriteLine($"  Status: '{status}'");
+                            Console.WriteLine($"  FileType: '{fileType}'");
+                            Console.WriteLine($"  FileSize: {fileSize}");
+                            Console.WriteLine($"  FileUrl: '{fileUrl}'");
+                            Console.WriteLine($"  UploadedBy: '{uploadedBy}'");
+                            Console.WriteLine($"  UploadedAt: {uploadedAt}");
+                            Console.WriteLine($"  Description: '{description}'");
+                            
+                            var manualDoc = new Document
+                            {
+                                DocumentId = doc.Id,
+                                ProjectId = projectId,
+                                FileName = fileName,
+                                Status = status,
+                                FileType = fileType,
+                                FileSize = fileSize,
+                                FileUrl = fileUrl,
+                                UploadedBy = uploadedBy,
+                                UploadedAt = uploadedAt,
+                                Description = description
+                            };
+                            converted = (T)(object)manualDoc;
+                            Console.WriteLine($"Successfully converted document {doc.Id} using manual conversion");
+                        }
+                        else
+                        {
+                            try
+                            {
+                                converted = doc.ConvertTo<T>();
+                                Console.WriteLine($"Successfully converted document {doc.Id} using ConvertTo<T>");
+                            }
+                            catch (Exception convertEx)
+                            {
+                                Console.WriteLine($"ConvertTo<T> failed for document {doc.Id}: {convertEx.Message}");
+                                throw convertEx; // Re-throw for non-Document types
+                            }
+                        }
+                        
+                        result.Add(converted);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error converting document {doc.Id}: {ex.Message}");
+                        Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                        // Continue with other documents
+                    }
+                }
+                
                 Console.WriteLine($"Retrieved {result.Count} documents from {collection}");
                 return result;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error getting collection {collection}: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<List<DocumentSnapshot>> GetRawCollectionAsync(string collection)
+        {
+            try
+            {
+                Console.WriteLine($"Getting raw collection: {collection}");
+                var snapshot = await _firestoreDb.Collection(collection).GetSnapshotAsync();
+                var result = snapshot.Documents.ToList();
+                Console.WriteLine($"Retrieved {result.Count} raw documents from {collection}");
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting raw collection {collection}: {ex.Message}");
                 throw;
             }
         }

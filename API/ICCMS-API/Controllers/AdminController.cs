@@ -7,7 +7,7 @@ namespace ICCMS_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin,Tester")] // Only admins and testers can access this controller
+    [Authorize(Roles = "Admin,Tester")]
     public class AdminController : ControllerBase
     {
         private readonly IAuthService _authService;
