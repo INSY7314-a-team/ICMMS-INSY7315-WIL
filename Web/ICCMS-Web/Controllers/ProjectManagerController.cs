@@ -105,6 +105,166 @@ namespace ICCMS_Web.Controllers
         }
 
         /// <summary>
+        /// Project detail page for Project Managers
+        /// Shows comprehensive project information, phases, tasks, and pending approvals
+        /// </summary>
+        [HttpGet]
+        [Route("ProjectManager/ProjectDetail")]
+        public async Task<IActionResult> ProjectDetail([FromQuery] string projectId)
+        {
+            _logger.LogInformation(
+                "=== [ProjectDetail] Loading project {ProjectId} ===",
+                projectId
+            );
+
+            try
+            {
+                if (string.IsNullOrEmpty(projectId))
+                {
+                    _logger.LogWarning("Missing projectId parameter");
+                    TempData["ErrorMessage"] = "Project ID is required.";
+                    return RedirectToAction("Dashboard");
+                }
+
+                // Get project details
+                _logger.LogInformation("Fetching project details for {ProjectId}", projectId);
+
+                ProjectDto project;
+                try
+                {
+                    project = await _apiClient.GetAsync<ProjectDto>(
+                        $"/api/projectmanager/project/{projectId}",
+                        User
+                    );
+                }
+                catch (Exception apiEx)
+                {
+                    _logger.LogError(
+                        apiEx,
+                        "API error fetching project {ProjectId}: {ErrorMessage}",
+                        projectId,
+                        apiEx.Message
+                    );
+                    TempData["ErrorMessage"] = $"Failed to fetch project details: {apiEx.Message}";
+                    return RedirectToAction("Dashboard");
+                }
+
+                if (project == null)
+                {
+                    _logger.LogWarning(
+                        "Project {ProjectId} not found - API returned null",
+                        projectId
+                    );
+                    TempData["ErrorMessage"] =
+                        $"Project {projectId} not found. The project may have been deleted or you may not have permission to view it.";
+                    return RedirectToAction("Dashboard");
+                }
+
+                _logger.LogInformation(
+                    "Successfully retrieved project {ProjectId}: {ProjectName}",
+                    projectId,
+                    project.Name
+                );
+
+                // Get project phases
+                _logger.LogInformation("Fetching phases for project {ProjectId}", projectId);
+                var phases =
+                    await _apiClient.GetAsync<List<PhaseDto>>(
+                        $"/api/projectmanager/project/{projectId}/phases",
+                        User
+                    ) ?? new List<PhaseDto>();
+
+                // Get project tasks
+                _logger.LogInformation("Fetching tasks for project {ProjectId}", projectId);
+                var tasks =
+                    await _apiClient.GetAsync<List<ProjectTaskDto>>(
+                        $"/api/projectmanager/project/{projectId}/tasks",
+                        User
+                    ) ?? new List<ProjectTaskDto>();
+
+                // Get pending progress reports
+                _logger.LogInformation("Fetching pending progress reports");
+                var pendingReports =
+                    await _apiClient.GetAsync<List<ProgressReportDto>>(
+                        "/api/projectmanager/progress-reports/pending",
+                        User
+                    ) ?? new List<ProgressReportDto>();
+
+                // Filter progress reports for this project
+                var projectPendingReports = pendingReports
+                    .Where(pr => pr.ProjectId == projectId)
+                    .ToList();
+
+                // Get tasks awaiting completion (tasks with status "Awaiting Approval")
+                var tasksAwaitingCompletion = tasks
+                    .Where(t => t.Status == "Awaiting Approval")
+                    .ToList();
+
+                // Get contractors for display names
+                var contractors =
+                    await _apiClient.GetAsync<List<UserDto>>("/api/users/contractors", User)
+                    ?? new List<UserDto>();
+
+                var contractorMap = contractors.ToDictionary(c => c.UserId, c => c);
+
+                // Get client information
+                var client = await _apiClient.GetAsync<UserDto>(
+                    $"/api/users/{project.ClientId}",
+                    User
+                );
+
+                // Calculate statistics
+                var totalTasks = tasks.Count;
+                var completedTasks = tasks.Count(t => t.Status == "Completed");
+                var inProgressTasks = tasks.Count(t => t.Status == "In Progress");
+                var pendingTasks = tasks.Count(t => t.Status == "Pending");
+                var overdueTasks = tasks.Count(t =>
+                    t.DueDate < DateTime.UtcNow && t.Status != "Completed"
+                );
+                var overallProgress = totalTasks > 0 ? (int)tasks.Average(t => t.Progress) : 0;
+
+                var totalPhases = phases.Count;
+                var completedPhases = phases.Count(p => p.Status == "Completed");
+
+                // Create view model
+                var viewModel = new PMProjectDetailViewModel
+                {
+                    Project = project,
+                    Phases = phases,
+                    Tasks = tasks,
+                    PendingProgressReports = projectPendingReports,
+                    TasksAwaitingCompletion = tasksAwaitingCompletion,
+                    ContractorMap = contractorMap,
+                    Client = client,
+                    TotalTasks = totalTasks,
+                    CompletedTasks = completedTasks,
+                    InProgressTasks = inProgressTasks,
+                    PendingTasks = pendingTasks,
+                    OverdueTasks = overdueTasks,
+                    OverallProgress = overallProgress,
+                    TotalPhases = totalPhases,
+                    CompletedPhases = completedPhases,
+                };
+
+                _logger.LogInformation(
+                    "✅ Project detail loaded for {ProjectName} with {TaskCount} tasks, {PhaseCount} phases",
+                    project.Name,
+                    totalTasks,
+                    totalPhases
+                );
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading project detail for {ProjectId}", projectId);
+                TempData["ErrorMessage"] =
+                    "Failed to load project details. Please try again later.";
+                return RedirectToAction("Dashboard");
+            }
+        }
+
+        /// <summary>
         /// JSON endpoint for fast in-memory search and filtering of projects (AJAX-friendly).
         /// Builds the index lazily if it doesn't exist for the current user.
         /// </summary>

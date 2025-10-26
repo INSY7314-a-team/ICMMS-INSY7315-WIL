@@ -364,5 +364,22 @@ namespace ICCMS_Web.Services
                 }
             }
         }
+
+        // Public method to manually reset circuit breaker
+        public void ResetCircuitBreaker(string endpoint)
+        {
+            lock (_failureCounts)
+            {
+                if (_failureCounts.ContainsKey(endpoint))
+                {
+                    _logger.LogInformation(
+                        "Manually resetting circuit breaker for {Endpoint}",
+                        endpoint
+                    );
+                    _failureCounts.Remove(endpoint);
+                    _lastFailureTimes.Remove(endpoint);
+                }
+            }
+        }
     }
 }
