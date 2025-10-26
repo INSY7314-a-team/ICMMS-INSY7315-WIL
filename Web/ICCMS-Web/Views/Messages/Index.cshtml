@@ -182,6 +182,46 @@
                         <div class="messages-container" id="messagesContainer">
                             <!-- Messages will be loaded here -->
                         </div>
+                        
+                        <!-- Message Input Area -->
+                        <div class="message-input-area" id="messageInputArea">
+                            <div class="message-input-container">
+                                <div class="message-input-wrapper">
+                                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="toggleEmojiPicker()">
+                                        <i class="fas fa-smile"></i>
+                                    </button>
+                                    <div class="message-input-field">
+                                        <textarea 
+                                            class="form-control" 
+                                            id="threadMessageInput" 
+                                            placeholder="Type a message..." 
+                                            rows="1"
+                                            onkeydown="handleMessageInputKeydown(event)"
+                                            oninput="autoResizeTextarea(this)"></textarea>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="toggleAttachmentOptions()">
+                                        <i class="fas fa-paperclip"></i>
+                                    </button>
+                                    <button class="btn btn-primary" onclick="sendThreadMessage()" id="sendThreadMessageBtn">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Reply Preview (shown when replying to a specific message) -->
+                                <div class="reply-preview" id="replyPreview" style="display: none;">
+                                    <div class="reply-preview-content">
+                                        <div class="reply-preview-header">
+                                            <i class="fas fa-reply"></i>
+                                            <span id="replyPreviewSender">Replying to User</span>
+                                            <button class="btn btn-sm btn-link p-0" onclick="cancelReply()">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <div class="reply-preview-text" id="replyPreviewText">Message preview...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
             </div>
             </div>
@@ -241,6 +281,44 @@
     </div>
 </div>
 
+<!-- Reply Message Modal -->
+<div class="modal fade" id="replyMessageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-reply me-2"></i>Reply to Message
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="replyMessageForm">
+                    <input type="hidden" id="replyParentMessageId">
+                    <input type="hidden" id="replySenderId">
+                    <div class="mb-3">
+                        <label class="form-label">Replying to:</label>
+                        <div class="form-control-plaintext" id="replyToInfo"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="replySubject" class="form-label">Subject</label>
+                        <input type="text" class="form-control" id="replySubject" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="replyContent" class="form-label">Your Reply</label>
+                        <textarea class="form-control" id="replyContent" rows="4" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="sendReply()">
+                    <i class="fas fa-paper-plane me-2"></i>Send Reply
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script src="~/js/messages.js"></script>
     <script>
@@ -257,6 +335,11 @@
         function initializeMessages() {
             // Add any initialization logic here
             console.log('Messages page initialized');
+            
+            // Hide message input area initially
+            const messageInputArea = document.getElementById('messageInputArea');
+            messageInputArea.style.display = 'none';
+            console.log('Message input area hidden initially');
         }
 
         function setupMessageTypeFilters() {
@@ -271,6 +354,24 @@
         }
 
         function loadThreadsByType(messageType) {
+            console.log('Loading threads by type:', messageType);
+            
+            // Hide message input area for system messages
+            const messageInputArea = document.getElementById('messageInputArea');
+            if (messageType === 'system' || messageType === 'workflow') {
+                messageInputArea.style.display = 'none';
+                console.log('Hiding message input for system/workflow messages');
+            } else if (messageType === 'direct') {
+                // Only show if a direct message thread is selected
+                const activeThread = document.querySelector('.thread-item.active');
+                if (activeThread && activeThread.dataset.messageType === 'direct') {
+                    messageInputArea.style.display = 'block';
+                    console.log('Showing message input for direct messages');
+                } else {
+                    messageInputArea.style.display = 'none';
+                }
+            }
+            
             const threadsList = document.getElementById('threadsList');
             threadsList.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"></div><p class="mt-2">Loading messages...</p></div>';
             
@@ -345,6 +446,11 @@
         }
 
         function selectThread(threadId, subject) {
+            console.log('Selecting thread:', threadId, subject);
+            
+            // Store current thread ID globally
+            window.currentThreadId = threadId;
+            
             // Remove active class from all threads
             document.querySelectorAll('.thread-item').forEach(item => {
                 item.classList.remove('active');
@@ -353,15 +459,31 @@
             // Add active class to selected thread
             event.currentTarget.classList.add('active');
             
+            // Get the message type from the thread item
+            const messageType = event.currentTarget.dataset.messageType;
+            console.log('Message type:', messageType);
+            
             // Show thread view
             document.getElementById('noThreadSelected').style.display = 'none';
             document.getElementById('threadView').style.display = 'block';
+            
+            // Show/hide message input based on message type
+            const messageInputArea = document.getElementById('messageInputArea');
+            if (messageType === 'direct' || messageType === 'thread') {
+                messageInputArea.style.display = 'block';
+                console.log('Showing message input for direct/thread messages');
+            } else {
+                messageInputArea.style.display = 'none';
+                console.log('Hiding message input for system/workflow messages');
+            }
             
             // Update header
             document.getElementById('selectedThreadSubject').textContent = subject;
             
             // Load messages for this thread
             loadThreadMessages(threadId);
+            
+            console.log('Thread view should now be visible');
         }
 
         function loadThreadMessages(threadId) {
@@ -397,6 +519,12 @@
                 const messageClass = isSystemMessage ? 'system-message' : 'user-message';
                 const senderName = isSystemMessage ? 'System' : (message.senderName || 'Unknown User');
                 
+                    // Determine if this message can be replied to
+                    const canReply = !isSystemMessage && 
+                                   message.messageType !== 'workflow' && 
+                                   message.messageType !== 'system' &&
+                                   message.senderId !== 'system';
+                    
                     html += `
                     <div class="message-item ${messageClass}">
                                     <div class="message-avatar">
@@ -409,6 +537,14 @@
                                     </div>
                             <div class="message-text">${message.content}</div>
                             ${isSystemMessage ? '<div class="system-message-indicator">System Message</div>' : ''}
+                            ${canReply ? `
+                                <div class="message-actions">
+                                    <button class="btn btn-sm btn-outline-primary reply-btn" 
+                                            onclick="replyToMessage('${message.messageId}', '${message.subject}', '${message.senderId}', '${senderName}', '${message.content.replace(/'/g, "\\'")}')">
+                                        <i class="fas fa-reply me-1"></i>Reply
+                                    </button>
+                                </div>
+                            ` : ''}
                             </div>
                         </div>
                     `;
@@ -492,12 +628,216 @@
                 });
         }
 
+        function openReplyModal(messageId, subject, senderId, senderName) {
+            // Set the form data
+            document.getElementById('replyParentMessageId').value = messageId;
+            document.getElementById('replySenderId').value = senderId;
+            document.getElementById('replySubject').value = 'Re: ' + subject;
+            document.getElementById('replyToInfo').textContent = senderName;
+            document.getElementById('replyContent').value = '';
+            
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('replyMessageModal'));
+            modal.show();
+        }
+
+        function sendReply() {
+            const parentMessageId = document.getElementById('replyParentMessageId').value;
+            const senderId = document.getElementById('replySenderId').value;
+            const subject = document.getElementById('replySubject').value;
+            const content = document.getElementById('replyContent').value;
+            
+            if (!content.trim()) {
+                alert('Please enter your reply');
+                return;
+            }
+            
+            const request = {
+                parentMessageId: parentMessageId,
+                content: content
+            };
+            
+            fetch('/Messages/ReplyToMessage', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify(request)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('replyMessageModal'));
+                    modal.hide();
+                    
+                    // Reset form
+                    document.getElementById('replyMessageForm').reset();
+                    
+                    // Show success message
+                    showAlert('success', data.message);
+                    
+                    // Refresh the current thread
+                    if (window.currentThreadId) {
+                        loadThreadMessages(window.currentThreadId);
+                    }
+                } else {
+                    showAlert('danger', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error sending reply:', error);
+                showAlert('danger', 'Error sending reply');
+            });
+        }
+
         function refreshThread() {
             const activeThread = document.querySelector('.thread-item.active');
             if (activeThread) {
                 const threadId = activeThread.dataset.threadId;
                 loadThreadMessages(threadId);
             }
+        }
+
+        // WhatsApp-like functionality
+        function sendThreadMessage() {
+            console.log('sendThreadMessage called');
+            const messageInput = document.getElementById('threadMessageInput');
+            const content = messageInput.value.trim();
+            
+            console.log('Message content:', content);
+            console.log('Current thread ID:', window.currentThreadId);
+            
+            if (!content) {
+                console.log('No content, returning');
+                return;
+            }
+            
+            if (!window.currentThreadId) {
+                console.log('No thread selected');
+                showAlert('danger', 'No thread selected');
+                return;
+            }
+            
+            // Check if we're replying to a specific message
+            const replyPreview = document.getElementById('replyPreview');
+            const isReplying = replyPreview.style.display !== 'none';
+            
+            if (isReplying) {
+                // Send as reply
+                const parentMessageId = replyPreview.dataset.parentMessageId;
+                sendReply(parentMessageId, content);
+            } else {
+                // Send as new message in thread
+                sendNewThreadMessage(content);
+            }
+            
+            // Clear input
+            messageInput.value = '';
+            autoResizeTextarea(messageInput);
+            
+            // Cancel any active reply
+            cancelReply();
+        }
+
+        function sendNewThreadMessage(content) {
+            // This will send a new message to the current thread
+            // We'll need to create an endpoint for this
+            fetch('/Messages/SendThreadMessage', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({
+                    threadId: window.currentThreadId,
+                    content: content
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Refresh the thread to show the new message
+                    loadThreadMessages(window.currentThreadId);
+                } else {
+                    showAlert('danger', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error sending thread message:', error);
+                showAlert('danger', 'Error sending message');
+            });
+        }
+
+        function sendReply(parentMessageId, content) {
+            const request = {
+                parentMessageId: parentMessageId,
+                content: content
+            };
+            
+            fetch('/Messages/ReplyToMessage', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify(request)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Refresh the thread to show the reply
+                    loadThreadMessages(window.currentThreadId);
+                } else {
+                    showAlert('danger', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error sending reply:', error);
+                showAlert('danger', 'Error sending reply');
+            });
+        }
+
+        function replyToMessage(messageId, subject, senderId, senderName, messageContent) {
+            // Show reply preview
+            const replyPreview = document.getElementById('replyPreview');
+            replyPreview.style.display = 'block';
+            replyPreview.dataset.parentMessageId = messageId;
+            
+            document.getElementById('replyPreviewSender').textContent = `Replying to ${senderName}`;
+            document.getElementById('replyPreviewText').textContent = messageContent;
+            
+            // Focus on input
+            document.getElementById('threadMessageInput').focus();
+        }
+
+        function cancelReply() {
+            const replyPreview = document.getElementById('replyPreview');
+            replyPreview.style.display = 'none';
+            replyPreview.dataset.parentMessageId = '';
+        }
+
+        function handleMessageInputKeydown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendThreadMessage();
+            }
+        }
+
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        }
+
+        function toggleEmojiPicker() {
+            // Placeholder for emoji picker functionality
+            showAlert('info', 'Emoji picker coming soon!');
+        }
+
+        function toggleAttachmentOptions() {
+            // Placeholder for attachment functionality
+            showAlert('info', 'Attachment options coming soon!');
         }
 
         function showAlert(type, message) {

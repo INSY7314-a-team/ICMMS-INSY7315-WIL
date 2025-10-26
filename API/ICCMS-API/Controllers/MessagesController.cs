@@ -464,11 +464,20 @@ namespace ICCMS_API.Controllers
                 var messageId = await _firebaseService.AddDocumentAsync("messages", message);
 
                 // Update thread information if this is a thread starter
-                if (message.IsThreadStarter)
+                // Only create thread documents for project threads (multiple participants), not direct messages (2 participants)
+                if (
+                    message.IsThreadStarter
+                    && message.ThreadParticipants != null
+                    && message.ThreadParticipants.Count > 2
+                )
                 {
                     await CreateOrUpdateThreadAsync(message);
                 }
-                else if (!string.IsNullOrEmpty(message.ThreadId))
+                else if (
+                    !string.IsNullOrEmpty(message.ThreadId)
+                    && message.ThreadParticipants != null
+                    && message.ThreadParticipants.Count > 2
+                )
                 {
                     await UpdateThreadAsync(message);
                 }

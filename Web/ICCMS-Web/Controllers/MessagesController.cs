@@ -203,11 +203,44 @@ namespace ICCMS_Web.Controllers
                 }
 
                 // Validate communication hierarchy
-                var receiverUser = await GetUserById(request.ReceiverId);
+                _logger.LogInformation(
+                    "Validating recipient: {ReceiverId} for {Role} user {CurrentUserId}",
+                    request.ReceiverId,
+                    userRole,
+                    currentUserId
+                );
+
+                // First, try to get the user from the available users list (more efficient)
+                var availableUsers = await GetAvailableUsersForMessaging(currentUserId, userRole);
+                var receiverUser = availableUsers.FirstOrDefault(u =>
+                    u.UserId == request.ReceiverId
+                );
+
+                // If not found in available users, try the GetUserById method as fallback
                 if (receiverUser == null)
                 {
+                    _logger.LogInformation(
+                        "Recipient not found in available users, trying GetUserById"
+                    );
+                    receiverUser = await GetUserById(request.ReceiverId);
+                }
+
+                if (receiverUser == null)
+                {
+                    _logger.LogWarning(
+                        "Recipient {ReceiverId} not found for {Role} user {CurrentUserId}",
+                        request.ReceiverId,
+                        userRole,
+                        currentUserId
+                    );
                     return Json(new { success = false, message = "Recipient not found" });
                 }
+
+                _logger.LogInformation(
+                    "Recipient found: {FullName} ({Role})",
+                    receiverUser.FullName,
+                    receiverUser.Role
+                );
 
                 if (!_messagingService.CanUserSendMessage(userRole, receiverUser.Role))
                 {
@@ -241,6 +274,179 @@ namespace ICCMS_Web.Controllers
             {
                 _logger.LogError(ex, "Error sending message");
                 return Json(new { success = false, message = "Error sending message" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SendThreadMessage(
+            [FromBody] SendThreadMessageRequest request
+        )
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "Unknown";
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Json(new { success = false, message = "User not authenticated" });
+                }
+
+                _logger.LogInformation(
+                    "Sending thread message to thread {ThreadId} by user {UserId}",
+                    request.ThreadId,
+                    currentUserId
+                );
+
+                // Get the thread to find the other participant
+                var threadMessages = await _apiClient.GetAsync<List<MessageDto>>(
+                    $"/api/messages/user/{currentUserId}",
+                    User
+                );
+
+                if (threadMessages == null || !threadMessages.Any())
+                {
+                    return Json(new { success = false, message = "No messages found" });
+                }
+
+                // Find a message from this thread to get the other participant
+                var threadMessage = threadMessages.FirstOrDefault(m =>
+                    m.ThreadId == request.ThreadId
+                );
+                if (threadMessage == null)
+                {
+                    return Json(new { success = false, message = "Thread not found" });
+                }
+
+                // Determine the receiver (the other participant in the thread)
+                var receiverId =
+                    threadMessage.SenderId == currentUserId
+                        ? threadMessage.ReceiverId
+                        : threadMessage.SenderId;
+
+                // Create a new message in the thread
+                var messageRequest = new CreateMessageRequest
+                {
+                    SenderId = currentUserId,
+                    ReceiverId = receiverId,
+                    ProjectId = threadMessage.ProjectId,
+                    Subject = threadMessage.Subject, // Keep the same subject
+                    Content = request.Content,
+                    MessageType = "thread", // This will be a thread message
+                    ThreadId = request.ThreadId, // Use existing thread ID
+                    ThreadParticipants = threadMessage.ThreadParticipants,
+                };
+
+                var result = await _apiClient.PostAsync<string>(
+                    "/api/messages",
+                    messageRequest,
+                    User
+                );
+
+                if (!string.IsNullOrEmpty(result))
+                {
+                    _logger.LogInformation(
+                        "Thread message sent successfully to thread {ThreadId}",
+                        request.ThreadId
+                    );
+                    return Json(new { success = true, message = "Message sent successfully" });
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Failed to send thread message to thread {ThreadId}",
+                        request.ThreadId
+                    );
+                    return Json(new { success = false, message = "Failed to send message" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error sending thread message to thread {ThreadId}",
+                    request.ThreadId
+                );
+                return Json(new { success = false, message = "Error sending message" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ReplyToMessage([FromBody] ReplyToMessageRequest request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "Unknown";
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Json(new { success = false, message = "User not authenticated" });
+                }
+
+                _logger.LogInformation(
+                    "Replying to message {ParentMessageId} by user {UserId}",
+                    request.ParentMessageId,
+                    currentUserId
+                );
+
+                // Get the parent message to validate it can be replied to
+                var parentMessage = await GetMessageById(request.ParentMessageId);
+                if (parentMessage == null)
+                {
+                    return Json(new { success = false, message = "Parent message not found" });
+                }
+
+                // Check if the message can be replied to (not system/workflow messages)
+                if (
+                    parentMessage.MessageType == "workflow"
+                    || parentMessage.MessageType == "system"
+                    || parentMessage.SenderId == "system"
+                )
+                {
+                    return Json(
+                        new { success = false, message = "Cannot reply to this type of message" }
+                    );
+                }
+
+                // Create the reply request for the API
+                var replyRequest = new
+                {
+                    parentMessageId = request.ParentMessageId,
+                    content = request.Content,
+                };
+
+                var result = await _apiClient.PostAsync<string>(
+                    "/api/messages/reply",
+                    replyRequest,
+                    User
+                );
+
+                if (!string.IsNullOrEmpty(result))
+                {
+                    _logger.LogInformation(
+                        "Reply sent successfully to message {ParentMessageId}",
+                        request.ParentMessageId
+                    );
+                    return Json(new { success = true, message = "Reply sent successfully" });
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Failed to send reply to message {ParentMessageId}",
+                        request.ParentMessageId
+                    );
+                    return Json(new { success = false, message = "Failed to send reply" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error sending reply to message {ParentMessageId}",
+                    request.ParentMessageId
+                );
+                return Json(new { success = false, message = "Error sending reply" });
             }
         }
 
@@ -482,15 +688,76 @@ namespace ICCMS_Web.Controllers
                     User
                 );
 
+                _logger.LogInformation(
+                    "Retrieved {Count} messages from API for user {UserId}",
+                    messages?.Count ?? 0,
+                    userId
+                );
+
+                if (messages != null && messages.Any())
+                {
+                    _logger.LogInformation(
+                        "Processing {Count} messages for user {UserId}",
+                        messages.Count,
+                        userId
+                    );
+
+                    // Log first few messages for debugging
+                    foreach (var msg in messages.Take(3))
+                    {
+                        _logger.LogInformation(
+                            "Message: {MessageId}, Sender: {SenderId}, Receiver: {ReceiverId}, Subject: {Subject}",
+                            msg.MessageId,
+                            msg.SenderId,
+                            msg.ReceiverId,
+                            msg.Subject
+                        );
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("No messages returned from API for user {UserId}", userId);
+                }
+
                 if (messages != null)
                 {
-                    // Group messages by thread
-                    var threadGroups = messages
-                        .Where(m => m.MessageType == "direct" && m.ReceiverId == userId)
-                        .GroupBy(m => m.ThreadId)
+                    // Group messages by thread - include messages where user is sender OR receiver
+                    // Note: Direct messages are created as "thread" type in the API, so we need to filter for both
+                    // But we want to distinguish between direct messages (2 participants) and project threads (multiple participants)
+                    var directMessages = messages
+                        .Where(m =>
+                            (m.MessageType == "direct" || m.MessageType == "thread")
+                            && (m.SenderId == userId || m.ReceiverId == userId)
+                            && m.ThreadParticipants != null
+                            && m.ThreadParticipants.Count == 2 // Only 2 participants = direct message
+                        )
                         .ToList();
 
-                    return threadGroups
+                    _logger.LogInformation(
+                        "Found {Count} direct messages for user {UserId}",
+                        directMessages.Count,
+                        userId
+                    );
+
+                    // Log details about the filtering
+                    var threadMessages = messages.Where(m => m.MessageType == "thread").ToList();
+                    var directTypeMessages = messages
+                        .Where(m => m.MessageType == "direct")
+                        .ToList();
+                    var twoParticipantMessages = messages
+                        .Where(m => m.ThreadParticipants != null && m.ThreadParticipants.Count == 2)
+                        .ToList();
+
+                    _logger.LogInformation(
+                        "Filtering details: Thread messages: {ThreadCount}, Direct messages: {DirectCount}, Two-participant messages: {TwoParticipantCount}",
+                        threadMessages.Count,
+                        directTypeMessages.Count,
+                        twoParticipantMessages.Count
+                    );
+
+                    var threadGroups = directMessages.GroupBy(m => m.ThreadId).ToList();
+
+                    var threads = threadGroups
                         .Select(group => new ThreadDto
                         {
                             ThreadId = group.Key,
@@ -523,6 +790,23 @@ namespace ICCMS_Web.Controllers
                         })
                         .OrderByDescending(t => t.LastMessageAt)
                         .ToList();
+
+                    _logger.LogInformation(
+                        "Created {Count} direct message threads for user {UserId}",
+                        threads.Count,
+                        userId
+                    );
+                    foreach (var thread in threads)
+                    {
+                        _logger.LogInformation(
+                            "Thread: {ThreadId}, Subject: {Subject}, Messages: {Count}",
+                            thread.ThreadId,
+                            thread.Subject,
+                            thread.MessageCount
+                        );
+                    }
+
+                    return threads;
                 }
             }
             catch (Exception ex)
@@ -555,12 +839,126 @@ namespace ICCMS_Web.Controllers
             };
         }
 
+        private async Task<MessageDto?> GetMessageById(string messageId)
+        {
+            try
+            {
+                var messages = await _apiClient.GetAsync<List<MessageDto>>(
+                    $"/api/messages/user/{User.FindFirst(ClaimTypes.NameIdentifier)?.Value}",
+                    User
+                );
+                return messages?.FirstOrDefault(m => m.MessageId == messageId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting message by ID: {MessageId}", messageId);
+                return null;
+            }
+        }
+
         private async Task<UserDto?> GetUserById(string userId)
         {
             try
             {
-                var users = await _apiClient.GetAsync<List<UserDto>>("/api/admin/users", User);
-                return users?.FirstOrDefault(u => u.UserId == userId);
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "Unknown";
+
+                _logger.LogInformation(
+                    "Getting user by ID: {UserId} for {Role} user {CurrentUserId}",
+                    userId,
+                    userRole,
+                    currentUserId
+                );
+
+                // Use role-specific endpoints to get users
+                if (userRole == "Contractor")
+                {
+                    var contractorUsers = await _apiClient.GetAsync<List<object>>(
+                        "/api/contractors/messaging/available-users",
+                        User
+                    );
+                    if (contractorUsers != null && contractorUsers.Any())
+                    {
+                        var user = contractorUsers.FirstOrDefault(u =>
+                            GetPropertyValue(u, "UserId") == userId
+                            || GetPropertyValue(u, "userId") == userId
+                        );
+
+                        if (user != null)
+                        {
+                            return new UserDto
+                            {
+                                UserId =
+                                    GetPropertyValue(user, "UserId")
+                                    ?? GetPropertyValue(user, "userId")
+                                    ?? "",
+                                FullName =
+                                    GetPropertyValue(user, "FullName")
+                                    ?? GetPropertyValue(user, "fullName")
+                                    ?? "Unknown User",
+                                Role =
+                                    GetPropertyValue(user, "Role")
+                                    ?? GetPropertyValue(user, "role")
+                                    ?? "",
+                                Email =
+                                    GetPropertyValue(user, "Email")
+                                    ?? GetPropertyValue(user, "email")
+                                    ?? "",
+                            };
+                        }
+                    }
+                }
+                else if (userRole == "Client")
+                {
+                    var clientUsers = await _apiClient.GetAsync<List<object>>(
+                        "/api/clients/messaging/available-users",
+                        User
+                    );
+                    if (clientUsers != null && clientUsers.Any())
+                    {
+                        var user = clientUsers.FirstOrDefault(u =>
+                            GetPropertyValue(u, "UserId") == userId
+                            || GetPropertyValue(u, "userId") == userId
+                        );
+
+                        if (user != null)
+                        {
+                            return new UserDto
+                            {
+                                UserId =
+                                    GetPropertyValue(user, "UserId")
+                                    ?? GetPropertyValue(user, "userId")
+                                    ?? "",
+                                FullName =
+                                    GetPropertyValue(user, "FullName")
+                                    ?? GetPropertyValue(user, "fullName")
+                                    ?? "Unknown User",
+                                Role =
+                                    GetPropertyValue(user, "Role")
+                                    ?? GetPropertyValue(user, "role")
+                                    ?? "",
+                                Email =
+                                    GetPropertyValue(user, "Email")
+                                    ?? GetPropertyValue(user, "email")
+                                    ?? "",
+                            };
+                        }
+                    }
+                }
+                else
+                {
+                    // For Admins and PMs, use the admin endpoint
+                    var users = await _apiClient.GetAsync<List<UserDto>>("/api/admin/users", User);
+                    return users?.FirstOrDefault(u => u.UserId == userId);
+                }
+
+                _logger.LogWarning(
+                    "User {UserId} not found in available users for {Role} user {CurrentUserId}",
+                    userId,
+                    userRole,
+                    currentUserId
+                );
+                return null;
             }
             catch (Exception ex)
             {
@@ -594,15 +992,48 @@ namespace ICCMS_Web.Controllers
                     );
                     if (contractorUsers != null && contractorUsers.Any())
                     {
+                        _logger.LogInformation(
+                            "Retrieved {Count} contractor users from API",
+                            contractorUsers.Count
+                        );
+
+                        // Log the first user for debugging
+                        if (contractorUsers.Any())
+                        {
+                            var firstUser = contractorUsers.First();
+                            _logger.LogInformation(
+                                "First user data: {UserData}",
+                                JsonSerializer.Serialize(firstUser)
+                            );
+                        }
+
                         allUsers = contractorUsers
                             .Select(u => new UserDto
                             {
-                                UserId = GetPropertyValue(u, "UserId") ?? "",
-                                FullName = GetPropertyValue(u, "FullName") ?? "",
-                                Role = GetPropertyValue(u, "Role") ?? "",
-                                Email = GetPropertyValue(u, "Email") ?? "",
+                                UserId =
+                                    GetPropertyValue(u, "UserId")
+                                    ?? GetPropertyValue(u, "userId")
+                                    ?? "",
+                                FullName =
+                                    GetPropertyValue(u, "FullName")
+                                    ?? GetPropertyValue(u, "fullName")
+                                    ?? "Unknown User",
+                                Role =
+                                    GetPropertyValue(u, "Role")
+                                    ?? GetPropertyValue(u, "role")
+                                    ?? "",
+                                Email =
+                                    GetPropertyValue(u, "Email")
+                                    ?? GetPropertyValue(u, "email")
+                                    ?? "",
                             })
                             .ToList();
+
+                        _logger.LogInformation(
+                            "Processed {Count} users with names: {Names}",
+                            allUsers.Count,
+                            string.Join(", ", allUsers.Select(u => $"'{u.FullName}'"))
+                        );
                     }
                     else
                     {
@@ -659,51 +1090,9 @@ namespace ICCMS_Web.Controllers
                     // Apply role-based filtering
                     if (CanUserMessage(currentUserId, userRole, user.UserId, user.Role))
                     {
-                        // For Contractors and Clients, further filter by project associations
-                        if (userRole == "Contractor" || userRole == "Client")
-                        {
-                            _logger.LogInformation(
-                                "Checking project associations for {Role} user {UserId} with {TargetUserRole} user {TargetUserId}",
-                                userRole,
-                                currentUserId,
-                                user.Role,
-                                user.UserId
-                            );
-
-                            if (
-                                await AreUsersAssociatedWithSameProjects(
-                                    currentUserId,
-                                    user.UserId,
-                                    userRole
-                                )
-                            )
-                            {
-                                filteredUsers.Add(user);
-                                _logger.LogInformation(
-                                    "Added user {UserId} ({Role}) to available users",
-                                    user.UserId,
-                                    user.Role
-                                );
-                            }
-                            else
-                            {
-                                _logger.LogInformation(
-                                    "User {UserId} ({Role}) not associated with same projects",
-                                    user.UserId,
-                                    user.Role
-                                );
-                            }
-                        }
-                        else
-                        {
-                            // Admins and PMs can message anyone they're allowed to
-                            filteredUsers.Add(user);
-                            _logger.LogInformation(
-                                "Added user {UserId} ({Role}) to available users (Admin/PM access)",
-                                user.UserId,
-                                user.Role
-                            );
-                        }
+                        // The API endpoints already handle complex filtering for Contractors and Clients
+                        // No need for additional filtering here - trust the API
+                        filteredUsers.Add(user);
                     }
                     else
                     {
@@ -761,15 +1150,48 @@ namespace ICCMS_Web.Controllers
                     );
                     if (contractorProjects != null && contractorProjects.Any())
                     {
+                        _logger.LogInformation(
+                            "Retrieved {Count} contractor projects from API",
+                            contractorProjects.Count
+                        );
+
+                        // Log the first project for debugging
+                        if (contractorProjects.Any())
+                        {
+                            var firstProject = contractorProjects.First();
+                            _logger.LogInformation(
+                                "First project data: {ProjectData}",
+                                JsonSerializer.Serialize(firstProject)
+                            );
+                        }
+
                         allProjects = contractorProjects
                             .Select(p => new ProjectDto
                             {
-                                ProjectId = GetPropertyValue(p, "ProjectId") ?? "",
-                                Name = GetPropertyValue(p, "Name") ?? "",
-                                Description = GetPropertyValue(p, "Description") ?? "",
-                                Status = GetPropertyValue(p, "Status") ?? "",
+                                ProjectId =
+                                    GetPropertyValue(p, "ProjectId")
+                                    ?? GetPropertyValue(p, "projectId")
+                                    ?? "",
+                                Name =
+                                    GetPropertyValue(p, "Name")
+                                    ?? GetPropertyValue(p, "name")
+                                    ?? "Unnamed Project",
+                                Description =
+                                    GetPropertyValue(p, "Description")
+                                    ?? GetPropertyValue(p, "description")
+                                    ?? "",
+                                Status =
+                                    GetPropertyValue(p, "Status")
+                                    ?? GetPropertyValue(p, "status")
+                                    ?? "",
                             })
                             .ToList();
+
+                        _logger.LogInformation(
+                            "Processed {Count} projects with names: {Names}",
+                            allProjects.Count,
+                            string.Join(", ", allProjects.Select(p => $"'{p.Name}'"))
+                        );
                     }
                     else
                     {
@@ -823,51 +1245,9 @@ namespace ICCMS_Web.Controllers
                     allProjects.Count
                 );
 
-                var filteredProjects = new List<ProjectDto>();
-
-                // Get user projects once to avoid infinite loops
-                List<ProjectDto> userProjects = new List<ProjectDto>();
-                if (userRole == "Contractor" || userRole == "Client")
-                {
-                    userProjects = await GetUserProjects(currentUserId, userRole);
-                }
-
-                foreach (var project in allProjects)
-                {
-                    // For Contractors and Clients, only show projects they're associated with
-                    if (userRole == "Contractor" || userRole == "Client")
-                    {
-                        // Check if user is associated with this project
-                        if (userProjects.Any(p => p.ProjectId == project.ProjectId))
-                        {
-                            filteredProjects.Add(project);
-                            _logger.LogInformation(
-                                "Added project {ProjectId} ({ProjectName}) to available projects",
-                                project.ProjectId,
-                                project.Name
-                            );
-                        }
-                        else
-                        {
-                            _logger.LogInformation(
-                                "User {UserId} not associated with project {ProjectId} ({ProjectName})",
-                                currentUserId,
-                                project.ProjectId,
-                                project.Name
-                            );
-                        }
-                    }
-                    else
-                    {
-                        // Admins and PMs can see all projects
-                        filteredProjects.Add(project);
-                        _logger.LogInformation(
-                            "Added project {ProjectId} ({ProjectName}) to available projects (Admin/PM access)",
-                            project.ProjectId,
-                            project.Name
-                        );
-                    }
-                }
+                // The API endpoints already handle project filtering for Contractors and Clients
+                // No need for additional filtering here - trust the API
+                var filteredProjects = allProjects;
 
                 _logger.LogInformation(
                     "Filtered {Count} available projects for {Role} user {UserId}",
@@ -1037,13 +1417,163 @@ namespace ICCMS_Web.Controllers
             }
         }
 
+        [HttpGet("debug/messages")]
+        public async Task<IActionResult> DebugMessages()
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "Unknown";
+
+                // Get all messages for this user
+                var messages = await _apiClient.GetAsync<List<MessageDto>>(
+                    $"/api/messages/user/{currentUserId}",
+                    User
+                );
+
+                var debugData = new
+                {
+                    UserId = currentUserId,
+                    Role = userRole,
+                    TotalMessages = messages?.Count ?? 0,
+                    DirectMessages = messages
+                        ?.Where(m =>
+                            (m.MessageType == "direct" || m.MessageType == "thread")
+                            && m.ThreadParticipants != null
+                            && m.ThreadParticipants.Count == 2
+                        )
+                        .Count() ?? 0,
+                    WorkflowMessages = messages?.Where(m => m.MessageType == "workflow").Count()
+                        ?? 0,
+                    SampleMessages = messages
+                        ?.Take(5)
+                        .Select(m => new
+                        {
+                            MessageId = m.MessageId,
+                            SenderId = m.SenderId,
+                            ReceiverId = m.ReceiverId,
+                            Subject = m.Subject,
+                            MessageType = m.MessageType,
+                            ThreadId = m.ThreadId,
+                            SentAt = m.SentAt,
+                        })
+                        .ToList(),
+                };
+
+                return Json(debugData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in debug messages endpoint");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("debug/contractor-data")]
+        public async Task<IActionResult> DebugContractorData()
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "Unknown";
+
+                if (userRole != "Contractor")
+                {
+                    return BadRequest("This endpoint is only for contractors");
+                }
+
+                // Get contractor users
+                var contractorUsers = await _apiClient.GetAsync<List<object>>(
+                    "/api/contractors/messaging/available-users",
+                    User
+                );
+
+                // Get contractor projects
+                var contractorProjects = await _apiClient.GetAsync<List<object>>(
+                    "/api/contractors/messaging/available-projects",
+                    User
+                );
+
+                var debugData = new
+                {
+                    UserId = currentUserId,
+                    Role = userRole,
+                    Users = new
+                    {
+                        Count = contractorUsers?.Count ?? 0,
+                        RawData = contractorUsers?.Take(2).ToList(),
+                        ProcessedData = contractorUsers
+                            ?.Select(u => new
+                            {
+                                UserId = GetPropertyValue(u, "UserId"),
+                                FullName = GetPropertyValue(u, "FullName"),
+                                Role = GetPropertyValue(u, "Role"),
+                                Email = GetPropertyValue(u, "Email"),
+                            })
+                            .Take(2)
+                            .ToList(),
+                    },
+                    Projects = new
+                    {
+                        Count = contractorProjects?.Count ?? 0,
+                        RawData = contractorProjects?.Take(2).ToList(),
+                        ProcessedData = contractorProjects
+                            ?.Select(p => new
+                            {
+                                ProjectId = GetPropertyValue(p, "ProjectId"),
+                                Name = GetPropertyValue(p, "Name"),
+                                Description = GetPropertyValue(p, "Description"),
+                                Status = GetPropertyValue(p, "Status"),
+                            })
+                            .Take(2)
+                            .ToList(),
+                    },
+                };
+
+                return Json(debugData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in debug endpoint");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
         private string? GetPropertyValue(object obj, string propertyName)
         {
             try
             {
                 if (obj is JsonElement jsonElement)
                 {
-                    return jsonElement.GetProperty(propertyName).GetString();
+                    // Try exact property name first
+                    if (jsonElement.TryGetProperty(propertyName, out var property))
+                    {
+                        return property.GetString();
+                    }
+
+                    // Try case-insensitive search through all properties
+                    foreach (var prop in jsonElement.EnumerateObject())
+                    {
+                        if (
+                            string.Equals(
+                                prop.Name,
+                                propertyName,
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                        )
+                        {
+                            return prop.Value.GetString();
+                        }
+                    }
+
+                    // Log for debugging
+                    _logger.LogWarning(
+                        "Property '{PropertyName}' not found in JsonElement. Available properties: {Properties}",
+                        propertyName,
+                        string.Join(", ", jsonElement.EnumerateObject().Select(p => p.Name))
+                    );
+
+                    return null;
                 }
                 else
                 {
@@ -1052,8 +1582,13 @@ namespace ICCMS_Web.Controllers
                     return property?.GetValue(obj)?.ToString();
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogWarning(
+                    ex,
+                    "Error getting property '{PropertyName}' from object",
+                    propertyName
+                );
                 return null;
             }
         }

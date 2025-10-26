@@ -48,11 +48,20 @@ namespace ICCMS_Web.Services
                     ThreadParticipants = new List<string> { senderId, receiverId },
                 };
 
+                _logger.LogInformation(
+                    "Sending direct message: Sender={SenderId}, Receiver={ReceiverId}, Subject={Subject}",
+                    senderId,
+                    receiverId,
+                    subject
+                );
+
                 var result = await _apiClient.PostAsync<string>(
                     "/api/messages",
                     messageRequest,
                     currentUser
                 );
+
+                _logger.LogInformation("Message creation result: {Result}", result);
 
                 if (!string.IsNullOrEmpty(result))
                 {

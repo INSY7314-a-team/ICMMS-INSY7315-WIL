@@ -86,6 +86,18 @@ namespace ICCMS_Web.Models
         public string Content { get; set; } = string.Empty;
     }
 
+    public class ReplyToMessageRequest
+    {
+        public string ParentMessageId { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
+    }
+
+    public class SendThreadMessageRequest
+    {
+        public string ThreadId { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
+    }
+
     public class UserMessagesViewModel
     {
         public List<ThreadDto> WorkflowThreads { get; set; } = new List<ThreadDto>();
