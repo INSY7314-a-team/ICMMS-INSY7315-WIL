@@ -155,11 +155,13 @@ namespace ICCMS_API.Services
             if (accept)
             {
                 quotation.Status = "ClientAccepted";
+                quotation.ApprovedAt = DateTime.UtcNow; // ✅ ADD THIS LINE
             }
             else
             {
                 quotation.Status = "ClientDeclined";
             }
+
 
             await _firebaseService.UpdateDocumentAsync("quotations", quotationId, quotation);
             return quotation;
@@ -212,9 +214,11 @@ namespace ICCMS_API.Services
             Pricing.Recalculate(invoice);
 
             // Generate invoice number
+            var invoiceId = $"inv_{Guid.NewGuid().ToString("N")[..8]}";
+            invoice.InvoiceId = invoiceId;
             invoice.InvoiceNumber = $"INV-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+            await _firebaseService.AddDocumentWithIdAsync("invoices", invoiceId, invoice);
 
-            var invoiceId = await _firebaseService.AddDocumentAsync("invoices", invoice);
             return (invoiceId, invoice);
         }
     }

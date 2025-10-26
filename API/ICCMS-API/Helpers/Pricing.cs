@@ -31,30 +31,30 @@ namespace ICCMS_API.Helpers
 
         public static void Recalculate(Invoice invoice)
         {
-            // Calculate line totals for each item
+            // Calculate line totals
             foreach (var item in invoice.Items)
             {
                 item.LineTotal = item.Quantity * item.UnitPrice;
             }
 
-            // Calculate subtotal
-            invoice.Subtotal = invoice.Items.Sum(item => item.LineTotal);
+            // Base subtotal
+            invoice.Subtotal = invoice.Items.Sum(i => i.LineTotal);
 
-            // Apply markup to subtotal first
-            var subtotalWithMarkup = invoice.Subtotal * invoice.MarkupRate;
+            // Apply markup correctly (1 + rate)
+            invoice.SubtotalWithMarkup = invoice.Subtotal * (1 + invoice.MarkupRate);
 
-            // Calculate tax total on the marked-up subtotal
-            invoice.TaxTotal = invoice.Items.Sum(item => (item.LineTotal * invoice.MarkupRate) * item.TaxRate);
+            // Tax calculations
+            invoice.TaxTotal = invoice.Items.Sum(i => (i.LineTotal * (1 + invoice.MarkupRate)) * i.TaxRate);
+            invoice.TaxTotalWithMarkup = invoice.TaxTotal;
 
-            // Calculate total amount
-            invoice.TotalAmount = subtotalWithMarkup + invoice.TaxTotal;
-
-            // Sync legacy fields
+            // Totals
+            invoice.TotalAmount = invoice.SubtotalWithMarkup + invoice.TaxTotal;
             invoice.Amount = invoice.Subtotal;
             invoice.TaxAmount = invoice.TaxTotal;
 
-            // Update timestamp
+            // Legacy sync
             invoice.UpdatedAt = DateTime.UtcNow;
         }
+
     }
 }

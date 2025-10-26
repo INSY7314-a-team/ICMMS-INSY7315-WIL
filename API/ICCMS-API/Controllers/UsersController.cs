@@ -97,6 +97,28 @@ namespace ICCMS_API.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+        
+        // ✅ Get a single user by ID (works for any role)
+        [HttpGet("{id}")]
+        public async Task<ActionResult<User>> GetUserById(string id)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                    return BadRequest(new { error = "Missing user ID" });
+
+                var user = await _firebaseService.GetDocumentAsync<User>("users", id);
+                if (user == null)
+                    return NotFound(new { error = $"User not found for ID {id}" });
+
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
 
         [HttpGet("contractors")]
         public async Task<ActionResult<List<User>>> GetContractors()
