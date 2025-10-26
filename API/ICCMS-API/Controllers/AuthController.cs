@@ -13,26 +13,34 @@ namespace ICCMS_API.Controllers
     {
         private readonly IAuthService _authService;
         private readonly IFirebaseService _firebaseService;
+        private readonly IAuditLogService _auditLogService;
 
-        public AuthController(IAuthService authService, IFirebaseService firebaseService)
+        public AuthController(IAuthService authService, IFirebaseService firebaseService, IAuditLogService auditLogService)
         {
             _authService = authService;
             _firebaseService = firebaseService;
+            _auditLogService = auditLogService;
         }
 
         [HttpPost("login")]
         public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
         {
+            Console.WriteLine($"[AuthController] LOGIN METHOD CALLED");
             try
             {
+                Console.WriteLine($"[AuthController] ===== LOGIN REQUEST RECEIVED for {request.Email} =====");
+                
                 // Authenticate with Firebase using email and password
                 var firebaseUser = await _authService.SignInWithEmailAndPasswordAsync(
                     request.Email,
                     request.Password
                 );
+                
+                Console.WriteLine($"[AuthController] Firebase authentication completed. User: {(firebaseUser?.Uid ?? "NULL")}");
 
                 if (firebaseUser == null)
                 {
+                    await _auditLogService.LogAsync("Login Attempt", "Login Failed", $"Failed login for {request.Email} - Invalid credentials", "unknown", request.Email);
                     return BadRequest(
                         new LoginResponse { Success = false, Message = "Invalid email or password" }
                     );
@@ -46,6 +54,8 @@ namespace ICCMS_API.Controllers
 
                 if (user == null || !user.IsActive)
                 {
+                    var failureReason = user == null ? "Account not found" : "Account deactivated";
+                    await _auditLogService.LogAsync("Login Attempt", "Login Failed", $"Failed login for {request.Email} - {failureReason}", firebaseUser?.Uid ?? "unknown", request.Email);
                     return BadRequest(
                         new LoginResponse
                         {
@@ -57,6 +67,27 @@ namespace ICCMS_API.Controllers
 
                 // Generate a Firebase ID token for the user
                 var idToken = await _authService.CreateIdTokenAsync(firebaseUser.Uid);
+
+                Console.WriteLine($"[AuthController] About to log successful login for {user.Email}");
+                Console.WriteLine($"[AuthController] _auditLogService is null: {_auditLogService == null}");
+                if (_auditLogService != null)
+                {
+                    try
+                    {
+                        Console.WriteLine($"[AuthController] CALLING LogAsync NOW");
+                        await _auditLogService.LogAsync("Login Attempt", "Login Successful", $"Successful login for {user.Email} (Role: {user.Role})", firebaseUser.Uid, firebaseUser.Uid);
+                        Console.WriteLine($"[AuthController] Login audit log call completed");
+                    }
+                    catch (Exception auditEx)
+                    {
+                        Console.WriteLine($"[AuthController] EXCEPTION during audit log: {auditEx.Message}");
+                        Console.WriteLine($"[AuthController] Audit exception stack: {auditEx.StackTrace}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"[AuthController] ERROR: _auditLogService is NULL!");
+                }
 
                 return Ok(
                     new LoginResponse

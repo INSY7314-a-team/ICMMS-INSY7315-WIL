@@ -69,30 +69,48 @@
                 submitBtn.textContent = 'Logging in...';
                 submitBtn.disabled = true;
 
-                console.log('[Login] Attempting Firebase sign-in for', email);
-                const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
-                const user = userCredential.user;
-                console.log('[Login] Firebase sign-in successful:', user.email);
-
-                const idToken = await user.getIdToken();
-                console.log('[Login] Got Firebase ID token');
-
-                const response = await fetch('/Auth/VerifyToken', {
+                console.log('[Login] Calling API login endpoint for', email);
+                
+                // Call the API's /api/auth/login endpoint directly
+                const response = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ idToken })
+                    body: JSON.stringify({ email, password })
                 });
 
                 console.log('[Login] API response status:', response.status);
                 const result = await response.json();
                 console.log('[Login] API response:', result);
 
-                if (result.success) {
-                    const role = result.user?.role?.toLowerCase();
-                    console.log('[Login] Verified user role:', role);
-                    if (role === 'client') window.location.href = '/Clients';
-                    else if (role === 'admin') window.location.href = '/Users';
-                    else window.location.href = '/';
+                if (result.success && result.token) {
+                    // Exchange the custom token for an ID token using Firebase client SDK
+                    console.log('[Login] Got custom token, exchanging for ID token');
+                    const idToken = await firebase.auth().signInWithCustomToken(result.token).then(userCred => userCred.user.getIdToken());
+                    console.log('[Login] Got ID token from Firebase');
+                    
+                    // Now verify the ID token with the Web Auth controller to create the session
+                    console.log('[Login] Got token from API, verifying with Web auth');
+                    const verifyResponse = await fetch('/Auth/VerifyToken', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            idToken: idToken,
+                            email: result.user?.email || email
+                        })
+                    });
+
+                    const verifyResult = await verifyResponse.json();
+                    console.log('[Login] Verify result:', verifyResult);
+
+                    if (verifyResult.success) {
+                        const role = verifyResult.user?.role?.toLowerCase();
+                        console.log('[Login] Verified user role:', role);
+                        if (role === 'client') window.location.href = '/Clients';
+                        else if (role === 'admin') window.location.href = '/Users';
+                        else window.location.href = '/';
+                    } else {
+                        alert(verifyResult.message || 'Login verification failed');
+                    }
                 } else {
                     alert(result.message || 'Login failed');
                 }

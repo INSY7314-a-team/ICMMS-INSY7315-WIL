@@ -81,7 +81,6 @@ namespace ICCMS_API.Services
                     ProjectId = projectId,
                     Credential = credential,
                 }.Build();
-                Console.WriteLine("FirestoreDb created successfully");
             }
             catch (Exception ex)
             {
@@ -95,8 +94,6 @@ namespace ICCMS_API.Services
         {
             try
             {
-                Console.WriteLine($"Getting document: {collection}/{documentId}");
-
                 var document = await _firestoreDb
                     .Collection(collection)
                     .Document(documentId)
@@ -104,13 +101,10 @@ namespace ICCMS_API.Services
 
                 if (!document.Exists)
                 {
-                    Console.WriteLine($"Document {documentId} does not exist");
                     return null;
                 }
 
-                Console.WriteLine($"Document {documentId} exists, converting to {typeof(T).Name}");
                 var result = document.ConvertTo<T>();
-                Console.WriteLine($"Successfully converted document {documentId}");
                 return result;
             }
             catch (Exception ex)
@@ -125,31 +119,18 @@ namespace ICCMS_API.Services
         {
             try
             {
-                Console.WriteLine($"Getting collection: {collection}");
                 var snapshot = await _firestoreDb.Collection(collection).GetSnapshotAsync();
-                Console.WriteLine($"Retrieved {snapshot.Documents.Count} documents from Firestore");
                 
                 var result = new List<T>();
                 foreach (var doc in snapshot.Documents)
                 {
                     try
                     {
-                        Console.WriteLine($"Converting document {doc.Id} to {typeof(T).Name}");
-                        
-                        // Debug: Show what fields are available in the document
-                        var fields = doc.ToDictionary();
-                        Console.WriteLine($"Available fields in document {doc.Id}: {string.Join(", ", fields.Keys)}");
-                        
                         T converted;
-                        Console.WriteLine($"Checking if type {typeof(T).Name} equals Document type");
-                        Console.WriteLine($"typeof(T) == typeof(Document): {typeof(T) == typeof(Document)}");
-                        Console.WriteLine($"typeof(T).Name: {typeof(T).Name}");
-                        Console.WriteLine($"typeof(Document).Name: {typeof(Document).Name}");
                         
                         if (typeof(T) == typeof(Document) || typeof(T).Name == "Document")
                         {
                             // Always use manual conversion for Document objects since ConvertTo<T> returns default values
-                            Console.WriteLine($"Using manual conversion for Document object {doc.Id}");
                             
                             // Debug: Log the actual field values being extracted
                             var projectId = doc.GetValue<string>("projectId") ?? "";
@@ -161,17 +142,6 @@ namespace ICCMS_API.Services
                             var uploadedBy = doc.GetValue<string>("uploadedBy") ?? "";
                             var uploadedAt = doc.GetValue<DateTime>("uploadedAt");
                             var description = doc.GetValue<string>("description") ?? "";
-                            
-                            Console.WriteLine($"Manual conversion field values for {doc.Id}:");
-                            Console.WriteLine($"  ProjectId: '{projectId}'");
-                            Console.WriteLine($"  FileName: '{fileName}'");
-                            Console.WriteLine($"  Status: '{status}'");
-                            Console.WriteLine($"  FileType: '{fileType}'");
-                            Console.WriteLine($"  FileSize: {fileSize}");
-                            Console.WriteLine($"  FileUrl: '{fileUrl}'");
-                            Console.WriteLine($"  UploadedBy: '{uploadedBy}'");
-                            Console.WriteLine($"  UploadedAt: {uploadedAt}");
-                            Console.WriteLine($"  Description: '{description}'");
                             
                             var manualDoc = new Document
                             {
@@ -187,14 +157,22 @@ namespace ICCMS_API.Services
                                 Description = description
                             };
                             converted = (T)(object)manualDoc;
-                            Console.WriteLine($"Successfully converted document {doc.Id} using manual conversion");
+                        }
+                        else if (typeof(T) == typeof(AuditLog) || typeof(T).Name == "AuditLog")
+                        {
+                            // Handle AuditLog - need to set the Id from doc.Id
+                            var auditLog = doc.ConvertTo<AuditLog>();
+                            if (auditLog != null)
+                            {
+                                auditLog.Id = doc.Id; // Set the Firestore document ID
+                            }
+                            converted = (T)(object)auditLog;
                         }
                         else
                         {
                             try
                             {
                                 converted = doc.ConvertTo<T>();
-                                Console.WriteLine($"Successfully converted document {doc.Id} using ConvertTo<T>");
                             }
                             catch (Exception convertEx)
                             {
@@ -213,7 +191,6 @@ namespace ICCMS_API.Services
                     }
                 }
                 
-                Console.WriteLine($"Retrieved {result.Count} documents from {collection}");
                 return result;
             }
             catch (Exception ex)
@@ -227,10 +204,8 @@ namespace ICCMS_API.Services
         {
             try
             {
-                Console.WriteLine($"Getting raw collection: {collection}");
                 var snapshot = await _firestoreDb.Collection(collection).GetSnapshotAsync();
                 var result = snapshot.Documents.ToList();
-                Console.WriteLine($"Retrieved {result.Count} raw documents from {collection}");
                 return result;
             }
             catch (Exception ex)
@@ -245,9 +220,7 @@ namespace ICCMS_API.Services
         {
             try
             {
-                Console.WriteLine($"Adding document to {collection}");
                 var docRef = await _firestoreDb.Collection(collection).AddAsync(document);
-                Console.WriteLine($"Added document with ID: {docRef.Id}");
                 return docRef.Id;
             }
             catch (Exception ex)
@@ -266,9 +239,7 @@ namespace ICCMS_API.Services
         {
             try
             {
-                Console.WriteLine($"Adding document with ID: {collection}/{documentId}");
                 await _firestoreDb.Collection(collection).Document(documentId).SetAsync(document);
-                Console.WriteLine($"Added document with ID: {documentId}");
             }
             catch (Exception ex)
             {
@@ -282,9 +253,7 @@ namespace ICCMS_API.Services
         {
             try
             {
-                Console.WriteLine($"Updating document: {collection}/{documentId}");
                 await _firestoreDb.Collection(collection).Document(documentId).SetAsync(document);
-                Console.WriteLine($"Updated document: {documentId}");
             }
             catch (Exception ex)
             {
@@ -303,8 +272,6 @@ namespace ICCMS_API.Services
         {
             try
             {
-                Console.WriteLine($"Conditionally updating document: {collection}/{documentId}");
-
                 return await _firestoreDb.RunTransactionAsync(async transaction =>
                 {
                     var docRef = _firestoreDb.Collection(collection).Document(documentId);
@@ -312,7 +279,6 @@ namespace ICCMS_API.Services
 
                     if (!snapshot.Exists)
                     {
-                        Console.WriteLine($"Document {documentId} does not exist");
                         return false;
                     }
 
@@ -321,25 +287,18 @@ namespace ICCMS_API.Services
                     {
                         if (!snapshot.ContainsField(condition.Key))
                         {
-                            Console.WriteLine(
-                                $"Document {documentId} does not contain field {condition.Key}"
-                            );
                             return false;
                         }
 
                         var fieldValue = snapshot.GetValue<object>(condition.Key);
                         if (!fieldValue?.Equals(condition.Value) == true)
                         {
-                            Console.WriteLine(
-                                $"Condition failed: {condition.Key} = {fieldValue}, expected {condition.Value}"
-                            );
                             return false;
                         }
                     }
 
                     // All conditions met, perform the update
                     transaction.Set(docRef, document);
-                    Console.WriteLine($"Conditional update successful for document: {documentId}");
                     return true;
                 });
             }
@@ -356,9 +315,7 @@ namespace ICCMS_API.Services
         {
             try
             {
-                Console.WriteLine($"Deleting document: {collection}/{documentId}");
                 await _firestoreDb.Collection(collection).Document(documentId).DeleteAsync();
-                Console.WriteLine($"Deleted document: {documentId}");
             }
             catch (Exception ex)
             {
@@ -379,10 +336,6 @@ namespace ICCMS_API.Services
         {
             try
             {
-                Console.WriteLine(
-                    $"Getting filtered collection: {collection} with {filters.Count} filters, page {page}, size {pageSize}"
-                );
-
                 Query query = _firestoreDb.Collection(collection);
 
                 // Apply filters
@@ -475,7 +428,6 @@ namespace ICCMS_API.Services
                         .ToList();
                 }
 
-                Console.WriteLine($"Retrieved {result.Count} filtered documents from {collection}");
                 return result;
             }
             catch (Exception ex)
@@ -493,10 +445,6 @@ namespace ICCMS_API.Services
         {
             try
             {
-                Console.WriteLine(
-                    $"Getting count for collection: {collection} with {filters.Count} filters"
-                );
-
                 Query query = _firestoreDb.Collection(collection);
 
                 // Apply filters (same logic as GetCollectionWithFiltersAsync)
@@ -569,7 +517,6 @@ namespace ICCMS_API.Services
                     });
                 }
 
-                Console.WriteLine($"Count for {collection}: {count}");
                 return count;
             }
             catch (Exception ex)

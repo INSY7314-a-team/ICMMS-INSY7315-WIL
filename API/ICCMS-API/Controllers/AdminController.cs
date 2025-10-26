@@ -1,3 +1,4 @@
+using ICCMS_API.Auth;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -12,11 +13,13 @@ namespace ICCMS_API.Controllers
     {
         private readonly IAuthService _authService;
         private readonly IFirebaseService _firebaseService;
+        private readonly IAuditLogService _auditLogService;
 
-        public AdminController(IAuthService authService, IFirebaseService firebaseService)
+        public AdminController(IAuthService authService, IFirebaseService firebaseService, IAuditLogService auditLogService)
         {
             _authService = authService;
             _firebaseService = firebaseService;
+            _auditLogService = auditLogService;
         }
 
         [HttpGet("dashboard")]
@@ -203,6 +206,9 @@ namespace ICCMS_API.Controllers
 
                 await _firebaseService.AddDocumentWithIdAsync("users", firebaseUid, user);
 
+                var userId = User.UserId();
+                _auditLogService.LogAsync("User Management", "User Created", $"User {request.Email} ({firebaseUid}) created with role {request.Role}", userId ?? "system", firebaseUid);
+
                 return Ok(new { userId = firebaseUid, message = "User created successfully" });
             }
             catch (Exception ex)
@@ -253,6 +259,9 @@ namespace ICCMS_API.Controllers
                 user.IsActive = true;
                 await _firebaseService.UpdateDocumentAsync("users", id, user);
 
+                var userId = User.UserId();
+                _auditLogService.LogAsync("User Management", "User Activated", $"User {user.Email} ({id}) activated", userId ?? "system", id);
+
                 return Ok(new { message = "User activated successfully" });
             }
             catch (Exception ex)
@@ -274,6 +283,9 @@ namespace ICCMS_API.Controllers
 
                 user.IsActive = false;
                 await _firebaseService.UpdateDocumentAsync("users", id, user);
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync("User Management", "User Deactivated", $"User {user.Email} ({id}) deactivated", userId ?? "system", id);
 
                 return Ok(new { message = "User deactivated successfully" });
             }
@@ -297,6 +309,10 @@ namespace ICCMS_API.Controllers
                 user.UserId = id;
 
                 await _firebaseService.UpdateDocumentAsync("users", id, user);
+                
+                var userId = User.UserId();
+                _auditLogService.LogAsync("User Management", "User Updated", $"User {user.Email} ({id}) updated", userId ?? "system", id);
+                
                 return Ok(new { message = "User updated successfully" });
             }
             catch (Exception ex)
@@ -332,8 +348,12 @@ namespace ICCMS_API.Controllers
                     return NotFound(new { error = "User not found" });
                 }
 
+                var oldRole = user.Role;
                 user.Role = request.Role;
                 await _firebaseService.UpdateDocumentAsync("users", id, user);
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync("User Management", "User Role Changed", $"User {user.Email} ({id}) role changed from {oldRole} to {request.Role}", userId ?? "system", id);
 
                 return Ok(new { message = "User role updated successfully" });
             }
@@ -393,6 +413,9 @@ namespace ICCMS_API.Controllers
                 {
                     user.IsActive = false;
                     await _firebaseService.UpdateDocumentAsync("users", id, user);
+                    
+                    var userId = User.UserId();
+                    _auditLogService.LogAsync("User Management", "User Deleted", $"User {user.Email} ({id}) deleted", userId ?? "system", id);
                 }
 
                 return Ok(new { message = "User deactivated successfully" });

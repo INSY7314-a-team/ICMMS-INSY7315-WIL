@@ -1,3 +1,4 @@
+using ICCMS_API.Auth;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -14,14 +15,17 @@ namespace ICCMS_API.Controllers
     {
         private readonly ISupabaseService _supabaseService;
         private readonly IFirebaseService _firebaseService;
+        private readonly IAuditLogService _auditLogService;
 
         public DocumentsController(
             ISupabaseService supabaseService,
-            IFirebaseService firebaseService
+            IFirebaseService firebaseService,
+            IAuditLogService auditLogService
         )
         {
             _supabaseService = supabaseService;
             _firebaseService = firebaseService;
+            _auditLogService = auditLogService;
         }
 
         [HttpGet]
@@ -101,7 +105,7 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpGet("{fileName}")]
-        public async Task<IActionResult> GetDocument(string fileName)
+        public async Task<IActionResult> GetDocument(string fileName, [FromQuery] bool download = false)
         {
             try
             {
@@ -112,10 +116,24 @@ namespace ICCMS_API.Controllers
                 
                 Console.WriteLine($"Document found: {fileName}");
                 
+                // Only log if this is an actual download request, not just viewing
+                if (download)
+                {
+                    var userId = User.UserId();
+                    _auditLogService.LogAsync("Document Download", "Document Downloaded", $"File {fileName} downloaded", userId ?? "system", fileName);
+                }
+                
                 // Determine content type based on file extension
                 var contentType = GetContentType(fileName);
                 
-                return File(document, contentType, fileName);
+                // If download=true, set the content-disposition header to force download
+                if (download)
+                {
+                    return File(document, contentType, fileName);
+                }
+                
+                // Otherwise, just return the file for viewing (browser can open it)
+                return File(document, contentType);
             }
             catch (Exception ex)
             {
@@ -245,6 +263,10 @@ namespace ICCMS_API.Controllers
                 await _firebaseService.AddDocumentAsync("documents", document);
 
                 Console.WriteLine("Document metadata created successfully");
+                
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Document Upload", "Document Uploaded", $"File {file.FileName} ({document.DocumentId}) uploaded to project {projectId}", userId ?? "system", document.DocumentId);
+                
                 return Ok(document);
             }
             catch (Exception ex)
@@ -278,6 +300,9 @@ namespace ICCMS_API.Controllers
                     file.ContentType
                 );
 
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Document Upload", "Document Updated", $"File {fileName} updated", userId ?? "system", fileName);
+
                 return NoContent();
             }
             catch (Exception ex)
@@ -292,6 +317,10 @@ namespace ICCMS_API.Controllers
             try
             {
                 await _supabaseService.DeleteFileAsync("upload", fileName);
+                
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Document Upload", "Document Deleted", $"File {fileName} deleted from storage", userId ?? "system", fileName);
+                
                 return NoContent();
             }
             catch (Exception ex)
@@ -323,6 +352,9 @@ namespace ICCMS_API.Controllers
 
                 // Delete from Firestore
                 await _firebaseService.DeleteDocumentAsync("documents", documentId);
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Document Upload", "Document Deleted", $"Document {document.FileName} ({documentId}) deleted from storage and database", userId ?? "system", documentId);
 
                 return Ok(
                     new { message = "Document deleted successfully from both storage and database" }

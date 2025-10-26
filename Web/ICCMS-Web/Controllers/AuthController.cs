@@ -36,6 +36,46 @@ namespace ICCMS_Web.Controllers
             return View(new LoginViewModel());
         }
 
+        // Proxy login request to API
+        [HttpPost("api/auth/login")]
+        public async Task<IActionResult> LoginProxy([FromBody] LoginRequest request)
+        {
+            if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
+            {
+                _logger.LogWarning("LoginProxy: Missing credentials");
+                return Json(new { success = false, message = "Email and password are required" });
+            }
+
+            try
+            {
+                _logger.LogInformation("LoginProxy: Forwarding login request for {Email} to API", request.Email);
+
+                // Call API /api/auth/login
+                var response = await _httpClient.PostAsJsonAsync(
+                    $"{_apiBaseUrl}/api/auth/login",
+                    request
+                );
+
+                var content = await response.Content.ReadAsStringAsync();
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("LoginProxy: API returned {Status}. Body: {Body}", response.StatusCode, content);
+                    return StatusCode((int)response.StatusCode, content);
+                }
+
+                _logger.LogInformation("LoginProxy: API login successful for {Email}", request.Email);
+                
+                // Return the API response as-is
+                return Content(content, "application/json");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "LoginProxy: Exception forwarding login for {Email}", request.Email);
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
         // Called by JS (Login.cshtml) after Firebase sign-in
         [HttpPost]
         public async Task<IActionResult> VerifyToken([FromBody] VerifyTokenRequest request)
@@ -169,6 +209,12 @@ namespace ICCMS_Web.Controllers
     }
 
     // Request from Login.cshtml JS
+    public class LoginRequest
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+
     public class VerifyTokenRequest
     {
         public string IdToken { get; set; } = string.Empty;

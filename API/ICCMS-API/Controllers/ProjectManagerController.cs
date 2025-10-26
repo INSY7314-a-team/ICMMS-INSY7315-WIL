@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Security.Claims;
+using ICCMS_API.Auth;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -15,16 +16,19 @@ namespace ICCMS_API.Controllers
         private readonly IAuthService _authService;
         private readonly IFirebaseService _firebaseService;
         private readonly IWorkflowMessageService _workflowMessageService;
+        private readonly IAuditLogService _auditLogService;
 
         public ProjectManagerController(
             IAuthService authService,
             IFirebaseService firebaseService,
-            IWorkflowMessageService workflowMessageService
+            IWorkflowMessageService workflowMessageService,
+            IAuditLogService auditLogService
         )
         {
             _authService = authService;
             _firebaseService = firebaseService;
             _workflowMessageService = workflowMessageService;
+            _auditLogService = auditLogService;
         }
 
         [HttpGet("projects")]
@@ -1013,6 +1017,15 @@ namespace ICCMS_API.Controllers
                     project
                 );
 
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Project Creation",
+                    "Project Created",
+                    $"Project {project.Name} ({project.ProjectId}) created for client {project.ClientId}",
+                    userId ?? "system",
+                    project.ProjectId
+                );
+
                 Console.WriteLine($"Added project {project.Name} successfully.");
                 return Ok(project);
             }
@@ -1030,6 +1043,16 @@ namespace ICCMS_API.Controllers
             {
                 phase.ProjectId = projectId;
                 await _firebaseService.AddDocumentWithIdAsync("phases", phase.PhaseId, phase);
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Project Update",
+                    "Phase Created",
+                    $"Phase {phase.Name} ({phase.PhaseId}) created for project {projectId}",
+                    userId ?? "system",
+                    phase.PhaseId
+                );
+
                 return Ok(phase);
             }
             catch (Exception ex)
@@ -1062,6 +1085,15 @@ namespace ICCMS_API.Controllers
                         );
                     }
                 }
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Task Update",
+                    "Task Created",
+                    $"Task {task.Name} ({task.TaskId}) created for project {projectId}",
+                    userId ?? "system",
+                    task.TaskId
+                );
 
                 return Ok(task);
             }
@@ -1119,6 +1151,16 @@ namespace ICCMS_API.Controllers
                     );
                 }
                 await _firebaseService.UpdateDocumentAsync("projects", id, project);
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Project Update",
+                    "Project Updated",
+                    $"Project {project.Name} ({id}) updated",
+                    userId ?? "system",
+                    id
+                );
+
                 return Ok(project);
             }
             catch (Exception ex)
@@ -1144,6 +1186,16 @@ namespace ICCMS_API.Controllers
                     );
                 }
                 await _firebaseService.UpdateDocumentAsync("phases", id, phase);
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Project Update",
+                    "Phase Updated",
+                    $"Phase {phase.Name} ({id}) updated for project {phase.ProjectId}",
+                    userId ?? "system",
+                    id
+                );
+
                 return Ok(phase);
             }
             catch (Exception ex)
@@ -1195,6 +1247,15 @@ namespace ICCMS_API.Controllers
                         );
                     }
                 }
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Task Update",
+                    "Task Updated",
+                    $"Task {task.Name} ({id}) updated for project {task.ProjectId}",
+                    userId ?? "system",
+                    id
+                );
 
                 return Ok(task);
             }

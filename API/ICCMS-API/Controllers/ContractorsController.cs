@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
+using ICCMS_API.Auth;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -16,16 +17,19 @@ namespace ICCMS_API.Controllers
         private readonly IAuthService _authService;
         private readonly IFirebaseService _firebaseService;
         private readonly IWorkflowMessageService _workflowMessageService;
+        private readonly IAuditLogService _auditLogService;
 
         public ContractorsController(
             IAuthService authService,
             IFirebaseService firebaseService,
-            IWorkflowMessageService workflowMessageService
+            IWorkflowMessageService workflowMessageService,
+            IAuditLogService auditLogService
         )
         {
             _authService = authService;
             _firebaseService = firebaseService;
             _workflowMessageService = workflowMessageService;
+            _auditLogService = auditLogService;
         }
 
         [HttpGet("Project/Tasks")]
@@ -164,6 +168,16 @@ namespace ICCMS_API.Controllers
                 }
 
                 await _firebaseService.UpdateDocumentAsync("tasks", id, task);
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Contractor Update",
+                    "Task Updated",
+                    $"Task {task.Name} ({id}) updated by contractor",
+                    userId ?? "system",
+                    id
+                );
+
                 return Ok(task);
             }
             catch (Exception ex)
