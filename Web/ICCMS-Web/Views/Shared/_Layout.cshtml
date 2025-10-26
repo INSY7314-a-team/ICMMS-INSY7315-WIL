@@ -269,21 +269,22 @@
                                 <span>My Tasks</span>
                             </a>
                         </li>
-                    }                    if (User.IsInRole("Admin"))
-                    {
-                        <li><a asp-controller="SystemOverview" asp-action="Index"><i class="fa-solid fa-tachometer-alt"></i><span>System Overview</span></a>
-                        </li>
-                        <li><a asp-controller="Users" asp-action="Index"><i class="fa-solid fa-users"></i><span>Users</span></a>
-                        </li>
-                        <li><a asp-controller="AuditLogs" asp-action="Index"><i class="fa-solid fa-clipboard-list"></i><span>Audit Logs</span></a>
-                        </li>
-                        <li><a asp-controller="Messages" asp-action="Index"><i class="fa-solid fa-envelope"></i><span>Messages</span></a>
-                        </li>
-                        <li><a asp-controller="Documents" asp-action="Index"><i class="fa-solid fa-file-alt"></i><span>Documents</span></a>
-                        </li>
-                        <li><a asp-controller="Data" asp-action="Index"><i class="fa-solid fa-database"></i><span>Database</span></a>
-                        </li>
-                    }
+                    }                                         if (User.IsInRole("Admin"))
+                     {
+                         <li><a asp-controller="SystemOverview" asp-action="Index"><i class="fa-solid fa-tachometer-alt"></i><span>System Overview</span></a>
+                         </li>
+                         <li><a asp-controller="Users" asp-action="Index"><i class="fa-solid fa-users"></i><span>Users Overview</span></a>
+                         </li>
+                         <li><a asp-controller="AuditLogs" asp-action="Index"><i class="fa-solid fa-clipboard-list"></i><span>Audit Logs Overview</span></a>
+                         </li>
+
+                         <li><a asp-controller="MessageDashboard" asp-action="Dashboard"><i class="fa-solid fa-envelope"></i><span>Messages Overview</span></a>
+                         </li>
+
+                         <li><a asp-controller="Documents" asp-action="Index"><i class="fa-solid fa-file-alt"></i><span>Documents Overview</span></a>
+                         </li>
+                    
+                     }
                     if (User.IsInRole("Tester"))
                     {
                         <li><a asp-controller="Testing" asp-action="Index"><i class="fa-solid fa-flask"></i><span>Testing</span></a>

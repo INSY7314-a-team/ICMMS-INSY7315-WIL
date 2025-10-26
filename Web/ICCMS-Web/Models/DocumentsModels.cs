@@ -33,16 +33,4 @@ namespace ICCMS_Web.Models
         public DateTime? ApprovedAt { get; set; }
     }
 
-    public class ProjectSummary
-    {
-        public string Id { get; set; } = "";
-        public string Name { get; set; } = "";
-    }
-
-    public class UserSummary
-    {
-        public string Id { get; set; } = "";
-        public string FullName { get; set; } = "";
-        public string Email { get; set; } = "";
-    }
 }

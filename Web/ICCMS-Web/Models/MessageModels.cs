@@ -24,6 +24,7 @@ namespace ICCMS_Web.Models
         public List<MessageAttachmentDto> Attachments { get; set; } =
             new List<MessageAttachmentDto>();
         public bool HasAttachments { get; set; } = false;
+        public int AttachmentCount => Attachments?.Count ?? 0;
     }
 
     public class MessageAttachmentDto
@@ -127,6 +128,19 @@ namespace ICCMS_Web.Models
         public int UnreadCount { get; set; }
     }
 
+    public class MessageViewModel
+    {
+        public string MessageId { get; set; } = string.Empty;
+        public string SenderId { get; set; } = string.Empty;
+        public string SenderName { get; set; } = string.Empty;
+        public string ReceiverId { get; set; } = string.Empty;
+        public string ReceiverName { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
+        public bool IsRead { get; set; }
+        public DateTime SentAt { get; set; }
+        public int AttachmentCount { get; set; }
+    }
+
     // Workflow Message Models
     public class WorkflowMessageDto
     {
@@ -159,5 +173,72 @@ namespace ICCMS_Web.Models
         public string Content { get; set; } = string.Empty;
         public string Priority { get; set; } = "normal";
         public Dictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
+    }
+
+    // Message Dashboard Models
+    public class MessageThreadsViewModel
+    {
+        public List<MessageThreadViewModel> Threads { get; set; } = new List<MessageThreadViewModel>();
+        public int CurrentPage { get; set; } = 1;
+        public int PageSize { get; set; } = 25;
+        public int TotalThreads { get; set; } = 0;
+        public int TotalPages { get; set; } = 0;
+        public List<string> AvailableMessageTypes { get; set; } = new List<string>();
+        public List<ProjectSummary> AvailableProjects { get; set; } = new List<ProjectSummary>();
+        public List<UserSummary> AvailableUsers { get; set; } = new List<UserSummary>();
+        public string CurrentFilter { get; set; } = "all";
+        public string ProjectFilter { get; set; } = "all";
+        public string UserFilter { get; set; } = "all";
+        public string ThreadFilter { get; set; } = "all";
+        public string ReadFilter { get; set; } = "all";
+        public string CurrentSearchTerm { get; set; } = "";
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        
+        public bool HasPreviousPage => CurrentPage > 1;
+        public bool HasNextPage => CurrentPage < TotalPages;
+        public int StartIndex => (CurrentPage - 1) * PageSize + 1;
+        public int EndIndex => Math.Min(StartIndex + PageSize - 1, TotalThreads);
+    }
+
+    public class ProjectSummary
+    {
+        public string ProjectId { get; set; } = string.Empty;
+        public string ProjectName { get; set; } = string.Empty;
+        
+        // For backward compatibility with DocumentsController
+        public string Id 
+        { 
+            get => ProjectId; 
+            set => ProjectId = value; 
+        }
+        public string Name 
+        { 
+            get => ProjectName; 
+            set => ProjectName = value; 
+        }
+    }
+
+    public class UserSummary
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        
+        // For backward compatibility with DocumentsController
+        public string Id 
+        { 
+            get => UserId; 
+            set => UserId = value; 
+        }
+        public string FullName 
+        { 
+            get => UserName; 
+            set => UserName = value; 
+        }
+        public string Email 
+        { 
+            get => UserName; 
+            set => UserName = value; 
+        }
     }
 }
