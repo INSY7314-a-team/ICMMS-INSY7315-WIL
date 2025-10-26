@@ -448,7 +448,7 @@ namespace ICCMS_API.Services
             {
                 // Get progress report details
                 var reports = await _firebaseService.GetCollectionAsync<ProgressReport>(
-                    "progress-reports"
+                    "progressReports"
                 );
                 var report = reports.FirstOrDefault(r => r.ProgressReportId == reportId);
 

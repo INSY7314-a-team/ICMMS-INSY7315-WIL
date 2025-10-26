@@ -26,6 +26,9 @@ namespace ICCMS_API.Models
         [FirestoreProperty("hoursWorked")]
         public double HoursWorked { get; set; }
 
+        [FirestoreProperty("progressPercentage")]
+        public int? ProgressPercentage { get; set; }
+
         [FirestoreProperty("status")]
         public string Status { get; set; } = "Submitted";
 

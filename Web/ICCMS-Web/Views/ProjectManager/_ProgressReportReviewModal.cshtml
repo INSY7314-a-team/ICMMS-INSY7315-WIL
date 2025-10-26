@@ -180,43 +180,83 @@
             </div>
         `;
 
-            // In a real implementation, you would fetch the report details
-            // For now, we'll show a placeholder
-            setTimeout(() => {
-                progressReportContent.innerHTML = `
-                <div class="progress-report-details">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <h6>Report Information</h6>
-                            <p><strong>Report ID:</strong> ${reportId}</p>
-                            <p><strong>Submitted:</strong> <span id="reportSubmittedDate">Loading...</span></p>
-                            <p><strong>Status:</strong> <span class="badge bg-warning">Pending Review</span></p>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Contractor Information</h6>
-                            <p><strong>Submitted By:</strong> <span id="reportSubmittedBy">Loading...</span></p>
-                            <p><strong>Hours Worked:</strong> <span id="reportHoursWorked">Loading...</span></p>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <h6>Description</h6>
-                        <div class="card">
-                            <div class="card-body">
-                                <p id="reportDescription">Loading description...</p>
+            // Fetch the actual progress report details
+            fetch(`/ProjectManager/GetProgressReport?reportId=${reportId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        const report = data.data;
+                        progressReportContent.innerHTML = `
+                        <div class="progress-report-details">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <h6>Report Information</h6>
+                                    <p><strong>Report ID:</strong> ${report.progressReportId || reportId}</p>
+                                    <p><strong>Submitted:</strong> ${new Date(report.submittedAt || report.createdAt).toLocaleString()}</p>
+                                    <p><strong>Status:</strong> <span class="badge bg-warning">Pending Review</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Contractor Information</h6>
+                                    <p><strong>Submitted By:</strong> ${report.submittedBy || 'Unknown'}</p>
+                                    <p><strong>Hours Worked:</strong> ${report.hoursWorked || 0}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6>Description</h6>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <p>${report.description || 'No description provided'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6>Progress Details</h6>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <p><strong>Progress Percentage:</strong> ${report.progressPercentage || 0}%</p>
+                                        <p><strong>Work Completed:</strong> ${report.workCompleted || 'Not specified'}</p>
+                                        <p><strong>Challenges:</strong> ${report.challenges || 'None reported'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6>Attachments</h6>
+                                <div id="reportAttachments">
+                                    ${report.attachments && report.attachments.length > 0 
+                                        ? report.attachments.map(att => 
+                                            `<div class="mb-2">
+                                                <a href="${att.url}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fa-solid fa-download me-1"></i>${att.fileName || 'Download'}
+                                                </a>
+                                            </div>`
+                                          ).join('')
+                                        : '<p class="text-muted">No attachments</p>'
+                                    }
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <h6>Attachments</h6>
-                        <div id="reportAttachments">
-                            <p class="text-muted">No attachments</p>
+                        `;
+                    } else {
+                        progressReportContent.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fa-solid fa-exclamation-triangle me-2"></i>
+                            Failed to load progress report details. Please try again.
                         </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading progress report:', error);
+                    progressReportContent.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fa-solid fa-exclamation-circle me-2"></i>
+                        Error loading progress report. Please check your connection and try again.
                     </div>
-                </div>
-            `;
-            }, 500);
+                    `;
+                });
         }
     });
 

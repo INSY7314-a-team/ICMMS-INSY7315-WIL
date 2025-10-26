@@ -123,7 +123,7 @@ function approveTaskCompletion(taskId) {
 
   // Make real API call
   fetch(
-    `/ProjectManager/ApproveCompletionReport?id=${encodeURIComponent(taskId)}`,
+    `/ProjectManager/ApproveTaskCompletion?taskId=${encodeURIComponent(taskId)}`,
     {
       method: "POST",
       headers: {
@@ -131,18 +131,28 @@ function approveTaskCompletion(taskId) {
       },
     }
   )
-    .then(async (response) => {
-      console.log("📡 Approval response status:", response.status);
-      const responseData = await response.json();
+  .then(async (response) => {
+    console.log("📡 Approval response status:", response.status);
+    
+    // Check if response has content before trying to parse JSON
+    const responseText = await response.text();
+    console.log("📡 Response text:", responseText);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    // Try to parse JSON, but handle empty responses
+    let responseData;
+    try {
+      responseData = responseText ? JSON.parse(responseText) : { success: false, message: "Empty response" };
+    } catch (parseError) {
+      console.error("❌ Failed to parse JSON response:", parseError);
+      throw new Error("Invalid response format from server");
+    }
 
-      if (!response.ok) {
-        throw new Error(
-          responseData.error || `HTTP error! status: ${response.status}`
-        );
-      }
-
-      return responseData;
-    })
+    return responseData;
+  })
     .then((data) => {
       console.log("✅ Task completion approved successfully:", data);
 

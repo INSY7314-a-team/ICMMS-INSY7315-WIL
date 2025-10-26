@@ -1448,11 +1448,34 @@ namespace ICCMS_API.Controllers
                     "progressReports"
                 );
                 var pendingReports = progressReports
-                    .Where(pr => pr.Status == "Submitted")
+                    .Where(pr => pr.Status == "Approved")
                     .OrderBy(pr => pr.SubmittedAt)
                     .ToList();
 
                 return Ok(pendingReports);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("progress-report/{id}")]
+        public async Task<ActionResult<ProgressReport>> GetProgressReport(string id)
+        {
+            try
+            {
+                var progressReport = await _firebaseService.GetDocumentAsync<ProgressReport>(
+                    "progressReports",
+                    id
+                );
+
+                if (progressReport == null)
+                {
+                    return NotFound(new { error = "Progress report not found" });
+                }
+
+                return Ok(progressReport);
             }
             catch (Exception ex)
             {
@@ -1584,17 +1607,25 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                Console.WriteLine($"[ApproveTaskCompletion] Starting approval for task {taskId}");
+                
                 var pmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(pmId))
                 {
+                    Console.WriteLine($"[ApproveTaskCompletion] No PM ID found in claims");
                     return Unauthorized(new { error = "Project Manager ID not found" });
                 }
+
+                Console.WriteLine($"[ApproveTaskCompletion] PM ID: {pmId}");
 
                 var task = await _firebaseService.GetDocumentAsync<ProjectTask>("tasks", taskId);
                 if (task == null)
                 {
+                    Console.WriteLine($"[ApproveTaskCompletion] Task {taskId} not found");
                     return NotFound(new { error = "Task not found" });
                 }
+
+                Console.WriteLine($"[ApproveTaskCompletion] Found task: {task.Name}");
 
                 // Verify the task belongs to a project managed by this PM
                 var project = await _firebaseService.GetDocumentAsync<Project>(
@@ -1603,8 +1634,11 @@ namespace ICCMS_API.Controllers
                 );
                 if (project == null || project.ProjectManagerId != pmId)
                 {
+                    Console.WriteLine($"[ApproveTaskCompletion] Task {taskId} does not belong to PM {pmId}");
                     return Forbid();
                 }
+
+                Console.WriteLine($"[ApproveTaskCompletion] Task belongs to project: {project.Name}");
 
                 // Find and update the completion report for this task
                 var allCompletionReports =
@@ -1641,6 +1675,7 @@ namespace ICCMS_API.Controllers
                     Console.WriteLine(
                         $"[ApproveTaskCompletion] No completion report found for task {taskId}"
                     );
+                    return NotFound(new { error = "No completion request found for this task" });
                 }
 
                 // Update task status to completed
@@ -1656,10 +1691,12 @@ namespace ICCMS_API.Controllers
                 await UpdateTaskProgressToComplete(taskId);
                 await UpdatePhaseProgress(task.PhaseId);
 
+                Console.WriteLine($"[ApproveTaskCompletion] Successfully approved task {taskId}");
                 return Ok(task);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[ApproveTaskCompletion] Error: {ex.Message}");
                 return StatusCode(
                     500,
                     new

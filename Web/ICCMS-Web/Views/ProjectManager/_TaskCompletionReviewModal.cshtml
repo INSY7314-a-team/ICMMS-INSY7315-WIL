@@ -63,8 +63,12 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const taskCompletionModal = document.getElementById('taskCompletionReviewModal');
-        const completionRejectionModal = document.getElementById('completionRejectionModal');
+        const taskCompletionModalElement = document.getElementById('taskCompletionReviewModal');
+        const completionRejectionModalElement = document.getElementById('completionRejectionModal');
+        
+        // Create Bootstrap modal instances
+        const taskCompletionModal = new bootstrap.Modal(taskCompletionModalElement);
+        const completionRejectionModal = new bootstrap.Modal(completionRejectionModalElement);
         const taskCompletionContent = document.getElementById('taskCompletionContent');
         const approveCompletionBtn = document.getElementById('approveCompletionBtn');
         const rejectCompletionBtn = document.getElementById('rejectCompletionBtn');
