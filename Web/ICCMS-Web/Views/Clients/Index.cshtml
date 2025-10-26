@@ -1,359 +1,591 @@
 @model ICCMS_Web.Controllers.ClientDashboardViewModel
-
 @{
     ViewData["Title"] = "Client Dashboard";
+    Layout = "_Layout";
 }
 
-<!-- Modern Dashboard Header -->
-<div class="dashboard-header bg-gradient-primary text-white py-4 mb-4">
-    <div class="container-fluid">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="h3 mb-0">
-                    <i class="fas fa-user-tie me-3"></i>Client Dashboard
-                </h1>
-                <p class="mb-0 opacity-75">Welcome back, @User.Identity?.Name! Manage your projects and quotations</p>
+<div class="pm-dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header construction-border">
+        <h1 class="dashboard-title">@User.Identity.Name Dashboard</h1>
+        <p class="dashboard-subtitle">
+            Welcome back, @User.Identity.Name! View your projects, quotations, and maintenance requests.
+        </p>
+    </div>
+
+    <!-- Search + Filter Controls -->
+    <div class="dashboard-controls">
+        <div class="search-section">
+            <div class="search-input-group">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search projects or quotes..." />
+                <button type="button" id="searchBtn" class="search-btn">
+                    <i class="fa-solid fa-search"></i>
+                </button>
+                <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">
+                    <i class="fa-solid fa-times"></i>
+                </button>
             </div>
-            <div class="col-md-4 text-md-end">
-                <div class="d-flex align-items-center justify-content-end">
-                    <div class="me-3">
-                        <small class="text-white-50">Last Login</small><br>
-                        <span class="fw-bold">@DateTime.Now.ToString("MMM dd, yyyy")</span>
+        </div>
+
+        <!-- Filter Toggle -->
+        <div class="filter-section">
+            <div class="d-flex justify-content-center mb-3">
+                <button type="button" class="filter-toggle-btn" onclick="toggleFilters()">
+                    <i class="fa-solid fa-sliders-h me-2"></i>
+                    <span id="filterToggleText">Show Filters</span>
+                    <i class="fa-solid fa-chevron-down ms-2" id="filterToggleIcon"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters Panel -->
+        <div class="filters-panel construction-border-thin" id="filtersPanel" style="display:none;">
+            <div class="filters-container">
+                <div class="filter-group">
+                    <div class="filter-group-header"><h6>Status</h6></div>
+                    <div class="status-filters">
+                        @{
+                            var statuses = new[] { "All", "Active", "Completed", "Pending", "Resolved" };
+                        }
+                        @foreach (var status in statuses)
+                        {
+                            <a href="#" class="status-filter-btn" data-status="@status">
+                                <i class="fa-solid fa-circle me-2"></i>@status
+                            </a>
+                        }
                     </div>
-                    <div class="avatar-circle bg-white text-primary">
-                        <i class="fas fa-user"></i>
+                </div>
+
+                <div class="filter-group">
+                    <div class="filter-group-header"><h6>Date Range</h6></div>
+                    <div class="advanced-filters-grid">
+                        <div class="filter-item">
+                            <label class="filter-label">Start From</label>
+                            <input type="date" id="filterStart" class="filter-input" />
+                        </div>
+                        <div class="filter-item">
+                            <label class="filter-label">End To</label>
+                            <input type="date" id="filterEnd" class="filter-input" />
+                        </div>
                     </div>
+                </div>
+
+                <div class="filter-actions">
+                    <button type="button" class="filter-action-btn primary" onclick="applyClientFilters()">
+                        <i class="fa-solid fa-search me-2"></i>Apply
+                    </button>
+                    <button type="button" class="filter-action-btn secondary" onclick="clearClientFilters()">
+                        <i class="fa-solid fa-times me-2"></i>Clear
+                    </button>
+                    <button type="button" class="filter-action-btn tertiary" onclick="toggleFilters()">
+                        <i class="fa-solid fa-chevron-up me-2"></i>Close
+                    </button>
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- ===== Maintenance Requests ===== -->
+    <div class="section-header construction-border-thin mt-4">
+        <h3 class="section-title">
+            Maintenance Requests
+            <span class="badge badge-secondary">@((Model.MaintenanceRequests?.Count ?? 0))</span>
+        </h3>
+        <button type="button" class="btn btn-sm btn-warning" onclick="showMaintenanceForm()">+ New Request</button>
+    </div>
+
+    <div class="projects-grid" id="maintenanceRequestsGrid">
+        @if (Model.MaintenanceRequests?.Any() == true)
+        {
+            foreach (var req in Model.MaintenanceRequests)
+            {
+                var projectName = Model.Projects.FirstOrDefault(p => p.ProjectId == req.ProjectId)?.Name ?? "Unknown Project";
+                ViewBag.ProjectName = projectName;
+                @await Html.PartialAsync("_MaintenanceRequestCard", req)
+            }
+        }
+        else
+        {
+            <div class="no-projects-message text-center py-5">
+                <i class="fa-solid fa-screwdriver-wrench fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No maintenance requests yet</h5>
+                <p class="text-muted">Submit one using the button above.</p>
+            </div>
+        }
+    </div>
+
+    <!-- ===== Projects Section ===== -->
+    <div class="section-header construction-border-thin mt-4">
+        <h3 class="section-title">
+            My Projects
+            <span class="badge badge-secondary">@((Model.Projects?.Count ?? 0))</span>
+        </h3>
+    </div>
+
+    <div class="projects-grid" id="projectsGrid">
+        @if (Model.Projects?.Any() == true)
+        {
+            foreach (var project in Model.Projects)
+            {
+                ViewBag.Progress = 0;
+                ViewBag.ClientName = User.Identity?.Name ?? "Client";
+                @await Html.PartialAsync("_ClientProjectCard", project)
+            }
+        }
+        else
+        {
+            <div class="no-projects-message text-center py-5">
+                <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No projects found</h5>
+            </div>
+        }
+    </div>
+
+    <!-- ===== Quotations Section ===== -->
+    <div class="section-header construction-border-thin mt-4">
+        <h3 class="section-title">
+            Quotations
+            <span class="badge badge-secondary">@((Model.Quotations?.Count ?? 0))</span>
+        </h3>
+    </div>
+
+    <div class="projects-grid" id="quotationsGrid">
+        @if (Model.Quotations?.Any() == true)
+        {
+            foreach (var quote in Model.Quotations)
+            {
+                @await Html.PartialAsync("_QuotationCard", quote)
+            }
+        }
+        else
+        {
+            <div class="no-projects-message text-center py-5">
+                <i class="fa-solid fa-file-invoice fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No quotations found</h5>
+            </div>
+        }
     </div>
 </div>
 
-<div class="container-fluid">
-    <!-- Alert Messages -->
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-check-circle me-3 fs-4"></i>
-                <div>
-                    <strong>Success!</strong> @TempData["SuccessMessage"]
-                </div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
+<link rel="stylesheet" href="~/css/pm-dashboard.css" />
+<link rel="stylesheet" href="~/css/project-cards.css" />
+<link rel="stylesheet" href="~/css/site.css" />
 
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-exclamation-triangle me-3 fs-4"></i>
-                <div>
-                    <strong>Error!</strong> @TempData["ErrorMessage"]
-                </div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
 
-    <!-- Dashboard Stats Cards -->
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card stat-card bg-primary text-white h-100 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title text-white-50 mb-1">Total Projects</h6>
-                            <h2 class="mb-0">@(Model.Projects?.Count ?? 0)</h2>
-                        </div>
-                        <div class="stat-icon">
-                            <i class="fas fa-project-diagram fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card stat-card bg-success text-white h-100 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title text-white-50 mb-1">Active Projects</h6>
-                            <h2 class="mb-0">@(Model.Projects?.Count(p => p.Status?.ToLower() == "active") ?? 0)</h2>
-                        </div>
-                        <div class="stat-icon">
-                            <i class="fas fa-play-circle fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card stat-card bg-warning text-white h-100 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title text-white-50 mb-1">Pending Quotations</h6>
-                            <h2 class="mb-0">@(Model.Quotations?.Count(q => q.Status?.ToLower() == "pending") ?? 0)</h2>
-                        </div>
-                        <div class="stat-icon">
-                            <i class="fas fa-clock fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card stat-card bg-info text-white h-100 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title text-white-50 mb-1">Total Budget</h6>
-                            <h2 class="mb-0">R @(Model.Projects?.Sum(p => p.BudgetPlanned).ToString("N0") ?? "0")</h2>
-                        </div>
-                        <div class="stat-icon">
-                            <i class="fas fa-money-bill-wave fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+<!-- ===============================
+     Maintenance Request Details Modal
+=============================== -->
+<div class="modal fade" id="maintenanceDetailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content construction-border"
+         style="background-color: var(--secondary-bg); color: var(--text-light); border-radius: 12px;">
+      <div class="modal-header" style="background: var(--primary-bg); border-bottom: 1px solid var(--accent-yellow);">
+        <h5 class="modal-title" style="color: var(--accent-yellow); font-weight: 600;">
+          <i class="fa-solid fa-wrench me-2"></i> Maintenance Request Details
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="maintenanceDetailsBody">
+        <p class="text-center py-3 text-muted">Loading...</p>
+      </div>
     </div>
-
-    <!-- Projects Section -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-white border-0 py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-project-diagram me-2 text-primary"></i>My Projects
-                        </h5>
-                        <span class="badge bg-primary">@(Model.Projects?.Count ?? 0) Projects</span>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    @if (Model.Projects?.Any() == true)
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Project Name</th>
-                                        <th>Status</th>
-                                        <th>Budget</th>
-                                        <th>Start Date</th>
-                                        <th>End Date</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var project in Model.Projects)
-                                    {
-                                        <tr>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="project-icon me-3">
-                                                        <i class="fas fa-building text-primary"></i>
-                                                    </div>
-                                                    <div>
-                                                        <h6 class="mb-0">@project.Name</h6>
-                                                        <small class="text-muted">@project.Description</small>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                @{
-                                                    var statusClass = project.Status?.ToLower() switch
-                                                    {
-                                                        "active" => "success",
-                                                        "completed" => "primary",
-                                                        "on hold" => "warning",
-                                                        "cancelled" => "danger",
-                                                        _ => "secondary"
-                                                    };
-                                                }
-                                                <span class="badge bg-@statusClass">@project.Status</span>
-                                            </td>
-                                            <td>
-                                                <div>
-                                                    <strong>R @project.BudgetPlanned.ToString("N0")</strong>
-                                                    @if (project.BudgetActual > 0)
-                                                    {
-                                                        <br><small class="text-muted">Actual: R @project.BudgetActual.ToString("N0")</small>
-                                                    }
-                                                </div>
-                                            </td>
-                                            <td>@project.StartDate.ToString("MMM dd, yyyy")</td>
-                                            <td>@project.EndDatePlanned.ToString("MMM dd, yyyy")</td>
-                                            <td>
-                                                <a href="@Url.Action("ProjectDetails", "Clients", new { id = project.ProjectId })" 
-                                                   class="btn btn-sm btn-outline-primary">
-                                                    <i class="fas fa-eye me-1"></i>View
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-center py-5">
-                            <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
-                            <h5 class="text-muted">No Projects Found</h5>
-                            <p class="text-muted">You don't have any projects assigned yet.</p>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quotations Section -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-white border-0 py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-file-invoice-dollar me-2 text-success"></i>Quotations
-                        </h5>
-                        <span class="badge bg-success">@(Model.Quotations?.Count ?? 0) Quotations</span>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    @if (Model.Quotations?.Any() == true)
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Description</th>
-                                        <th>Amount</th>
-                                        <th>Status</th>
-                                        <th>Valid Until</th>
-                                        <th>Created</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var quotation in Model.Quotations)
-                                    {
-                                        <tr>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="quotation-icon me-3">
-                                                        <i class="fas fa-file-invoice text-success"></i>
-                                                    </div>
-                                                    <div>
-                                                        <h6 class="mb-0">@quotation.Description</h6>
-                                                        <small class="text-muted">ID: @quotation.QuotationId</small>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <strong>R @quotation.GrandTotal.ToString("N2")</strong>
-
-                                            </td>
-                                            <td>
-                                                @{
-                                                    var quoteStatusClass = quotation.Status?.ToLower() switch
-                                                    {
-                                                        "pending" => "warning",
-                                                        "approved" => "success",
-                                                        "rejected" => "danger",
-                                                        "expired" => "secondary",
-                                                        _ => "info"
-                                                    };
-                                                }
-                                                <span class="badge bg-@quoteStatusClass">@quotation.Status</span>
-                                            </td>
-                                            <td>@quotation.ValidUntil.ToString("MMM dd, yyyy")</td>
-                                            <td>@quotation.CreatedAt.ToString("MMM dd, yyyy")</td>
-                                            <td>
-                                                <div class="btn-group" role="group">
-                                                    <a href="@Url.Action("QuotationDetails", "Clients", new { id = quotation.QuotationId })" 
-                                                       class="btn btn-sm btn-outline-primary">
-                                                        <i class="fas fa-eye me-1"></i>View
-                                                    </a>
-                                                    @if (quotation.Status?.ToLower() == "pending")
-                                                    {
-                                                        <form method="post" action="@Url.Action("ApproveQuotation", "Clients")" class="d-inline">
-                                                            @Html.AntiForgeryToken()
-                                                            <input type="hidden" name="quotationId" value="@quotation.QuotationId" />
-                                                            <button type="submit" class="btn btn-sm btn-success" 
-                                                                    onclick="return confirm('Are you sure you want to approve this quotation?')">
-                                                                <i class="fas fa-check me-1"></i>Approve
-                                                            </button>
-                                                        </form>
-                                                        <form method="post" action="@Url.Action("RejectQuotation", "Clients")" class="d-inline">
-                                                            @Html.AntiForgeryToken()
-                                                            <input type="hidden" name="quotationId" value="@quotation.QuotationId" />
-                                                            <button type="submit" class="btn btn-sm btn-danger" 
-                                                                    onclick="return confirm('Are you sure you want to reject this quotation?')">
-                                                                <i class="fas fa-times me-1"></i>Reject
-                                                            </button>
-                                                        </form>
-                                                    }
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-center py-5">
-                            <i class="fas fa-file-invoice-dollar fa-3x text-muted mb-3"></i>
-                            <h5 class="text-muted">No Quotations Found</h5>
-                            <p class="text-muted">You don't have any quotations yet.</p>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
+  </div>
 </div>
 
-<style>
-    .dashboard-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+<!-- ===============================
+     New Maintenance Request Modal
+=============================== -->
+<div class="modal fade" id="maintenanceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content construction-border"
+         style="background-color: var(--secondary-bg); color: var(--text-light); border-radius: 12px;">
+      <div class="modal-header"
+           style="background: var(--primary-bg); border-bottom: 1px solid var(--accent-yellow);">
+        <h5 class="modal-title" style="color: var(--accent-yellow); font-weight: 600;">
+          <i class="fa-solid fa-plus-circle me-2"></i> New Maintenance Request
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="maintenanceForm" onsubmit="submitMaintenanceRequest(event)">
+          <div class="mb-3">
+            <label class="form-label">Project</label>
+            <select id="projectSelect" class="form-select">
+            <option value="">Select Project</option>
+            @foreach (var project in Model.Projects.Where(p => p.Status == "Completed"))
+            {
+                <option value="@project.ProjectId">@project.Name</option>
+            }
+            </select>
+
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Priority</label>
+            <select id="prioritySelect" class="form-select">
+              <option value="">Select Priority</option>
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea id="descriptionInput" class="form-control" rows="3"></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Attach Image (optional)</label>
+            <input type="file" id="mediaFile" class="form-control" accept="image/*">
+          </div>
+
+          <div class="text-end">
+            <button type="submit" class="btn btn-warning">
+              <i class="fa-solid fa-paper-plane me-2"></i> Submit Request
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- 🧱 Project Details Modal -->
+<div class="modal fade" id="projectDetailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content construction-border"
+         style="background-color: var(--secondary-bg); color: var(--text-light); border-radius: 12px;">
+      <div class="modal-header" style="background: var(--primary-bg); border-bottom: 1px solid var(--accent-yellow);">
+        <h5 class="modal-title" style="color: var(--accent-yellow); font-weight: 600;">
+          <i class="fa-solid fa-building me-2"></i> Project Details
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="projectDetailsBody">
+        <p class="text-center py-3 text-muted">Loading...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 🧾 Quotation Details Modal -->
+<div class="modal fade" id="quotationDetailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content construction-border"
+         style="background-color: var(--secondary-bg); color: var(--text-light); border-radius: 12px;">
+      <div class="modal-header" style="background: var(--primary-bg); border-bottom: 1px solid var(--accent-yellow);">
+        <h5 class="modal-title" style="color: var(--accent-yellow); font-weight: 600;">
+          <i class="fa-solid fa-file-invoice-dollar me-2"></i> Quotation Details
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="quotationDetailsBody">
+        <p class="text-center py-3 text-muted">Loading...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ===============================
+     Image Preview Modal
+=============================== -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content bg-dark">
+      <div class="modal-body text-center p-0">
+        <img id="modalImage" src="" class="img-fluid rounded" alt="Preview" />
+      </div>
+      <div class="modal-footer justify-content-center border-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            console.log("🧭 Client Dashboard initialized");
+            initializeClientDashboard();
+        });
+
+        // ==========================
+        // 🔹 MAIN INITIALIZER
+        // ==========================
+        function initializeClientDashboard() {
+            setupFilterToggle();
+            setupSearchBar();
+            console.log("✅ Dashboard ready");
+        }
+
+        // ==========================
+        // 🔹 FILTER PANEL TOGGLE
+        // ==========================
+        function setupFilterToggle() {
+            const toggleBtn = document.querySelector(".filter-toggle-btn");
+            const panel = document.getElementById("filtersPanel");
+            const icon = document.getElementById("filterToggleIcon");
+            const text = document.getElementById("filterToggleText");
+
+            toggleBtn?.addEventListener("click", () => {
+                const visible = panel.style.display === "block";
+                panel.style.display = visible ? "none" : "block";
+                icon.classList.toggle("fa-chevron-up", !visible);
+                icon.classList.toggle("fa-chevron-down", visible);
+                text.textContent = visible ? "Show Filters" : "Hide Filters";
+            });
+        }
+
+        // ==========================
+        // 🔹 SEARCH BAR LOGIC
+        // ==========================
+        function setupSearchBar() {
+            const searchInput = document.getElementById("searchInput");
+            const searchBtn = document.getElementById("searchBtn");
+            const clearBtn = document.getElementById("clearSearchBtn");
+
+            searchBtn?.addEventListener("click", () => applySearch(searchInput.value));
+            clearBtn?.addEventListener("click", () => {
+                searchInput.value = "";
+                applySearch("");
+            });
+        }
+
+        function applySearch(query) {
+            console.log("🔍 Searching for:", query);
+            query = query.toLowerCase();
+
+            const allCards = document.querySelectorAll(".projects-grid .project-card, .projects-grid .quotation-card");
+            allCards.forEach(card => {
+                const text = card.innerText.toLowerCase();
+                card.style.display = text.includes(query) ? "block" : "none";
+            });
+        }
+
+        // ==========================
+        // 🔹 APPLY / CLEAR FILTERS
+        // ==========================
+        function applyClientFilters() {
+            const status = document.querySelector(".status-filter-btn.active")?.dataset.status;
+            const start = document.getElementById("filterStart").value;
+            const end = document.getElementById("filterEnd").value;
+
+            console.log("🎯 Applying filters:", { status, start, end });
+
+            const allCards = document.querySelectorAll(".projects-grid .project-card");
+            allCards.forEach(card => {
+                const cardStatus = card.querySelector(".status-badge")?.innerText.trim().toLowerCase();
+                let visible = true;
+
+                if (status && status !== "All" && cardStatus !== status.toLowerCase())
+                    visible = false;
+
+                // Extend here for date comparisons if available
+                card.style.display = visible ? "block" : "none";
+            });
+        }
+
+        function clearClientFilters() {
+            console.log("♻️ Clearing filters");
+            document.getElementById("filterStart").value = "";
+            document.getElementById("filterEnd").value = "";
+            document.querySelectorAll(".status-filter-btn").forEach(btn => btn.classList.remove("active"));
+            document.querySelectorAll(".projects-grid .project-card").forEach(card => (card.style.display = "block"));
+        }
+
+        // ==========================
+        // 🔹 MAINTENANCE FORM TOGGLE
+        // ==========================
+        function showMaintenanceForm() {
+            console.log("🧩 Showing maintenance form");
+            const modal = new bootstrap.Modal(document.getElementById("maintenanceModal"));
+            modal.show();
+        }
+
+        // ==========================
+        // 🔹 IMAGE MODAL PREVIEW
+        // ==========================
+        function showImageModal(url) {
+            console.log("🖼️ Opening image modal:", url);
+            document.getElementById("modalImage").src = url;
+            const modal = new bootstrap.Modal(document.getElementById("imageModal"));
+            modal.show();
+        }
+
+        // ==========================
+        // 🔹 SUBMIT MAINTENANCE FORM
+        // ==========================
+        async function submitMaintenanceRequest(event) {
+        event.preventDefault();
+
+        const form = event.target;
+        const projectId = form.querySelector("#projectSelect")?.value;
+        const priority = form.querySelector("#prioritySelect")?.value;
+        const description = form.querySelector("#descriptionInput")?.value;
+        const file = form.querySelector("#mediaFile")?.files[0];
+
+        console.log("📤 Submitting maintenance request:", { projectId, priority, description, file });
+
+        let mediaUrl = "";
+
+        try {
+            // ✅ 1. Upload to Supabase via DocumentsController
+            if (file) {
+                console.log("📁 Uploading to Supabase...");
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("projectId", projectId || "");
+                formData.append("description", description || "");
+
+                const uploadRes = await fetch("/Clients/UploadDocument", {
+                method: "POST",
+                body: formData
+                });
+
+
+
+                if (uploadRes.ok) {
+                    const data = await uploadRes.json();
+                    mediaUrl = data.fileUrl; // ← Supabase public URL
+                    console.log("✅ Uploaded file to Supabase:", mediaUrl);
+                } else {
+                    console.error("❌ Upload failed:", uploadRes.status);
+                    alert("File upload failed.");
+                    return;
+                }
+            }
+
+            // ✅ 2. Create the maintenance request (same as before)
+            const payload = { projectId, priority, description, mediaUrl };
+            const res = await fetch("/Clients/CreateMaintenanceRequest", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                console.log("✅ Request created successfully");
+                alert("Maintenance request submitted!");
+                location.reload();
+            } else {
+                console.error("❌ Request failed:", res.status);
+                alert("Failed to create request.");
+            }
+        } catch (err) {
+            console.error("🔥 Unexpected error:", err);
+            alert("Error: " + err.message);
+        }
+}
+
+
+async function openMaintenanceDetails(requestId) {
+    console.log("📂 Opening maintenance details modal for:", requestId);
+
+    const modal = new bootstrap.Modal(document.getElementById("maintenanceDetailsModal"));
+    const body = document.getElementById("maintenanceDetailsBody");
+    body.innerHTML = "<p class='text-center py-3 text-muted'>Loading...</p>";
+
+    try {
+        const res = await fetch(`/Clients/MaintenanceRequestDetailsPartial/${requestId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        body.innerHTML = await res.text();
+        modal.show();
+    } catch (err) {
+        console.error("❌ Failed to load details:", err);
+        body.innerHTML = "<p class='text-danger text-center'>Failed to load details.</p>";
+        modal.show();
     }
-    
-    .stat-card {
-        transition: transform 0.2s;
+}
+
+async function openProjectDetails(projectId) {
+    console.log("🏗 Opening project details for:", projectId);
+    const modalElement = document.getElementById("projectDetailsModal");
+    const body = document.getElementById("projectDetailsBody");
+    if (!modalElement) {
+        console.error("❌ Modal element not found in DOM");
+        return;
     }
-    
-    .stat-card:hover {
-        transform: translateY(-2px);
+
+    const modal = new bootstrap.Modal(modalElement);
+    body.innerHTML = "<p class='text-center py-3 text-muted'>Loading...</p>";
+
+    try {
+        const res = await fetch(`/Clients/ProjectDetailsPartial/${projectId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        body.innerHTML = await res.text();
+        modal.show();
+    } catch (err) {
+        console.error("❌ Failed to load project details:", err);
+        body.innerHTML = "<p class='text-danger text-center'>Failed to load details.</p>";
+        modal.show();
     }
-    
-    .avatar-circle {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
+}
+
+async function openQuotationDetails(quotationId) {
+    console.log("📄 Opening quotation details for:", quotationId);
+
+    const modalEl = document.getElementById("quotationDetailsModal");
+    const body = document.getElementById("quotationDetailsBody");
+    if (!modalEl) {
+        console.error("❌ quotationDetailsModal missing in DOM");
+        return;
     }
-    
-    .project-icon, .quotation-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: rgba(13, 110, 253, 0.1);
+
+    const modal = new bootstrap.Modal(modalEl);
+    body.innerHTML = "<p class='text-center py-3 text-muted'>Loading...</p>";
+
+    try {
+        const res = await fetch(`/Clients/QuotationDetailsPartial/${quotationId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        body.innerHTML = await res.text();
+        modal.show();
+    } catch (err) {
+        console.error("❌ Failed to load quotation details:", err);
+        body.innerHTML = "<p class='text-danger text-center'>Failed to load details.</p>";
+        modal.show();
     }
-    
-    .quotation-icon {
-        background-color: rgba(25, 135, 84, 0.1);
+}
+
+
+function closeDetailsPanel() {
+    const overlay = document.getElementById("dynamicDetailsOverlay");
+    if (!overlay) return;
+    const panel = overlay.querySelector(".details-panel");
+    panel.classList.remove("active");
+    setTimeout(() => overlay.remove(), 350);
+}
+
+    console.log("🧾 [Init] downloadQuotation script loaded");
+
+    function downloadQuotation(id) {
+        console.log("🧩 [downloadQuotation] Function triggered");
+        console.log("📦 [Param] Quotation ID received:", id);
+
+        if (!id) {
+            console.warn("⚠️ [downloadQuotation] No quotation ID provided");
+            alert("Quotation ID missing");
+            return;
+        }
+
+        const url = `/Clients/DownloadQuotation/${id}`;
+        console.log("🌐 [downloadQuotation] Navigating to:", url);
+
+        try {
+            window.location.href = url;
+            console.log("🚀 [downloadQuotation] Redirect initiated successfully");
+        } catch (err) {
+            console.error("🔥 [downloadQuotation] Redirect failed:", err);
+            alert("Failed to start download. See console for details.");
+        }
     }
-</style>
+
+    </script>
+}

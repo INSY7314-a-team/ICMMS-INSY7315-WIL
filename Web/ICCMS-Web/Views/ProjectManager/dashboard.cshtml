@@ -1,4 +1,5 @@
 @using System.Linq
+@using System.Linq
 @model ICCMS_Web.Models.DashboardViewModel
 @{
     ViewData["Title"] = "Project Manager Dashboard";
@@ -352,8 +353,155 @@
     <script src="~/js/project-creation-wizard.js"></script>
     <script src="~/js/pm-dashboard.js"></script>
     <script src="~/js/plan-editor.js"></script>
+    <script src="~/js/project-creation-wizard.js"></script>
+    <script src="~/js/pm-dashboard.js"></script>
+    <script src="~/js/plan-editor.js"></script>
 
     <script>
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeDashboard();
+            initializeDraftProjectsToggle();
+        });
+
+        // Initialize draft projects toggle functionality
+        function initializeDraftProjectsToggle() {
+            console.log('Initializing draft projects toggle...');
+            const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+            console.log('Found collapsible headers:', collapsibleHeaders.length);
+
+            collapsibleHeaders.forEach((header, index) => {
+                console.log(`Setting up header ${index}:`, header);
+                header.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    console.log('Draft section clicked!');
+                    const targetId = this.getAttribute('data-target');
+                    const targetElement = document.getElementById(targetId);
+                    const toggleIcon = this.querySelector('.toggle-icon');
+
+                    console.log('Target ID:', targetId);
+                    console.log('Target Element:', targetElement);
+                    console.log('Toggle Icon:', toggleIcon);
+
+                    if (targetElement) {
+                        const isExpanded = targetElement.style.display !== 'none';
+                        console.log('Is expanded:', isExpanded);
+
+                        if (isExpanded) {
+                            targetElement.style.display = 'none';
+                            if (toggleIcon) {
+                                toggleIcon.classList.remove('fa-chevron-up');
+                                toggleIcon.classList.add('fa-chevron-down');
+                            }
+                            this.setAttribute('data-expanded', 'false');
+                            console.log('Collapsed');
+                        } else {
+                            targetElement.style.display = 'block';
+                            if (toggleIcon) {
+                                toggleIcon.classList.remove('fa-chevron-down');
+                                toggleIcon.classList.add('fa-chevron-up');
+                            }
+                            this.setAttribute('data-expanded', 'true');
+                            console.log('Expanded');
+                        }
+                    } else {
+                        console.error('Target element not found:', targetId);
+                    }
+                });
+            });
+        }
+
+        // Inject project data into Quote Builder modal
+        document.getElementById("quoteBuilderModal")?.addEventListener("show.bs.modal", function (event) {
+            const btn = event.relatedTarget;
+            if (!btn) return;
+            document.getElementById("qb-projectId").value = btn.dataset.projectId || "";
+            document.getElementById("qb-clientId").value = btn.dataset.clientId || "";
+            document.getElementById("qb-contractorId").value = btn.dataset.contractorId || "";
+            console.log("🟢 Opening Quote Builder for:", btn.dataset.projectName);
+        });
+
+        // DEV-ONLY: simulate client approval
+        async function simulateClientApproval(quoteId) {
+            if (!quoteId) return alert("No quote ID found.");
+            if (!confirm("Simulate client approval for this quote?")) return;
+
+            try {
+                const res = await fetch(`/Quotes/simulate-client-approval/${quoteId}`, { method: "POST" });
+                if (!res.ok) throw new Error(`API error ${res.status}`);
+                showToast("✅ Simulated client approval successfully!");
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (err) {
+                console.error("🔥 Simulate approval failed:", err);
+                showToast("❌ Failed to simulate approval.");
+            }
+        }
+
+        function showAllDraftProjects() {
+            // Toggle to show all draft projects
+            window.location.href = '@Url.Action("Dashboard")';
+        }
+
+        function clearSearch() {
+            window.location.href = '@Url.Action("Dashboard")';
+        }
+
+        function toggleFilters() {
+            const panel = document.getElementById('filtersPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function applyAdvancedFilters() {
+            try {
+                const clientId = document.getElementById('clientFilter').value;
+                // infer selected status from active quick buttons if any
+                const activeStatusBtn = document.querySelector('.status-filter-btn.active');
+                const status = activeStatusBtn ? activeStatusBtn.getAttribute('data-status') : '';
+
+                const params = new URLSearchParams();
+                if (clientId) params.set('clientId', clientId);
+                if (status && status !== 'All') params.set('status', status);
+
+                const res = await fetch(`/ProjectManager/SearchProjects?${params.toString()}`);
+                if (!res.ok) throw new Error('Filter failed');
+                const data = await res.json();
+
+                // If a specific status (non-draft) is applied, hide drafts; otherwise update both
+                if (status && status.toLowerCase() !== 'draft' && status !== 'All') {
+                    document.getElementById('draftSection')?.style && (document.getElementById('draftSection').style.display = 'none');
+                    document.getElementById('projectsGrid').innerHTML = data.projectsHtml;
+                } else {
+                    document.getElementById('draftSection')?.style && (document.getElementById('draftSection').style.display = 'block');
+                    document.getElementById('projectsGrid').innerHTML = data.projectsHtml;
+                    const draftsGrid = document.getElementById('draftProjectsGrid');
+                    if (draftsGrid) draftsGrid.innerHTML = data.draftsHtml;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function clearAdvancedFilters() {
+            document.getElementById('clientFilter').value = '';
+            document.getElementById('startDateFrom').value = '';
+            document.getElementById('startDateTo').value = '';
+            document.getElementById('budgetMin').value = '';
+            document.getElementById('budgetMax').value = '';
+
+            try {
+                const res = await fetch(`/ProjectManager/SearchProjects`);
+                if (!res.ok) throw new Error('Clear filters failed');
+                const data = await res.json();
+                document.getElementById('draftSection')?.style && (document.getElementById('draftSection').style.display = 'block');
+                document.getElementById('projectsGrid').innerHTML = data.projectsHtml;
+                const draftsGrid = document.getElementById('draftProjectsGrid');
+                if (draftsGrid) draftsGrid.innerHTML = data.draftsHtml;
+            } catch (e) {
+                console.error(e);
+            }
+        }
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function () {
             initializeDashboard();

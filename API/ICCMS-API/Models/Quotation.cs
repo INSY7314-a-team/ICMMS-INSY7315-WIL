@@ -64,7 +64,7 @@ namespace ICCMS_API.Models
         public double GrandTotal { get; set; }
 
         [FirestoreProperty("markupRate")]
-        public double MarkupRate { get; set; } = 1.0; // Default to no markup (1.0 = 100%)
+        public double MarkupRate { get; set; } = 0; // Default to no markup (0 = 0%)
 
         [FirestoreProperty("currency")]
         public string Currency { get; set; } = "ZAR";

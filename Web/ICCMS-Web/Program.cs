@@ -1,4 +1,6 @@
 using DinkToPdf;
+using DinkToPdf;
+using DinkToPdf.Contracts;
 using DinkToPdf.Contracts;
 using ICCMS_Web.Services;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
@@ -10,6 +12,11 @@ var builder = WebApplication.CreateBuilder(args);
 // ===================================================
 
 // HTTP + API
+builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30); // 30 second timeout
+    client.DefaultRequestHeaders.Add("User-Agent", "ICCMS-Web/1.0");
+});
 builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30); // 30 second timeout

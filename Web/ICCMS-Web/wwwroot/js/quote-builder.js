@@ -36,6 +36,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!projectId || !blueprintUrl)
         return alert("Please provide a valid blueprint URL.");
 
+      if (!projectId || !blueprintUrl)
+        return alert("Please provide a valid blueprint URL.");
+
       document.getElementById("qb-aiProgress").classList.remove("d-none");
 
       try {
@@ -102,6 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
       };
 
       console.log("🧾 Payload being submitted:", quote);
+      console.log("🧾 Payload being submitted:", quote);
 
       try {
         const res = await fetch("/Quotes/submit-quotation", {
@@ -113,7 +117,10 @@ document.addEventListener("DOMContentLoaded", () => {
         let data;
         try {
           data = await res.json();
+          data = await res.json();
         } catch {
+          console.warn("⚠️ Empty or non-JSON response, treating as success.");
+          data = {};
           console.warn("⚠️ Empty or non-JSON response, treating as success.");
           data = {};
         }
@@ -123,6 +130,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         showToast("✅ Quotation submitted successfully!");
         console.log("✅ Quotation submitted:", data);
+
+        // Auto refresh to update dashboard
 
         // Auto refresh to update dashboard
         setTimeout(() => window.location.reload(), 1200);
@@ -184,6 +193,7 @@ function renderItems(items) {
   recalcTotals();
 }
 
+/// ✅ Fixed Version
 /// ✅ Fixed Version
 function collectItems() {
   const rows = document.querySelectorAll("#qb-itemsTable tbody tr");
