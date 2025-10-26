@@ -1,10 +1,9 @@
+using System.Linq;
 using System.Security.Claims;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
-using System.Linq;
 
 namespace ICCMS_API.Controllers
 {
@@ -16,16 +15,11 @@ namespace ICCMS_API.Controllers
         private readonly IFirebaseService _firebaseService;
         private readonly ISupabaseService _supabaseService;
 
-        public ClientsController(
-            IFirebaseService firebaseService,
-            ISupabaseService supabaseService
-        )
+        public ClientsController(IFirebaseService firebaseService, ISupabaseService supabaseService)
         {
             _firebaseService = firebaseService;
             _supabaseService = supabaseService;
         }
-
-
 
         [HttpGet("projects")]
         public async Task<ActionResult<List<Project>>> GetProjects()
@@ -36,6 +30,89 @@ namespace ICCMS_API.Controllers
                 var clientProjects = projects
                     .Where(p => p.ClientId == User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
                     .ToList();
+                return Ok(clientProjects);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("messaging/available-users")]
+        public async Task<ActionResult<List<object>>> GetAvailableUsersForMessaging()
+        {
+            try
+            {
+                var clientId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(clientId))
+                {
+                    return Unauthorized("Client ID not found");
+                }
+
+                // Get all projects for this client
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var clientProjects = projects.Where(p => p.ClientId == clientId).ToList();
+
+                if (!clientProjects.Any())
+                {
+                    return Ok(new List<object>());
+                }
+
+                // Get unique Project Manager IDs from client's projects
+                var pmIds = clientProjects
+                    .Where(p => !string.IsNullOrEmpty(p.ProjectManagerId))
+                    .Select(p => p.ProjectManagerId)
+                    .Distinct()
+                    .ToList();
+
+                // Get all users to find Project Managers
+                var users = await _firebaseService.GetCollectionAsync<User>("users");
+                var projectManagers = users
+                    .Where(u =>
+                        pmIds.Contains(u.UserId)
+                        && (u.Role == "Project Manager" || u.Role == "Admin")
+                    )
+                    .Select(u => new
+                    {
+                        UserId = u.UserId,
+                        FullName = u.FullName,
+                        Role = u.Role,
+                        Email = u.Email,
+                    })
+                    .ToList();
+
+                return Ok(projectManagers);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("messaging/available-projects")]
+        public async Task<ActionResult<List<object>>> GetAvailableProjectsForMessaging()
+        {
+            try
+            {
+                var clientId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(clientId))
+                {
+                    return Unauthorized("Client ID not found");
+                }
+
+                // Get all projects for this client
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var clientProjects = projects
+                    .Where(p => p.ClientId == clientId)
+                    .Select(p => new
+                    {
+                        ProjectId = p.ProjectId,
+                        Name = p.Name,
+                        Description = p.Description,
+                        Status = p.Status,
+                    })
+                    .ToList();
+
                 return Ok(clientProjects);
             }
             catch (Exception ex)
@@ -212,10 +289,10 @@ namespace ICCMS_API.Controllers
             }
         }
 
-
-
         [HttpPost("create/maintenanceRequest")]
-        public async Task<ActionResult> CreateMaintenanceRequest([FromBody] MaintenanceRequest maintenanceRequest)
+        public async Task<ActionResult> CreateMaintenanceRequest(
+            [FromBody] MaintenanceRequest maintenanceRequest
+        )
         {
             try
             {
@@ -233,21 +310,34 @@ namespace ICCMS_API.Controllers
                     maintenanceRequest
                 );
 
-                Console.WriteLine($"✅ Created maintenance request with Firestore ID = {maintenanceRequest.MaintenanceRequestId}");
+                Console.WriteLine(
+                    $"✅ Created maintenance request with Firestore ID = {maintenanceRequest.MaintenanceRequestId}"
+                );
 
                 // ✅ Update linked project status to Maintenance
                 if (!string.IsNullOrWhiteSpace(maintenanceRequest.ProjectId))
                 {
-                    var project = await _firebaseService.GetDocumentAsync<Project>("projects", maintenanceRequest.ProjectId);
+                    var project = await _firebaseService.GetDocumentAsync<Project>(
+                        "projects",
+                        maintenanceRequest.ProjectId
+                    );
                     if (project != null)
                     {
                         project.Status = "Maintenance";
-                        await _firebaseService.UpdateDocumentAsync("projects", maintenanceRequest.ProjectId, project);
-                        Console.WriteLine($"🔧 Updated project {maintenanceRequest.ProjectId} status to 'Maintenance'");
+                        await _firebaseService.UpdateDocumentAsync(
+                            "projects",
+                            maintenanceRequest.ProjectId,
+                            project
+                        );
+                        Console.WriteLine(
+                            $"🔧 Updated project {maintenanceRequest.ProjectId} status to 'Maintenance'"
+                        );
                     }
                     else
                     {
-                        Console.WriteLine($"⚠️ Project {maintenanceRequest.ProjectId} not found — skipping status update");
+                        Console.WriteLine(
+                            $"⚠️ Project {maintenanceRequest.ProjectId} not found — skipping status update"
+                        );
                     }
                 }
 
@@ -259,9 +349,6 @@ namespace ICCMS_API.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
-
-
-
 
         [HttpPost("pay/invoice/{id}")]
         public async Task<ActionResult> PayInvoice(string id, [FromBody] Payment payment)

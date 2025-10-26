@@ -619,7 +619,7 @@ class ProjectCreationWizard {
         endDate:
           this.parseDateInput(card.querySelector(".phase-end")?.value) ||
           new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        status: "Not Started",
+        status: "Pending",
         progress: 0,
         budget: 0,
         assignedTo: "",
@@ -643,7 +643,7 @@ class ProjectCreationWizard {
         dueDate:
           this.parseDateInput(card.querySelector(".task-due")?.value) ||
           new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        status: "Not Started",
+        status: "Pending",
         priority: "Medium",
         progress: 0,
         estimatedHours: 0,

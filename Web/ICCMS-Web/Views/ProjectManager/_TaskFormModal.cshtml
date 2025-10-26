@@ -145,7 +145,8 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const taskForm = document.getElementById('taskForm');
-        const taskModal = document.getElementById('taskFormModal');
+        const taskModalElement = document.getElementById('taskFormModal');
+        const taskModal = new bootstrap.Modal(taskModalElement);
         const taskModalTitle = document.getElementById('taskModalTitle');
         const saveTaskBtnText = document.getElementById('saveTaskBtnText');
         const saveTaskBtn = document.getElementById('saveTaskBtn');
@@ -158,7 +159,7 @@
         });
 
         // Reset form when modal is shown
-        taskModal.addEventListener('show.bs.modal', function () {
+        taskModalElement.addEventListener('show.bs.modal', function () {
             resetTaskForm();
         });
 
@@ -303,6 +304,11 @@
 
             return isValid;
         }
+
+        // Global function to show task modal
+        window.showTaskModal = function () {
+            taskModal.show();
+        };
 
         // Global function to edit task (called from task management)
         window.editTask = function (taskId) {

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ICCMS_Web.Helpers;
 using ICCMS_Web.Models;
 using ICCMS_Web.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -24,6 +25,7 @@ namespace ICCMS_Web.Controllers
         private readonly IQuotationsService _quotationsService;
         private readonly IConfiguration _config;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IMessagingService _messagingService;
 
         public ProjectManagerController(
             IApiClient apiClient,
@@ -33,7 +35,8 @@ namespace ICCMS_Web.Controllers
             IDocumentsService documentsService,
             IQuotationsService quotationsService,
             IConfiguration config,
-            IHttpClientFactory httpClientFactory
+            IHttpClientFactory httpClientFactory,
+            IMessagingService messagingService
         )
         {
             _apiClient = apiClient;
@@ -44,6 +47,7 @@ namespace ICCMS_Web.Controllers
             _quotationsService = quotationsService;
             _config = config;
             _httpClientFactory = httpClientFactory;
+            _messagingService = messagingService;
         }
 
         /// <summary>
@@ -939,6 +943,10 @@ namespace ICCMS_Web.Controllers
                     "✅ Successfully sent quotation {QuotationId} to client.",
                     quotationId
                 );
+
+                // Send message to client about the quotation
+                await SendQuoteSentMessageAsync(quotationId);
+
                 return Json(new { success = true });
             }
             catch (Exception ex)
@@ -1246,6 +1254,12 @@ namespace ICCMS_Web.Controllers
             {
                 _logger.LogError("SaveProject: API returned null");
                 return Json(new { success = false, error = "Failed to save project" });
+            }
+
+            // Send automatic messages for new projects with assigned contractors
+            if (isNew && result.Status == "Planning" && request.Tasks != null)
+            {
+                await SendTaskAssignmentMessagesAsync(request.Project, request.Tasks);
             }
 
             return Json(
@@ -1795,6 +1809,393 @@ namespace ICCMS_Web.Controllers
             {
                 _logger.LogError(ex, "💥 Error approving quotation {QuotationId}", quotationId);
                 return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Send quote sent message to client
+        /// </summary>
+        private async Task SendQuoteSentMessageAsync(string quotationId)
+        {
+            try
+            {
+                // Get quotation details
+                var quotation = await _apiClient.GetAsync<QuotationDto>(
+                    $"/api/quotations/{quotationId}",
+                    User
+                );
+                if (quotation == null)
+                {
+                    _logger.LogWarning(
+                        "Could not find quotation {QuotationId} for messaging",
+                        quotationId
+                    );
+                    return;
+                }
+
+                // Get project details
+                var project = await _apiClient.GetAsync<ProjectDto>(
+                    $"/api/projectmanager/project/{quotation.ProjectId}",
+                    User
+                );
+                if (project == null)
+                {
+                    _logger.LogWarning(
+                        "Could not find project {ProjectId} for quotation messaging",
+                        quotation.ProjectId
+                    );
+                    return;
+                }
+
+                // Send message to client
+                await MessageHelper.SendQuoteSentMessageAsync(
+                    _messagingService,
+                    project.ClientId,
+                    project.ProjectId,
+                    project.Name,
+                    quotationId,
+                    (decimal)quotation.Total
+                );
+
+                _logger.LogInformation(
+                    "Sent quote sent message to client {ClientId} for quotation {QuotationId}",
+                    project.ClientId,
+                    quotationId
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error sending quote sent message for quotation {QuotationId}",
+                    quotationId
+                );
+            }
+        }
+
+        /// <summary>
+        /// Send task assignment messages to contractors when a new project is created
+        /// </summary>
+        private async Task SendTaskAssignmentMessagesAsync(
+            ProjectDto project,
+            List<ProjectTaskDto> tasks
+        )
+        {
+            try
+            {
+                var assignedContractors = new HashSet<string>();
+
+                // Collect all unique contractors assigned to tasks
+                foreach (var task in tasks)
+                {
+                    if (
+                        !string.IsNullOrEmpty(task.AssignedTo)
+                        && !assignedContractors.Contains(task.AssignedTo)
+                    )
+                    {
+                        assignedContractors.Add(task.AssignedTo);
+                    }
+                }
+
+                // Send messages to each assigned contractor
+                foreach (var contractorId in assignedContractors)
+                {
+                    var contractorTasks = tasks.Where(t => t.AssignedTo == contractorId).ToList();
+
+                    // Send a message for each task
+                    foreach (var task in contractorTasks)
+                    {
+                        await MessageHelper.SendTaskAssignmentMessageAsync(
+                            _messagingService,
+                            contractorId,
+                            project.ProjectId,
+                            project.Name,
+                            task.Name,
+                            task.Description ?? "No description provided",
+                            task.StartDate,
+                            task.DueDate
+                        );
+                    }
+                }
+
+                _logger.LogInformation(
+                    "Sent task assignment messages to {Count} contractors for project {ProjectId}",
+                    assignedContractors.Count,
+                    project.ProjectId
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error sending task assignment messages for project {ProjectId}",
+                    project.ProjectId
+                );
+            }
+        }
+
+        /// <summary>
+        /// Create a new task
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateTask([FromBody] ProjectTaskDto task)
+        {
+            try
+            {
+                // Generate new ID if not provided
+                if (string.IsNullOrEmpty(task.TaskId))
+                {
+                    task.TaskId = Guid.NewGuid().ToString();
+                }
+
+                var result = await _apiClient.PostAsync<ProjectTaskDto>(
+                    $"/api/projectmanager/create/project/{task.ProjectId}/task",
+                    task,
+                    User
+                );
+
+                if (result != null)
+                {
+                    _logger.LogInformation("Task created successfully: {TaskId}", result.TaskId);
+
+                    // Send workflow message to assigned contractor if task is assigned
+                    if (!string.IsNullOrEmpty(result.AssignedTo))
+                    {
+                        await SendTaskAssignmentWorkflowMessageAsync(result);
+                    }
+
+                    return Json(new { success = true, task = result });
+                }
+                else
+                {
+                    _logger.LogError("Failed to create task");
+                    return Json(new { success = false, message = "Failed to create task" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating task");
+                return Json(new { success = false, message = "Error creating task" });
+            }
+        }
+
+        /// <summary>
+        /// Update an existing task
+        /// </summary>
+        [HttpPut]
+        public async Task<IActionResult> UpdateTask(string id, [FromBody] ProjectTaskDto task)
+        {
+            try
+            {
+                var result = await _apiClient.PutAsync<ProjectTaskDto>(
+                    $"/api/projectmanager/update/task/{id}",
+                    task,
+                    User
+                );
+
+                if (result != null)
+                {
+                    _logger.LogInformation("Task updated successfully: {TaskId}", id);
+                    return Json(new { success = true, task = result });
+                }
+                else
+                {
+                    _logger.LogError("Failed to update task: {TaskId}", id);
+                    return Json(new { success = false, message = "Failed to update task" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating task: {TaskId}", id);
+                return Json(new { success = false, message = "Error updating task" });
+            }
+        }
+
+        /// <summary>
+        /// Create a new phase
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CreatePhase([FromBody] PhaseDto phase)
+        {
+            try
+            {
+                // Generate new ID if not provided
+                if (string.IsNullOrEmpty(phase.PhaseId))
+                {
+                    phase.PhaseId = Guid.NewGuid().ToString();
+                }
+
+                var result = await _apiClient.PostAsync<PhaseDto>(
+                    $"/api/projectmanager/create/project/{phase.ProjectId}/phase",
+                    phase,
+                    User
+                );
+
+                if (result != null)
+                {
+                    _logger.LogInformation("Phase created successfully: {PhaseId}", result.PhaseId);
+                    return Json(new { success = true, phase = result });
+                }
+                else
+                {
+                    _logger.LogError("Failed to create phase");
+                    return Json(new { success = false, message = "Failed to create phase" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating phase");
+                return Json(new { success = false, message = "Error creating phase" });
+            }
+        }
+
+        /// <summary>
+        /// Update an existing phase
+        /// </summary>
+        [HttpPut]
+        public async Task<IActionResult> UpdatePhase(string id, [FromBody] PhaseDto phase)
+        {
+            try
+            {
+                var result = await _apiClient.PutAsync<PhaseDto>(
+                    $"/api/projectmanager/update/phase/{id}",
+                    phase,
+                    User
+                );
+
+                if (result != null)
+                {
+                    _logger.LogInformation("Phase updated successfully: {PhaseId}", id);
+                    return Json(new { success = true, phase = result });
+                }
+                else
+                {
+                    _logger.LogError("Failed to update phase: {PhaseId}", id);
+                    return Json(new { success = false, message = "Failed to update phase" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating phase: {PhaseId}", id);
+                return Json(new { success = false, message = "Error updating phase" });
+            }
+        }
+
+        /// <summary>
+        /// Approve a progress report
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> ApproveProgressReport(string reportId)
+        {
+            try
+            {
+                var result = await _apiClient.PostAsync<object>(
+                    $"/api/projectmanager/approve/progress-report/{reportId}",
+                    null,
+                    User
+                );
+
+                if (result != null)
+                {
+                    _logger.LogInformation(
+                        "Progress report approved successfully: {ReportId}",
+                        reportId
+                    );
+                    return Json(new { success = true });
+                }
+                else
+                {
+                    _logger.LogError("Failed to approve progress report: {ReportId}", reportId);
+                    return Json(
+                        new { success = false, message = "Failed to approve progress report" }
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving progress report: {ReportId}", reportId);
+                return Json(new { success = false, message = "Error approving progress report" });
+            }
+        }
+
+        /// <summary>
+        /// Get progress report details
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetProgressReport(string reportId)
+        {
+            try
+            {
+                var result = await _apiClient.GetAsync<ProgressReportDto>(
+                    $"/api/projectmanager/progress-report/{reportId}",
+                    User
+                );
+
+                if (result != null)
+                {
+                    return Json(new { success = true, report = result });
+                }
+                else
+                {
+                    _logger.LogError("Failed to get progress report: {ReportId}", reportId);
+                    return Json(
+                        new { success = false, message = "Failed to load progress report" }
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting progress report: {ReportId}", reportId);
+                return Json(new { success = false, message = "Error loading progress report" });
+            }
+        }
+
+        /// <summary>
+        /// Send workflow message to contractor when a new task is assigned
+        /// </summary>
+        private async Task SendTaskAssignmentWorkflowMessageAsync(ProjectTaskDto task)
+        {
+            try
+            {
+                // Get project details
+                var project = await _apiClient.GetAsync<ProjectDto>(
+                    $"/api/projectmanager/project/{task.ProjectId}",
+                    User
+                );
+                if (project == null)
+                {
+                    _logger.LogWarning(
+                        "Could not find project {ProjectId} for task assignment workflow message",
+                        task.ProjectId
+                    );
+                    return;
+                }
+
+                // Send workflow message to contractor
+                await MessageHelper.SendTaskAssignmentMessageAsync(
+                    _messagingService,
+                    task.AssignedTo,
+                    task.ProjectId,
+                    project.Name,
+                    task.Name,
+                    task.Description ?? "No description provided",
+                    task.StartDate,
+                    task.DueDate
+                );
+
+                _logger.LogInformation(
+                    "Sent task assignment workflow message to contractor {ContractorId} for task {TaskId}",
+                    task.AssignedTo,
+                    task.TaskId
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error sending task assignment workflow message for task {TaskId}",
+                    task.TaskId
+                );
             }
         }
     }

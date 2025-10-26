@@ -463,7 +463,7 @@ function createTaskCard(task) {
     const clockIcon = document.createElement("i");
     clockIcon.className = "fa-solid fa-clock me-1";
     mainActionBtn.appendChild(clockIcon);
-    mainActionBtn.appendChild(document.createTextNode("Not Started"));
+    mainActionBtn.appendChild(document.createTextNode("Pending"));
   }
 
   actionButtons.appendChild(mainActionBtn);
