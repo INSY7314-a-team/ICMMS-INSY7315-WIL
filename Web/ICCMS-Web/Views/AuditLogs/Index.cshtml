@@ -337,52 +337,78 @@
 
         // View log details
         function viewLogDetails(logId) {
-            // Find the log in the model data
-            const log = @Html.Raw(Json.Serialize(Model.Logs));
-            const foundLog = log.find(l => l.id === logId);
+            console.log('Looking for log with ID:', logId);
             
-            if (foundLog) {
-                const content = document.getElementById('logDetailsContent');
-                content.innerHTML = `
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="simple-info-card">
-                                <div class="info-row">
-                                    <span class="info-label">Log ID:</span>
-                                    <span class="info-value">${foundLog.id}</span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">Type:</span>
-                                    <span class="info-value"><span class="badge badge-primary">${foundLog.logType}</span></span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">Title:</span>
-                                    <span class="info-value">${foundLog.title}</span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">User:</span>
-                                    <span class="info-value">${foundLog.userFullName || 'Unknown User'}</span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">Entity ID:</span>
-                                    <span class="info-value">${foundLog.entityId}</span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">Timestamp:</span>
-                                    <span class="info-value">${new Date(foundLog.timestampUtc).toLocaleString()}</span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">Description:</span>
-                                    <span class="info-value">${foundLog.description || 'N/A'}</span>
-                                </div>
+            // Find the log in the model data - try both camelCase and PascalCase
+            const logs = @Html.Raw(Json.Serialize(Model.Logs));
+            console.log('First log sample:', logs[0]);
+            console.log('Total logs:', logs.length);
+            
+            // Try camelCase first (ASP.NET Core default)
+            let foundLog = logs.find(l => l.id === logId || l.Id === logId);
+            
+            if (!foundLog) {
+                console.error('Log not found with ID:', logId);
+                console.log('Available log IDs:', logs.map(l => l.id || l.Id));
+                alert('Log not found');
+                return;
+            }
+            
+            // Use property names that exist (try both casings)
+            const log = foundLog;
+            const logId_value = log.id || log.Id;
+            const logType_value = log.logType || log.LogType;
+            const title_value = log.title || log.Title;
+            const userFullName_value = log.userFullName || log.UserFullName;
+            const userId_value = log.userId || log.UserId;
+            const entityId_value = log.entityId || log.EntityId;
+            const timestampUtc_value = log.timestampUtc || log.TimestampUtc;
+            const description_value = log.description || log.Description;
+            
+            const content = document.getElementById('logDetailsContent');
+            content.innerHTML = `
+                <div class="row">
+                    <div class="col-12">
+                        <div class="simple-info-card">
+                            <div class="info-row">
+                                <span class="info-label">Log ID:</span>
+                                <span class="info-value">${logId_value}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Type:</span>
+                                <span class="info-value"><span class="badge badge-primary">${logType_value}</span></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Title:</span>
+                                <span class="info-value">${title_value}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">User:</span>
+                                <span class="info-value">${userFullName_value || 'Unknown User'}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">User ID:</span>
+                                <span class="info-value"><code style="color: #F7EC59;">${userId_value}</code></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Entity ID:</span>
+                                <span class="info-value"><code style="color: #F7EC59;">${entityId_value}</code></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Timestamp:</span>
+                                <span class="info-value">${new Date(timestampUtc_value).toLocaleString()}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Description:</span>
+                                <span class="info-value">${description_value || 'N/A'}</span>
                             </div>
                         </div>
                     </div>
-                `;
-                
-                const modal = new bootstrap.Modal(document.getElementById('logDetailsModal'));
-                modal.show();
-            }
+                </div>
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('logDetailsModal'));
+            modal.show();
         }
 
         // Show alert message

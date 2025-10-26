@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Security.Claims;
+using ICCMS_API.Auth;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -14,11 +15,13 @@ namespace ICCMS_API.Controllers
     {
         private readonly IFirebaseService _firebaseService;
         private readonly ISupabaseService _supabaseService;
+        private readonly IAuditLogService _auditLogService;
 
-        public ClientsController(IFirebaseService firebaseService, ISupabaseService supabaseService)
+        public ClientsController(IFirebaseService firebaseService, ISupabaseService supabaseService, IAuditLogService auditLogService)
         {
             _firebaseService = firebaseService;
             _supabaseService = supabaseService;
+            _auditLogService = auditLogService;
         }
 
         [HttpGet("projects")]
@@ -310,6 +313,9 @@ namespace ICCMS_API.Controllers
                     maintenanceRequest
                 );
 
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Maintenance Update", "Maintenance Request Created", $"Maintenance request {maintenanceRequest.MaintenanceRequestId} created for project {maintenanceRequest.ProjectId}", userId ?? "system", maintenanceRequest.MaintenanceRequestId);
+
                 Console.WriteLine(
                     $"✅ Created maintenance request with Firestore ID = {maintenanceRequest.MaintenanceRequestId}"
                 );
@@ -432,11 +438,17 @@ namespace ICCMS_API.Controllers
                         new { error = "You are not authorized to update this maintenance request" }
                     );
                 }
+                var oldStatus = existingMaintenanceRequest.Status;
+                existingMaintenanceRequest = maintenanceRequest;
                 await _firebaseService.UpdateDocumentAsync(
                     "maintenanceRequests",
                     id,
                     existingMaintenanceRequest
                 );
+                
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Maintenance Update", "Maintenance Request Updated", $"Maintenance request {id} status changed from {oldStatus} to {maintenanceRequest.Status}", userId ?? "system", id);
+                
                 return Ok(new { message = "Maintenance request updated successfully" });
             }
             catch (Exception ex)

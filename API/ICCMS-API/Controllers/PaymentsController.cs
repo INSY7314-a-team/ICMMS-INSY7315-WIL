@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ICCMS_API.Auth;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
 
@@ -11,10 +12,12 @@ namespace ICCMS_API.Controllers
     public class PaymentsController : ControllerBase
     {
         private readonly IFirebaseService _firebaseService;
+        private readonly IAuditLogService _auditLogService;
 
-        public PaymentsController(IFirebaseService firebaseService)
+        public PaymentsController(IFirebaseService firebaseService, IAuditLogService auditLogService)
         {
             _firebaseService = firebaseService;
+            _auditLogService = auditLogService;
         }
 
         [HttpGet]
@@ -100,6 +103,10 @@ namespace ICCMS_API.Controllers
                 payment.PaymentDate = DateTime.UtcNow;
                 payment.ProcessedAt = DateTime.UtcNow;
                 var paymentId = await _firebaseService.AddDocumentAsync("payments", payment);
+                
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Payment", "Payment Created", $"Payment {paymentId} created for invoice {payment.InvoiceId} - Amount: {payment.Amount}", userId ?? "system", paymentId);
+                
                 return Ok(paymentId);
             }
             catch (Exception ex)

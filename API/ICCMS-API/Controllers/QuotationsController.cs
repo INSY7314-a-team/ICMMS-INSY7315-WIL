@@ -15,14 +15,17 @@ namespace ICCMS_API.Controllers
     {
         private readonly IFirebaseService _firebaseService;
         private readonly IQuoteWorkflowService _quoteWorkflow;
+        private readonly IAuditLogService _auditLogService;
 
         public QuotationsController(
             IFirebaseService firebaseService,
-            IQuoteWorkflowService quoteWorkflow
+            IQuoteWorkflowService quoteWorkflow,
+            IAuditLogService auditLogService
         )
         {
             _firebaseService = firebaseService;
             _quoteWorkflow = quoteWorkflow;
+            _auditLogService = auditLogService;
         }
 
         [HttpGet]
@@ -160,6 +163,9 @@ namespace ICCMS_API.Controllers
                 // ✅ Step 3: Update Firestore with this new field
                 await _firebaseService.UpdateDocumentAsync("quotations", quotationId, quotation);
 
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Quotation", "Quotation Created", $"Quotation {quotationId} created for client {quotation.ClientId}", userId ?? "system", quotationId);
+
                 // ✅ Step 4: Return the quotation ID to the caller
                 return Ok(quotationId);
             }
@@ -222,6 +228,9 @@ namespace ICCMS_API.Controllers
                 // update record to include the Firestore-generated quotationId
                 quotation.QuotationId = quotationId;
                 await _firebaseService.UpdateDocumentAsync("quotations", quotationId, quotation);
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Quotation", "Quotation Created From Estimate", $"Quotation {quotationId} created from estimate {estimateId} for client {project.ClientId}", userId ?? "system", quotationId);
 
                 // ===== 7️⃣ Return JSON (expected by Web side) =====
                 return Ok(new
@@ -305,6 +314,10 @@ namespace ICCMS_API.Controllers
                 var quotation = await _quoteWorkflow.PmApproveAsync(id);
                 if (quotation == null)
                     return NotFound();
+                
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Quotation", "Quotation Approved", $"Quote {id} approved by PM", userId ?? "system", id);
+                
                 return Ok();
             }
             catch (InvalidOperationException ex)
@@ -327,6 +340,10 @@ namespace ICCMS_API.Controllers
                 var quotation = await _quoteWorkflow.PmRejectAsync(id, request.Reason);
                 if (quotation == null)
                     return NotFound();
+                
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Quotation", "Quotation Rejected", $"Quote {id} rejected by PM: {request.Reason}", userId ?? "system", id);
+                
                 return Ok();
             }
             catch (InvalidOperationException ex)
@@ -414,6 +431,11 @@ namespace ICCMS_API.Controllers
                 var result = await _quoteWorkflow.ClientDecisionAsync(id, body.Accept, body.Note);
                 if (result == null)
                     return NotFound();
+                
+                var userId = User.UserId();
+                var decision = body.Accept ? "approved" : "rejected";
+                _auditLogService.LogAsync("Quotation", $"Quotation {char.ToUpper(decision[0]) + decision.Substring(1)}", $"Quote {id} {decision} by client: {body.Note}", userId ?? "system", id);
+                
                 return Ok();
             }
             catch (InvalidOperationException ex)
@@ -435,6 +457,10 @@ namespace ICCMS_API.Controllers
                 var result = await _quoteWorkflow.ConvertToInvoiceAsync(id);
                 if (result == null)
                     return NotFound();
+                
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Quotation", "Quotation Converted to Invoice", $"Quote {id} converted to invoice {result.Value.invoiceId}", userId ?? "system", id);
+                
                 return Ok(result.Value.invoiceId);
             }
             catch (InvalidOperationException ex)

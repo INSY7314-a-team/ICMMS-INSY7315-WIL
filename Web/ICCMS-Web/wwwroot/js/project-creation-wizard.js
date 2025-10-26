@@ -1,4 +1,4 @@
-/**
+/*
  * Project Creation Wizard JavaScript
  * Handles the multi-step project creation process
  */

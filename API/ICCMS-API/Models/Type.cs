@@ -10,8 +10,20 @@ namespace ICCMS_API.Models
             "Document Upload",
             "Maintenance Update",
             "Project Update",
+            "Project Creation",
             "Quotation",
-            "New thing",
+            "Invoice",
+            "Payment",
+            "User Management",
+            "Estimate",
+            "Task Update",
+            "Contractor Update",
+            "Phase Created",
+            "Phase Updated",
+            "Task Created",
+            "Task Updated",
+            "Blueprint Processed",
+            "Estimate Converted to Quotation",
         };
 
         public static string[] GetAuditLogTypes() => _auditLogTypes;
