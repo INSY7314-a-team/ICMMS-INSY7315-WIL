@@ -1232,7 +1232,43 @@ namespace ICCMS_API.Controllers
                 var wasUnassigned = string.IsNullOrEmpty(existingTask.AssignedTo);
                 var isNowAssigned = !string.IsNullOrEmpty(task.AssignedTo);
 
+                var statusChanged = existingTask.Status != task.Status;
+                var progressChanged = existingTask.Progress != task.Progress;
+
                 await _firebaseService.UpdateDocumentAsync("tasks", id, task);
+
+                // Send project update notification to client if status or progress changes
+                if (statusChanged || progressChanged)
+                {
+                    var project = await _firebaseService.GetDocumentAsync<Project>(
+                        "projects",
+                        task.ProjectId
+                    );
+                    if (project != null && !string.IsNullOrEmpty(project.ClientId))
+                    {
+                        string updateMessage = "";
+                        if (statusChanged && progressChanged)
+                        {
+                            updateMessage =
+                                $"Task '{task.Name}' status is now '{task.Status}' and progress is {task.Progress}%.";
+                        }
+                        else if (statusChanged)
+                        {
+                            updateMessage =
+                                $"Task '{task.Name}' status has been updated to '{task.Status}'.";
+                        }
+                        else // progressChanged
+                        {
+                            updateMessage = $"Task '{task.Name}' progress is now {task.Progress}%.";
+                        }
+
+                        await _workflowMessageService.SendProjectUpdateNotificationAsync(
+                            task.ProjectId,
+                            updateMessage,
+                            project.ClientId
+                        );
+                    }
+                }
 
                 // Send workflow notification if task assignment changed
                 if (assignmentChanged && isNowAssigned)
@@ -1608,7 +1644,7 @@ namespace ICCMS_API.Controllers
             try
             {
                 Console.WriteLine($"[ApproveTaskCompletion] Starting approval for task {taskId}");
-                
+
                 var pmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(pmId))
                 {
@@ -1634,11 +1670,15 @@ namespace ICCMS_API.Controllers
                 );
                 if (project == null || project.ProjectManagerId != pmId)
                 {
-                    Console.WriteLine($"[ApproveTaskCompletion] Task {taskId} does not belong to PM {pmId}");
+                    Console.WriteLine(
+                        $"[ApproveTaskCompletion] Task {taskId} does not belong to PM {pmId}"
+                    );
                     return Forbid();
                 }
 
-                Console.WriteLine($"[ApproveTaskCompletion] Task belongs to project: {project.Name}");
+                Console.WriteLine(
+                    $"[ApproveTaskCompletion] Task belongs to project: {project.Name}"
+                );
 
                 // Find and update the completion report for this task
                 var allCompletionReports =
@@ -1690,6 +1730,16 @@ namespace ICCMS_API.Controllers
                 // Update task progress to 100% and phase progress
                 await UpdateTaskProgressToComplete(taskId);
                 await UpdatePhaseProgress(task.PhaseId);
+
+                // Notify client of task completion
+                if (project != null && !string.IsNullOrEmpty(project.ClientId))
+                {
+                    await _workflowMessageService.SendProjectUpdateNotificationAsync(
+                        project.ProjectId,
+                        $"Task '{task.Name}' has been completed.",
+                        project.ClientId
+                    );
+                }
 
                 Console.WriteLine($"[ApproveTaskCompletion] Successfully approved task {taskId}");
                 return Ok(task);

@@ -23,17 +23,12 @@ namespace ICCMS_Web.Services
         /// <summary>
         /// Get all messages in a specific thread
         /// </summary>
-        Task<List<MessageDto>> GetThreadMessagesAsync(string threadId, string userId);
+        Task<List<MessageWithSenderDto>> GetThreadMessagesAsync(string threadId, string userId);
 
         /// <summary>
         /// Get unread message count for a user
         /// </summary>
         Task<int> GetUnreadCountAsync(string userId);
-
-        /// <summary>
-        /// Mark a message as read
-        /// </summary>
-        Task<bool> MarkAsReadAsync(string messageId, string userId);
 
         /// <summary>
         /// Mark all messages in a thread as read

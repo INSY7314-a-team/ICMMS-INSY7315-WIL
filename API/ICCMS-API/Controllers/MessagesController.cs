@@ -1,3 +1,6 @@
+using System.Security.Claims;
+using ICCMS_API.Auth;
+using ICCMS_API.Helpers;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -435,6 +438,29 @@ namespace ICCMS_API.Controllers
                     );
                 }
 
+                // Check for existing direct message thread
+                if (
+                    string.IsNullOrEmpty(request.ThreadId)
+                    && request.ThreadParticipants != null
+                    && request.ThreadParticipants.Count == 2
+                )
+                {
+                    var threads = await _firebaseService.GetCollectionAsync<MessageThread>(
+                        "threads"
+                    );
+                    var existingThread = threads.FirstOrDefault(t =>
+                        t.ThreadType == "direct"
+                        && t.Participants.Count == 2
+                        && t.Participants.Contains(request.SenderId)
+                        && t.Participants.Contains(request.ReceiverId)
+                    );
+
+                    if (existingThread != null)
+                    {
+                        request.ThreadId = existingThread.ThreadId;
+                    }
+                }
+
                 // Create message from validated request
                 var message = new Message
                 {
@@ -465,18 +491,13 @@ namespace ICCMS_API.Controllers
 
                 // Update thread information if this is a thread starter
                 // Only create thread documents for project threads (multiple participants), not direct messages (2 participants)
-                if (
-                    message.IsThreadStarter
-                    && message.ThreadParticipants != null
-                    && message.ThreadParticipants.Count > 2
-                )
+                if (message.IsThreadStarter && message.ThreadParticipants != null)
                 {
                     await CreateOrUpdateThreadAsync(message);
                 }
                 else if (
                     !string.IsNullOrEmpty(message.ThreadId)
                     && message.ThreadParticipants != null
-                    && message.ThreadParticipants.Count > 2
                 )
                 {
                     await UpdateThreadAsync(message);
@@ -580,7 +601,7 @@ namespace ICCMS_API.Controllers
                 var starterMessage = new Message
                 {
                     MessageId = messageId,
-                    SenderId = HttpContext.Items["UserId"] as string ?? string.Empty,
+                    SenderId = User.UserId() ?? string.Empty,
                     ReceiverId = request.Participants.FirstOrDefault() ?? string.Empty,
                     ProjectId = request.ProjectId,
                     Subject = request.Subject,
@@ -647,7 +668,7 @@ namespace ICCMS_API.Controllers
 
                 var messageId = Guid.NewGuid().ToString();
                 var sentAt = DateTime.UtcNow;
-                var senderId = HttpContext.Items["UserId"] as string ?? string.Empty;
+                var senderId = User.UserId() ?? string.Empty;
 
                 // Create reply message
                 var replyMessage = new Message
@@ -701,7 +722,7 @@ namespace ICCMS_API.Controllers
                 }
 
                 var threadSummaries = new List<ThreadSummary>();
-                var currentUserId = HttpContext.Items["UserId"] as string;
+                var currentUserId = User.UserId();
 
                 foreach (var thread in threads.Where(t => t.IsActive))
                 {
@@ -862,6 +883,69 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpPost("thread/{threadId}/mark-as-read")]
+        public async Task<IActionResult> MarkThreadAsRead(string threadId)
+        {
+            try
+            {
+                var userId = User.UserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated." });
+                }
+
+                var messages = await _firebaseService.GetCollectionAsync<Message>("messages");
+                var threadMessages = messages.Where(m => m.ThreadId == threadId).ToList();
+
+                if (!threadMessages.Any())
+                {
+                    return Ok(new { message = "Thread not found or no messages in thread." });
+                }
+
+                var firstMessage = threadMessages.First();
+                if (
+                    firstMessage.ThreadParticipants == null
+                    || !firstMessage.ThreadParticipants.Contains(userId)
+                )
+                {
+                    return Forbid("User is not a participant of this thread.");
+                }
+
+                var messagesToUpdate = threadMessages
+                    .Where(m =>
+                        (
+                            m.ReceiverId == userId
+                            || (
+                                m.ThreadParticipants != null
+                                && m.ThreadParticipants.Contains(userId)
+                            )
+                        )
+                        && m.SenderId != userId
+                        && !m.IsRead
+                    )
+                    .ToList();
+
+                var updateTasks = new List<Task>();
+                foreach (var message in messagesToUpdate)
+                {
+                    message.IsRead = true;
+                    message.ReadAt = DateTime.UtcNow;
+                    updateTasks.Add(
+                        _firebaseService.UpdateDocumentAsync("messages", message.MessageId, message)
+                    );
+                }
+
+                await Task.WhenAll(updateTasks);
+
+                return Ok(new { message = $"{messagesToUpdate.Count} message(s) marked as read." });
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                return StatusCode(500, new { message = $"An error occurred: {ex.Message}" });
+            }
+        }
+
         [HttpPost("attachment")]
         [Consumes("multipart/form-data")]
         [ApiExplorerSettings(IgnoreApi = true)]
@@ -919,7 +1003,7 @@ namespace ICCMS_API.Controllers
                     FileType = file.ContentType,
                     FileSize = file.Length,
                     FileUrl = fileUrl,
-                    UploadedBy = HttpContext.Items["UserId"] as string ?? string.Empty,
+                    UploadedBy = User.UserId() ?? string.Empty,
                     UploadedAt = DateTime.UtcNow,
                     Description = description,
                     Category = category,
@@ -1362,7 +1446,7 @@ namespace ICCMS_API.Controllers
                     LastMessageId = message.MessageId,
                     LastMessageSenderId = message.SenderId,
                     CreatedAt = message.SentAt,
-                    ThreadType = "general",
+                    ThreadType = message.ThreadParticipants.Count > 2 ? "general" : "direct",
                 };
 
                 await _firebaseService.AddDocumentAsync("threads", thread);
@@ -1388,11 +1472,14 @@ namespace ICCMS_API.Controllers
                     thread.LastMessageSenderId = message.SenderId;
 
                     // Update participants if new ones are added
-                    foreach (var participant in message.ThreadParticipants)
+                    if (message.ThreadParticipants != null)
                     {
-                        if (!thread.Participants.Contains(participant))
+                        foreach (var participant in message.ThreadParticipants)
                         {
-                            thread.Participants.Add(participant);
+                            if (!thread.Participants.Contains(participant))
+                            {
+                                thread.Participants.Add(participant);
+                            }
                         }
                     }
 

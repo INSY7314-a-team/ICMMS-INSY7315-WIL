@@ -496,6 +496,21 @@ namespace ICCMS_API.Controllers
                     }
                 }
 
+                // Notify the Project Manager about the client's decision
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    quotation.ProjectId
+                );
+                if (project != null && !string.IsNullOrEmpty(project.ProjectManagerId))
+                {
+                    var action = body.Accept ? "Accepted" : "Rejected";
+                    await _workflowMessageService.SendQuoteApprovalNotificationAsync(
+                        id,
+                        action,
+                        project.ProjectManagerId
+                    );
+                }
+
                 var userId = User.UserId();
                 var decision = body.Accept ? "approved" : "rejected";
                 _auditLogService.LogAsync(

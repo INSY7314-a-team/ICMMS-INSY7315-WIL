@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using ICCMS_API.Models;
 
 namespace ICCMS_API.Services
@@ -988,12 +989,37 @@ namespace ICCMS_API.Services
 
         private string ProcessTemplate(string template, Dictionary<string, object> data)
         {
-            var result = template;
-            foreach (var kvp in data)
-            {
-                result = result.Replace($"{{{kvp.Key}}}", kvp.Value?.ToString() ?? "");
-            }
-            return result;
+            return Regex.Replace(
+                template,
+                @"\{(.+?)\}",
+                match =>
+                {
+                    string keyWithFormat = match.Groups[1].Value;
+                    string[] parts = keyWithFormat.Split(new[] { ':' }, 2);
+                    string key = parts[0];
+                    string format = parts.Length > 1 ? parts[1] : null;
+
+                    if (data.TryGetValue(key, out object value))
+                    {
+                        if (value == null)
+                            return "";
+
+                        if (!string.IsNullOrEmpty(format))
+                        {
+                            if (value is IFormattable formattableValue)
+                            {
+                                return formattableValue.ToString(
+                                    format,
+                                    new System.Globalization.CultureInfo("en-ZA")
+                                );
+                            }
+                        }
+                        return value.ToString();
+                    }
+
+                    return match.Value;
+                }
+            );
         }
 
         private List<WorkflowMessageTemplate> InitializeMessageTemplates()

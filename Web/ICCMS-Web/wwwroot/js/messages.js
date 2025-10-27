@@ -1,625 +1,305 @@
-// Messages JavaScript functionality
-class MessagesManager {
-  constructor() {
-    this.currentThreadId = null;
-    this.refreshInterval = null;
-    this.init();
-  }
+document.addEventListener("DOMContentLoaded", function () {
+  const systemTab = document.getElementById("system-tab");
+  const directTab = document.getElementById("direct-tab");
+  const threadsList = document.getElementById("threadsList");
+  const noThreadSelected = document.getElementById("noThreadSelected");
+  const threadView = document.getElementById("threadView");
+  const messageInputArea = document.getElementById("messageInputArea");
+  const sendThreadMessageBtn = document.getElementById("sendThreadMessageBtn");
+  const threadMessageInput = document.getElementById("threadMessageInput");
+  const refreshButton = document.getElementById("refreshButton");
+  const closeChatButton = document.getElementById("closeChatButton");
+  const newMessageButton = document.getElementById("newMessageButton");
+  const sendMessageBtnModal = document.getElementById("sendMessageBtnModal");
 
-  init() {
-    this.setupEventListeners();
-    this.startAutoRefresh();
-    this.updateUnreadCount();
-  }
+  let currentUserId = "";
+  let currentThreadId = null;
 
-  setupEventListeners() {
-    // Search functionality
-    const searchInput = document.getElementById("searchThreads");
-    if (searchInput) {
-      searchInput.addEventListener(
-        "input",
-        this.debounce(this.searchThreads.bind(this), 300)
-      );
+  // --- Initialization ---
+  function initialize() {
+    currentUserId = window.currentUserId;
+    if (!currentUserId) {
+      console.error("Could not determine current user ID.");
+      return;
     }
+    setupEventListeners();
+    loadThreads("system");
+  }
 
-    // Thread selection
-    document.addEventListener("click", (e) => {
-      if (e.target.closest(".thread-item")) {
-        const threadItem = e.target.closest(".thread-item");
-        const threadId = threadItem.dataset.threadId;
-        const subject = threadItem.querySelector(".thread-subject").textContent;
-        this.selectThread(threadId, subject);
+  // --- Event Listeners ---
+  function setupEventListeners() {
+    systemTab.addEventListener("click", () => switchTab("system"));
+    directTab.addEventListener("click", () => switchTab("direct"));
+    sendThreadMessageBtn.addEventListener("click", sendMessage);
+    threadMessageInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
       }
     });
-
-    // Message form submission
-    const sendButton = document.querySelector('[onclick="sendMessage()"]');
-    if (sendButton) {
-      sendButton.addEventListener("click", this.sendMessage.bind(this));
-    }
-
-    // Modal events
-    const sendModal = document.getElementById("sendMessageModal");
-    if (sendModal) {
-      sendModal.addEventListener(
-        "hidden.bs.modal",
-        this.resetSendForm.bind(this)
-      );
-    }
-
-    // Message type filter events
-    const filterButtons = document.querySelectorAll(
-      'input[name="messageTypeFilter"]'
-    );
-    filterButtons.forEach((button) => {
-      button.addEventListener("change", this.filterMessagesByType.bind(this));
-    });
+    refreshButton.addEventListener("click", refreshCurrentThread);
+    closeChatButton.addEventListener("click", closeChat);
+    sendMessageBtnModal.addEventListener("click", sendNewDirectMessage);
   }
 
-  selectThread(threadId, subject) {
-    this.currentThreadId = threadId;
-
-    // Update UI
-    this.updateThreadSelection(threadId);
-    this.showThreadView(subject);
-    this.loadThreadMessages(threadId);
+  // --- Tab and Thread Management ---
+  function switchTab(tabType) {
+    systemTab.classList.toggle("active", tabType === "system");
+    directTab.classList.toggle("active", tabType === "direct");
+    newMessageButton.style.display = tabType === "direct" ? "block" : "none";
+    closeChat();
+    loadThreads(tabType);
   }
 
-  updateThreadSelection(threadId) {
-    // Remove active class from all threads
-    document.querySelectorAll(".thread-item").forEach((item) => {
-      item.classList.remove("active");
-    });
+  function loadThreads(type) {
+    threadsList.innerHTML = "<p>Loading...</p>";
+    const url =
+      type === "system"
+        ? "/Messages/GetUserThreadsByType?messageType=workflow"
+        : "/Messages/GetUserThreadsByType?messageType=direct";
 
-    // Add active class to selected thread
-    const selectedThread = document.querySelector(
-      `[data-thread-id="${threadId}"]`
-    );
-    if (selectedThread) {
-      selectedThread.classList.add("active");
-    }
+    fetch(url)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          renderThreads(data.threads, type);
+        } else {
+          threadsList.innerHTML = "<p>Error loading threads.</p>";
+        }
+      })
+      .catch(() => (threadsList.innerHTML = "<p>Error loading threads.</p>"));
   }
 
-  showThreadView(subject) {
-    document.getElementById("noThreadSelected").style.display = "none";
-    document.getElementById("threadView").style.display = "block";
-    document.getElementById("selectedThreadSubject").textContent = subject;
-  }
-
-  async loadThreadMessages(threadId) {
-    const container = document.getElementById("messagesContainer");
-    container.innerHTML = this.createLoadingHTML();
-
-    try {
-      const response = await fetch(
-        `/Messages/GetThreadMessages?threadId=${threadId}`
-      );
-      const data = await response.json();
-
-      if (data.success) {
-        this.displayMessages(data.messages);
-        this.markThreadAsRead(threadId);
-      } else {
-        container.innerHTML = this.createErrorHTML("Failed to load messages");
-      }
-    } catch (error) {
-      console.error("Error loading messages:", error);
-      container.innerHTML = this.createErrorHTML("Error loading messages");
-    }
-  }
-
-  displayMessages(messages) {
-    const container = document.getElementById("messagesContainer");
-
-    if (!messages || messages.length === 0) {
-      container.innerHTML = this.createEmptyStateHTML();
+  function renderThreads(threads, type) {
+    if (!threads || threads.length === 0) {
+      threadsList.innerHTML = `<p>No ${type} messages.</p>`;
       return;
     }
 
-    let html = "";
-    messages.forEach((message) => {
-      html += this.createMessageHTML(message);
-    });
-
-    container.innerHTML = html;
-    this.scrollToBottom(container);
-  }
-
-  createMessageHTML(message) {
-    const isSystemMessage = message.senderId === "system";
-    const messageClass = isSystemMessage ? "system-message" : "user-message";
-    const senderName = isSystemMessage
-      ? "System"
-      : message.senderName || "Unknown User";
-    const avatarIcon = isSystemMessage ? "robot" : "user";
-    const sentTime = new Date(message.sentAt).toLocaleString();
-
-    return `
-            <div class="message-item ${messageClass}">
-                <div class="message-avatar">
-                    <i class="fas fa-${avatarIcon}"></i>
-                </div>
-                <div class="message-content">
-                    <div class="message-header">
-                        <span class="message-sender">${senderName}</span>
-                        <span class="message-time">${sentTime}</span>
+    threadsList.innerHTML = threads
+      .map(
+        (thread) => `
+            <div class="thread-item ${
+              thread.hasUnreadMessages ? "unread" : ""
+            }" data-thread-id="${thread.threadId}" data-subject="${
+          thread.subject
+        }" data-type="${type}">
+                <div class="thread-content">
+                    <div class="thread-header">
+                        <span class="thread-subject">${thread.subject}</span>
+                        <span class="thread-time">${new Date(
+                          thread.lastMessageAt
+                        ).toLocaleDateString()}</span>
                     </div>
-                    <div class="message-text">${this.escapeHtml(
-                      message.content
-                    )}</div>
-                    ${
-                      isSystemMessage
-                        ? '<div class="system-message-indicator">System Message</div>'
-                        : ""
-                    }
+                    <div class="thread-preview">${
+                      thread.lastMessagePreview || "No preview available."
+                    }</div>
                 </div>
             </div>
-        `;
+        `
+      )
+      .join("");
+
+    document.querySelectorAll(".thread-item").forEach((item) => {
+      item.addEventListener("click", () => selectThread(item));
+    });
   }
 
-  async sendMessage() {
+  function selectThread(threadElement) {
+    currentThreadId = threadElement.dataset.threadId;
+    const subject = threadElement.dataset.subject;
+    const type = threadElement.dataset.type;
+
+    document
+      .querySelectorAll(".thread-item")
+      .forEach((el) => el.classList.remove("active"));
+    threadElement.classList.add("active");
+
+    noThreadSelected.style.display = "none";
+    threadView.style.display = "flex";
+    threadView.style.flexDirection = "column";
+    threadView.style.height = "100%";
+
+    document.getElementById("selectedThreadSubject").textContent = subject;
+    messageInputArea.style.display = type === "direct" ? "flex" : "none";
+
+    loadMessages(currentThreadId);
+    markThreadAsRead(currentThreadId);
+  }
+
+  // --- Message Handling ---
+  function loadMessages(threadId) {
+    const messagesContainer = document.getElementById("messagesContainer");
+    messagesContainer.innerHTML = "<p>Loading messages...</p>";
+
+    fetch(`/Messages/GetThreadMessages?threadId=${threadId}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success && data.messages) {
+          renderMessages(data.messages);
+        } else {
+          messagesContainer.innerHTML = "<p>Could not load messages.</p>";
+        }
+      })
+      .catch(
+        () => (messagesContainer.innerHTML = "<p>Error loading messages.</p>")
+      );
+  }
+
+  function renderMessages(messages) {
+    const messagesContainer = document.getElementById("messagesContainer");
+    if (!messages || messages.length === 0) {
+      messagesContainer.innerHTML =
+        "<p>No messages in this conversation yet.</p>";
+      return;
+    }
+
+    messagesContainer.innerHTML = messages
+      .map((msg) => {
+        const isMine = msg.senderId === currentUserId;
+        const isSystem = msg.senderId === "system";
+        let messageClass = "user-message-left";
+        if (isSystem) messageClass = "system-message";
+        if (isMine) messageClass = "user-message-right";
+
+        // Render system messages differently
+        if (isSystem) {
+          return `
+                <div class="message-item ${messageClass}">
+                    <div class="message-content">
+                        <div class="message-text">${msg.content}</div>
+                        <div class="message-time"> - System at ${new Date(
+                          msg.sentAt
+                        ).toLocaleTimeString()}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render regular user messages
+        const senderName = msg.senderName || "Unknown User";
+        return `
+                <div class="message-item ${messageClass}">
+                    <div class="message-content">
+                        ${
+                          !isMine && !isSystem
+                            ? `<div class="message-sender">${senderName}</div>`
+                            : ""
+                        }
+                        <div class="message-text">${msg.content}
+                         <span class="message-time-chip">${new Date(
+                           msg.sentAt
+                         ).toLocaleTimeString()}</span></div>
+                        
+                    </div>
+                </div>
+            `;
+      })
+      .join("");
+
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+
+  function sendMessage() {
+    const content = threadMessageInput.value.trim();
+    if (!content || !currentThreadId) return;
+
+    fetch("/Messages/SendThreadMessage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ threadId: currentThreadId, content: content }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          threadMessageInput.value = "";
+          loadMessages(currentThreadId);
+        } else {
+          alert("Failed to send message.");
+        }
+      })
+      .catch(() => alert("Error sending message."));
+  }
+
+  function sendNewDirectMessage() {
     const recipientId = document.getElementById("recipientSelect").value;
     const projectId = document.getElementById("projectSelect").value;
     const subject = document.getElementById("messageSubject").value;
     const content = document.getElementById("messageContent").value;
 
-    if (!this.validateSendForm(recipientId, subject, content)) {
+    if (!recipientId || !subject || !content) {
+      alert("Please fill out all required fields.");
       return;
     }
 
-    const request = {
-      receiverId: recipientId,
-      projectId: projectId,
-      subject: subject,
-      content: content,
-    };
-
-    try {
-      const response = await fetch("/Messages/SendMessage", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          RequestVerificationToken: this.getAntiForgeryToken(),
-        },
-        body: JSON.stringify(request),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        this.closeSendModal();
-        this.resetSendForm();
-        this.showAlert("success", data.message);
-        this.refreshThreadsList();
-      } else {
-        this.showAlert("danger", data.message);
-      }
-    } catch (error) {
-      console.error("Error sending message:", error);
-      this.showAlert("danger", "Error sending message");
-    }
-  }
-
-  validateSendForm(recipientId, subject, content) {
-    if (!recipientId) {
-      this.showAlert("warning", "Please select a recipient");
-      return false;
-    }
-    if (!subject.trim()) {
-      this.showAlert("warning", "Please enter a subject");
-      return false;
-    }
-    if (!content.trim()) {
-      this.showAlert("warning", "Please enter a message");
-      return false;
-    }
-    return true;
-  }
-
-  async updateUnreadCount() {
-    try {
-      const response = await fetch("/Messages/GetUnreadCount");
-      const data = await response.json();
-
-      if (data.success) {
-        this.updateUnreadBadge(data.count);
-      }
-    } catch (error) {
-      console.error("Error updating unread count:", error);
-    }
-  }
-
-  async filterMessagesByType() {
-    const selectedFilter = document.querySelector(
-      'input[name="messageTypeFilter"]:checked'
-    ).value;
-
-    try {
-      // Fetch filtered threads from server
-      const response = await fetch(
-        `/Messages/GetUserThreadsByType?messageType=${selectedFilter}`
-      );
-      const data = await response.json();
-
-      if (data.success) {
-        this.updateThreadsList(data.threads);
-      } else {
-        console.error("Error filtering threads:", data.message);
-        this.showAlert("error", "Error filtering messages");
-      }
-    } catch (error) {
-      console.error("Error filtering messages:", error);
-      this.showAlert("error", "Error filtering messages");
-    }
-  }
-
-  updateThreadsList(threads) {
-    const threadsList = document.getElementById("threadsList");
-    if (!threadsList) return;
-
-    if (threads.length === 0) {
-      threadsList.innerHTML = `
-        <div class="no-messages" id="noMessages">
-          <div class="no-messages-icon">
-            <i class="fas fa-comments"></i>
-          </div>
-          <h5>No messages found</h5>
-          <p>No messages match your current filter.</p>
-        </div>
-      `;
-      return;
-    }
-
-    // Clear existing threads
-    threadsList.innerHTML = "";
-
-    // Add filtered threads
-    threads.forEach((thread) => {
-      const threadItem = this.createThreadItem(thread);
-      threadsList.appendChild(threadItem);
-    });
-  }
-
-  createThreadItem(thread) {
-    const threadItem = document.createElement("div");
-    threadItem.className = `thread-item ${
-      thread.hasUnreadMessages ? "unread" : ""
-    }`;
-    threadItem.setAttribute("data-thread-id", thread.threadId);
-    threadItem.setAttribute("data-message-type", thread.threadType || "direct");
-    threadItem.onclick = () =>
-      this.selectThread(thread.threadId, thread.subject);
-
-    const avatarIcon =
-      thread.threadType === "workflow" ? "fas fa-cogs" : "fas fa-comments";
-    const preview =
-      thread.lastMessagePreview && thread.lastMessagePreview.length > 50
-        ? thread.lastMessagePreview.substring(0, 47) + "..."
-        : thread.lastMessagePreview || "";
-
-    threadItem.innerHTML = `
-      <div class="thread-avatar">
-        <i class="${avatarIcon}"></i>
-      </div>
-      <div class="thread-content">
-        <div class="thread-header">
-          <h6 class="thread-subject">${thread.subject}</h6>
-          <span class="thread-time">${new Date(
-            thread.lastMessageAt
-          ).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          })}</span>
-        </div>
-        <div class="thread-preview">
-          <span class="thread-sender">${thread.lastMessageSenderName}:</span>
-          <span class="thread-message">${preview}</span>
-        </div>
-        ${
-          thread.hasUnreadMessages ? '<div class="unread-indicator"></div>' : ""
+    fetch("/Messages/SendMessage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        receiverId: recipientId,
+        projectId: projectId,
+        subject: subject,
+        content: content,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          const modal = bootstrap.Modal.getInstance(
+            document.getElementById("sendMessageModal")
+          );
+          modal.hide();
+          document.getElementById("sendMessageForm").reset();
+          // Refresh direct messages to show the new thread
+          loadThreads("direct");
+        } else {
+          alert("Failed to send message: " + data.message);
         }
-      </div>
-    `;
-
-    return threadItem;
+      })
+      .catch((error) => {
+        console.error("Error sending new message:", error);
+        alert("An error occurred while sending the message.");
+      });
   }
 
-  updateNoMessagesState() {
-    const visibleThreads = document.querySelectorAll(
-      '.thread-item[style*="block"], .thread-item:not([style*="none"])'
-    );
-    const noMessagesDiv = document.getElementById("noMessages");
+  function markThreadAsRead(threadId) {
+    fetch("/Messages/MarkThreadAsRead", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ threadId: threadId }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          const threadItem = document.querySelector(
+            `.thread-item[data-thread-id="${threadId}"]`
+          );
+          if (threadItem) threadItem.classList.remove("unread");
+          // Since this might affect the total count, let's refresh the threads
+          // This will ensure the data is consistent
+          const activeTab = document
+            .querySelector(".tab-button.active")
+            .id.replace("-tab", "");
+          loadThreads(activeTab);
+        }
+      });
+  }
 
-    if (visibleThreads.length === 0 && noMessagesDiv) {
-      noMessagesDiv.style.display = "block";
-    } else if (noMessagesDiv) {
-      noMessagesDiv.style.display = "none";
+  function refreshCurrentThread() {
+    if (currentThreadId) {
+      loadMessages(currentThreadId);
     }
   }
 
-  updateUnreadBadge(count) {
-    const badge = document.getElementById("unreadCount");
-    const badgeContainer = document.getElementById("unreadBadge");
-
-    if (count > 0) {
-      badge.textContent = count;
-      badgeContainer.style.display = "inline-block";
-    } else {
-      badgeContainer.style.display = "none";
-    }
+  function closeChat() {
+    currentThreadId = null;
+    document
+      .querySelectorAll(".thread-item")
+      .forEach((el) => el.classList.remove("active"));
+    threadView.style.display = "none";
+    noThreadSelected.style.display = "flex";
   }
 
-  async refreshThreadsList() {
-    try {
-      const response = await fetch("/Messages/GetUserThreads");
-      const data = await response.json();
-
-      if (data.success) {
-        this.updateThreadsList(data.threads);
-      }
-    } catch (error) {
-      console.error("Error refreshing threads:", error);
-    }
-  }
-
-  updateThreadsList(threads) {
-    const container = document.getElementById("threadsList");
-
-    if (!threads || threads.length === 0) {
-      container.innerHTML = this.createEmptyThreadsHTML();
-      return;
-    }
-
-    let html = "";
-    threads.forEach((thread) => {
-      html += this.createThreadHTML(thread);
-    });
-
-    container.innerHTML = html;
-  }
-
-  createThreadHTML(thread) {
-    const hasUnread = thread.hasUnreadMessages ? "unread" : "";
-    const unreadBadge = thread.hasUnreadMessages
-      ? `<span class="thread-unread-badge">${thread.unreadCount}</span>`
-      : "";
-
-    const preview =
-      thread.lastMessagePreview.length > 50
-        ? thread.lastMessagePreview.substring(0, 47) + "..."
-        : thread.lastMessagePreview;
-
-    const time = new Date(thread.lastMessageAt).toLocaleDateString();
-
-    return `
-            <div class="thread-item ${hasUnread}" data-thread-id="${
-      thread.threadId
-    }">
-                <div class="thread-avatar">
-                    <i class="fas fa-comments"></i>
-                </div>
-                <div class="thread-content">
-                    <div class="thread-header">
-                        <h6 class="thread-subject">${this.escapeHtml(
-                          thread.subject
-                        )}</h6>
-                        <span class="thread-time">${time}</span>
-                    </div>
-                    <div class="thread-preview">
-                        <span class="thread-sender">${this.escapeHtml(
-                          thread.lastMessageSenderName
-                        )}:</span>
-                        <span class="thread-message">${this.escapeHtml(
-                          preview
-                        )}</span>
-                    </div>
-                    <div class="thread-meta">
-                        <span class="thread-project">${this.escapeHtml(
-                          thread.projectName
-                        )}</span>
-                        ${unreadBadge}
-                    </div>
-                </div>
-            </div>
-        `;
-  }
-
-  searchThreads(event) {
-    const searchTerm = event.target.value.toLowerCase();
-    const threads = document.querySelectorAll(".thread-item");
-
-    threads.forEach((thread) => {
-      const subject = thread
-        .querySelector(".thread-subject")
-        .textContent.toLowerCase();
-      const sender = thread
-        .querySelector(".thread-sender")
-        .textContent.toLowerCase();
-      const message = thread
-        .querySelector(".thread-message")
-        .textContent.toLowerCase();
-      const project = thread
-        .querySelector(".thread-project")
-        .textContent.toLowerCase();
-
-      const matches =
-        subject.includes(searchTerm) ||
-        sender.includes(searchTerm) ||
-        message.includes(searchTerm) ||
-        project.includes(searchTerm);
-
-      thread.style.display = matches ? "flex" : "none";
-    });
-  }
-
-  markThreadAsRead(threadId) {
-    // This would typically mark all messages in the thread as read
-    // For now, we'll just update the UI
-    const threadItem = document.querySelector(`[data-thread-id="${threadId}"]`);
-    if (threadItem) {
-      threadItem.classList.remove("unread");
-      const unreadBadge = threadItem.querySelector(".thread-unread-badge");
-      if (unreadBadge) {
-        unreadBadge.remove();
-      }
-    }
-  }
-
-  startAutoRefresh() {
-    // Refresh unread count every 30 seconds
-    this.refreshInterval = setInterval(() => {
-      this.updateUnreadCount();
-    }, 30000);
-  }
-
-  stopAutoRefresh() {
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-    }
-  }
-
-  // Utility methods
-  createLoadingHTML() {
-    return `
-            <div class="text-center py-4">
-                <div class="spinner-border" role="status"></div>
-                <p class="mt-2">Loading messages...</p>
-            </div>
-        `;
-  }
-
-  createErrorHTML(message) {
-    return `
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-triangle me-2"></i>${message}
-            </div>
-        `;
-  }
-
-  createEmptyStateHTML() {
-    return `
-            <div class="empty-state">
-                <i class="fas fa-comment-slash"></i>
-                <p>No messages in this conversation</p>
-            </div>
-        `;
-  }
-
-  createEmptyThreadsHTML() {
-    return `
-            <div class="empty-state">
-                <i class="fas fa-comment-slash"></i>
-                <p>No conversations yet</p>
-                <small>Start a conversation by sending a message</small>
-            </div>
-        `;
-  }
-
-  closeSendModal() {
-    const modal = bootstrap.Modal.getInstance(
-      document.getElementById("sendMessageModal")
-    );
-    if (modal) {
-      modal.hide();
-    }
-  }
-
-  resetSendForm() {
-    document.getElementById("sendMessageForm").reset();
-  }
-
-  scrollToBottom(element) {
-    element.scrollTop = element.scrollHeight;
-  }
-
-  showAlert(type, message) {
-    const alertDiv = document.createElement("div");
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-    alertDiv.innerHTML = `
-            <i class="fas fa-${
-              type === "success" ? "check-circle" : "exclamation-triangle"
-            } me-2"></i> ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-
-    const container = document.querySelector(".messages-container");
-    const content = document.querySelector(".messages-content");
-    container.insertBefore(alertDiv, content);
-
-    // Auto-dismiss after 5 seconds
-    setTimeout(() => {
-      if (alertDiv.parentNode) {
-        alertDiv.remove();
-      }
-    }, 5000);
-  }
-
-  getAntiForgeryToken() {
-    const token = document.querySelector(
-      'input[name="__RequestVerificationToken"]'
-    );
-    return token ? token.value : "";
-  }
-
-  escapeHtml(text) {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-      const later = () => {
-        clearTimeout(timeout);
-        func(...args);
-      };
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
-    };
-  }
-}
-
-// Initialize messages manager when DOM is loaded
-document.addEventListener("DOMContentLoaded", function () {
-  window.messagesManager = new MessagesManager();
+  // --- Run ---
+  initialize();
 });
-
-// Global functions for backward compatibility
-function selectThread(threadId, subject) {
-  if (window.messagesManager) {
-    window.messagesManager.selectThread(threadId, subject);
-  }
-}
-
-function loadThreadMessages(threadId) {
-  if (window.messagesManager) {
-    window.messagesManager.loadThreadMessages(threadId);
-  }
-}
-
-function sendMessage() {
-  if (window.messagesManager) {
-    window.messagesManager.sendMessage();
-  }
-}
-
-function updateUnreadCount() {
-  if (window.messagesManager) {
-    window.messagesManager.updateUnreadCount();
-  }
-}
-
-function refreshThread() {
-  if (window.messagesManager && window.messagesManager.currentThreadId) {
-    window.messagesManager.loadThreadMessages(
-      window.messagesManager.currentThreadId
-    );
-  }
-}
-
-function showAlert(type, message) {
-  if (window.messagesManager) {
-    window.messagesManager.showAlert(type, message);
-  }
-}

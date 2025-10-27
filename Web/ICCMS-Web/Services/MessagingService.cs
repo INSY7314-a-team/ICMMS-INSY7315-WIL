@@ -150,7 +150,10 @@ namespace ICCMS_Web.Services
             }
         }
 
-        public async Task<List<MessageDto>> GetThreadMessagesAsync(string threadId, string userId)
+        public async Task<List<MessageWithSenderDto>> GetThreadMessagesAsync(
+            string threadId,
+            string userId
+        )
         {
             try
             {
@@ -158,18 +161,17 @@ namespace ICCMS_Web.Services
                 if (currentUser == null)
                 {
                     _logger.LogWarning("No authenticated user found for getting thread messages");
-                    return new List<MessageDto>();
+                    return new List<MessageWithSenderDto>();
                 }
 
-                // First try to get regular thread messages
-                var messages = await _apiClient.GetAsync<List<MessageDto>>(
+                var messages = await _apiClient.GetAsync<List<MessageWithSenderDto>>(
                     $"/api/messages/thread/{threadId}",
                     currentUser
                 );
 
-                // If no regular messages found, check if it's a workflow message
                 if (messages == null || messages.Count == 0)
                 {
+                    // It might be a workflow message. Let's check.
                     var workflowMessage = await _apiClient.GetAsync<WorkflowMessageDto>(
                         $"/api/messages/workflow/{threadId}",
                         currentUser
@@ -177,34 +179,30 @@ namespace ICCMS_Web.Services
 
                     if (workflowMessage != null && workflowMessage.Recipients.Contains(userId))
                     {
-                        // Convert workflow message to MessageDto format
-                        var workflowMessageDto = new MessageDto
+                        var workflowAsMessage = new MessageWithSenderDto
                         {
                             MessageId = workflowMessage.WorkflowMessageId,
                             ThreadId = workflowMessage.WorkflowMessageId,
                             SenderId = "system",
                             SenderName = "System",
                             ReceiverId = userId,
-                            ReceiverName = "You",
                             ProjectId = workflowMessage.ProjectId,
                             Subject = workflowMessage.Subject,
                             Content = workflowMessage.Content,
                             SentAt = workflowMessage.CreatedAt,
-                            IsRead = true, // Workflow messages are always considered read
+                            IsRead = true,
                             MessageType = "workflow",
-                            Attachments = new List<MessageAttachmentDto>(),
                         };
-
-                        return new List<MessageDto> { workflowMessageDto };
+                        return new List<MessageWithSenderDto> { workflowAsMessage };
                     }
                 }
 
-                return messages ?? new List<MessageDto>();
+                return messages ?? new List<MessageWithSenderDto>();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting messages for thread {ThreadId}", threadId);
-                return new List<MessageDto>();
+                return new List<MessageWithSenderDto>();
             }
         }
 
@@ -235,41 +233,6 @@ namespace ICCMS_Web.Services
             }
         }
 
-        public async Task<bool> MarkAsReadAsync(string messageId, string userId)
-        {
-            try
-            {
-                var currentUser = GetCurrentUser();
-                if (currentUser == null)
-                {
-                    _logger.LogWarning("No authenticated user found for marking message as read");
-                    return false;
-                }
-
-                var message = await _apiClient.GetAsync<MessageDto>(
-                    $"/api/messages/{messageId}",
-                    currentUser
-                );
-                if (message == null)
-                    return false;
-
-                message.IsRead = true;
-                message.ReadAt = DateTime.UtcNow;
-
-                var result = await _apiClient.PutAsync<object>(
-                    $"/api/messages/{messageId}",
-                    message,
-                    currentUser
-                );
-                return result != null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error marking message {MessageId} as read", messageId);
-                return false;
-            }
-        }
-
         public async Task<bool> MarkThreadAsReadAsync(string threadId, string userId)
         {
             try
@@ -281,38 +244,13 @@ namespace ICCMS_Web.Services
                     return false;
                 }
 
-                // Get all messages in the thread
-                var messages = await _apiClient.GetAsync<List<MessageWithSender>>(
-                    $"/api/messages/thread/{threadId}",
+                var response = await _apiClient.PostAsync<object>(
+                    $"/api/messages/thread/{threadId}/mark-as-read",
+                    new { }, // Empty body
                     currentUser
                 );
 
-                if (messages == null || !messages.Any())
-                    return false;
-
-                // Mark all unread messages in the thread as read
-                var unreadMessages = messages
-                    .Where(m => !m.IsRead && m.ReceiverId == userId)
-                    .ToList();
-
-                foreach (var message in unreadMessages)
-                {
-                    message.IsRead = true;
-                    message.ReadAt = DateTime.UtcNow;
-
-                    await _apiClient.PutAsync<object>(
-                        $"/api/messages/{message.MessageId}",
-                        message,
-                        currentUser
-                    );
-                }
-
-                _logger.LogInformation(
-                    "Marked {Count} messages as read in thread {ThreadId}",
-                    unreadMessages.Count,
-                    threadId
-                );
-                return true;
+                return response != null;
             }
             catch (Exception ex)
             {

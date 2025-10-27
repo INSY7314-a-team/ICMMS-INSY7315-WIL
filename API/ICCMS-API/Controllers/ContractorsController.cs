@@ -294,45 +294,15 @@ namespace ICCMS_API.Controllers
                     .Distinct()
                     .ToList();
 
-                // Get all users to find Project Managers, other contractors, and clients
+                // Get all users to find Project Managers and Admins
                 var users = await _firebaseService.GetCollectionAsync<User>("users");
 
                 // Get Project Managers and Admins
-                var projectManagers = users
-                    .Where(u =>
-                        pmIds.Contains(u.UserId)
-                        && (u.Role == "Project Manager" || u.Role == "Admin")
-                    )
+                var projectManagersAndAdmins = users
+                    .Where(u => pmIds.Contains(u.UserId) || u.Role == "Admin")
                     .ToList();
 
-                // Get other contractors working on the same projects
-                var otherContractorTasks = tasks
-                    .Where(t => projectIds.Contains(t.ProjectId) && t.AssignedTo != contractorId)
-                    .ToList();
-                var otherContractorIds = otherContractorTasks
-                    .Select(t => t.AssignedTo)
-                    .Distinct()
-                    .ToList();
-
-                var otherContractors = users
-                    .Where(u => otherContractorIds.Contains(u.UserId) && u.Role == "Contractor")
-                    .ToList();
-
-                // Get clients of the projects
-                var clientIds = contractorProjects
-                    .Where(p => !string.IsNullOrEmpty(p.ClientId))
-                    .Select(p => p.ClientId)
-                    .Distinct()
-                    .ToList();
-
-                var clients = users
-                    .Where(u => clientIds.Contains(u.UserId) && u.Role == "Client")
-                    .ToList();
-
-                // Combine all available users
-                var allAvailableUsers = projectManagers
-                    .Concat(otherContractors)
-                    .Concat(clients)
+                var availableUsers = projectManagersAndAdmins
                     .Select(u => new
                     {
                         UserId = u.UserId,
@@ -342,7 +312,7 @@ namespace ICCMS_API.Controllers
                     })
                     .ToList();
 
-                return Ok(allAvailableUsers);
+                return Ok(availableUsers);
             }
             catch (Exception ex)
             {
@@ -383,43 +353,6 @@ namespace ICCMS_API.Controllers
                         Status = p.Status,
                     })
                     .ToList();
-
-                return Ok(contractorProjects);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
-
-        [HttpGet("projects")]
-        public async Task<ActionResult<List<Project>>> GetProjects()
-        {
-            try
-            {
-                var contractorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(contractorId))
-                {
-                    return Unauthorized("Contractor ID not found");
-                }
-
-                // Get all projects where this contractor has tasks
-                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
-                var contractorTasks = tasks.Where(t => t.AssignedTo == contractorId).ToList();
-                var projectIds = contractorTasks.Select(t => t.ProjectId).Distinct().ToList();
-
-                if (!projectIds.Any())
-                {
-                    return Ok(new List<Project>());
-                }
-
-                // Get the projects
-                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
-                var contractorProjects = projects
-                    .Where(p => projectIds.Contains(p.ProjectId))
-                    .ToList();
-
-                // Return the projects
 
                 return Ok(contractorProjects);
             }
@@ -754,7 +687,7 @@ namespace ICCMS_API.Controllers
                 {
                     task.Progress = report.ProgressPercentage.Value;
                     await _firebaseService.UpdateDocumentAsync("tasks", taskId, task);
-                    
+
                     Console.WriteLine(
                         $"[SubmitProgressReport] Updated task {taskId} progress to {report.ProgressPercentage.Value}%"
                     );
