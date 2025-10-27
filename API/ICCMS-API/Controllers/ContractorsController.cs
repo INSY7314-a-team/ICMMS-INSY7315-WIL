@@ -895,5 +895,34 @@ namespace ICCMS_API.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
+        [HttpGet("projects")]
+        public async Task<IActionResult> GetProjects()
+        {
+            try
+            {
+                var contractorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(contractorId))
+                {
+                    return Unauthorized("User not identified.");
+                }
+
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var contractorTasks = tasks.Where(t => t.AssignedTo == contractorId).ToList();
+                var projectIds = contractorTasks.Select(t => t.ProjectId).Distinct().ToList();
+
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var contractorProjects = projects
+                    .Where(p => projectIds.Contains(p.ProjectId))
+                    .ToList();
+
+                return Ok(contractorProjects);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                return StatusCode(500, "An error occurred while fetching projects.");
+            }
+        }
     }
 }

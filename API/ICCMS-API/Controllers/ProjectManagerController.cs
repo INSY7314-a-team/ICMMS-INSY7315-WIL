@@ -32,25 +32,25 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpGet("projects")]
-        public async Task<ActionResult<List<Project>>> GetProjects()
+        public async Task<IActionResult> GetProjects()
         {
             try
             {
-                Console.WriteLine("[GetProjects] Fetching all projects from Firestore");
-                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
-                Console.WriteLine(
-                    $"[GetProjects] Retrieved {projects.Count} projects from Firestore"
-                );
+                var pmId = User.UserId();
+                if (string.IsNullOrEmpty(pmId))
+                {
+                    return Unauthorized("User not identified.");
+                }
 
-                // For testing purposes, return all projects instead of filtering by ProjectManagerId
-                // TODO: Re-enable filtering once user authentication is properly configured
-                var projectManagerProjects = projects.ToList();
-                return Ok(projectManagerProjects);
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var pmProjects = projects.Where(p => p.ProjectManagerId == pmId).ToList();
+
+                return Ok(pmProjects);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[GetProjects] Error: {ex.Message}");
-                return StatusCode(500, new { error = ex.Message });
+                // Log the exception
+                return StatusCode(500, "An error occurred while fetching projects.");
             }
         }
 

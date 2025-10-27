@@ -48,6 +48,28 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpGet("{clientId}/projects")]
+        public async Task<IActionResult> GetClientProjects(string clientId)
+        {
+            try
+            {
+                var currentUserId = User.UserId();
+                if (currentUserId != clientId)
+                {
+                    return Forbid("You are not authorized to view these projects.");
+                }
+
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var clientProjects = projects.Where(p => p.ClientId == clientId).ToList();
+                return Ok(clientProjects);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                return StatusCode(500, "An error occurred while fetching client projects.");
+            }
+        }
+
         [HttpGet("messaging/available-users")]
         public async Task<ActionResult<List<object>>> GetAvailableUsersForMessaging()
         {

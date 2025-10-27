@@ -417,14 +417,16 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        // =================================================================================================
+        // POST: /api/messages
+        // =================================================================================================
+        [Authorize]
         [HttpPost]
-        public async Task<ActionResult<string>> CreateMessage(
-            [FromBody] CreateMessageRequest request
-        )
+        public async Task<IActionResult> CreateMessage([FromBody] CreateMessageRequest request)
         {
             try
             {
-                // Validate the message
+                // 1. Validate the request
                 var validationResult = await _validationService.ValidateMessageAsync(request);
                 if (!validationResult.IsValid)
                 {
@@ -438,216 +440,121 @@ namespace ICCMS_API.Controllers
                     );
                 }
 
-                // Check for existing direct message thread
-                if (
-                    string.IsNullOrEmpty(request.ThreadId)
-                    && request.ThreadParticipants != null
+                var senderId = User.UserId();
+                if (string.IsNullOrEmpty(senderId))
+                {
+                    return Unauthorized("Sender not identified.");
+                }
+
+                MessageThread thread;
+                bool isNewThread = false;
+
+                // 2. Find or Create the Thread
+                if (!string.IsNullOrEmpty(request.ThreadId))
+                {
+                    // A threadId was provided, so we're replying.
+                    thread = await _firebaseService.GetDocumentAsync<MessageThread>(
+                        "threads",
+                        request.ThreadId
+                    );
+                    if (thread == null)
+                    {
+                        return BadRequest("Thread not found.");
+                    }
+                }
+                else if (
+                    request.ThreadParticipants != null
                     && request.ThreadParticipants.Count == 2
                 )
                 {
+                    // No threadId provided, this is a new direct message. Check if a thread already exists.
                     var threads = await _firebaseService.GetCollectionAsync<MessageThread>(
                         "threads"
                     );
-                    var existingThread = threads.FirstOrDefault(t =>
+                    var requestParticipants = new HashSet<string>(request.ThreadParticipants);
+
+                    thread = threads.FirstOrDefault(t =>
                         t.ThreadType == "direct"
+                        && t.Participants != null
                         && t.Participants.Count == 2
-                        && t.Participants.Contains(request.SenderId)
-                        && t.Participants.Contains(request.ReceiverId)
+                        && new HashSet<string>(t.Participants).SetEquals(requestParticipants)
                     );
 
-                    if (existingThread != null)
+                    if (thread == null)
                     {
-                        request.ThreadId = existingThread.ThreadId;
+                        // No existing thread found, create one.
+                        isNewThread = true;
+                        thread = new MessageThread
+                        {
+                            ThreadId = Guid.NewGuid().ToString(),
+                            Subject = request.Subject,
+                            Participants = request.ThreadParticipants,
+                            CreatedAt = DateTime.UtcNow,
+                            IsActive = true,
+                            ThreadType = "direct",
+                        };
                     }
                 }
+                else
+                {
+                    return BadRequest("New direct messages must have exactly two participants.");
+                }
 
-                // Create message from validated request
+                // 3. Create the Message
                 var message = new Message
                 {
                     MessageId = Guid.NewGuid().ToString(),
-                    SenderId = request.SenderId,
+                    SenderId = senderId,
                     ReceiverId = request.ReceiverId,
+                    ThreadParticipants = thread.Participants,
                     ProjectId = request.ProjectId,
-                    Subject = request.Subject,
+                    Subject = thread.Subject,
                     Content = request.Content,
                     SentAt = DateTime.UtcNow,
-                    ThreadId = request.ThreadId ?? Guid.NewGuid().ToString(),
-                    ParentMessageId = request.ParentMessageId,
-                    IsThreadStarter = string.IsNullOrEmpty(request.ThreadId),
-                    ThreadDepth = string.IsNullOrEmpty(request.ParentMessageId) ? 0 : 1,
-                    MessageType = request.MessageType,
-                    ThreadParticipants = request.ThreadParticipants,
+                    ThreadId = thread.ThreadId,
+                    IsThreadStarter = isNewThread,
+                    IsRead = false,
+                    MessageType = "direct",
                 };
+                await _firebaseService.AddDocumentAsync("messages", message);
 
-                // If this is a new thread starter, create thread ID
-                if (string.IsNullOrEmpty(request.ThreadId))
+                // 4. Update and Save the Thread Document
+                thread.LastMessageAt = message.SentAt;
+                if (isNewThread)
                 {
-                    message.IsThreadStarter = true;
-                    message.ThreadDepth = 0;
-                    message.MessageType = "thread";
+                    await _firebaseService.AddDocumentAsync("threads", thread);
+                }
+                else
+                {
+                    await _firebaseService.UpdateDocumentAsync("threads", thread.ThreadId, thread);
                 }
 
-                var messageId = await _firebaseService.AddDocumentAsync("messages", message);
-
-                // Update thread information if this is a thread starter
-                // Only create thread documents for project threads (multiple participants), not direct messages (2 participants)
-                if (message.IsThreadStarter && message.ThreadParticipants != null)
-                {
-                    await CreateOrUpdateThreadAsync(message);
-                }
-                else if (
-                    !string.IsNullOrEmpty(message.ThreadId)
-                    && message.ThreadParticipants != null
-                )
-                {
-                    await UpdateThreadAsync(message);
-                }
-
-                // Send push notification to the receiver
-                await SendMessageNotificationAsync(message);
-
-                // Return warnings if any
-                if (validationResult.Warnings.Any())
-                {
-                    return Ok(new { messageId, warnings = validationResult.Warnings });
-                }
-
-                return Ok(messageId);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
-        }
-
-        [HttpPost("broadcast")]
-        public async Task<ActionResult<string>> BroadcastMessage(
-            [FromBody] BroadcastMessageRequest request
-        )
-        {
-            try
-            {
-                var messageId = Guid.NewGuid().ToString();
-                var sentAt = DateTime.UtcNow;
-
-                // Get all users in the project
-                var users = await _firebaseService.GetCollectionAsync<User>("users");
-                var projectUsers = users.Where(u => u.IsActive).ToList();
-
-                var deviceTokens = new List<string>();
-                var notifications = new List<Task>();
-
-                foreach (var user in projectUsers)
-                {
-                    if (!string.IsNullOrEmpty(user.DeviceToken))
+                // 5. Return a detailed success response
+                return Ok(
+                    new
                     {
-                        deviceTokens.Add(user.DeviceToken);
+                        message = "Message sent successfully.",
+                        threadId = thread.ThreadId,
+                        messageId = message.MessageId,
                     }
-
-                    // Create individual message record for each user
-                    var message = new Message
-                    {
-                        MessageId = $"{messageId}_{user.UserId}",
-                        SenderId = request.SenderId,
-                        ReceiverId = user.UserId,
-                        ProjectId = request.ProjectId,
-                        Subject = request.Subject,
-                        Content = request.Content,
-                        IsRead = false,
-                        SentAt = sentAt,
-                    };
-
-                    await _firebaseService.AddDocumentAsync("messages", message);
-                }
-
-                // Send push notification to all users with device tokens
-                if (deviceTokens.Any())
-                {
-                    var notificationData = new Dictionary<string, string>
-                    {
-                        { "messageId", messageId },
-                        { "senderId", request.SenderId },
-                        { "projectId", request.ProjectId },
-                        { "type", "broadcast" },
-                        { "action", "broadcast_message" },
-                    };
-
-                    await _notificationService.SendToMultipleDevicesAsync(
-                        deviceTokens,
-                        request.Subject,
-                        request.Content,
-                        notificationData
-                    );
-                }
-
-                return Ok(new { messageId, recipientsCount = projectUsers.Count });
+                );
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                // Log the exception
+                return StatusCode(
+                    500,
+                    new { message = "An unexpected error occurred.", error = ex.Message }
+                );
             }
         }
 
-        [HttpPost("thread")]
-        public async Task<ActionResult<string>> CreateThread([FromBody] CreateThreadRequest request)
-        {
-            try
-            {
-                var threadId = Guid.NewGuid().ToString();
-                var messageId = Guid.NewGuid().ToString();
-                var sentAt = DateTime.UtcNow;
-
-                // Create the starter message
-                var starterMessage = new Message
-                {
-                    MessageId = messageId,
-                    SenderId = User.UserId() ?? string.Empty,
-                    ReceiverId = request.Participants.FirstOrDefault() ?? string.Empty,
-                    ProjectId = request.ProjectId,
-                    Subject = request.Subject,
-                    Content = request.Content,
-                    SentAt = sentAt,
-                    ThreadId = threadId,
-                    IsThreadStarter = true,
-                    ThreadDepth = 0,
-                    MessageType = "thread",
-                    ThreadParticipants = request.Participants,
-                };
-
-                await _firebaseService.AddDocumentAsync("messages", starterMessage);
-
-                // Create thread record
-                var thread = new MessageThread
-                {
-                    ThreadId = threadId,
-                    ProjectId = request.ProjectId,
-                    Subject = request.Subject,
-                    StarterMessageId = messageId,
-                    StarterUserId = starterMessage.SenderId,
-                    Participants = request.Participants,
-                    MessageCount = 1,
-                    LastMessageAt = sentAt,
-                    LastMessageId = messageId,
-                    LastMessageSenderId = starterMessage.SenderId,
-                    CreatedAt = sentAt,
-                    ThreadType = request.ThreadType,
-                    Tags = request.Tags,
-                };
-
-                await _firebaseService.AddDocumentAsync("threads", thread);
-
-                // Send notifications to all participants
-                await SendThreadNotificationAsync(starterMessage, request.Participants);
-
-                return Ok(new { threadId, messageId });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
-        }
-
-        [HttpPost("reply")]
+        // =================================================================================================
+        // POST: /api/messages/reply
+        // This is being deprecated in favor of the more robust CreateMessage endpoint.
+        // The logic is now handled by providing a threadId to CreateMessage.
+        // =================================================================================================
+        [NonAction] // Disabling this endpoint to prevent ambiguity
         public async Task<ActionResult<string>> ReplyToMessage(
             [FromBody] ReplyToMessageRequest request
         )
@@ -1436,23 +1343,20 @@ namespace ICCMS_API.Controllers
                 var thread = new MessageThread
                 {
                     ThreadId = message.ThreadId,
-                    ProjectId = message.ProjectId,
                     Subject = message.Subject,
-                    StarterMessageId = message.MessageId,
-                    StarterUserId = message.SenderId,
                     Participants = message.ThreadParticipants,
-                    MessageCount = 1,
+                    ProjectId = message.ProjectId,
+                    CreatedAt = DateTime.UtcNow,
                     LastMessageAt = message.SentAt,
-                    LastMessageId = message.MessageId,
-                    LastMessageSenderId = message.SenderId,
-                    CreatedAt = message.SentAt,
-                    ThreadType = message.ThreadParticipants.Count > 2 ? "general" : "direct",
+                    IsActive = true,
+                    ThreadType = message.ThreadParticipants.Count > 2 ? "group" : "direct", // Assuming 2 participants is direct
                 };
 
                 await _firebaseService.AddDocumentAsync("threads", thread);
             }
             catch (Exception ex)
             {
+                // Log error
                 Console.WriteLine($"Error creating thread: {ex.Message}");
             }
         }

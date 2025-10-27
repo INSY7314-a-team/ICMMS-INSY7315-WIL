@@ -16,7 +16,6 @@
 }
 
 .pm-dashboard-container {
-    padding: 20px;
     background-color: var(--primary-bg);
     min-height: 100vh;
     color: var(--text-primary);

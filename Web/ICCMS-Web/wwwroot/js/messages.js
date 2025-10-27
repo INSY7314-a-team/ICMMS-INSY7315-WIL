@@ -77,8 +77,13 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     threadsList.innerHTML = threads
-      .map(
-        (thread) => `
+      .map((thread) => {
+        const senderPrefix = thread.lastMessageSenderName
+          ? `<strong>${thread.lastMessageSenderName}:</strong> `
+          : "";
+        const preview = thread.lastMessagePreview || "No preview available.";
+
+        return `
             <div class="thread-item ${
               thread.hasUnreadMessages ? "unread" : ""
             }" data-thread-id="${thread.threadId}" data-subject="${
@@ -91,13 +96,11 @@ document.addEventListener("DOMContentLoaded", function () {
                           thread.lastMessageAt
                         ).toLocaleDateString()}</span>
                     </div>
-                    <div class="thread-preview">${
-                      thread.lastMessagePreview || "No preview available."
-                    }</div>
+                    <div class="thread-preview">${senderPrefix}${preview}</div>
                 </div>
             </div>
-        `
-      )
+        `;
+      })
       .join("");
 
     document.querySelectorAll(".thread-item").forEach((item) => {
