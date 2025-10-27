@@ -742,7 +742,6 @@ namespace ICCMS_Web.Controllers
             }
         }
 
-
         // ============================================
         // PROJECT MANAGER: Download Quotation (SA Format)
         // ============================================
@@ -755,158 +754,259 @@ namespace ICCMS_Web.Controllers
 
             // === FETCH QUOTATION ===
             var quote = await _apiClient.GetAsync<QuotationDto>($"/api/quotations/{id}", User);
-            if (quote == null) return NotFound("Quotation not found");
+            if (quote == null)
+                return NotFound("Quotation not found");
 
             // === FETCH PROJECT FROM PROJECT MANAGER SCOPE ===
-            var allProjects = await _apiClient.GetAsync<List<ProjectDto>>("/api/projectmanager/projects", User)
-                            ?? new List<ProjectDto>();
+            var allProjects =
+                await _apiClient.GetAsync<List<ProjectDto>>("/api/projectmanager/projects", User)
+                ?? new List<ProjectDto>();
             var project = allProjects.FirstOrDefault(p => p.ProjectId == quote.ProjectId);
-            if (project == null) return NotFound("Associated project not found");
+            if (project == null)
+                return NotFound("Associated project not found");
 
             // === FETCH CLIENT INFO ===
-            var client = await _apiClient.GetAsync<UserDto>($"/api/users/{project.ClientId}", User)
-                        ?? new UserDto { FullName = "Unknown Client" };
+            var client =
+                await _apiClient.GetAsync<UserDto>($"/api/users/{project.ClientId}", User)
+                ?? new UserDto { FullName = "Unknown Client" };
 
             // === BUILD PDF ===
-            var fileBytes = Document.Create(container =>
-            {
-                container.Page(page =>
+            var fileBytes = Document
+                .Create(container =>
                 {
-                    page.Size(PageSizes.A4);
-                    page.Margin(40);
-                    page.PageColor("#FFFFFF");
-                    page.DefaultTextStyle(x => x.FontFamily("Helvetica").FontSize(11));
-
-                    // ===== HEADER =====
-                    page.Header().BorderBottom(1).BorderColor("#F7EC59").PaddingBottom(6).Row(row =>
+                    container.Page(page =>
                     {
-                        row.RelativeItem().Column(col =>
-                        {
-                            col.Item().Text("TASKIT").FontSize(22).Bold().FontColor("#1A1B25");
-                            col.Item().Text("Integrated Construction & Maintenance Management System")
-                                .FontSize(10).FontColor("#666");
-                            col.Item().Text("support@taskit.co.za | +27 87 123 4567")
-                                .FontSize(9).FontColor("#888");
-                        });
+                        page.Size(PageSizes.A4);
+                        page.Margin(40);
+                        page.PageColor("#FFFFFF");
+                        page.DefaultTextStyle(x => x.FontFamily("Helvetica").FontSize(11));
 
-                        row.ConstantItem(90).AlignRight().Height(40)
-                            .Element(e => e.Image("wwwroot/images/TaskIt3.png").FitWidth());
-                    });
-
-                    // ===== CONTENT =====
-                    page.Content().PaddingVertical(20).Column(stack =>
-                    {
-                        stack.Spacing(15);
-
-                        // --- Title ---
-                        stack.Item().AlignCenter().Text($"QUOTATION #{quote.QuotationId}")
-                            .FontSize(18).Bold().FontColor("#1A1B25");
-
-                        // --- Summary Section ---
-                        stack.Item().Border(1).BorderColor("#F7EC59").Background("#FFFDE7")
-                            .Padding(10).Column(info =>
+                        // ===== HEADER =====
+                        page.Header()
+                            .BorderBottom(1)
+                            .BorderColor("#F7EC59")
+                            .PaddingBottom(6)
+                            .Row(row =>
                             {
-                                info.Spacing(3);
-                                info.Item().Text($"Client: {client.FullName}").FontColor("#111");
-                                info.Item().Text($"Project: {project.Name}").FontColor("#111");
-                                if (!string.IsNullOrWhiteSpace(project.Description))
-                                    info.Item().Text($"Project Description: {project.Description}")
-                                        .FontSize(10).FontColor("#444");
-                                info.Item().Text($"Issued: {quote.CreatedAt:dd MMM yyyy}").FontColor("#333");
-                                info.Item().Text($"Valid Until: {quote.ValidUntil:dd MMM yyyy}").FontColor("#333");
-                                info.Item().Text($"Planned Budget: R {project.BudgetPlanned:N2}")
-                                    .FontColor("#000").Bold();
-                            });
-
-                        // --- Line Items Table ---
-                        stack.Item().PaddingTop(10).Element(e =>
-                        {
-                            e.Table(table =>
-                            {
-                                table.ColumnsDefinition(cols =>
-                                {
-                                    cols.RelativeColumn(5);
-                                    cols.RelativeColumn(1);
-                                    cols.RelativeColumn(2);
-                                    cols.RelativeColumn(2);
-                                });
-
-                                table.Header(h =>
-                                {
-                                    AddHeader(h, "Item");
-                                    AddHeader(h, "Qty");
-                                    AddHeader(h, "Unit Price (R)");
-                                    AddHeader(h, "Total (R)");
-                                });
-
-                                if (quote.Items?.Any() == true)
-                                {
-                                    foreach (var item in quote.Items)
+                                row.RelativeItem()
+                                    .Column(col =>
                                     {
-                                        AddCell(table, item.Name);
-                                        AddCell(table, item.Quantity % 1 == 0 
-                                            ? ((int)item.Quantity).ToString() 
-                                            : item.Quantity.ToString("0.##"));
-                                        AddCell(table, item.UnitPrice.ToString("N2"));
-                                        AddCell(table, item.LineTotal.ToString("N2"));
-                                    }
-                                }
-                                else
-                                {
-                                    table.Cell().ColumnSpan(4).AlignCenter().Text("No line items available")
-                                        .FontColor("#777").Italic();
-                                }
+                                        col.Item()
+                                            .Text("TASKIT")
+                                            .FontSize(22)
+                                            .Bold()
+                                            .FontColor("#1A1B25");
+                                        col.Item()
+                                            .Text(
+                                                "Integrated Construction & Maintenance Management System"
+                                            )
+                                            .FontSize(10)
+                                            .FontColor("#666");
+                                        col.Item()
+                                            .Text("support@taskit.co.za | +27 87 123 4567")
+                                            .FontSize(9)
+                                            .FontColor("#888");
+                                    });
+
+                                row.ConstantItem(90)
+                                    .AlignRight()
+                                    .Height(40)
+                                    .Element(e => e.Image("wwwroot/images/TaskIt3.png").FitWidth());
                             });
 
-                        // --- Totals Section ---
-                        stack.Item().PaddingTop(15).AlignRight().Column(tot =>
-                        {
-                            tot.Item().Text($"Subtotal: R {quote.Subtotal:N2}").FontSize(11);
-                            tot.Item().Text($"Tax (15%): R {quote.TaxTotal:N2}").FontSize(11);
-                            tot.Item().Text($"Grand Total: R {quote.GrandTotal:N2}")
-                                .Bold().FontSize(13).FontColor("#000");
-                        });
-
-                        // --- Banking Details ---
-                        stack.Item().PaddingTop(25).BorderTop(1).BorderColor("#EEE").PaddingTop(10)
-                            .Column(bank =>
+                        // ===== CONTENT =====
+                        page.Content()
+                            .PaddingVertical(20)
+                            .Column(stack =>
                             {
-                                bank.Item().Text("BANKING DETAILS")
-                                    .Bold().FontSize(12).FontColor("#1A1B25");
-                                bank.Item().Text("Bank: FNB | Acc No: 0000000000 | Branch: 250655")
-                                    .FontSize(10).FontColor("#333");
-                                bank.Item().Text($"Reference: {project.Name}")
-                                    .FontSize(10).FontColor("#333");
-                                bank.Item().Text("Email proof of payment to accounts@taskit.co.za")
-                                    .FontSize(9).FontColor("#555");
+                                stack.Spacing(15);
+
+                                // --- Title ---
+                                stack
+                                    .Item()
+                                    .AlignCenter()
+                                    .Text($"QUOTATION #{quote.QuotationId}")
+                                    .FontSize(18)
+                                    .Bold()
+                                    .FontColor("#1A1B25");
+
+                                // --- Summary Section ---
+                                stack
+                                    .Item()
+                                    .Border(1)
+                                    .BorderColor("#F7EC59")
+                                    .Background("#FFFDE7")
+                                    .Padding(10)
+                                    .Column(info =>
+                                    {
+                                        info.Spacing(3);
+                                        info.Item()
+                                            .Text($"Client: {client.FullName}")
+                                            .FontColor("#111");
+                                        info.Item()
+                                            .Text($"Project: {project.Name}")
+                                            .FontColor("#111");
+                                        if (!string.IsNullOrWhiteSpace(project.Description))
+                                            info.Item()
+                                                .Text($"Project Description: {project.Description}")
+                                                .FontSize(10)
+                                                .FontColor("#444");
+                                        info.Item()
+                                            .Text($"Issued: {quote.CreatedAt:dd MMM yyyy}")
+                                            .FontColor("#333");
+                                        info.Item()
+                                            .Text($"Valid Until: {quote.ValidUntil:dd MMM yyyy}")
+                                            .FontColor("#333");
+                                        info.Item()
+                                            .Text($"Planned Budget: R {project.BudgetPlanned:N2}")
+                                            .FontColor("#000")
+                                            .Bold();
+                                    });
+
+                                // --- Line Items Table ---
+                                stack
+                                    .Item()
+                                    .PaddingTop(10)
+                                    .Element(e =>
+                                    {
+                                        e.Table(table =>
+                                        {
+                                            table.ColumnsDefinition(cols =>
+                                            {
+                                                cols.RelativeColumn(5);
+                                                cols.RelativeColumn(1);
+                                                cols.RelativeColumn(2);
+                                                cols.RelativeColumn(2);
+                                            });
+
+                                            table.Header(h =>
+                                            {
+                                                AddHeader(h, "Item");
+                                                AddHeader(h, "Qty");
+                                                AddHeader(h, "Unit Price (R)");
+                                                AddHeader(h, "Total (R)");
+                                            });
+
+                                            if (quote.Items?.Any() == true)
+                                            {
+                                                foreach (var item in quote.Items)
+                                                {
+                                                    AddCell(table, item.Name);
+                                                    AddCell(
+                                                        table,
+                                                        item.Quantity % 1 == 0
+                                                            ? ((int)item.Quantity).ToString()
+                                                            : item.Quantity.ToString("0.##")
+                                                    );
+                                                    AddCell(table, item.UnitPrice.ToString("N2"));
+                                                    AddCell(table, item.LineTotal.ToString("N2"));
+                                                }
+                                            }
+                                            else
+                                            {
+                                                table
+                                                    .Cell()
+                                                    .ColumnSpan(4)
+                                                    .AlignCenter()
+                                                    .Text("No line items available")
+                                                    .FontColor("#777")
+                                                    .Italic();
+                                            }
+                                        });
+                                    });
+
+                                // --- Totals Section ---
+                                stack
+                                    .Item()
+                                    .PaddingTop(15)
+                                    .AlignRight()
+                                    .Column(tot =>
+                                    {
+                                        tot.Item()
+                                            .Text($"Subtotal: R {quote.Subtotal:N2}")
+                                            .FontSize(11);
+                                        tot.Item()
+                                            .Text($"Tax (15%): R {quote.TaxTotal:N2}")
+                                            .FontSize(11);
+                                        tot.Item()
+                                            .Text($"Grand Total: R {quote.GrandTotal:N2}")
+                                            .Bold()
+                                            .FontSize(13)
+                                            .FontColor("#000");
+                                    });
+
+                                // --- Banking Details ---
+                                stack
+                                    .Item()
+                                    .PaddingTop(25)
+                                    .BorderTop(1)
+                                    .BorderColor("#EEE")
+                                    .PaddingTop(10)
+                                    .Column(bank =>
+                                    {
+                                        bank.Item()
+                                            .Text("BANKING DETAILS")
+                                            .Bold()
+                                            .FontSize(12)
+                                            .FontColor("#1A1B25");
+                                        bank.Item()
+                                            .Text("Bank: FNB | Acc No: 0000000000 | Branch: 250655")
+                                            .FontSize(10)
+                                            .FontColor("#333");
+                                        bank.Item()
+                                            .Text($"Reference: {project.Name}")
+                                            .FontSize(10)
+                                            .FontColor("#333");
+                                        bank.Item()
+                                            .Text("Email proof of payment to accounts@taskit.co.za")
+                                            .FontSize(9)
+                                            .FontColor("#555");
+                                    });
                             });
+
+                        // ===== FOOTER =====
+                        page.Footer()
+                            .BorderTop(1)
+                            .BorderColor("#F7EC59")
+                            .PaddingTop(8)
+                            .AlignCenter()
+                            .Text("Thank you for choosing TaskIt — powered by ICCMS")
+                            .FontSize(9)
+                            .FontColor("#666");
                     });
 
-                    // ===== FOOTER =====
-                    page.Footer().BorderTop(1).BorderColor("#F7EC59").PaddingTop(8)
-                        .AlignCenter()
-                        .Text("Thank you for choosing TaskIt — powered by ICCMS")
-                        .FontSize(9).FontColor("#666");
-                });
+                    // ===== LOCAL HELPERS =====
+                    static void AddHeader(TableCellDescriptor h, string text)
+                    {
+                        h.Cell()
+                            .Background("#F7EC59")
+                            .Padding(5)
+                            .AlignCenter()
+                            .Text(text)
+                            .Bold()
+                            .FontColor("#1A1B25");
+                    }
 
-                // ===== LOCAL HELPERS =====
-                static void AddHeader(TableCellDescriptor h, string text)
-                {
-                    h.Cell().Background("#F7EC59").Padding(5)
-                        .AlignCenter()
-                        .Text(text).Bold().FontColor("#1A1B25");
-                }
-
-                static void AddCell(TableDescriptor table, string? text)
-                {
-                    table.Cell().BorderBottom(0.5f).BorderColor("#EEE")
-                        .PaddingVertical(4).PaddingHorizontal(3)
-                        .Text(text ?? "—").FontColor("#111");
-                }
-            }).GeneratePdf();
+                    static void AddCell(TableDescriptor table, string? text)
+                    {
+                        table
+                            .Cell()
+                            .BorderBottom(0.5f)
+                            .BorderColor("#EEE")
+                            .PaddingVertical(4)
+                            .PaddingHorizontal(3)
+                            .Text(text ?? "—")
+                            .FontColor("#111");
+                    }
+                })
+                .GeneratePdf();
 
             _logger.LogInformation("✅ [PM-DownloadQuote] PDF generated for quotation {Id}", id);
-            return File(fileBytes, "application/pdf", $"Quotation_{project.Name.Replace(" ", "_")}.pdf");
+            return File(
+                fileBytes,
+                "application/pdf",
+                $"Quotation_{project.Name.Replace(" ", "_")}.pdf"
+            );
         }
 
         // ============================================
@@ -915,7 +1015,10 @@ namespace ICCMS_Web.Controllers
         [HttpGet("download-invoice/{id}")]
         public async Task<IActionResult> DownloadInvoice(string id)
         {
-            _logger.LogInformation("📄 [PM-DownloadInvoice] Generating professional PDF for invoice {Id}", id);
+            _logger.LogInformation(
+                "📄 [PM-DownloadInvoice] Generating professional PDF for invoice {Id}",
+                id
+            );
 
             QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
@@ -928,8 +1031,9 @@ namespace ICCMS_Web.Controllers
             }
 
             // === FETCH PROJECT ===
-            var allProjects = await _apiClient.GetAsync<List<ProjectDto>>("/api/projectmanager/projects", User)
-                            ?? new List<ProjectDto>();
+            var allProjects =
+                await _apiClient.GetAsync<List<ProjectDto>>("/api/projectmanager/projects", User)
+                ?? new List<ProjectDto>();
             var project = allProjects.FirstOrDefault(p => p.ProjectId == invoice.ProjectId);
             if (project == null)
             {
@@ -938,14 +1042,18 @@ namespace ICCMS_Web.Controllers
             }
 
             // === FETCH CLIENT ===
-            var client = await _apiClient.GetAsync<UserDto>($"/api/users/{invoice.ClientId}", User)
-                        ?? new UserDto { FullName = "Unknown Client" };
+            var client =
+                await _apiClient.GetAsync<UserDto>($"/api/users/{invoice.ClientId}", User)
+                ?? new UserDto { FullName = "Unknown Client" };
 
             // === FETCH RELATED QUOTATION ===
             QuotationDto? quote = null;
             if (!string.IsNullOrWhiteSpace(invoice.QuotationId))
             {
-                quote = await _apiClient.GetAsync<QuotationDto>($"/api/quotations/{invoice.QuotationId}", User);
+                quote = await _apiClient.GetAsync<QuotationDto>(
+                    $"/api/quotations/{invoice.QuotationId}",
+                    User
+                );
             }
 
             // === DETERMINE STATUS COLOR ===
@@ -954,133 +1062,251 @@ namespace ICCMS_Web.Controllers
                 "paid" => "#4CAF50",
                 "overdue" => "#E53935",
                 "issued" => "#FBC02D",
-                _ => "#757575"
+                _ => "#757575",
             };
 
             // === BUILD PDF ===
-            var fileBytes = Document.Create(container =>
-            {
-                container.Page(page =>
+            var fileBytes = Document
+                .Create(container =>
                 {
-                    page.Size(PageSizes.A4);
-                    page.Margin(40);
-                    page.PageColor("#FFFFFF");
-                    page.DefaultTextStyle(x => x.FontFamily("Helvetica").FontSize(11));
-
-                    // ===== HEADER =====
-                    page.Header().BorderBottom(1).BorderColor("#F7EC59").PaddingBottom(6).Row(row =>
+                    container.Page(page =>
                     {
-                        row.RelativeItem().Column(col =>
-                        {
-                            col.Item().Text("TASKIT").FontSize(22).Bold().FontColor("#1A1B25");
-                            col.Item().Text("Integrated Construction & Maintenance Management System")
-                                .FontSize(10).FontColor("#666");
-                            col.Item().Text("support@taskit.co.za | +27 87 123 4567")
-                                .FontSize(9).FontColor("#888");
-                        });
+                        page.Size(PageSizes.A4);
+                        page.Margin(40);
+                        page.PageColor("#FFFFFF");
+                        page.DefaultTextStyle(x => x.FontFamily("Helvetica").FontSize(11));
 
-                        row.ConstantItem(90).AlignRight().Height(40)
-                            .Element(e => e.Image("wwwroot/images/TaskIt3.png").FitWidth());
-                    });
-
-                    // ===== CONTENT =====
-                    page.Content().PaddingVertical(25).Column(stack =>
-                    {
-                        stack.Spacing(15);
-
-                        // --- TITLE & STATUS ---
-                        stack.Item().AlignCenter().Text($"INVOICE #{invoice.InvoiceNumber}")
-                            .FontSize(18).Bold().FontColor("#1A1B25");
-                        stack.Item().AlignCenter().Text($"Status: {invoice.Status}")
-                            .FontSize(11).Bold().FontColor(statusColor);
-
-                        // --- CLIENT & PROJECT SUMMARY ---
-                        stack.Item().Border(1).BorderColor("#F7EC59").Background("#FFFDE7")
-                            .Padding(12).Column(info =>
+                        // ===== HEADER =====
+                        page.Header()
+                            .BorderBottom(1)
+                            .BorderColor("#F7EC59")
+                            .PaddingBottom(6)
+                            .Row(row =>
                             {
-                                info.Spacing(3);
-                                info.Item().Text($"Client: {client.FullName}").FontColor("#111");
-                                info.Item().Text($"Email: {client.Email}").FontColor("#111");
-                                if (!string.IsNullOrWhiteSpace(client.Phone))
-                                    info.Item().Text($"Phone: {client.Phone}").FontColor("#111");
-                                info.Item().Text($"Project: {project.Name}").FontColor("#111");
-                                if (!string.IsNullOrWhiteSpace(project.Description))
-                                    info.Item().Text($"Project Description: {project.Description}")
-                                        .FontSize(10).FontColor("#444");
-                                info.Item().Text($"Budget: R {project.BudgetPlanned:N2}").FontColor("#000");
+                                row.RelativeItem()
+                                    .Column(col =>
+                                    {
+                                        col.Item()
+                                            .Text("TASKIT")
+                                            .FontSize(22)
+                                            .Bold()
+                                            .FontColor("#1A1B25");
+                                        col.Item()
+                                            .Text(
+                                                "Integrated Construction & Maintenance Management System"
+                                            )
+                                            .FontSize(10)
+                                            .FontColor("#666");
+                                        col.Item()
+                                            .Text("support@taskit.co.za | +27 87 123 4567")
+                                            .FontSize(9)
+                                            .FontColor("#888");
+                                    });
+
+                                row.ConstantItem(90)
+                                    .AlignRight()
+                                    .Height(40)
+                                    .Element(e => e.Image("wwwroot/images/TaskIt3.png").FitWidth());
                             });
 
-                        // --- QUOTATION REFERENCE ---
-                        if (quote != null)
-                        {
-                            stack.Item().Border(1).BorderColor("#EEE").Padding(10).Background("#FAFAFA")
-                                .Column(q =>
+                        // ===== CONTENT =====
+                        page.Content()
+                            .PaddingVertical(25)
+                            .Column(stack =>
+                            {
+                                stack.Spacing(15);
+
+                                // --- TITLE & STATUS ---
+                                stack
+                                    .Item()
+                                    .AlignCenter()
+                                    .Text($"INVOICE #{invoice.InvoiceNumber}")
+                                    .FontSize(18)
+                                    .Bold()
+                                    .FontColor("#1A1B25");
+                                stack
+                                    .Item()
+                                    .AlignCenter()
+                                    .Text($"Status: {invoice.Status}")
+                                    .FontSize(11)
+                                    .Bold()
+                                    .FontColor(statusColor);
+
+                                // --- CLIENT & PROJECT SUMMARY ---
+                                stack
+                                    .Item()
+                                    .Border(1)
+                                    .BorderColor("#F7EC59")
+                                    .Background("#FFFDE7")
+                                    .Padding(12)
+                                    .Column(info =>
+                                    {
+                                        info.Spacing(3);
+                                        info.Item()
+                                            .Text($"Client: {client.FullName}")
+                                            .FontColor("#111");
+                                        info.Item()
+                                            .Text($"Email: {client.Email}")
+                                            .FontColor("#111");
+                                        if (!string.IsNullOrWhiteSpace(client.Phone))
+                                            info.Item()
+                                                .Text($"Phone: {client.Phone}")
+                                                .FontColor("#111");
+                                        info.Item()
+                                            .Text($"Project: {project.Name}")
+                                            .FontColor("#111");
+                                        if (!string.IsNullOrWhiteSpace(project.Description))
+                                            info.Item()
+                                                .Text($"Project Description: {project.Description}")
+                                                .FontSize(10)
+                                                .FontColor("#444");
+                                        info.Item()
+                                            .Text($"Budget: R {project.BudgetPlanned:N2}")
+                                            .FontColor("#000");
+                                    });
+
+                                // --- QUOTATION REFERENCE ---
+                                if (quote != null)
                                 {
-                                    q.Spacing(2);
-                                    q.Item().Text($"Linked Quote: {quote.QuotationId}")
-                                        .FontSize(10).FontColor("#444");
-                                    q.Item().Text($"Quote Accepted On: {quote.ApprovedAt?.ToString("dd MMM yyyy") ?? "Pending"}")
-                                        .FontSize(10).FontColor("#444");
-                                    q.Item().Text($"Quote Description: {quote.Description}")
-                                        .FontSize(10).FontColor("#444");
-                                });
-                        }
+                                    stack
+                                        .Item()
+                                        .Border(1)
+                                        .BorderColor("#EEE")
+                                        .Padding(10)
+                                        .Background("#FAFAFA")
+                                        .Column(q =>
+                                        {
+                                            q.Spacing(2);
+                                            q.Item()
+                                                .Text($"Linked Quote: {quote.QuotationId}")
+                                                .FontSize(10)
+                                                .FontColor("#444");
+                                            q.Item()
+                                                .Text(
+                                                    $"Quote Accepted On: {quote.ApprovedAt?.ToString("dd MMM yyyy") ?? "Pending"}"
+                                                )
+                                                .FontSize(10)
+                                                .FontColor("#444");
+                                            q.Item()
+                                                .Text($"Quote Description: {quote.Description}")
+                                                .FontSize(10)
+                                                .FontColor("#444");
+                                        });
+                                }
 
-                        // --- DATES SECTION ---
-                        stack.Item().PaddingTop(10).Column(dates =>
-                        {
-                            dates.Spacing(2);
-                            dates.Item().Text($"Invoice Created: {invoice.CreatedAt:dd MMM yyyy}").FontColor("#333");
-                            dates.Item().Text($"Issued: {invoice.IssuedDate:dd MMM yyyy}").FontColor("#333");
-                            dates.Item().Text($"Due Date: {invoice.DueDate:dd MMM yyyy}").FontColor("#333");
-                            if (invoice.PaidDate.HasValue)
-                                dates.Item().Text($"Paid On: {invoice.PaidDate.Value:dd MMM yyyy}")
-                                    .FontColor("#4CAF50");
-                        });
+                                // --- DATES SECTION ---
+                                stack
+                                    .Item()
+                                    .PaddingTop(10)
+                                    .Column(dates =>
+                                    {
+                                        dates.Spacing(2);
+                                        dates
+                                            .Item()
+                                            .Text(
+                                                $"Invoice Created: {invoice.CreatedAt:dd MMM yyyy}"
+                                            )
+                                            .FontColor("#333");
+                                        dates
+                                            .Item()
+                                            .Text($"Issued: {invoice.IssuedDate:dd MMM yyyy}")
+                                            .FontColor("#333");
+                                        dates
+                                            .Item()
+                                            .Text($"Due Date: {invoice.DueDate:dd MMM yyyy}")
+                                            .FontColor("#333");
+                                        if (invoice.PaidDate.HasValue)
+                                            dates
+                                                .Item()
+                                                .Text(
+                                                    $"Paid On: {invoice.PaidDate.Value:dd MMM yyyy}"
+                                                )
+                                                .FontColor("#4CAF50");
+                                    });
 
-                        // --- DESCRIPTION OF WORK ---
-                        if (!string.IsNullOrWhiteSpace(invoice.Description))
-                        {
-                            stack.Item().PaddingTop(10)
-                                .Text($"Description of Work: {invoice.Description}")
-                                .FontSize(10).FontColor("#444");
-                        }
+                                // --- DESCRIPTION OF WORK ---
+                                if (!string.IsNullOrWhiteSpace(invoice.Description))
+                                {
+                                    stack
+                                        .Item()
+                                        .PaddingTop(10)
+                                        .Text($"Description of Work: {invoice.Description}")
+                                        .FontSize(10)
+                                        .FontColor("#444");
+                                }
 
-                        // --- FINANCIAL SUMMARY ---
-                        stack.Item().PaddingTop(15).AlignRight().Column(fin =>
-                        {
-                            fin.Item().Text($"Subtotal: R {invoice.Subtotal:N2}").FontSize(11);
-                            fin.Item().Text($"Tax (15%): R {invoice.TaxTotal:N2}").FontSize(11);
-                            fin.Item().Text($"Total Amount: R {invoice.TotalAmount:N2}")
-                                .Bold().FontSize(13).FontColor("#000");
-                            fin.Item().Text($"Currency: {invoice.Currency}").FontSize(10).FontColor("#555");
-                        });
+                                // --- FINANCIAL SUMMARY ---
+                                stack
+                                    .Item()
+                                    .PaddingTop(15)
+                                    .AlignRight()
+                                    .Column(fin =>
+                                    {
+                                        fin.Item()
+                                            .Text($"Subtotal: R {invoice.Subtotal:N2}")
+                                            .FontSize(11);
+                                        fin.Item()
+                                            .Text($"Tax (15%): R {invoice.TaxTotal:N2}")
+                                            .FontSize(11);
+                                        fin.Item()
+                                            .Text($"Total Amount: R {invoice.TotalAmount:N2}")
+                                            .Bold()
+                                            .FontSize(13)
+                                            .FontColor("#000");
+                                        fin.Item()
+                                            .Text($"Currency: {invoice.Currency}")
+                                            .FontSize(10)
+                                            .FontColor("#555");
+                                    });
 
-                        // --- PAYMENT DETAILS ---
-                        stack.Item().PaddingTop(25).BorderTop(1).BorderColor("#EEE").PaddingTop(10)
-                            .Column(bank =>
-                            {
-                                bank.Item().Text("PAYMENT DETAILS")
-                                    .Bold().FontSize(12).FontColor("#1A1B25");
-                                bank.Item().Text("Bank: FNB | Acc No: 0000000000 | Branch: 250655")
-                                    .FontSize(10).FontColor("#333");
-                                bank.Item().Text($"Reference: {invoice.InvoiceNumber}")
-                                    .FontSize(10).FontColor("#333");
-                                bank.Item().Text("Email proof of payment to accounts@taskit.co.za")
-                                    .FontSize(9).FontColor("#555");
+                                // --- PAYMENT DETAILS ---
+                                stack
+                                    .Item()
+                                    .PaddingTop(25)
+                                    .BorderTop(1)
+                                    .BorderColor("#EEE")
+                                    .PaddingTop(10)
+                                    .Column(bank =>
+                                    {
+                                        bank.Item()
+                                            .Text("PAYMENT DETAILS")
+                                            .Bold()
+                                            .FontSize(12)
+                                            .FontColor("#1A1B25");
+                                        bank.Item()
+                                            .Text("Bank: FNB | Acc No: 0000000000 | Branch: 250655")
+                                            .FontSize(10)
+                                            .FontColor("#333");
+                                        bank.Item()
+                                            .Text($"Reference: {invoice.InvoiceNumber}")
+                                            .FontSize(10)
+                                            .FontColor("#333");
+                                        bank.Item()
+                                            .Text("Email proof of payment to accounts@taskit.co.za")
+                                            .FontSize(9)
+                                            .FontColor("#555");
+                                    });
                             });
-                    });
 
-                    // ===== FOOTER =====
-                    page.Footer().BorderTop(1).BorderColor("#F7EC59").PaddingTop(8)
-                        .AlignCenter()
-                        .Text("Internal document — managed by Project Manager via ICCMS")
-                        .FontSize(9).FontColor("#666");
-                });
-            }).GeneratePdf();
+                        // ===== FOOTER =====
+                        page.Footer()
+                            .BorderTop(1)
+                            .BorderColor("#F7EC59")
+                            .PaddingTop(8)
+                            .AlignCenter()
+                            .Text("Internal document — managed by Project Manager via ICCMS")
+                            .FontSize(9)
+                            .FontColor("#666");
+                    });
+                })
+                .GeneratePdf();
 
             _logger.LogInformation("✅ [PM-DownloadInvoice] PDF generated for invoice {Id}", id);
-            return File(fileBytes, "application/pdf", $"Invoice_{invoice.InvoiceNumber.Replace(" ", "_")}.pdf");
+            return File(
+                fileBytes,
+                "application/pdf",
+                $"Invoice_{invoice.InvoiceNumber.Replace(" ", "_")}.pdf"
+            );
         }
 
         // ================================================

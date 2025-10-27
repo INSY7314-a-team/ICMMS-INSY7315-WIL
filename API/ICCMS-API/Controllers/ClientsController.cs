@@ -13,19 +13,22 @@ namespace ICCMS_API.Controllers
     [Authorize(Roles = "Client,Tester")] // Only clients and testers can access this controller
     public class ClientsController : ControllerBase
     {
-            private readonly IFirebaseService _firebaseService;
-            private readonly ISupabaseService _supabaseService;
-            private readonly IQuoteWorkflowService _quoteWorkflow;
+        private readonly IFirebaseService _firebaseService;
+        private readonly ISupabaseService _supabaseService;
+        private readonly IQuoteWorkflowService _quoteWorkflow;
+        private readonly IAuditLogService _auditLogService;
 
         public ClientsController(
             IFirebaseService firebaseService,
             ISupabaseService supabaseService,
-            IQuoteWorkflowService quoteWorkflow
+            IQuoteWorkflowService quoteWorkflow,
+            IAuditLogService auditLogService
         )
         {
             _firebaseService = firebaseService;
             _supabaseService = supabaseService;
             _quoteWorkflow = quoteWorkflow;
+            _auditLogService = auditLogService;
         }
 
         [HttpGet("projects")]
@@ -347,7 +350,13 @@ namespace ICCMS_API.Controllers
                 );
 
                 var userId = User.UserId();
-                _auditLogService.LogAsync("Maintenance Update", "Maintenance Request Created", $"Maintenance request {maintenanceRequest.MaintenanceRequestId} created for project {maintenanceRequest.ProjectId}", userId ?? "system", maintenanceRequest.MaintenanceRequestId);
+                _auditLogService.LogAsync(
+                    "Maintenance Update",
+                    "Maintenance Request Created",
+                    $"Maintenance request {maintenanceRequest.MaintenanceRequestId} created for project {maintenanceRequest.ProjectId}",
+                    userId ?? "system",
+                    maintenanceRequest.MaintenanceRequestId
+                );
 
                 Console.WriteLine(
                     $"✅ Created maintenance request with Firestore ID = {maintenanceRequest.MaintenanceRequestId}"
@@ -478,10 +487,16 @@ namespace ICCMS_API.Controllers
                     id,
                     existingMaintenanceRequest
                 );
-                
+
                 var userId = User.UserId();
-                _auditLogService.LogAsync("Maintenance Update", "Maintenance Request Updated", $"Maintenance request {id} status changed from {oldStatus} to {maintenanceRequest.Status}", userId ?? "system", id);
-                
+                _auditLogService.LogAsync(
+                    "Maintenance Update",
+                    "Maintenance Request Updated",
+                    $"Maintenance request {id} status changed from {oldStatus} to {maintenanceRequest.Status}",
+                    userId ?? "system",
+                    id
+                );
+
                 return Ok(new { message = "Maintenance request updated successfully" });
             }
             catch (Exception ex)
@@ -524,7 +539,9 @@ namespace ICCMS_API.Controllers
                     if (conversion != null)
                     {
                         // Return both the updated quotation and created invoice id
-                        return Ok(new { quotation = accepted, invoiceId = conversion.Value.invoiceId });
+                        return Ok(
+                            new { quotation = accepted, invoiceId = conversion.Value.invoiceId }
+                        );
                     }
                 }
                 catch (InvalidOperationException iex)
