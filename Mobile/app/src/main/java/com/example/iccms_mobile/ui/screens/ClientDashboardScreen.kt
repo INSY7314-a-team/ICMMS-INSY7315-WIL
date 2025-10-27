@@ -31,7 +31,7 @@ fun ClientDashboardScreen(
     val tabs = listOf(
         TabItem("Dashboard", Icons.Default.Home),
         TabItem("Projects", Icons.Default.Star),
-        TabItem("MR", Icons.Default.Build),
+        TabItem("Maintenance", Icons.Default.Build),
         TabItem("Quotations", Icons.Default.List),
         TabItem("Invoices", Icons.Default.Menu)
     )
