@@ -41,10 +41,10 @@ class AuthRepository {
                 
                 if (response.isSuccessful && response.body() != null) {
                     val responseBody = response.body()!!
-                    println("DEBUG: Response body Success: ${responseBody.Success}")
-                    println("DEBUG: Response body Message: ${responseBody.Message}")
-                    println("DEBUG: Response body User: ${responseBody.User}")
-                    println("DEBUG: Response body User Role: ${responseBody.User?.Role}")
+                    println("DEBUG: Response body Success: ${responseBody.success}")
+                    println("DEBUG: Response body Message: ${responseBody.message}")
+                    println("DEBUG: Response body User: ${responseBody.user}")
+                    println("DEBUG: Response body User Role: ${responseBody.user?.role}")
                     Result.success(responseBody)
                 } else {
                     val errorMessage = response.errorBody()?.string() ?: "Login failed"

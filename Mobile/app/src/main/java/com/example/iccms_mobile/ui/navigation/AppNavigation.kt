@@ -50,8 +50,8 @@ fun AppNavigation(
                     // Navigate based on user role - only client and contractor allowed
                     // Use the authViewModel's current state directly to avoid timing issues
                     val currentUser = authViewModel.uiState.value.user
-                    val userRole = checkUserRole(currentUser?.Role)
-                    println("DEBUG: Navigation - User role: ${currentUser?.Role}, processed: $userRole")
+                    val userRole = checkUserRole(currentUser?.role)
+                    println("DEBUG: Navigation - User role: ${currentUser?.role}, processed: $userRole")
                     println("DEBUG: Navigation - Full user data: $currentUser")
                     println("DEBUG: Navigation - Role comparison: '$userRole' == 'client' = ${userRole == "client"}")
                     println("DEBUG: Navigation - Role comparison: '$userRole' == 'contractor' = ${userRole == "contractor"}")

@@ -67,13 +67,13 @@ fun ClientDashboardOverviewScreen(
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            text = "Welcome back, ${user.FullName}!",
+                            text = "Welcome back, ${user.fullName}!",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.padding(top = 8.dp)
                         )
                         Text(
-                            text = "Role: ${user.Role}",
+                            text = "Role: ${user.role}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )

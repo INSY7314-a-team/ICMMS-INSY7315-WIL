@@ -1,14 +1,14 @@
 package com.example.iccms_mobile.data.models
 
 data class LoginResponse(
-    val Success: Boolean,
-    val Message: String,
-    val User: UserInfo
+    val success: Boolean,
+    val message: String,
+    val user: UserInfo
 )
 
 data class UserInfo(
-    val UserId: String,
-    val Email: String,
-    val FullName: String,
-    val Role: String
+    val userId: String,
+    val email: String,
+    val fullName: String,
+    val role: String
 )

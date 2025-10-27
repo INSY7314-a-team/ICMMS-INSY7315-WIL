@@ -38,7 +38,7 @@ fun LoginScreen(
         if (uiState.isLoggedIn && uiState.user != null) {
             println("DEBUG: LoginScreen - isLoggedIn became true AND user data is available")
             println("DEBUG: LoginScreen - Current user data: ${uiState.user}")
-            println("DEBUG: LoginScreen - User role: ${uiState.user?.Role}")
+            println("DEBUG: LoginScreen - User role: ${uiState.user?.role}")
             println("DEBUG: LoginScreen - Calling onLoginSuccess callback")
             onLoginSuccess()
         }

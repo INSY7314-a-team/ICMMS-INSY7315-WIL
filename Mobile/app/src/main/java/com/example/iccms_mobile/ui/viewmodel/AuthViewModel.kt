@@ -64,16 +64,16 @@ class AuthViewModel : ViewModel() {
             authRepository.login(email, password)
                 .onSuccess { response ->
                     println("DEBUG: Login successful, response: $response")
-                    println("DEBUG: User data: ${response.User}")
-                    println("DEBUG: User role: ${response.User.Role}")
-                    println("DEBUG: User role length: ${response.User.Role.length}")
-                    println("DEBUG: User role bytes: ${response.User.Role.toByteArray().contentToString()}")
-                    println("DEBUG: User role trimmed: '${response.User.Role.trim()}'")
+                    println("DEBUG: User data: ${response.user}")
+                    println("DEBUG: User role: ${response.user.role}")
+                    println("DEBUG: User role length: ${response.user.role.length}")
+                    println("DEBUG: User role bytes: ${response.user.role.toByteArray().contentToString()}")
+                    println("DEBUG: User role trimmed: '${response.user.role.trim()}'")
                     
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         isLoggedIn = true,
-                        user = response.User
+                        user = response.user
                     )
                     
                     println("DEBUG: UI state updated - isLoggedIn: ${_uiState.value.isLoggedIn}, user: ${_uiState.value.user}")
