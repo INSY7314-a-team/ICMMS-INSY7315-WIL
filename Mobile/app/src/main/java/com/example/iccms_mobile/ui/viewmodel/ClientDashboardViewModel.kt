@@ -67,7 +67,7 @@ class ClientDashboardViewModel : ViewModel() {
             clientsRepository.approveQuotation(quotationId)
                 .onSuccess { updatedQuotation ->
                     val updatedQuotations = _uiState.value.quotations.map { quotation ->
-                        if (quotation.QuotationId == quotationId) updatedQuotation else quotation
+                        if (quotation.quotationId == quotationId) updatedQuotation else quotation
                     }
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -91,7 +91,7 @@ class ClientDashboardViewModel : ViewModel() {
             clientsRepository.rejectQuotation(quotationId)
                 .onSuccess { updatedQuotation ->
                     val updatedQuotations = _uiState.value.quotations.map { quotation ->
-                        if (quotation.QuotationId == quotationId) updatedQuotation else quotation
+                        if (quotation.quotationId == quotationId) updatedQuotation else quotation
                     }
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -166,7 +166,7 @@ class ClientDashboardViewModel : ViewModel() {
             clientsRepository.updateMaintenanceRequest(requestId, request)
                 .onSuccess {
                     val updatedRequests = _uiState.value.maintenanceRequests.map { req ->
-                        if (req.MaintenanceRequestId == requestId) request else req
+                        if (req.maintenanceRequestId == requestId) request else req
                     }
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -190,7 +190,7 @@ class ClientDashboardViewModel : ViewModel() {
             clientsRepository.deleteMaintenanceRequest(requestId)
                 .onSuccess {
                     val updatedRequests = _uiState.value.maintenanceRequests.filter { req ->
-                        req.MaintenanceRequestId != requestId
+                        req.maintenanceRequestId != requestId
                     }
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -225,64 +225,64 @@ class ClientDashboardViewModel : ViewModel() {
         
         return listOf(
             Quotation(
-                QuotationId = "QUO-2024-001",
-                ProjectId = "PROJ-001",
-                MaintenanceRequestId = "MR-2024-001",
-                ClientId = "CLIENT-001",
-                ContractorId = "CONTRACTOR-001",
-                AdminApproverUserId = "ADMIN-001",
-                Description = "Kitchen Renovation - Cabinet Installation and Plumbing Work",
-                Total = 45000.00,
-                Status = "Pending",
-                ValidUntil = validUntil,
-                CreatedAt = currentDate,
-                SentAt = currentDate,
-                ApprovedAt = null
+                quotationId = "QUO-2024-001",
+                projectId = "PROJ-001",
+                maintenanceRequestId = "MR-2024-001",
+                clientId = "CLIENT-001",
+                contractorId = "CONTRACTOR-001",
+                adminApproverUserId = "ADMIN-001",
+                description = "Kitchen Renovation - Cabinet Installation and Plumbing Work",
+                total = 45000.00,
+                status = "Pending",
+                validUntil = validUntil,
+                createdAt = currentDate,
+                sentAt = currentDate,
+                approvedAt = null
             ),
             Quotation(
-                QuotationId = "QUO-2024-002",
-                ProjectId = "PROJ-002",
-                MaintenanceRequestId = "MR-2024-002",
-                ClientId = "CLIENT-001",
-                ContractorId = "CONTRACTOR-002",
-                AdminApproverUserId = "ADMIN-001",
-                Description = "Bathroom Remodeling - Tile Work and Fixture Installation",
-                Total = 32000.00,
-                Status = "Approved",
-                ValidUntil = validUntil,
-                CreatedAt = currentDate,
-                SentAt = currentDate,
-                ApprovedAt = approvedAt
+                quotationId = "QUO-2024-002",
+                projectId = "PROJ-002",
+                maintenanceRequestId = "MR-2024-002",
+                clientId = "CLIENT-001",
+                contractorId = "CONTRACTOR-002",
+                adminApproverUserId = "ADMIN-001",
+                description = "Bathroom Remodeling - Tile Work and Fixture Installation",
+                total = 32000.00,
+                status = "Approved",
+                validUntil = validUntil,
+                createdAt = currentDate,
+                sentAt = currentDate,
+                approvedAt = approvedAt
             ),
             Quotation(
-                QuotationId = "QUO-2024-003",
-                ProjectId = "PROJ-003",
-                MaintenanceRequestId = "MR-2024-003",
-                ClientId = "CLIENT-001",
-                ContractorId = "CONTRACTOR-003",
-                AdminApproverUserId = "ADMIN-001",
-                Description = "Roof Repair and Gutter Installation",
-                Total = 18500.00,
-                Status = "Pending",
-                ValidUntil = validUntil,
-                CreatedAt = currentDate,
-                SentAt = currentDate,
-                ApprovedAt = null
+                quotationId = "QUO-2024-003",
+                projectId = "PROJ-003",
+                maintenanceRequestId = "MR-2024-003",
+                clientId = "CLIENT-001",
+                contractorId = "CONTRACTOR-003",
+                adminApproverUserId = "ADMIN-001",
+                description = "Roof Repair and Gutter Installation",
+                total = 18500.00,
+                status = "Pending",
+                validUntil = validUntil,
+                createdAt = currentDate,
+                sentAt = currentDate,
+                approvedAt = null
             ),
             Quotation(
-                QuotationId = "QUO-2024-004",
-                ProjectId = "PROJ-004",
-                MaintenanceRequestId = "MR-2024-004",
-                ClientId = "CLIENT-001",
-                ContractorId = "CONTRACTOR-004",
-                AdminApproverUserId = "ADMIN-001",
-                Description = "Electrical Panel Upgrade and Outlet Installation",
-                Total = 12500.00,
-                Status = "Rejected",
-                ValidUntil = validUntil,
-                CreatedAt = currentDate,
-                SentAt = currentDate,
-                ApprovedAt = null
+                quotationId = "QUO-2024-004",
+                projectId = "PROJ-004",
+                maintenanceRequestId = "MR-2024-004",
+                clientId = "CLIENT-001",
+                contractorId = "CONTRACTOR-004",
+                adminApproverUserId = "ADMIN-001",
+                description = "Electrical Panel Upgrade and Outlet Installation",
+                total = 12500.00,
+                status = "Rejected",
+                validUntil = validUntil,
+                createdAt = currentDate,
+                sentAt = currentDate,
+                approvedAt = null
             )
         )
     }

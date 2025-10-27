@@ -63,13 +63,13 @@ fun ClientQuotationsScreen(
                     )
                     StatCard(
                         title = "Pending",
-                        value = uiState.quotations.count { it.Status.lowercase() == "pending" }.toString(),
+                        value = uiState.quotations.count { it.status.lowercase() == "pending" }.toString(),
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f)
                     )
                     StatCard(
                         title = "Approved",
-                        value = uiState.quotations.count { it.Status.lowercase() == "approved" }.toString(),
+                        value = uiState.quotations.count { it.status.lowercase() == "approved" }.toString(),
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.weight(1f)
                     )
@@ -110,9 +110,9 @@ fun ClientQuotationsScreen(
                 items(uiState.quotations) { quotation ->
                     QuotationCard(
                         quotation = quotation,
-                        onClick = { onNavigateToQuotationDetails(quotation.QuotationId) },
-                        onApprove = { viewModel.approveQuotation(quotation.QuotationId) },
-                        onReject = { viewModel.rejectQuotation(quotation.QuotationId) }
+                        onClick = { onNavigateToQuotationDetails(quotation.quotationId) },
+                        onApprove = { viewModel.approveQuotation(quotation.quotationId) },
+                        onReject = { viewModel.rejectQuotation(quotation.quotationId) }
                     )
                 }
             }
@@ -154,18 +154,18 @@ fun QuotationCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = quotation.Description,
+                        text = quotation.description,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "Contractor ID: ${quotation.ContractorId}",
+                        text = "Contractor ID: ${quotation.contractorId}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
-                QuotationStatusChip(status = quotation.Status)
+                QuotationStatusChip(status = quotation.status)
             }
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -182,7 +182,7 @@ fun QuotationCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "R ${NumberFormat.getNumberInstance().format(quotation.Total)}",
+                        text = "R ${NumberFormat.getNumberInstance().format(quotation.total)}",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -195,7 +195,7 @@ fun QuotationCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = formatDate(quotation.ValidUntil),
+                        text = formatDate(quotation.validUntil),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -203,13 +203,13 @@ fun QuotationCard(
             }
             
             Text(
-                text = "Created: ${formatDate(quotation.CreatedAt)}",
+                text = "Created: ${formatDate(quotation.createdAt)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp)
             )
             
-            if (quotation.Status.lowercase() == "pending") {
+            if (quotation.status.lowercase() == "pending") {
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),

@@ -76,13 +76,13 @@ fun ClientMaintenanceScreen(
                     )
                     StatCard(
                         title = "Pending",
-                        value = uiState.maintenanceRequests.count { it.Status.lowercase() == "pending" }.toString(),
+                        value = uiState.maintenanceRequests.count { it.status.lowercase() == "pending" }.toString(),
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f)
                     )
                     StatCard(
                         title = "In Progress",
-                        value = uiState.maintenanceRequests.count { it.Status.lowercase() == "in progress" }.toString(),
+                        value = uiState.maintenanceRequests.count { it.status.lowercase() == "in progress" }.toString(),
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.weight(1f)
                     )
@@ -123,8 +123,8 @@ fun ClientMaintenanceScreen(
                 items(uiState.maintenanceRequests) { request ->
                     MaintenanceRequestCard(
                         request = request,
-                        onClick = { onNavigateToRequestDetails(request.MaintenanceRequestId) },
-                        onDelete = { viewModel.deleteMaintenanceRequest(request.MaintenanceRequestId) }
+                        onClick = { onNavigateToRequestDetails(request.maintenanceRequestId) },
+                        onDelete = { viewModel.deleteMaintenanceRequest(request.maintenanceRequestId) }
                     )
                 }
             }
@@ -165,18 +165,18 @@ fun MaintenanceRequestCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = request.Description,
+                        text = request.description,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "Requested by: ${request.RequestedBy}",
+                        text = "Requested by: ${request.requestedBy}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
-                PriorityChip(priority = request.Priority)
+                PriorityChip(priority = request.priority)
             }
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -192,7 +192,7 @@ fun MaintenanceRequestCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    StatusChip(status = request.Status)
+                    StatusChip(status = request.status)
                 }
                 Column {
                     Text(
@@ -201,14 +201,14 @@ fun MaintenanceRequestCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = formatDate(request.CreatedAt),
+                        text = formatDate(request.createdAt),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
             
-            if (request.Status.lowercase() == "pending") {
+            if (request.status.lowercase() == "pending") {
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
                     onClick = onDelete,

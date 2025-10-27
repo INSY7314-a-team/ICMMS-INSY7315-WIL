@@ -112,7 +112,7 @@ fun ClientDashboardOverviewScreen(
                     item {
                         StatCard(
                             title = "Pending Quotes",
-                            value = uiState.quotations.count { it.Status.lowercase() == "pending" }.toString(),
+                            value = uiState.quotations.count { it.status.lowercase() == "pending" }.toString(),
                             color = MaterialTheme.colorScheme.secondary
                         )
                     }
@@ -265,17 +265,17 @@ fun ClientDashboardOverviewScreen(
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = request.Description,
+                                            text = request.description,
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Medium
                                         )
                                         Text(
-                                            text = "${request.Priority} Priority",
+                                            text = "${request.priority} Priority",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
-                                    StatusChip(status = request.Status)
+                                    StatusChip(status = request.status)
                                 }
                                 if (request != uiState.maintenanceRequests.take(3).last()) {
                                     Divider(modifier = Modifier.padding(vertical = 8.dp))
