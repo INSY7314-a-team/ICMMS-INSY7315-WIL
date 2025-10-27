@@ -13,15 +13,19 @@ namespace ICCMS_API.Controllers
     [Authorize(Roles = "Client,Tester")] // Only clients and testers can access this controller
     public class ClientsController : ControllerBase
     {
-        private readonly IFirebaseService _firebaseService;
-        private readonly ISupabaseService _supabaseService;
-        private readonly IAuditLogService _auditLogService;
+            private readonly IFirebaseService _firebaseService;
+            private readonly ISupabaseService _supabaseService;
+            private readonly IQuoteWorkflowService _quoteWorkflow;
 
-        public ClientsController(IFirebaseService firebaseService, ISupabaseService supabaseService, IAuditLogService auditLogService)
+        public ClientsController(
+            IFirebaseService firebaseService,
+            ISupabaseService supabaseService,
+            IQuoteWorkflowService quoteWorkflow
+        )
         {
             _firebaseService = firebaseService;
             _supabaseService = supabaseService;
-            _auditLogService = auditLogService;
+            _quoteWorkflow = quoteWorkflow;
         }
 
         [HttpGet("projects")]
@@ -506,9 +510,30 @@ namespace ICCMS_API.Controllers
                     );
                 }
 
-                quotation.Status = "Approved";
-                await _firebaseService.UpdateDocumentAsync("quotations", id, quotation);
-                return Ok(quotation);
+                // Use the quote workflow to register the client's acceptance (this sets status to ClientAccepted)
+                var accepted = await _quoteWorkflow.ClientDecisionAsync(id, true, null);
+                if (accepted == null)
+                {
+                    return StatusCode(500, new { error = "Failed to apply client decision" });
+                }
+
+                // Attempt to convert to invoice. This is idempotent in the workflow service.
+                try
+                {
+                    var conversion = await _quoteWorkflow.ConvertToInvoiceAsync(id);
+                    if (conversion != null)
+                    {
+                        // Return both the updated quotation and created invoice id
+                        return Ok(new { quotation = accepted, invoiceId = conversion.Value.invoiceId });
+                    }
+                }
+                catch (InvalidOperationException iex)
+                {
+                    // If conversion isn't allowed, still return the accepted quotation
+                    return Ok(new { quotation = accepted, conversionError = iex.Message });
+                }
+
+                return Ok(accepted);
             }
             catch (Exception ex)
             {

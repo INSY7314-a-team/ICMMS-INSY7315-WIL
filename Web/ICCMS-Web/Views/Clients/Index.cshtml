@@ -165,6 +165,32 @@
             </div>
         }
     </div>
+
+
+        <!-- ===== Invoices Section ===== -->
+    <div class="section-header construction-border-thin mt-4">
+        <h3 class="section-title">
+            Invoices
+            <span class="badge badge-secondary">@((Model.Invoices?.Count ?? 0))</span>
+        </h3>
+    </div>
+
+    <div class="projects-grid" id="invoicesGrid">
+        @if (Model.Invoices?.Any() == true)
+        {
+            foreach (var invoice in Model.Invoices)
+            {
+                @await Html.PartialAsync("_InvoiceCard", invoice)
+            }
+        }
+        else
+        {
+            <div class="no-projects-message text-center py-5">
+                <i class="fa-solid fa-file-invoice-dollar fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No invoices found</h5>
+            </div>
+        }
+    </div>
 </div>
 
 <link rel="stylesheet" href="~/css/pm-dashboard.css" />
@@ -289,6 +315,23 @@
   </div>
 </div>
 
+<!-- 🧾 Invoice Details Modal -->
+<div class="modal fade" id="invoiceDetailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content construction-border"
+         style="background-color: var(--secondary-bg); color: var(--text-light); border-radius: 12px;">
+      <div class="modal-header" style="background: var(--primary-bg); border-bottom: 1px solid var(--accent-yellow);">
+        <h5 class="modal-title" style="color: var(--accent-yellow); font-weight: 600;">
+          <i class="fa-solid fa-file-invoice-dollar me-2"></i> Invoice Details
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="invoiceDetailsBody">
+        <p class="text-center py-3 text-muted">Loading...</p>
+      </div>
+    </div>
+  </div>
+</div>
 
 
 <!-- ===============================
@@ -363,7 +406,7 @@
             console.log("🔍 Searching for:", query);
             query = query.toLowerCase();
 
-            const allCards = document.querySelectorAll(".projects-grid .project-card, .projects-grid .quotation-card");
+            const allCards = document.querySelectorAll(".projects-grid .project-card, .projects-grid .quotation-card, .projects-grid .invoice-card");
             allCards.forEach(card => {
                 const text = card.innerText.toLowerCase();
                 card.style.display = text.includes(query) ? "block" : "none";
@@ -554,6 +597,31 @@ async function openQuotationDetails(quotationId) {
     }
 }
 
+async function openInvoiceDetails(invoiceId) {
+    console.log("🧾 Opening invoice details for:", invoiceId);
+
+    const modalEl = document.getElementById("invoiceDetailsModal");
+    const body = document.getElementById("invoiceDetailsBody");
+    if (!modalEl) {
+        console.error("❌ invoiceDetailsModal missing in DOM");
+        return;
+    }
+
+    const modal = new bootstrap.Modal(modalEl);
+    body.innerHTML = "<p class='text-center py-3 text-muted'>Loading...</p>";
+
+    try {
+        const res = await fetch(`/Clients/InvoiceDetailsPartial/${invoiceId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        body.innerHTML = await res.text();
+        modal.show();
+    } catch (err) {
+        console.error("❌ Failed to load invoice details:", err);
+        body.innerHTML = "<p class='text-danger text-center'>Failed to load invoice details.</p>";
+        modal.show();
+    }
+}
+
 
 function closeDetailsPanel() {
     const overlay = document.getElementById("dynamicDetailsOverlay");
@@ -586,6 +654,29 @@ function closeDetailsPanel() {
             alert("Failed to start download. See console for details.");
         }
     }
+    
+    function downloadInvoice(id) {
+    console.log("🧾 [downloadInvoice] Triggered for ID:", id);
+
+    if (!id) {
+        console.warn("⚠️ No invoice ID provided");
+        alert("Invoice ID missing");
+        return;
+    }
+
+    const url = `/Clients/DownloadInvoice/${id}`;
+    console.log("🌐 [downloadInvoice] Navigating to:", url);
+
+    try {
+        // simpler direct redirect for reliability
+        window.location.href = url;
+        console.log("🚀 [downloadInvoice] Redirect initiated successfully");
+    } catch (err) {
+        console.error("🔥 [downloadInvoice] Redirect failed:", err);
+        alert("Failed to start invoice download. See console for details.");
+    }
+}
+
 
     </script>
 }
