@@ -3,36 +3,45 @@ package com.example.iccms_mobile.data.models
 import com.google.gson.annotations.SerializedName
 
 data class Project(
-    @SerializedName("ProjectId")
-    val ProjectId: String = "",
-    
-    @SerializedName("ProjectManagerId")
-    val ProjectManagerId: String = "",
-    
-    @SerializedName("ClientId")
-    val ClientId: String = "",
-    
-    @SerializedName("Name")
-    val Name: String = "",
-    
-    @SerializedName("Description")
-    val Description: String = "",
-    
-    @SerializedName("BudgetPlanned")
-    val BudgetPlanned: Double = 0.0,
-    
-    @SerializedName("BudgetActual")
-    val BudgetActual: Double = 0.0,
-    
-    @SerializedName("Status")
-    val Status: String = "",
-    
-    @SerializedName("StartDatePlanned")
-    val StartDatePlanned: String = "",
-    
-    @SerializedName("EndDatePlanned")
-    val EndDatePlanned: String = "",
-    
-    @SerializedName("EndDateActual")
-    val EndDateActual: String? = null
+    @SerializedName("projectId")
+    val projectId: String = "",
+
+    @SerializedName("projectManagerId")
+    val projectManagerId: String = "",
+
+    @SerializedName("clientId")
+    val clientId: String = "",
+
+    @SerializedName("name")
+    val name: String = "",
+
+    @SerializedName("description")
+    val description: String = "",
+
+    @SerializedName("budgetPlanned")
+    val budgetPlanned: Double = 0.0,
+
+    @SerializedName("budgetActual")
+    val budgetActual: Double = 0.0,
+
+    @SerializedName("status")
+    val status: String = "",
+
+    @SerializedName("isDraft")
+    val isDraft: Boolean = false,
+
+    @SerializedName("startDatePlanned")
+    val startDatePlanned: String = "",
+
+    @SerializedName("endDatePlanned")
+    val endDatePlanned: String = "",
+
+    @SerializedName("endDateActual")
+    val endDateActual: String? = null,
+
+    @SerializedName("createdByUserId")
+    val createdByUserId: String = "",
+
+    @SerializedName("updatedAt")
+    val updatedAt: String = ""
 )

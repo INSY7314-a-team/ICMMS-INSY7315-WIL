@@ -105,7 +105,7 @@ fun ClientDashboardOverviewScreen(
                     item {
                         StatCard(
                             title = "Active Projects",
-                            value = uiState.projects.count { it.Status.lowercase() == "active" }.toString(),
+                            value = uiState.projects.count { it.status.lowercase() == "active" }.toString(),
                             color = MaterialTheme.colorScheme.tertiary
                         )
                     }
@@ -155,7 +155,7 @@ fun ClientDashboardOverviewScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = "R ${NumberFormat.getNumberInstance().format(uiState.projects.sumOf { it.BudgetPlanned.toDouble() })}",
+                                    text = "R ${NumberFormat.getNumberInstance().format(uiState.projects.sumOf { it.budgetPlanned.toDouble() })}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -214,18 +214,18 @@ fun ClientDashboardOverviewScreen(
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = project.Name,
+                                            text = project.name,
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Medium
                                         )
                                         Text(
-                                            text = project.Status,
+                                            text = project.status,
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                     Text(
-                                        text = "R ${NumberFormat.getNumberInstance().format(project.BudgetPlanned)}",
+                                        text = "R ${NumberFormat.getNumberInstance().format(project.budgetPlanned)}",
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.Medium
                                     )

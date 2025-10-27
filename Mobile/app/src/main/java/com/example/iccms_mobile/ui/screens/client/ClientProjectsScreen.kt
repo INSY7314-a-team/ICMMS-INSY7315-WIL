@@ -61,7 +61,7 @@ fun ClientProjectsScreen(
                     )
                     StatCard(
                         title = "Active",
-                        value = uiState.projects.count { it.Status.lowercase() == "active" }.toString(),
+                        value = uiState.projects.count { it.status.lowercase() == "active" }.toString(),
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.weight(1f)
                     )
@@ -90,7 +90,7 @@ fun ClientProjectsScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "R ${NumberFormat.getNumberInstance().format(uiState.projects.sumOf { it.BudgetPlanned.toDouble() })}",
+                                text = "R ${NumberFormat.getNumberInstance().format(uiState.projects.sumOf { it.budgetPlanned.toDouble() })}",
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold
                             )
@@ -137,7 +137,7 @@ fun ClientProjectsScreen(
                 items(uiState.projects) { project ->
                     ProjectCard(
                         project = project,
-                        onClick = { onNavigateToProjectDetails(project.ProjectId) }
+                        onClick = { onNavigateToProjectDetails(project.projectId) }
                     )
                 }
             }
@@ -207,18 +207,18 @@ fun ProjectCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = project.Name,
+                        text = project.name,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = project.Description,
+                        text = project.description,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
-                StatusChip(status = project.Status)
+                StatusChip(status = project.status)
             }
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -234,7 +234,7 @@ fun ProjectCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "R ${NumberFormat.getNumberInstance().format(project.BudgetPlanned)}",
+                        text = "R ${NumberFormat.getNumberInstance().format(project.budgetPlanned)}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.primary
@@ -247,7 +247,7 @@ fun ProjectCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "${project.StartDatePlanned} - ${project.EndDatePlanned}",
+                        text = "${project.startDatePlanned} - ${project.endDatePlanned}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
