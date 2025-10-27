@@ -198,10 +198,28 @@ namespace ICCMS_Web.Controllers
                     .Where(pr => pr.ProjectId == projectId)
                     .ToList();
 
-                // Get tasks awaiting completion (tasks with status "Awaiting Approval")
+                // Get completion reports to check which tasks actually have completion requests
+                var completionReports = await _apiClient.GetAsync<List<CompletionReportDto>>(
+                    "/api/projectmanager/completion-reports",
+                    User
+                ) ?? new List<CompletionReportDto>();
+
+                // Get tasks awaiting completion (tasks with status "Awaiting Approval" AND have completion reports)
+                var tasksWithCompletionReports = completionReports
+                    .Where(cr => cr.Status == "Submitted" && cr.ProjectId == projectId)
+                    .Select(cr => cr.TaskId)
+                    .ToHashSet();
+
                 var tasksAwaitingCompletion = tasks
-                    .Where(t => t.Status == "Awaiting Approval")
+                    .Where(t => t.Status == "Awaiting Approval" && tasksWithCompletionReports.Contains(t.TaskId))
                     .ToList();
+
+                _logger.LogInformation(
+                    "Found {CompletionReportCount} completion reports, {TasksWithReports} tasks with completion reports, {TasksAwaitingCompletion} tasks awaiting completion",
+                    completionReports.Count,
+                    tasksWithCompletionReports.Count,
+                    tasksAwaitingCompletion.Count
+                );
 
                 // Get contractors for display names
                 var contractors =
@@ -2055,6 +2073,99 @@ namespace ICCMS_Web.Controllers
                     "Error sending task assignment workflow message for task {TaskId}",
                     task.TaskId
                 );
+            }
+        }
+
+        /// <summary>
+        /// Get completion report details
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetCompletionReport(string id)
+        {
+            try
+            {
+                var result = await _apiClient.GetAsync<CompletionReportDto>(
+                    $"/api/projectmanager/completion-report/{id}",
+                    User
+                );
+
+                if (result != null)
+                {
+                    return Json(new { success = true, data = result });
+                }
+                else
+                {
+                    return Json(new { success = false, message = "Completion report not found" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading completion report {Id}", id);
+                return Json(new { success = false, message = "Error loading completion report" });
+            }
+        }
+
+        /// <summary>
+        /// Approve task completion
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> ApproveTaskCompletion(string taskId)
+        {
+            try
+            {
+                _logger.LogInformation("Attempting to approve task completion for task {TaskId}", taskId);
+                
+                var result = await _apiClient.PutAsync<object>(
+                    $"/api/projectmanager/task/{taskId}/approve-completion",
+                    null,
+                    User
+                );
+
+                if (result != null)
+                {
+                    _logger.LogInformation("Successfully approved task completion for task {TaskId}", taskId);
+                    return Json(new { success = true, message = "Task completion approved successfully" });
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to approve task completion for task {TaskId} - API returned null", taskId);
+                    return Json(new { success = false, message = "No completion request found for this task" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving task completion for task {TaskId}", taskId);
+                return Json(new { success = false, message = $"Error approving task completion: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Reject task completion
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> RejectTaskCompletion(string taskId)
+        {
+            try
+            {
+                var result = await _apiClient.PutAsync<object>(
+                    $"/api/projectmanager/task/{taskId}/reject-completion",
+                    null,
+                    User
+                );
+
+                if (result != null)
+                {
+                    return Json(new { success = true, message = "Task completion rejected successfully" });
+                }
+                else
+                {
+                    return Json(new { success = false, message = "Failed to reject task completion" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rejecting task completion for task {TaskId}", taskId);
+                return Json(new { success = false, message = "Error rejecting task completion" });
             }
         }
     }

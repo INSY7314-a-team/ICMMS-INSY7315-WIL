@@ -749,6 +749,17 @@ namespace ICCMS_API.Controllers
                     report
                 );
 
+                // Update task progress if provided
+                if (report.ProgressPercentage.HasValue)
+                {
+                    task.Progress = report.ProgressPercentage.Value;
+                    await _firebaseService.UpdateDocumentAsync("tasks", taskId, task);
+                    
+                    Console.WriteLine(
+                        $"[SubmitProgressReport] Updated task {taskId} progress to {report.ProgressPercentage.Value}%"
+                    );
+                }
+
                 // Send workflow notification to project manager
                 var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (!string.IsNullOrEmpty(currentUserId))

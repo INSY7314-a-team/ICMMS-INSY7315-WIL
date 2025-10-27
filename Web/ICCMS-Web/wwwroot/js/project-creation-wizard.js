@@ -437,20 +437,43 @@ class ProjectCreationWizard {
     wrapper.innerHTML = `
       <div class="card-body">
         <div class="row g-2 align-items-end">
-          <div class="col-md-5">
+          <div class="col-md-4">
             <label class="form-label">Phase Name</label>
             <input type="text" class="form-control phase-name" data-id="${id}" value="${
       phase.name || ""
     }" />
           </div>
-          <div class="col-md-5">
+          <div class="col-md-4">
             <label class="form-label">Description</label>
             <input type="text" class="form-control phase-desc" value="${
               phase.description || ""
             }" />
           </div>
+          <div class="col-md-2">
+            <label class="form-label">Budget</label>
+            <div class="input-group">
+              <span class="input-group-text">R</span>
+              <input type="number" class="form-control phase-budget" value="${
+                phase.budget || ""
+              }" step="0.01" min="0" />
+            </div>
+          </div>
           <div class="col-md-2 text-end">
             <button type="button" class="btn btn-outline-danger btn-sm remove-phase">Remove</button>
+          </div>
+        </div>
+        <div class="row g-2 mt-2">
+          <div class="col-md-6">
+            <label class="form-label">Start Date</label>
+            <input type="date" class="form-control phase-start" value="${
+              phase.startDate ? new Date(phase.startDate).toISOString().split('T')[0] : ""
+            }" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">End Date</label>
+            <input type="date" class="form-control phase-end" value="${
+              phase.endDate ? new Date(phase.endDate).toISOString().split('T')[0] : ""
+            }" />
           </div>
         </div>
       </div>`;
@@ -488,20 +511,45 @@ class ProjectCreationWizard {
       task.name || ""
     }" />
           </div>
-          <div class="col-md-3">
+          <div class="col-md-2">
             <label class="form-label">Phase</label>
             <select class="form-select task-phase-select">${phaseOptions}</select>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-2">
             <label class="form-label">Contractor</label>
             <select class="form-select task-contractor">${contractorOptions}</select>
           </div>
           <div class="col-md-2">
+            <label class="form-label">Budget</label>
+            <div class="input-group">
+              <span class="input-group-text">R</span>
+              <input type="number" class="form-control task-budget" value="${
+                task.budget || ""
+              }" step="0.01" min="0" />
+            </div>
+          </div>
+          <div class="col-md-2">
             <label class="form-label">Due</label>
-            <input type="date" class="form-control task-due" value="" />
+            <input type="date" class="form-control task-due" value="${
+              task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ""
+            }" />
           </div>
           <div class="col-md-1 text-end">
             <button type="button" class="btn btn-outline-danger btn-sm remove-task">Remove</button>
+          </div>
+        </div>
+        <div class="row g-2 mt-2">
+          <div class="col-md-6">
+            <label class="form-label">Start Date</label>
+            <input type="date" class="form-control task-start" value="${
+              task.startDate ? new Date(task.startDate).toISOString().split('T')[0] : ""
+            }" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Description</label>
+            <input type="text" class="form-control task-desc" value="${
+              task.description || ""
+            }" placeholder="Task description..." />
           </div>
         </div>
       </div>`;
@@ -621,7 +669,7 @@ class ProjectCreationWizard {
           new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         status: "Pending",
         progress: 0,
-        budget: 0,
+        budget: parseFloat(card.querySelector(".phase-budget")?.value) || 0,
         assignedTo: "",
       };
     });
@@ -648,7 +696,8 @@ class ProjectCreationWizard {
         progress: 0,
         estimatedHours: 0,
         actualHours: 0,
-        description: "",
+        budget: parseFloat(card.querySelector(".task-budget")?.value) || 0,
+        description: card.querySelector(".task-desc")?.value || "",
       };
     });
   }
