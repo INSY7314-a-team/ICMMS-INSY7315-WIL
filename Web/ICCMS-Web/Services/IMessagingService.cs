@@ -36,6 +36,11 @@ namespace ICCMS_Web.Services
         Task<bool> MarkAsReadAsync(string messageId, string userId);
 
         /// <summary>
+        /// Mark all messages in a thread as read
+        /// </summary>
+        Task<bool> MarkThreadAsReadAsync(string threadId, string userId);
+
+        /// <summary>
         /// Validate if a user can send a message to another user based on communication hierarchy
         /// </summary>
         bool CanUserSendMessage(string senderRole, string receiverRole);

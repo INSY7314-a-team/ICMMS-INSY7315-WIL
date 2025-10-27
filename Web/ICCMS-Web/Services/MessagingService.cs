@@ -270,6 +270,57 @@ namespace ICCMS_Web.Services
             }
         }
 
+        public async Task<bool> MarkThreadAsReadAsync(string threadId, string userId)
+        {
+            try
+            {
+                var currentUser = GetCurrentUser();
+                if (currentUser == null)
+                {
+                    _logger.LogWarning("No authenticated user found for marking thread as read");
+                    return false;
+                }
+
+                // Get all messages in the thread
+                var messages = await _apiClient.GetAsync<List<MessageWithSender>>(
+                    $"/api/messages/thread/{threadId}",
+                    currentUser
+                );
+
+                if (messages == null || !messages.Any())
+                    return false;
+
+                // Mark all unread messages in the thread as read
+                var unreadMessages = messages
+                    .Where(m => !m.IsRead && m.ReceiverId == userId)
+                    .ToList();
+
+                foreach (var message in unreadMessages)
+                {
+                    message.IsRead = true;
+                    message.ReadAt = DateTime.UtcNow;
+
+                    await _apiClient.PutAsync<object>(
+                        $"/api/messages/{message.MessageId}",
+                        message,
+                        currentUser
+                    );
+                }
+
+                _logger.LogInformation(
+                    "Marked {Count} messages as read in thread {ThreadId}",
+                    unreadMessages.Count,
+                    threadId
+                );
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking thread {ThreadId} as read", threadId);
+                return false;
+            }
+        }
+
         public bool CanUserSendMessage(string senderRole, string receiverRole)
         {
             // Admin can message all roles

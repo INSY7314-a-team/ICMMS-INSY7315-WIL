@@ -7,6 +7,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ICCMS_Web.Controllers
 {
+    public class MarkThreadAsReadRequest
+    {
+        public string ThreadId { get; set; } = string.Empty;
+    }
+
     [Authorize(Roles = "Admin,Project Manager,Client,Contractor,Tester")] // All authenticated users can access this controller
     public class MessagesController : Controller
     {
@@ -469,6 +474,46 @@ namespace ICCMS_Web.Controllers
             {
                 _logger.LogError(ex, "Error marking message as read");
                 return Json(new { success = false, message = "Error updating message" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> MarkThreadAsRead(
+            [FromBody] MarkThreadAsReadRequest request
+        )
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Json(new { success = false, message = "User not authenticated" });
+                }
+
+                if (string.IsNullOrEmpty(request.ThreadId))
+                {
+                    return Json(new { success = false, message = "Thread ID is required" });
+                }
+
+                var success = await _messagingService.MarkThreadAsReadAsync(
+                    request.ThreadId,
+                    currentUserId
+                );
+                return Json(
+                    new
+                    {
+                        success = success,
+                        message = success
+                            ? "Thread marked as read"
+                            : "Failed to mark thread as read",
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking thread as read");
+                return Json(new { success = false, message = "Error updating thread" });
             }
         }
 

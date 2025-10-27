@@ -1,3 +1,4 @@
+@using System.Security.Claims
 @model ICCMS_Web.Models.UserMessagesViewModel
 @{
     ViewData["Title"] = "Messages";
@@ -6,691 +7,749 @@
 <link href="~/css/messages.css" rel="stylesheet" />
 
 <div class="messages-container">
-    <!-- Header -->
-    <div class="messages-header">
-        <div class="d-flex justify-content-between align-items-center">
-        <div>
-                <h1 class="messages-title">
-                    <i class="fas fa-envelope me-3"></i>Messages
-            </h1>
-                <p class="messages-subtitle">Communicate with your team and stay updated on project activities</p>
-            </div>
-            <div class="messages-actions">
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#sendMessageModal">
-                    <i class="fas fa-plus me-2"></i>New Message
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- Alerts -->
-    @if (TempData["Success"] != null)
-    {
+@if (TempData["Success"] != null)
+{
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="fas fa-check-circle me-2"></i> @TempData["Success"]
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    }
-    @if (TempData["Error"] != null)
-    {
+}
+@if (TempData["Error"] != null)
+{
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <i class="fas fa-exclamation-triangle me-2"></i> @TempData["Error"]
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    }
+}
 
-    <!-- Main Content -->
-    <div class="messages-content">
-        <div class="row">
-            <!-- Threads List -->
-            <div class="col-md-4">
-                <div class="messages-sidebar">
-                    <div class="messages-sidebar-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-comments me-2"></i>Conversations
-                        </h5>
-                        <div class="unread-badge" id="unreadBadge" style="display: none;">
-                            <span class="badge bg-warning" id="unreadCount">0</span>
+    <!-- Custom Tab Interface -->
+    <div class="messages-tabs">
+        <div class="tab-buttons">
+            <button class="tab-button active" id="system-tab" onclick="switchTab('system')">
+                <i class="fas fa-cogs me-2"></i>System Messages
+            </button>
+            <button class="tab-button" id="direct-tab" onclick="switchTab('direct')">
+                <i class="fas fa-comment me-2"></i>Direct Messages
+            </button>
+        </div>
+
+        <div class="tab-content">
+            <div class="messages-content">
+                <div class="row h-100">
+                    <!-- Threads List -->
+                    <div class="col-md-4 d-flex flex-column">
+                        <div class="messages-sidebar">
+                            <div class="messages-sidebar-header">
+                                <h5 class="mb-0" id="sidebarTitle">
+                                    <i class="fas fa-cogs me-2"></i>System Messages
+                                </h5>
+                                <div class="unread-badge" id="unreadBadge" style="display: none;">
+                                    <span class="badge bg-warning" id="unreadCount">0</span>
+                                </div>
+                            </div>
+
+                            <div class="messages-search">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="searchThreads"
+                                        placeholder="Search messages...">
+                                    <button class="btn btn-outline-secondary" type="button">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- New Message Button (only for direct messages) -->
+                            <div class="new-message-section" id="newMessageSection" style="display: none;">
+                                <button class="btn btn-primary w-100 new-message-btn" data-bs-toggle="modal"
+                                    data-bs-target="#sendMessageModal">
+                                    <i class="fas fa-plus me-2"></i>
+                                    <i class="fas fa-pencil-alt me-1"></i>
+                                    New Message
+                                </button>
+                            </div>
+
+                            <div class="threads-list" id="threadsList">
+                                <!-- Threads will be loaded here dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Messages View -->
+                    <div class="col-md-8 d-flex flex-column">
+                        <div class="messages-main">
+                            <div id="noThreadSelected" class="no-selection">
+                                <div class="no-selection-content">
+                                    <i class="fas fa-comments"></i>
+                                    <h4>Select a conversation</h4>
+                                    <p>Choose a conversation from the list to view messages</p>
+                                </div>
+                            </div>
+
+                                <div id="threadView" style="display: none;" class="d-flex flex-column h-100">
+                                    <div class="messages-header-bar">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h5 class="mb-0" id="selectedThreadSubject">Thread Subject</h5>
+                                                <small class="text-muted" id="selectedThreadProject">Project Name</small>
+                                            </div>
+                                            <div class="thread-actions">
+                                                <button class="btn btn-sm btn-outline-secondary me-2" onclick="refreshThread()">
+                                                    <i class="fas fa-sync-alt"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="closeChatView()" title="Close conversation">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                <div class="messages-container" id="messagesContainer">
+                                    <!-- Messages will be loaded here -->
+                                </div>
+
+                                <!-- Message Input Area -->
+                                <div class="message-input-area" id="messageInputArea" style="display: none;">
+                                    <div class="message-input-container">
+                                        <div class="message-input-wrapper">
+                                            <button class="btn btn-sm btn-outline-secondary me-2"
+                                                onclick="toggleEmojiPicker()">
+                                                <i class="fas fa-smile"></i>
+                                            </button>
+                                            <div class="message-input-field">
+                                                <textarea class="form-control" id="threadMessageInput"
+                                                    placeholder="Type a message..." rows="1"
+                                                    onkeydown="handleMessageInputKeydown(event)"
+                                                    oninput="autoResizeTextarea(this)"></textarea>
+                                            </div>
+                                            <button class="btn btn-sm btn-outline-secondary me-2"
+                                                onclick="toggleAttachmentOptions()">
+                                                <i class="fas fa-paperclip"></i>
+                                            </button>
+                                            <button class="btn btn-primary" onclick="sendThreadMessage()"
+                                                id="sendThreadMessageBtn">
+                                                <i class="fas fa-paper-plane"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- Reply Preview (shown when replying to a specific message) -->
+                                        <div class="reply-preview" id="replyPreview" style="display: none;">
+                                            <div class="reply-preview-content">
+                                                <div class="reply-preview-header">
+                                                    <i class="fas fa-reply"></i>
+                                                    <span id="replyPreviewSender">Replying to User</span>
+                                                    <button class="btn btn-sm btn-link p-0" onclick="cancelReply()">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </div>
+                                                <div class="reply-preview-text" id="replyPreviewText">Message preview...
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-                    <div class="messages-search">
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="searchThreads" placeholder="Search conversations...">
-                            <button class="btn btn-outline-secondary" type="button">
-                        <i class="fas fa-search"></i>
+    <!-- Send Message Modal -->
+    <div class="modal fade" id="sendMessageModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-envelope me-2"></i>Send New Message
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="sendMessageForm">
+                        <div class="mb-3">
+                            <label for="recipientSelect" class="form-label">To</label>
+                            <select class="form-select" id="recipientSelect" required>
+                                <option value="">Select recipient...</option>
+                                @foreach (var user in Model.AvailableUsers)
+                                {
+                                    <option value="@user.UserId">@user.FullName (@user.Role)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="projectSelect" class="form-label">Project (Optional)</label>
+                            <select class="form-select" id="projectSelect">
+                                <option value="">No specific project</option>
+                                @foreach (var project in Model.AvailableProjects)
+                                {
+                                    <option value="@project.ProjectId">@project.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="messageSubject" class="form-label">Subject</label>
+                            <input type="text" class="form-control" id="messageSubject" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="messageContent" class="form-label">Message</label>
+                            <textarea class="form-control" id="messageContent" rows="4" required></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane me-2"></i>Send Message
                     </button>
                 </div>
             </div>
-            
-                    <!-- Message Type Filters -->
-                    <div class="message-filters">
-                        <div class="btn-group w-100" role="group" aria-label="Message type filters">
-                            <input type="radio" class="btn-check" name="messageTypeFilter" id="filterWorkflow" value="workflow" @(Model.CurrentView == "workflow" ? "checked" : "")>
-                            <label class="btn btn-outline-success" for="filterWorkflow">
-                                <i class="fas fa-cogs me-1"></i>System
-                            </label>
+        </div>
+    </div>
 
-                            <input type="radio" class="btn-check" name="messageTypeFilter" id="filterDirect" value="direct" @(Model.CurrentView == "direct" ? "checked" : "")>
-                            <label class="btn btn-outline-info" for="filterDirect">
-                                <i class="fas fa-comment me-1"></i>Direct
-                            </label>
-                    </div>
+    <!-- Reply Message Modal -->
+    <div class="modal fade" id="replyMessageModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-reply me-2"></i>Reply to Message
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                
-                    <div class="threads-list" id="threadsList">
-            @if (Model.CurrentView == "workflow" && Model.WorkflowThreads.Any())
-            {
-                            @foreach (var thread in Model.WorkflowThreads.OrderByDescending(t => t.LastMessageAt))
-                            {
-                                <div class="thread-item @(thread.HasUnreadMessages ? "unread" : "")" 
-                                     data-thread-id="@thread.ThreadId" 
-                                     data-message-type="@(thread.ThreadType ?? "workflow")"
-                                     onclick="selectThread('@thread.ThreadId', '@thread.Subject')">
-                                            <div class="thread-avatar">
-                                                <i class="fas fa-cogs"></i>
-                                            </div>
-                                    <div class="thread-content">
-                                        <div class="thread-header">
-                                            <h6 class="thread-subject">@thread.Subject</h6>
-                                            <span class="thread-time">@thread.LastMessageAt.ToString("MMM dd")</span>
-                                            </div>
-                                        <div class="thread-preview">
-                                            <span class="thread-sender">@thread.LastMessageSenderName:</span>
-                                            <span class="thread-message">@(thread.LastMessagePreview.Length > 50 ? thread.LastMessagePreview.Substring(0, 47) + "..." : thread.LastMessagePreview)</span>
-                                        </div>
-                                        <div class="thread-meta">
-                                            <span class="thread-project">@thread.ProjectName</span>
-                                            @if (thread.HasUnreadMessages)
-                                            {
-                                                <span class="thread-unread-badge">@thread.UnreadCount</span>
-                                                                    }
-                                                                </div>
-                                                        </div>
-                                                    </div>
-                                                }
-                                            }
-                                            else if (Model.CurrentView == "direct" && Model.DirectThreads.Any())
-                                            {
-                            @foreach (var thread in Model.DirectThreads.OrderByDescending(t => t.LastMessageAt))
-                            {
-                                <div class="thread-item @(thread.HasUnreadMessages ? "unread" : "")" 
-                                     data-thread-id="@thread.ThreadId" 
-                                     data-message-type="@(thread.ThreadType ?? "direct")"
-                                     onclick="selectThread('@thread.ThreadId', '@thread.Subject')">
-                                            <div class="thread-avatar">
-                                                <i class="fas fa-comment"></i>
-                                            </div>
-                                    <div class="thread-content">
-                                        <div class="thread-header">
-                                            <h6 class="thread-subject">@thread.Subject</h6>
-                                            <span class="thread-time">@thread.LastMessageAt.ToString("MMM dd")</span>
-                                            </div>
-                                        <div class="thread-preview">
-                                            <span class="thread-sender">@thread.LastMessageSenderName:</span>
-                                            <span class="thread-message">@(thread.LastMessagePreview.Length > 50 ? thread.LastMessagePreview.Substring(0, 47) + "..." : thread.LastMessagePreview)</span>
-                                        </div>
-                                        <div class="thread-meta">
-                                            <span class="thread-project">@thread.ProjectName</span>
-                                            @if (thread.HasUnreadMessages)
-                                            {
-                                                <span class="thread-unread-badge">@thread.UnreadCount</span>
-                                                                    }
-                                                                </div>
-                                                        </div>
-                                                    </div>
-                                                }
-                                            }
-                                            else
-                                            {
-                            <div class="empty-state">
-                                                    <i class="fas fa-comment-slash"></i>
-                                <p>No @(Model.CurrentView == "workflow" ? "workflow" : "direct") messages yet</p>
-                                <small>@(Model.CurrentView == "workflow" ? "Workflow messages will appear here when system events occur" : "Start a conversation by sending a message")</small>
-                                                </div>
-                                            }
-                                        </div>
+                <div class="modal-body">
+                    <form id="replyMessageForm">
+                        <input type="hidden" id="replyParentMessageId">
+                        <input type="hidden" id="replySenderId">
+                        <div class="mb-3">
+                            <label class="form-label">Replying to:</label>
+                            <div class="form-control-plaintext" id="replyToInfo"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="replySubject" class="form-label">Subject</label>
+                            <input type="text" class="form-control" id="replySubject" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="replyContent" class="form-label">Your Reply</label>
+                            <textarea class="form-control" id="replyContent" rows="4" required></textarea>
+                        </div>
+                    </form>
                 </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="sendReply()">
+                        <i class="fas fa-paper-plane me-2"></i>Send Reply
+                    </button>
                 </div>
-                
-            <!-- Messages View -->
-            <div class="col-md-8">
-                <div class="messages-main">
-                    <div id="noThreadSelected" class="no-selection">
-                        <div class="no-selection-content">
-                            <i class="fas fa-comments"></i>
-                            <h4>Select a conversation</h4>
-                            <p>Choose a conversation from the list to view messages</p>
-                        </div>
-                        </div>
-
-                    <div id="threadView" style="display: none;">
-                        <div class="messages-header-bar">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h5 class="mb-0" id="selectedThreadSubject">Thread Subject</h5>
-                                    <small class="text-muted" id="selectedThreadProject">Project Name</small>
-                    </div>
-                                <div class="thread-actions">
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="refreshThread()">
-                                        <i class="fas fa-sync-alt"></i>
-                                    </button>
-        </div>
-    </div>
-</div>
-
-                        <div class="messages-container" id="messagesContainer">
-                            <!-- Messages will be loaded here -->
-                        </div>
-                        
-                        <!-- Message Input Area -->
-                        <div class="message-input-area" id="messageInputArea">
-                            <div class="message-input-container">
-                                <div class="message-input-wrapper">
-                                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="toggleEmojiPicker()">
-                                        <i class="fas fa-smile"></i>
-                                    </button>
-                                    <div class="message-input-field">
-                                        <textarea 
-                                            class="form-control" 
-                                            id="threadMessageInput" 
-                                            placeholder="Type a message..." 
-                                            rows="1"
-                                            onkeydown="handleMessageInputKeydown(event)"
-                                            oninput="autoResizeTextarea(this)"></textarea>
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="toggleAttachmentOptions()">
-                                        <i class="fas fa-paperclip"></i>
-                                    </button>
-                                    <button class="btn btn-primary" onclick="sendThreadMessage()" id="sendThreadMessageBtn">
-                                        <i class="fas fa-paper-plane"></i>
-                                    </button>
-                                </div>
-                                
-                                <!-- Reply Preview (shown when replying to a specific message) -->
-                                <div class="reply-preview" id="replyPreview" style="display: none;">
-                                    <div class="reply-preview-content">
-                                        <div class="reply-preview-header">
-                                            <i class="fas fa-reply"></i>
-                                            <span id="replyPreviewSender">Replying to User</span>
-                                            <button class="btn btn-sm btn-link p-0" onclick="cancelReply()">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-                                        </div>
-                                        <div class="reply-preview-text" id="replyPreviewText">Message preview...</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-            </div>
             </div>
         </div>
     </div>
-</div>
-
-<!-- Send Message Modal -->
-<div class="modal fade" id="sendMessageModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-envelope me-2"></i>Send New Message
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="sendMessageForm">
-                    <div class="mb-3">
-                        <label for="recipientSelect" class="form-label">To</label>
-                        <select class="form-select" id="recipientSelect" required>
-                            <option value="">Select recipient...</option>
-                            @foreach (var user in Model.AvailableUsers)
-                            {
-                                <option value="@user.UserId">@user.FullName (@user.Role)</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="projectSelect" class="form-label">Project (Optional)</label>
-                        <select class="form-select" id="projectSelect">
-                            <option value="">No specific project</option>
-                            @foreach (var project in Model.AvailableProjects)
-                            {
-                                <option value="@project.ProjectId">@project.Name</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="messageSubject" class="form-label">Subject</label>
-                        <input type="text" class="form-control" id="messageSubject" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="messageContent" class="form-label">Message</label>
-                        <textarea class="form-control" id="messageContent" rows="4" required></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="sendMessage()">
-                    <i class="fas fa-paper-plane me-2"></i>Send Message
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Reply Message Modal -->
-<div class="modal fade" id="replyMessageModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-reply me-2"></i>Reply to Message
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="replyMessageForm">
-                    <input type="hidden" id="replyParentMessageId">
-                    <input type="hidden" id="replySenderId">
-                    <div class="mb-3">
-                        <label class="form-label">Replying to:</label>
-                        <div class="form-control-plaintext" id="replyToInfo"></div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="replySubject" class="form-label">Subject</label>
-                        <input type="text" class="form-control" id="replySubject" readonly>
-                    </div>
-                    <div class="mb-3">
-                        <label for="replyContent" class="form-label">Your Reply</label>
-                        <textarea class="form-control" id="replyContent" rows="4" required></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="sendReply()">
-                    <i class="fas fa-paper-plane me-2"></i>Send Reply
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 @section Scripts {
-    <script src="~/js/messages.js"></script>
-    <script>
-        // Initialize messages page
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeMessages();
-            updateUnreadCount();
-            setupMessageTypeFilters();
-            
-            // Auto-refresh unread count every 30 seconds
-            setInterval(updateUnreadCount, 30000);
-        });
+        <script src="~/js/messages.js"></script>
+        <script>
+            // Initialize messages page
+            document.addEventListener('DOMContentLoaded', function () {
+                // Set current user ID from the page data
+                window.currentUserId = '@User.FindFirst(ClaimTypes.NameIdentifier)?.Value';
+                console.log('Current user ID set to:', window.currentUserId);
+                
+                initializeMessages();
+                updateUnreadCount();
+                setupTabHandlers();
 
-        function initializeMessages() {
-            // Add any initialization logic here
-            console.log('Messages page initialized');
-            
-            // Hide message input area initially
-            const messageInputArea = document.getElementById('messageInputArea');
-            messageInputArea.style.display = 'none';
-            console.log('Message input area hidden initially');
-        }
-
-        function setupMessageTypeFilters() {
-            const filterButtons = document.querySelectorAll('input[name="messageTypeFilter"]');
-            filterButtons.forEach(button => {
-                button.addEventListener('change', function() {
-                    if (this.checked) {
-                        loadThreadsByType(this.value);
-                    }
-                });
+                // Auto-refresh unread count every 30 seconds
+                setInterval(updateUnreadCount, 30000);
             });
-        }
 
-        function loadThreadsByType(messageType) {
-            console.log('Loading threads by type:', messageType);
-            
-            // Hide message input area for system messages
-            const messageInputArea = document.getElementById('messageInputArea');
-            if (messageType === 'system' || messageType === 'workflow') {
+            function initializeMessages() {
+                // Add any initialization logic here
+                console.log('Messages page initialized');
+
+                // Hide message input area initially
+                const messageInputArea = document.getElementById('messageInputArea');
                 messageInputArea.style.display = 'none';
-                console.log('Hiding message input for system/workflow messages');
-            } else if (messageType === 'direct') {
-                // Only show if a direct message thread is selected
-                const activeThread = document.querySelector('.thread-item.active');
-                if (activeThread && activeThread.dataset.messageType === 'direct') {
-                    messageInputArea.style.display = 'block';
-                    console.log('Showing message input for direct messages');
+                console.log('Message input area hidden initially');
+            }
+
+            function setupTabHandlers() {
+                // Load initial system threads
+                loadSystemThreads();
+            }
+
+            function switchTab(tabType) {
+                console.log('Switching to tab:', tabType);
+                
+                // Update tab button states
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.getElementById(tabType + '-tab').classList.add('active');
+                
+                // Close chat view when switching to system messages
+                if (tabType === 'system') {
+                    closeChatView();
+                }
+                
+                // Update sidebar title and show/hide new message button
+                const sidebarTitle = document.getElementById('sidebarTitle');
+                const newMessageSection = document.getElementById('newMessageSection');
+                const searchInput = document.getElementById('searchThreads');
+                
+                if (tabType === 'system') {
+                    sidebarTitle.innerHTML = '<i class="fas fa-cogs me-2"></i>System Messages';
+                    newMessageSection.style.display = 'none';
+                    searchInput.placeholder = 'Search system messages...';
+                    loadSystemThreads();
                 } else {
-                    messageInputArea.style.display = 'none';
+                    sidebarTitle.innerHTML = '<i class="fas fa-comment me-2"></i>Direct Messages';
+                    newMessageSection.style.display = 'block';
+                    searchInput.placeholder = 'Search direct messages...';
+                    loadDirectThreads();
                 }
             }
-            
-            const threadsList = document.getElementById('threadsList');
-            threadsList.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"></div><p class="mt-2">Loading messages...</p></div>';
-            
-            fetch(`/Messages/GetUserThreadsByType?messageType=${messageType}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        displayThreads(data.threads, messageType);
-                    } else {
-                        threadsList.innerHTML = '<div class="alert alert-danger">Failed to load messages</div>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading threads:', error);
-                    threadsList.innerHTML = '<div class="alert alert-danger">Error loading messages</div>';
-                });
-        }
 
-        function displayThreads(threads, messageType) {
-            const threadsList = document.getElementById('threadsList');
-            
-            if (threads.length === 0) {
-                const emptyMessage = messageType === 'workflow' 
-                    ? 'No workflow messages yet' 
-                    : 'No direct messages yet';
-                const emptySubMessage = messageType === 'workflow'
-                    ? 'Workflow messages will appear here when system events occur'
-                    : 'Start a conversation by sending a message';
-                
-                threadsList.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-comment-slash"></i>
-                        <p>${emptyMessage}</p>
-                        <small>${emptySubMessage}</small>
-                    </div>
-                `;
-                return;
+            function loadSystemThreads() {
+                console.log('Loading system threads');
+
+                const threadsList = document.getElementById('threadsList');
+                threadsList.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"></div><p class="mt-2">Loading system messages...</p></div>';
+
+                fetch('/Messages/GetUserThreadsByType?messageType=workflow')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            displayThreads(data.threads, 'system');
+                        } else {
+                            threadsList.innerHTML = '<div class="alert alert-danger">Failed to load system messages</div>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading system threads:', error);
+                        threadsList.innerHTML = '<div class="alert alert-danger">Error loading system messages</div>';
+                    });
             }
-            
-            let html = '';
-            threads.forEach(thread => {
-                const iconClass = messageType === 'workflow' ? 'fas fa-cogs' : 'fas fa-comment';
-                const unreadClass = thread.hasUnreadMessages ? 'unread' : '';
-                
-                html += `
-                    <div class="thread-item ${unreadClass}" 
-                         data-thread-id="${thread.threadId}" 
-                         data-message-type="${thread.threadType || messageType}"
-                         onclick="selectThread('${thread.threadId}', '${thread.subject}')">
-                        <div class="thread-avatar">
-                            <i class="${iconClass}"></i>
+
+            function loadDirectThreads() {
+                console.log('Loading direct threads');
+
+                const threadsList = document.getElementById('threadsList');
+                threadsList.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"></div><p class="mt-2">Loading direct messages...</p></div>';
+
+                fetch('/Messages/GetUserThreadsByType?messageType=direct')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            displayThreads(data.threads, 'direct');
+                        } else {
+                            threadsList.innerHTML = '<div class="alert alert-danger">Failed to load direct messages</div>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading direct threads:', error);
+                        threadsList.innerHTML = '<div class="alert alert-danger">Error loading direct messages</div>';
+                    });
+            }
+
+            function displayThreads(threads, tabType) {
+                const threadsList = document.getElementById('threadsList');
+
+                if (threads.length === 0) {
+                    const emptyMessage = tabType === 'system' ? 'No system messages yet' : 'No direct messages yet';
+                    const emptySubMessage = tabType === 'system'
+                        ? 'System messages will appear here when workflow events occur'
+                        : 'Start a conversation by sending a message';
+                    const emptyIcon = tabType === 'system' ? 'fas fa-cogs' : 'fas fa-comment-slash';
+
+                    threadsList.innerHTML = `
+                        <div class="empty-state">
+                            <i class="${emptyIcon}"></i>
+                            <p>${emptyMessage}</p>
+                            <small>${emptySubMessage}</small>
                         </div>
-                        <div class="thread-content">
-                            <div class="thread-header">
-                                <h6 class="thread-subject">${thread.subject}</h6>
-                                <span class="thread-time">${new Date(thread.lastMessageAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                            </div>
-                            <div class="thread-preview">
-                                <span class="thread-sender">${thread.lastMessageSenderName}:</span>
-                                <span class="thread-message">${thread.lastMessagePreview.length > 50 ? thread.lastMessagePreview.substring(0, 47) + '...' : thread.lastMessagePreview}</span>
-                            </div>
-                            <div class="thread-meta">
-                                <span class="thread-project">${thread.projectName || ''}</span>
-                                ${thread.hasUnreadMessages ? `<span class="thread-unread-badge">${thread.unreadCount}</span>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            threadsList.innerHTML = html;
-        }
+                    `;
+                    return;
+                }
 
-        function selectThread(threadId, subject) {
-            console.log('Selecting thread:', threadId, subject);
-            
-            // Store current thread ID globally
-            window.currentThreadId = threadId;
-            
-            // Remove active class from all threads
-            document.querySelectorAll('.thread-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            
-            // Add active class to selected thread
-            event.currentTarget.classList.add('active');
-            
-            // Get the message type from the thread item
-            const messageType = event.currentTarget.dataset.messageType;
-            console.log('Message type:', messageType);
-            
-            // Show thread view
-            document.getElementById('noThreadSelected').style.display = 'none';
-            document.getElementById('threadView').style.display = 'block';
-            
-            // Show/hide message input based on message type
-            const messageInputArea = document.getElementById('messageInputArea');
-            if (messageType === 'direct' || messageType === 'thread') {
-                messageInputArea.style.display = 'block';
-                console.log('Showing message input for direct/thread messages');
-            } else {
-                messageInputArea.style.display = 'none';
-                console.log('Hiding message input for system/workflow messages');
-            }
-            
-            // Update header
-            document.getElementById('selectedThreadSubject').textContent = subject;
-            
-            // Load messages for this thread
-            loadThreadMessages(threadId);
-            
-            console.log('Thread view should now be visible');
-        }
+                let html = '';
+                threads.forEach(thread => {
+                    const unreadClass = thread.hasUnreadMessages ? 'unread' : '';
+                    const iconClass = tabType === 'system' ? 'fas fa-cogs' : 'fas fa-comment';
+                    const messageType = tabType === 'system' ? 'workflow' : 'direct';
 
-        function loadThreadMessages(threadId) {
-            const container = document.getElementById('messagesContainer');
-            container.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"></div><p class="mt-2">Loading messages...</p></div>';
-            
-            fetch(`/Messages/GetThreadMessages?threadId=${threadId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        displayMessages(data.messages);
-                } else {
-                        container.innerHTML = '<div class="alert alert-danger">Failed to load messages</div>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading messages:', error);
-                    container.innerHTML = '<div class="alert alert-danger">Error loading messages</div>';
-                });
-        }
-
-        function displayMessages(messages) {
-            const container = document.getElementById('messagesContainer');
-            
-            if (messages.length === 0) {
-                container.innerHTML = '<div class="empty-state"><i class="fas fa-comment-slash"></i><p>No messages in this conversation</p></div>';
-                return;
-            }
-            
-            let html = '';
-                messages.forEach(message => {
-                const isSystemMessage = message.senderId === 'system';
-                const messageClass = isSystemMessage ? 'system-message' : 'user-message';
-                const senderName = isSystemMessage ? 'System' : (message.senderName || 'Unknown User');
-                
-                    // Determine if this message can be replied to
-                    const canReply = !isSystemMessage && 
-                                   message.messageType !== 'workflow' && 
-                                   message.messageType !== 'system' &&
-                                   message.senderId !== 'system';
-                    
                     html += `
-                    <div class="message-item ${messageClass}">
-                                    <div class="message-avatar">
-                            <i class="fas fa-${isSystemMessage ? 'robot' : 'user'}"></i>
-                                    </div>
-                        <div class="message-content">
-                            <div class="message-header">
-                                <span class="message-sender">${senderName}</span>
-                                <span class="message-time">${new Date(message.sentAt).toLocaleString()}</span>
-                                    </div>
-                            <div class="message-text">${message.content}</div>
-                            ${isSystemMessage ? '<div class="system-message-indicator">System Message</div>' : ''}
-                            ${canReply ? `
-                                <div class="message-actions">
-                                    <button class="btn btn-sm btn-outline-primary reply-btn" 
-                                            onclick="replyToMessage('${message.messageId}', '${message.subject}', '${message.senderId}', '${senderName}', '${message.content.replace(/'/g, "\\'")}')">
-                                        <i class="fas fa-reply me-1"></i>Reply
-                                    </button>
+                        <div class="thread-item ${unreadClass}" 
+                             data-thread-id="${thread.threadId}" 
+                             data-message-type="${thread.threadType || messageType}"
+                             onclick="selectThread('${thread.threadId}', '${thread.subject}')">
+                            <div class="thread-avatar">
+                                <i class="${iconClass}"></i>
+                            </div>
+                            <div class="thread-content">
+                                <div class="thread-header">
+                                    <h6 class="thread-subject">${thread.subject}</h6>
+                                    <span class="thread-time">${new Date(thread.lastMessageAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                                 </div>
-                            ` : ''}
+                                <div class="thread-preview">
+                                    <span class="thread-sender">${thread.lastMessageSenderName}:</span>
+                                    <span class="thread-message">${thread.lastMessagePreview.length > 50 ? thread.lastMessagePreview.substring(0, 47) + '...' : thread.lastMessagePreview}</span>
+                                </div>
+                                <div class="thread-meta">
+                                    <span class="thread-project">${thread.projectName || ''}</span>
+                                    ${thread.hasUnreadMessages ? `<span class="thread-unread-badge">${thread.unreadCount}</span>` : ''}
+                                </div>
                             </div>
                         </div>
                     `;
                 });
-            
-            container.innerHTML = html;
-            
-            // Scroll to bottom
-            container.scrollTop = container.scrollHeight;
-        }
 
-        function sendMessage() {
-            const recipientId = document.getElementById('recipientSelect').value;
-            const projectId = document.getElementById('projectSelect').value;
-            const subject = document.getElementById('messageSubject').value;
-            const content = document.getElementById('messageContent').value;
-            
-            if (!recipientId || !subject || !content) {
-                alert('Please fill in all required fields');
-                return;
+                threadsList.innerHTML = html;
             }
+
+            function selectThread(threadId, subject) {
+                console.log('Selecting thread:', threadId, subject);
+                
+                // Prevent duplicate selection of the same thread
+                if (window.currentThreadId === threadId) {
+                    console.log('Thread already selected, skipping');
+                    return;
+                }
+                
+                // Store current thread ID globally
+                window.currentThreadId = threadId;
+
+                // Remove active class from all threads
+                document.querySelectorAll('.thread-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+
+                // Add active class to selected thread
+                event.currentTarget.classList.add('active');
+
+                // Get the message type from the thread item
+                const messageType = event.currentTarget.dataset.messageType;
+                console.log('Message type:', messageType);
+
+                // Show shared thread view
+                document.getElementById('noThreadSelected').style.display = 'none';
+                document.getElementById('threadView').style.display = 'block';
+                document.getElementById('selectedThreadSubject').textContent = subject;
+
+                // Show/hide message input based on message type and current tab
+                const messageInputArea = document.getElementById('messageInputArea');
+                const currentTab = document.querySelector('.tab-button.active').id.replace('-tab', '');
+                
+                if (currentTab === 'direct' && (messageType === 'direct' || messageType === 'thread')) {
+                    messageInputArea.style.display = 'block';
+                    console.log('Showing message input for direct messages');
+                    
+                    // Ensure input area is visible and positioned correctly
+                    setTimeout(() => {
+                        messageInputArea.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    }, 200);
+                } else {
+                    messageInputArea.style.display = 'none';
+                    console.log('Hiding message input for system messages');
+                }
+
+            // Load messages for this thread
+            loadThreadMessages(threadId);
             
-            const request = {
-                receiverId: recipientId,
-                projectId: projectId,
-                subject: subject,
-                content: content
-            };
+            // Mark messages as read
+            markThreadAsRead(threadId);
             
-            fetch('/Messages/SendMessage', {
+            console.log('Thread view should now be visible');
+            }
+
+            // Track loading state to prevent duplicate calls
+            let isLoadingMessages = false;
+
+            function loadThreadMessages(threadId) {
+                if (isLoadingMessages) {
+                    console.log('Already loading messages, skipping duplicate call');
+                    return;
+                }
+                
+                console.log('loadThreadMessages called for thread:', threadId);
+                isLoadingMessages = true;
+                const container = document.getElementById('messagesContainer');
+                container.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"></div><p class="mt-2">Loading messages...</p></div>';
+
+                fetch(`/Messages/GetThreadMessages?threadId=${threadId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Received data:', data);
+                        if (data.success) {
+                            if (data.messages && data.messages.length > 0) {
+                                displayMessages(data.messages);
+                            } else {
+                                console.log('No messages received, trying direct API call...');
+                                // Fallback: try direct API call
+                                fetch(`/api/messages/thread/${threadId}`)
+                                    .then(response => response.json())
+                                    .then(apiData => {
+                                        console.log('Direct API data:', apiData);
+                                        if (Array.isArray(apiData)) {
+                                            displayMessages(apiData);
+                                        } else {
+                                            container.innerHTML = '<div class="alert alert-warning">No messages found in this conversation</div>';
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Direct API call failed:', error);
+                                        container.innerHTML = '<div class="alert alert-warning">No messages found in this conversation</div>';
+                                    });
+                            }
+                        } else {
+                            container.innerHTML = '<div class="alert alert-danger">Failed to load messages</div>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading messages:', error);
+                        container.innerHTML = '<div class="alert alert-danger">Error loading messages</div>';
+                    })
+                    .finally(() => {
+                        isLoadingMessages = false;
+                    });
+            }
+
+            function displayMessages(messages) {
+                console.log('displayMessages called with', messages.length, 'messages');
+                const container = document.getElementById('messagesContainer');
+
+                if (messages.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-comment-slash"></i><p>No messages in this conversation</p></div>';
+                    return;
+                }
+
+                // Clear container first to prevent duplicates
+                container.innerHTML = '';
+                
+                // Get current user ID for message positioning
+                const currentUserId = getCurrentUserId();
+                
+                let html = '';
+                messages.forEach(message => {
+                    const isSystemMessage = message.senderId === 'system';
+                    const isCurrentUser = message.senderId === currentUserId;
+                    const messageClass = isSystemMessage ? 'system-message' : (isCurrentUser ? 'user-message-right' : 'user-message-left');
+                    
+                    // Use the senderName from the API response
+                    let senderName = message.senderName || 'Unknown User';
+                    if (isCurrentUser) {
+                        senderName = 'You';
+                    }
+
+                    // Determine if this message can be replied to (only for direct messages)
+                    const canReply = !isSystemMessage &&
+                        message.messageType !== 'workflow' &&
+                        message.messageType !== 'system' &&
+                        message.senderId !== 'system' &&
+                        message.senderId !== '';
+
+                    // Check if this is a reply to another message
+                    const isReply = message.parentMessageId && message.parentMessageId !== '';
+                    const replyContext = isReply ? getReplyContext(message, messages) : '';
+
+                    html += `
+                        <div class="message-item ${messageClass}">
+                            ${!isCurrentUser ? `
+                                <div class="message-avatar">
+                                    <i class="fas fa-${isSystemMessage ? 'robot' : 'user'}"></i>
+                                </div>
+                            ` : ''}
+                            <div class="message-content">
+                                ${isReply ? `
+                                    <div class="reply-context">
+                                        <i class="fas fa-reply"></i>
+                                        <span class="reply-to">Replying to ${replyContext}</span>
+                                    </div>
+                                ` : ''}
+                                <div class="message-header">
+                                    <span class="message-sender">${senderName}</span>
+                                    <span class="message-time">${new Date(message.sentAt).toLocaleString()}</span>
+                                </div>
+                                <div class="message-text">${message.content}</div>
+                                ${isSystemMessage ? '<div class="system-message-indicator">System Message</div>' : ''}
+                                ${canReply ? `
+                                    <div class="message-actions">
+                                        <button class="btn btn-sm btn-outline-primary reply-btn" 
+                                                onclick="replyToMessage('${message.messageId}', '${message.subject}', '${message.senderId}', '${senderName}', '${message.content.replace(/'/g, "\\'")}')">
+                                            <i class="fas fa-reply me-1"></i>Reply
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            ${isCurrentUser ? `
+                                <div class="message-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+
+                // Scroll to bottom after a short delay to ensure DOM is updated
+                setTimeout(() => {
+                    container.scrollTop = container.scrollHeight;
+                }, 100);
+            }
+
+            function getCurrentUserId() {
+                // This should be set when the page loads
+                return window.currentUserId || '';
+            }
+
+            function getReplyContext(replyMessage, allMessages) {
+                const parentMessage = allMessages.find(m => m.messageId === replyMessage.parentMessageId);
+                if (parentMessage) {
+                    const parentSender = parentMessage.senderId === getCurrentUserId() ? 'You' : (parentMessage.senderName || 'Unknown User');
+                    const parentContent = parentMessage.content.length > 50 ? 
+                        parentMessage.content.substring(0, 47) + '...' : 
+                        parentMessage.content;
+                    return `${parentSender}: ${parentContent}`;
+                }
+                return 'Unknown message';
+            }
+
+            function sendMessage() {
+                const recipientId = document.getElementById('recipientSelect').value;
+                const projectId = document.getElementById('projectSelect').value;
+                const subject = document.getElementById('messageSubject').value;
+                const content = document.getElementById('messageContent').value;
+
+                if (!recipientId || !subject || !content) {
+                    alert('Please fill in all required fields');
+                    return;
+                }
+
+                const request = {
+                    receiverId: recipientId,
+                    projectId: projectId,
+                    subject: subject,
+                    content: content
+                };
+
+                fetch('/Messages/SendMessage', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
                     },
-                body: JSON.stringify(request)
+                    body: JSON.stringify(request)
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Close modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('sendMessageModal'));
-                        modal.hide();
-                    
-                    // Reset form
-                    document.getElementById('sendMessageForm').reset();
-                        
-                        // Show success message
-                        showAlert('success', data.message);
-                        
-                    // Refresh threads list
-                    location.reload();
-                    } else {
-                        showAlert('danger', data.message);
-                    }
-                })
-                .catch(error => {
-                console.error('Error sending message:', error);
-                showAlert('danger', 'Error sending message');
-            });
-        }
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Close modal
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('sendMessageModal'));
+                            modal.hide();
 
-        function updateUnreadCount() {
-            fetch('/Messages/GetUnreadCount')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const badge = document.getElementById('unreadCount');
-                        const badgeContainer = document.getElementById('unreadBadge');
-                        
-                        if (data.count > 0) {
-                            badge.textContent = data.count;
-                            badgeContainer.style.display = 'inline-block';
+                            // Reset form
+                            document.getElementById('sendMessageForm').reset();
+
+                            // Show success message
+                            showAlert('success', data.message);
+
+                            // Refresh threads list
+                            location.reload();
                         } else {
-                            badgeContainer.style.display = 'none';
+                            showAlert('danger', data.message);
                         }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error updating unread count:', error);
-                });
-        }
-
-        function openReplyModal(messageId, subject, senderId, senderName) {
-            // Set the form data
-            document.getElementById('replyParentMessageId').value = messageId;
-            document.getElementById('replySenderId').value = senderId;
-            document.getElementById('replySubject').value = 'Re: ' + subject;
-            document.getElementById('replyToInfo').textContent = senderName;
-            document.getElementById('replyContent').value = '';
-            
-            // Show the modal
-            const modal = new bootstrap.Modal(document.getElementById('replyMessageModal'));
-            modal.show();
-        }
-
-        function sendReply() {
-            const parentMessageId = document.getElementById('replyParentMessageId').value;
-            const senderId = document.getElementById('replySenderId').value;
-            const subject = document.getElementById('replySubject').value;
-            const content = document.getElementById('replyContent').value;
-            
-            if (!content.trim()) {
-                alert('Please enter your reply');
-                return;
+                    })
+                    .catch(error => {
+                        console.error('Error sending message:', error);
+                        showAlert('danger', 'Error sending message');
+                    });
             }
-            
-            const request = {
-                parentMessageId: parentMessageId,
-                content: content
-            };
-            
-            fetch('/Messages/ReplyToMessage', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                },
-                body: JSON.stringify(request)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Close modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('replyMessageModal'));
-                    modal.hide();
-                    
-                    // Reset form
-                    document.getElementById('replyMessageForm').reset();
-                    
-                    // Show success message
-                    showAlert('success', data.message);
-                    
-                    // Refresh the current thread
-                    if (window.currentThreadId) {
-                        loadThreadMessages(window.currentThreadId);
-                    }
-                } else {
-                    showAlert('danger', data.message);
+
+            function updateUnreadCount() {
+                fetch('/Messages/GetUnreadCount')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const badge = document.getElementById('unreadCount');
+                            const badgeContainer = document.getElementById('unreadBadge');
+
+                            if (data.count > 0) {
+                                badge.textContent = data.count;
+                                badgeContainer.style.display = 'inline-block';
+                            } else {
+                                badgeContainer.style.display = 'none';
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error updating unread count:', error);
+                    });
+            }
+
+            function openReplyModal(messageId, subject, senderId, senderName) {
+                // Set the form data
+                document.getElementById('replyParentMessageId').value = messageId;
+                document.getElementById('replySenderId').value = senderId;
+                document.getElementById('replySubject').value = 'Re: ' + subject;
+                document.getElementById('replyToInfo').textContent = senderName;
+                document.getElementById('replyContent').value = '';
+
+                // Show the modal
+                const modal = new bootstrap.Modal(document.getElementById('replyMessageModal'));
+                modal.show();
+            }
+
+            function sendReply() {
+                const parentMessageId = document.getElementById('replyParentMessageId').value;
+                const senderId = document.getElementById('replySenderId').value;
+                const subject = document.getElementById('replySubject').value;
+                const content = document.getElementById('replyContent').value;
+
+                if (!content.trim()) {
+                    alert('Please enter your reply');
+                    return;
                 }
-            })
-            .catch(error => {
-                console.error('Error sending reply:', error);
-                showAlert('danger', 'Error sending reply');
-            });
-        }
+
+                const request = {
+                    parentMessageId: parentMessageId,
+                    content: content
+                };
+
+                fetch('/Messages/ReplyToMessage', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify(request)
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Close modal
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('replyMessageModal'));
+                            modal.hide();
+
+                            // Reset form
+                            document.getElementById('replyMessageForm').reset();
+
+                            // Show success message
+                            showAlert('success', data.message);
+
+                            // Refresh the current thread
+                            if (window.currentThreadId) {
+                                loadThreadMessages(window.currentThreadId);
+                            }
+                        } else {
+                            showAlert('danger', data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error sending reply:', error);
+                        showAlert('danger', 'Error sending reply');
+                    });
+            }
 
         function refreshThread() {
             const activeThread = document.querySelector('.thread-item.active');
@@ -699,163 +758,223 @@
                 loadThreadMessages(threadId);
             }
         }
-
-        // WhatsApp-like functionality
-        function sendThreadMessage() {
-            console.log('sendThreadMessage called');
-            const messageInput = document.getElementById('threadMessageInput');
-            const content = messageInput.value.trim();
-            
-            console.log('Message content:', content);
-            console.log('Current thread ID:', window.currentThreadId);
-            
-            if (!content) {
-                console.log('No content, returning');
-                return;
-            }
-            
-            if (!window.currentThreadId) {
-                console.log('No thread selected');
-                showAlert('danger', 'No thread selected');
-                return;
-            }
-            
-            // Check if we're replying to a specific message
-            const replyPreview = document.getElementById('replyPreview');
-            const isReplying = replyPreview.style.display !== 'none';
-            
-            if (isReplying) {
-                // Send as reply
-                const parentMessageId = replyPreview.dataset.parentMessageId;
-                sendReply(parentMessageId, content);
-            } else {
-                // Send as new message in thread
-                sendNewThreadMessage(content);
-            }
-            
-            // Clear input
-            messageInput.value = '';
-            autoResizeTextarea(messageInput);
-            
-            // Cancel any active reply
-            cancelReply();
-        }
-
-        function sendNewThreadMessage(content) {
-            // This will send a new message to the current thread
-            // We'll need to create an endpoint for this
-            fetch('/Messages/SendThreadMessage', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                },
-                body: JSON.stringify({
-                    threadId: window.currentThreadId,
-                    content: content
+        
+            function markThreadAsRead(threadId) {
+                console.log('Marking thread as read:', threadId);
+                
+                fetch('/Messages/MarkThreadAsRead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({ threadId: threadId })
                 })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Refresh the thread to show the new message
-                    loadThreadMessages(window.currentThreadId);
-                } else {
-                    showAlert('danger', data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error sending thread message:', error);
-                showAlert('danger', 'Error sending message');
-            });
-        }
-
-        function sendReply(parentMessageId, content) {
-            const request = {
-                parentMessageId: parentMessageId,
-                content: content
-            };
-            
-            fetch('/Messages/ReplyToMessage', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                },
-                body: JSON.stringify(request)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Refresh the thread to show the reply
-                    loadThreadMessages(window.currentThreadId);
-                } else {
-                    showAlert('danger', data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error sending reply:', error);
-                showAlert('danger', 'Error sending reply');
-            });
-        }
-
-        function replyToMessage(messageId, subject, senderId, senderName, messageContent) {
-            // Show reply preview
-            const replyPreview = document.getElementById('replyPreview');
-            replyPreview.style.display = 'block';
-            replyPreview.dataset.parentMessageId = messageId;
-            
-            document.getElementById('replyPreviewSender').textContent = `Replying to ${senderName}`;
-            document.getElementById('replyPreviewText').textContent = messageContent;
-            
-            // Focus on input
-            document.getElementById('threadMessageInput').focus();
-        }
-
-        function cancelReply() {
-            const replyPreview = document.getElementById('replyPreview');
-            replyPreview.style.display = 'none';
-            replyPreview.dataset.parentMessageId = '';
-        }
-
-        function handleMessageInputKeydown(event) {
-            if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                sendThreadMessage();
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Thread marked as read successfully');
+                        // Remove unread styling from the thread item
+                        const threadItem = document.querySelector(`[data-thread-id="${threadId}"]`);
+                        if (threadItem) {
+                            threadItem.classList.remove('unread');
+                            const unreadBadge = threadItem.querySelector('.thread-unread-badge');
+                            if (unreadBadge) {
+                                unreadBadge.remove();
+                            }
+                        }
+                        // Update unread count
+                        updateUnreadCount();
+                    } else {
+                        console.error('Failed to mark thread as read:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error marking thread as read:', error);
+                });
             }
-        }
 
-        function autoResizeTextarea(textarea) {
-            textarea.style.height = 'auto';
-            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
-        }
+            function closeChatView() {
+                console.log('Closing chat view');
+                
+                // Clear current thread ID
+                window.currentThreadId = null;
+                
+                // Remove active class from all threads
+                document.querySelectorAll('.thread-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                
+                // Show no selection state
+                document.getElementById('noThreadSelected').style.display = 'block';
+                document.getElementById('threadView').style.display = 'none';
+                
+                // Hide message input area
+                const messageInputArea = document.getElementById('messageInputArea');
+                messageInputArea.style.display = 'none';
+                
+                // Clear any reply preview
+                cancelReply();
+                
+                console.log('Chat view closed');
+            }
 
-        function toggleEmojiPicker() {
-            // Placeholder for emoji picker functionality
-            showAlert('info', 'Emoji picker coming soon!');
-        }
+            // WhatsApp-like functionality
+            function sendThreadMessage() {
+                console.log('sendThreadMessage called');
+                const messageInput = document.getElementById('threadMessageInput');
+                const content = messageInput.value.trim();
 
-        function toggleAttachmentOptions() {
-            // Placeholder for attachment functionality
-            showAlert('info', 'Attachment options coming soon!');
-        }
+                console.log('Message content:', content);
+                console.log('Current thread ID:', window.currentThreadId);
 
-        function showAlert(type, message) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-            alertDiv.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i> ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            
-            document.querySelector('.messages-container').insertBefore(alertDiv, document.querySelector('.messages-content'));
-            
-            // Auto-dismiss after 5 seconds
-            setTimeout(() => {
-                if (alertDiv.parentNode) {
-                    alertDiv.remove();
+                if (!content) {
+                    console.log('No content, returning');
+                    return;
                 }
-            }, 5000);
-        }
-    </script>
+
+                if (!window.currentThreadId) {
+                    console.log('No thread selected');
+                    showAlert('danger', 'No thread selected');
+                    return;
+                }
+
+                // Check if we're replying to a specific message
+                const replyPreview = document.getElementById('replyPreview');
+                const isReplying = replyPreview.style.display !== 'none';
+
+                if (isReplying) {
+                    // Send as reply
+                    const parentMessageId = replyPreview.dataset.parentMessageId;
+                    sendReply(parentMessageId, content);
+                } else {
+                    // Send as new message in thread
+                    sendNewThreadMessage(content);
+                }
+
+                // Clear input
+                messageInput.value = '';
+                autoResizeTextarea(messageInput);
+
+                // Cancel any active reply
+                cancelReply();
+            }
+
+            function sendNewThreadMessage(content) {
+                // This will send a new message to the current thread
+                // We'll need to create an endpoint for this
+                fetch('/Messages/SendThreadMessage', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        threadId: window.currentThreadId,
+                        content: content
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Refresh the thread to show the new message
+                            loadThreadMessages(window.currentThreadId);
+                        } else {
+                            showAlert('danger', data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error sending thread message:', error);
+                        showAlert('danger', 'Error sending message');
+                    });
+            }
+
+            function sendReply(parentMessageId, content) {
+                const request = {
+                    parentMessageId: parentMessageId,
+                    content: content
+                };
+
+                fetch('/Messages/ReplyToMessage', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify(request)
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Refresh the thread to show the reply
+                            loadThreadMessages(window.currentThreadId);
+                        } else {
+                            showAlert('danger', data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error sending reply:', error);
+                        showAlert('danger', 'Error sending reply');
+                    });
+            }
+
+            function replyToMessage(messageId, subject, senderId, senderName, messageContent) {
+                // Show reply preview
+                const replyPreview = document.getElementById('replyPreview');
+                replyPreview.style.display = 'block';
+                replyPreview.dataset.parentMessageId = messageId;
+
+                document.getElementById('replyPreviewSender').textContent = `Replying to ${senderName}`;
+                document.getElementById('replyPreviewText').textContent = messageContent;
+
+                // Focus on input
+                document.getElementById('threadMessageInput').focus();
+            }
+
+            function cancelReply() {
+                const replyPreview = document.getElementById('replyPreview');
+                replyPreview.style.display = 'none';
+                replyPreview.dataset.parentMessageId = '';
+            }
+
+            function handleMessageInputKeydown(event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    sendThreadMessage();
+                }
+            }
+
+            function autoResizeTextarea(textarea) {
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+            }
+
+            function toggleEmojiPicker() {
+                // Placeholder for emoji picker functionality
+                showAlert('info', 'Emoji picker coming soon!');
+            }
+
+            function toggleAttachmentOptions() {
+                // Placeholder for attachment functionality
+                showAlert('info', 'Attachment options coming soon!');
+            }
+
+            function showAlert(type, message) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+                alertDiv.innerHTML = `
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i> ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+
+                document.querySelector('.messages-container').insertBefore(alertDiv, document.querySelector('.messages-content'));
+
+                // Auto-dismiss after 5 seconds
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.remove();
+                    }
+                }, 5000);
+            }
+        </script>
 }

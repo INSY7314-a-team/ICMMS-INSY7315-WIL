@@ -27,6 +27,11 @@ namespace ICCMS_Web.Models
         public int AttachmentCount => Attachments?.Count ?? 0;
     }
 
+    public class MessageWithSender : MessageDto
+    {
+        // Inherits all properties from MessageDto including SenderName
+    }
+
     public class MessageAttachmentDto
     {
         public string AttachmentId { get; set; } = string.Empty;
@@ -178,7 +183,8 @@ namespace ICCMS_Web.Models
     // Message Dashboard Models
     public class MessageThreadsViewModel
     {
-        public List<MessageThreadViewModel> Threads { get; set; } = new List<MessageThreadViewModel>();
+        public List<MessageThreadViewModel> Threads { get; set; } =
+            new List<MessageThreadViewModel>();
         public int CurrentPage { get; set; } = 1;
         public int PageSize { get; set; } = 25;
         public int TotalThreads { get; set; } = 0;
@@ -194,7 +200,7 @@ namespace ICCMS_Web.Models
         public string CurrentSearchTerm { get; set; } = "";
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
-        
+
         public bool HasPreviousPage => CurrentPage > 1;
         public bool HasNextPage => CurrentPage < TotalPages;
         public int StartIndex => (CurrentPage - 1) * PageSize + 1;
@@ -205,17 +211,17 @@ namespace ICCMS_Web.Models
     {
         public string ProjectId { get; set; } = string.Empty;
         public string ProjectName { get; set; } = string.Empty;
-        
+
         // For backward compatibility with DocumentsController
-        public string Id 
-        { 
-            get => ProjectId; 
-            set => ProjectId = value; 
+        public string Id
+        {
+            get => ProjectId;
+            set => ProjectId = value;
         }
-        public string Name 
-        { 
-            get => ProjectName; 
-            set => ProjectName = value; 
+        public string Name
+        {
+            get => ProjectName;
+            set => ProjectName = value;
         }
     }
 
@@ -223,22 +229,22 @@ namespace ICCMS_Web.Models
     {
         public string UserId { get; set; } = string.Empty;
         public string UserName { get; set; } = string.Empty;
-        
+
         // For backward compatibility with DocumentsController
-        public string Id 
-        { 
-            get => UserId; 
-            set => UserId = value; 
+        public string Id
+        {
+            get => UserId;
+            set => UserId = value;
         }
-        public string FullName 
-        { 
-            get => UserName; 
-            set => UserName = value; 
+        public string FullName
+        {
+            get => UserName;
+            set => UserName = value;
         }
-        public string Email 
-        { 
-            get => UserName; 
-            set => UserName = value; 
+        public string Email
+        {
+            get => UserName;
+            set => UserName = value;
         }
     }
 }

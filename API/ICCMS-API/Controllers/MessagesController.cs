@@ -753,7 +753,7 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpGet("thread/{threadId}")]
-        public async Task<ActionResult<List<Message>>> GetThreadMessages(string threadId)
+        public async Task<ActionResult<List<MessageWithSender>>> GetThreadMessages(string threadId)
         {
             try
             {
@@ -763,7 +763,98 @@ namespace ICCMS_API.Controllers
                     .OrderBy(m => m.SentAt)
                     .ToList();
 
-                return Ok(threadMessages);
+                Console.WriteLine($"Found {threadMessages.Count} messages for thread {threadId}");
+                foreach (var msg in threadMessages)
+                {
+                    Console.WriteLine(
+                        $"Message: {msg.MessageId}, SenderId: '{msg.SenderId}', Content: {msg.Content.Substring(0, Math.Min(50, msg.Content.Length))}..."
+                    );
+                }
+
+                // Get unique sender IDs
+                var senderIds = threadMessages.Select(m => m.SenderId).Distinct().ToList();
+                Console.WriteLine(
+                    $"Found {senderIds.Count} unique sender IDs: {string.Join(", ", senderIds)}"
+                );
+
+                // Fetch sender information
+                var senders = new Dictionary<string, string>();
+                foreach (var senderId in senderIds)
+                {
+                    if (!string.IsNullOrEmpty(senderId) && senderId != "system")
+                    {
+                        try
+                        {
+                            Console.WriteLine($"Fetching user info for senderId: {senderId}");
+                            var user = await _firebaseService.GetDocumentAsync<User>(
+                                "users",
+                                senderId
+                            );
+                            if (user != null)
+                            {
+                                senders[senderId] =
+                                    user.FullName
+                                    ?? $"User {senderId.Substring(0, Math.Min(8, senderId.Length))}";
+                                Console.WriteLine($"Found user: {senders[senderId]}");
+                            }
+                            else
+                            {
+                                senders[senderId] =
+                                    $"User {senderId.Substring(0, Math.Min(8, senderId.Length))}";
+                                Console.WriteLine(
+                                    $"User not found, using fallback: {senders[senderId]}"
+                                );
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error fetching user {senderId}: {ex.Message}");
+                            senders[senderId] =
+                                $"User {senderId.Substring(0, Math.Min(8, senderId.Length))}";
+                        }
+                    }
+                    else if (senderId == "system")
+                    {
+                        senders[senderId] = "System";
+                        Console.WriteLine($"System sender: {senders[senderId]}");
+                    }
+                    else
+                    {
+                        senders[senderId] = "Unknown User";
+                        Console.WriteLine($"Empty senderId, using: {senders[senderId]}");
+                    }
+                }
+
+                // Create message with sender info
+                var messagesWithSenders = threadMessages
+                    .Select(m => new MessageWithSender
+                    {
+                        MessageId = m.MessageId,
+                        SenderId = m.SenderId,
+                        SenderName = senders.GetValueOrDefault(m.SenderId, "Unknown User"),
+                        ReceiverId = m.ReceiverId,
+                        ProjectId = m.ProjectId,
+                        Subject = m.Subject,
+                        Content = m.Content,
+                        IsRead = m.IsRead,
+                        SentAt = m.SentAt,
+                        ReadAt = m.ReadAt,
+                        ThreadId = m.ThreadId,
+                        ParentMessageId = m.ParentMessageId,
+                        IsThreadStarter = m.IsThreadStarter,
+                        ThreadDepth = m.ThreadDepth,
+                        MessageType = m.MessageType,
+                        ThreadParticipants = m.ThreadParticipants,
+                        ReplyCount = m.ReplyCount,
+                        LastReplyAt = m.LastReplyAt,
+                        HasAttachments = m.HasAttachments,
+                    })
+                    .ToList();
+
+                Console.WriteLine(
+                    $"Returning {messagesWithSenders.Count} messages with sender info"
+                );
+                return Ok(messagesWithSenders);
             }
             catch (Exception ex)
             {
