@@ -62,6 +62,7 @@
 
             const email = document.getElementById('emailInput').value;
             const password = document.getElementById('passwordInput').value;
+            const rememberMe = document.getElementById('rememberMeInput').checked;
             const submitBtn = e.target.querySelector('button[type="submit"]');
             const originalText = submitBtn.textContent;
 
@@ -69,54 +70,57 @@
                 submitBtn.textContent = 'Logging in...';
                 submitBtn.disabled = true;
 
-                console.log('[Login] Calling API login endpoint for', email);
+                console.log('[Login] Signing in with Firebase for', email);
                 
-                // Call the API's /api/auth/login endpoint directly
-                const response = await fetch('/api/auth/login', {
+                // Use Firebase Client SDK to sign in with email and password
+                // This properly verifies the password on the client side
+                const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+                console.log('[Login] Firebase sign-in successful');
+                
+                // Get the ID token from the authenticated user
+                const idToken = await userCredential.user.getIdToken();
+                console.log('[Login] Got ID token from Firebase');
+                
+                // Verify the ID token with the Web Auth controller to create the session
+                console.log('[Login] Verifying token with Web auth');
+                const verifyResponse = await fetch('/Auth/VerifyToken', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify({ 
+                        idToken: idToken,
+                        email: email,
+                        rememberMe: rememberMe
+                    })
                 });
 
-                console.log('[Login] API response status:', response.status);
-                const result = await response.json();
-                console.log('[Login] API response:', result);
+                const verifyResult = await verifyResponse.json();
+                console.log('[Login] Verify result:', verifyResult);
 
-                if (result.success && result.token) {
-                    // Exchange the custom token for an ID token using Firebase client SDK
-                    console.log('[Login] Got custom token, exchanging for ID token');
-                    const idToken = await firebase.auth().signInWithCustomToken(result.token).then(userCred => userCred.user.getIdToken());
-                    console.log('[Login] Got ID token from Firebase');
-                    
-                    // Now verify the ID token with the Web Auth controller to create the session
-                    console.log('[Login] Got token from API, verifying with Web auth');
-                    const verifyResponse = await fetch('/Auth/VerifyToken', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            idToken: idToken,
-                            email: result.user?.email || email
-                        })
-                    });
-
-                    const verifyResult = await verifyResponse.json();
-                    console.log('[Login] Verify result:', verifyResult);
-
-                    if (verifyResult.success) {
-                        const role = verifyResult.user?.role?.toLowerCase();
-                        console.log('[Login] Verified user role:', role);
-                        if (role === 'client') window.location.href = '/Clients';
-                        else if (role === 'admin') window.location.href = '/Users';
-                        else window.location.href = '/';
-                    } else {
-                        alert(verifyResult.message || 'Login verification failed');
-                    }
+                if (verifyResult.success) {
+                    const role = verifyResult.user?.role?.toLowerCase();
+                    console.log('[Login] Verified user role:', role);
+                    if (role === 'client') window.location.href = '/Clients';
+                    else if (role === 'admin') window.location.href = '/Users';
+                    else window.location.href = '/';
                 } else {
-                    alert(result.message || 'Login failed');
+                    alert(verifyResult.message || 'Login verification failed');
                 }
             } catch (error) {
                 console.error('[Login] Error:', error);
-                alert('Login failed: ' + error.message);
+                let errorMessage = 'Login failed: ' + error.message;
+                
+                // Provide user-friendly error messages
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                    errorMessage = 'Invalid email or password.';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = 'Invalid email address.';
+                } else if (error.code === 'auth/user-disabled') {
+                    errorMessage = 'This account has been disabled.';
+                } else if (error.code === 'auth/too-many-requests') {
+                    errorMessage = 'Too many failed attempts. Please try again later.';
+                }
+                
+                alert(errorMessage);
             } finally {
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;

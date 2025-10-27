@@ -8,7 +8,13 @@ namespace ICCMS_API.Services
         Task<FirebaseToken> VerifyTokenAsync(string idToken);
         Task<UserRecord> GetUserAsync(string uid);
         Task<string> CreateUserAsync(string email, string password, string displayName);
+        
+        // WARNING: This method cannot verify passwords. Firebase Admin SDK does not support password verification.
+        // Password verification must be done using Firebase Client SDK (JavaScript/web, Android, iOS).
+        // This method will throw InvalidOperationException to prevent misuse.
+        [Obsolete("Cannot verify passwords with Firebase Admin SDK. Use Firebase Client SDK for authentication.")]
         Task<UserRecord> SignInWithEmailAndPasswordAsync(string email, string password);
+        
         Task<bool> DeleteUserAsync(string uid);
         Task<bool> UpdateUserAsync(string uid, string displayName, string email);
 
@@ -83,7 +89,11 @@ namespace ICCMS_API.Services
 
         public async Task<UserRecord> SignInWithEmailAndPasswordAsync(string email, string password)
         {
-            return await GetUserByEmailAsync(email);
+            // Firebase Admin SDK cannot verify passwords directly
+            // This method should not be used for password verification
+            // Password verification must be done using Firebase Client SDK
+            // This implementation is kept for backward compatibility but should not be relied upon
+            throw new InvalidOperationException("SignInWithEmailAndPasswordAsync cannot verify passwords. Use Firebase Client SDK for authentication.");
         }
 
         public async Task<bool> DeleteUserAsync(string uid)
