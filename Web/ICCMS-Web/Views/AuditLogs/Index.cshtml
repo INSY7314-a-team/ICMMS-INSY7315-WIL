@@ -1,35 +1,59 @@
-@model List<ICCMS_Web.Controllers.AuditLogViewModel>
+@model ICCMS_Web.Controllers.AuditLogsViewModel
 @{
     ViewData["Title"] = "Audit Logs";
 }
 
-<div class="container-fluid">
+@functions {
+    string GetLogTypeIcon(string logType)
+    {
+        return logType.ToLower() switch
+        {
+            "user" => "user",
+            "project" => "project-diagram",
+            "document" => "file",
+            "system" => "cog",
+            "login" => "sign-in-alt",
+            "logout" => "sign-out-alt",
+            "create" => "plus",
+            "update" => "edit",
+            "delete" => "trash",
+            "payment" => "credit-card",
+            "invoice" => "file-invoice",
+            "quotation" => "file-invoice-dollar",
+            "message" => "envelope",
+            "notification" => "bell",
+            _ => "tag"
+        };
+    }
+}
+
+<link href="~/css/audit-logs.css" rel="stylesheet" />
+
+<div class="audit-logs-container">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="audit-dashboard-header construction-border">
+        <div class="d-flex justify-content-between align-items-center">
         <div>
-            <h1 class="h3 mb-0">
-                <i class="fas fa-clipboard-list text-primary"></i>
-                Audit Logs
+                <h1 class="audit-dashboard-title">
+                    <i class="fas fa-clipboard-list me-3"></i>Audit Logs Dashboard
             </h1>
-            <p class="text-muted">Monitor and test system audit logging</p>
+                <p class="audit-dashboard-subtitle">Monitor system activities, track user actions, and analyze audit trails</p>
+            </div>
         </div>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createLogModal">
-            <i class="fas fa-plus"></i> Create Test Log
-        </button>
     </div>
 
     <!-- Alerts -->
     @if (TempData["Success"] != null)
     {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle"></i> @TempData["Success"]
+        <div class="audit-alert audit-alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i> @TempData["Success"]
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
     @if (TempData["Error"] != null)
     {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-triangle"></i> @TempData["Error"]
+        <div class="audit-alert audit-alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i> @TempData["Error"]
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
@@ -37,201 +61,242 @@
     <!-- Stats Cards -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4 class="mb-0">@Model.Count</h4>
-                            <small>Total Logs</small>
-                        </div>
-                        <i class="fas fa-clipboard-list fa-2x opacity-75"></i>
-                    </div>
+            <div class="audit-stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-clipboard-list"></i>
                 </div>
+                <h2 class="card-value">@Model.TotalLogs</h2>
+                <p class="card-title">Total Logs</p>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4 class="mb-0">@Model.Count(l => l.IsActive)</h4>
-                            <small>Active Logs</small>
-                        </div>
-                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
-                    </div>
+            <div class="audit-stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
                 </div>
+                <h2 class="card-value">@Model.Logs.Count(l => l.IsActive)</h2>
+                <p class="card-title">Active Logs</p>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4 class="mb-0">@Model.Select(l => l.LogType).Distinct().Count()</h4>
-                            <small>Log Types</small>
-                        </div>
-                        <i class="fas fa-tags fa-2x opacity-75"></i>
-                    </div>
+            <div class="audit-stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-tags"></i>
                 </div>
+                <h2 class="card-value">@Model.Logs.Select(l => l.LogType).Distinct().Count()</h2>
+                <p class="card-title">Log Types</p>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4 class="mb-0">@Model.Select(l => l.UserId).Distinct().Count()</h4>
-                            <small>Unique Users</small>
-                        </div>
-                        <i class="fas fa-users fa-2x opacity-75"></i>
-                    </div>
+            <div class="audit-stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h2 class="card-value">@Model.Logs.Select(l => l.UserId).Distinct().Count()</h2>
+                <p class="card-title">Unique Users</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <div class="audit-content-card">
+        <div class="audit-card-header">
+            <h5 class="audit-card-title">
+                <i class="fas fa-search"></i> Search & Filter Logs
+            </h5>
+        </div>
+        <div style="padding: 25px;">
+            <!-- Search Section -->
+            <div class="search-section" style="margin-bottom: 20px;">
+                <form method="get" class="search-input-group">
+                    <input type="hidden" name="page" value="1" />
+                    <input type="hidden" name="pageSize" value="@Model.PageSize" />
+                    <input type="hidden" name="filterType" value="@Model.CurrentFilter" />
+                    <input type="text" class="search-input" name="searchTerm" value="@Model.CurrentSearchTerm" placeholder="Search logs by title, description, user ID, or entity ID...">
+                    <button type="submit" class="search-btn" title="Search">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <a href="@Url.Action("Index", new { page = 1, pageSize = Model.PageSize, filterType = Model.CurrentFilter })" class="clear-search-btn" title="Clear Search">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </form>
+            </div>
+            
+            <!-- Filter Section -->
+            <div class="filter-dropdown">
+                <button class="filter-btn" onclick="toggleFilterDropdown()">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+                <div class="filter-dropdown-menu" id="filterDropdown">
+                    <a href="@Url.Action("Index", new { page = 1, pageSize = Model.PageSize, filterType = "all", searchTerm = Model.CurrentSearchTerm })" 
+                       class="filter-dropdown-item @(Model.CurrentFilter == "all" ? "active" : "")">
+                        <i class="fas fa-list"></i> All Types
+                    </a>
+                    @if (Model.AvailableLogTypes != null && Model.AvailableLogTypes.Any())
+                    {
+                        @foreach (var logType in Model.AvailableLogTypes)
+                        {
+                            <a href="@Url.Action("Index", new { page = 1, pageSize = Model.PageSize, filterType = logType, searchTerm = Model.CurrentSearchTerm })" 
+                               class="filter-dropdown-item @(Model.CurrentFilter == logType ? "active" : "")">
+                                <i class="fas fa-@(GetLogTypeIcon(logType))"></i> @logType
+                            </a>
+                        }
+                    }
+                    else
+                    {
+                        <a href="#" class="filter-dropdown-item">No log types available</a>
+                    }
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Audit Logs Table -->
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0">
-                <i class="fas fa-table"></i> Recent Audit Logs
+    <div class="audit-content-card">
+        <div class="audit-card-header">
+            <h5 class="audit-card-title">
+                <i class="fas fa-table"></i> Audit Logs
             </h5>
         </div>
-        <div class="card-body">
-            @if (Model.Any())
+        <div class="audit-table-container">
+            @if (Model.Logs.Any())
             {
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <thead class="table-dark">
+                <table class="audit-table" id="auditTable">
+                        <thead>
                             <tr>
                                 <th>Type</th>
                                 <th>Title</th>
-                                <th>User ID</th>
+                                <th>User</th>
                                 <th>Entity ID</th>
                                 <th>Timestamp</th>
-                                <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var log in Model.OrderByDescending(l => l.TimestampUtc))
+                            @foreach (var log in Model.Logs)
                             {
-                                <tr>
+                                <tr class="audit-row" data-log-type="@log.LogType" data-user-id="@log.UserId" data-entity-id="@log.EntityId" data-title="@log.Title.ToLower()" data-description="@(log.Description?.ToLower() ?? "")">
                                     <td>
-                                        <span class="badge bg-primary">@log.LogType</span>
+                                        <span class="audit-badge audit-badge-primary">@log.LogType</span>
                                     </td>
                                     <td>
                                         <strong>@log.Title</strong>
                                         @if (!string.IsNullOrEmpty(log.Description))
                                         {
-                                            <br><small class="text-muted">@log.Description</small>
+                                            <br><small style="color: #B0B0B0;">@log.Description</small>
                                         }
                                     </td>
                                     <td>
-                                        <code>@log.UserId</code>
+                                        <div>
+                                            <strong style="color: #F7EC59;">@(log.UserFullName ?? "Unknown User")</strong>
+                                            <br><small style="color: #B0B0B0;">@log.UserId</small>
+                                        </div>
                                     </td>
                                     <td>
-                                        <code>@log.EntityId</code>
+                                        <code style="color: #F7EC59;">@log.EntityId</code>
                                     </td>
                                     <td>
-                                        <small>@log.TimestampUtc.ToString("yyyy-MM-dd HH:mm:ss")</small>
+                                        <small style="color: #B0B0B0;">@log.TimestampUtc.ToString("yyyy-MM-dd HH:mm:ss")</small>
                                     </td>
                                     <td>
-                                        @if (log.IsActive)
-                                        {
-                                            <span class="badge bg-success">Active</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-secondary">Inactive</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-info" onclick="viewLogDetails('@log.Id')">
-                                            <i class="fas fa-eye"></i>
+                                        <button class="audit-btn audit-btn-info audit-btn-sm" onclick="viewLogDetails('@log.Id')">
+                                            <i class="fas fa-eye"></i> View
                                         </button>
                                     </td>
                                 </tr>
                             }
                         </tbody>
                     </table>
-                </div>
+                
+                <!-- Pagination Controls -->
+                @if (Model.TotalPages > 1)
+                {
+                    <div class="pagination-container">
+                        <div class="pagination-info">
+                            <span>Showing @Model.StartIndex to @Model.EndIndex of @Model.TotalLogs logs</span>
+                        </div>
+                        <nav aria-label="Audit logs pagination">
+                            <ul class="pagination">
+                                @if (Model.HasPreviousPage)
+                                {
+                                    <li class="page-item">
+                                        <a class="page-link" href="@Url.Action("Index", new { page = Model.CurrentPage - 1, pageSize = Model.PageSize, filterType = Model.CurrentFilter, searchTerm = Model.CurrentSearchTerm })" aria-label="Previous">
+                                            <span aria-hidden="true">&laquo;</span>
+                                        </a>
+                                    </li>
+                                }
+                                
+                                @{
+                                    int startPage = Math.Max(1, Model.CurrentPage - 2);
+                                    int endPage = Math.Min(Model.TotalPages, Model.CurrentPage + 2);
+                                }
+                                
+                                @if (startPage > 1)
+                                {
+                                    <li class="page-item">
+                                        <a class="page-link" href="@Url.Action("Index", new { page = 1, pageSize = Model.PageSize, filterType = Model.CurrentFilter, searchTerm = Model.CurrentSearchTerm })">1</a>
+                                    </li>
+                                    @if (startPage > 2)
+                                    {
+                                        <li class="page-item disabled">
+                                            <span class="page-link">...</span>
+                                        </li>
+                                    }
+                                }
+                                
+                                @for (int i = startPage; i <= endPage; i++)
+                                {
+                                    <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                        <a class="page-link" href="@Url.Action("Index", new { page = i, pageSize = Model.PageSize, filterType = Model.CurrentFilter, searchTerm = Model.CurrentSearchTerm })">@i</a>
+                                    </li>
+                                }
+                                
+                                @if (endPage < Model.TotalPages)
+                                {
+                                    @if (endPage < Model.TotalPages - 1)
+                                    {
+                                        <li class="page-item disabled">
+                                            <span class="page-link">...</span>
+                                        </li>
+                                    }
+                                    <li class="page-item">
+                                        <a class="page-link" href="@Url.Action("Index", new { page = Model.TotalPages, pageSize = Model.PageSize, filterType = Model.CurrentFilter, searchTerm = Model.CurrentSearchTerm })">@Model.TotalPages</a>
+                                    </li>
+                                }
+                                
+                                @if (Model.HasNextPage)
+                                {
+                                    <li class="page-item">
+                                        <a class="page-link" href="@Url.Action("Index", new { page = Model.CurrentPage + 1, pageSize = Model.PageSize, filterType = Model.CurrentFilter, searchTerm = Model.CurrentSearchTerm })" aria-label="Next">
+                                            <span aria-hidden="true">&raquo;</span>
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </nav>
+                    </div>
+                }
             }
             else
             {
-                <div class="text-center py-5">
-                    <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">No audit logs found</h5>
-                    <p class="text-muted">Create your first test log to get started</p>
+                <div class="audit-empty-state">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h4>No audit logs found</h4>
+                    <p>Create your first test log to get started</p>
                 </div>
             }
         </div>
     </div>
 </div>
 
-<!-- Create Log Modal -->
-<div class="modal fade" id="createLogModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-plus-circle text-primary"></i> Create Test Audit Log
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="createLogForm">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Log Type *</label>
-                                <select class="form-select" id="logType" name="logType" required>
-                                    <option value="">Select log type...</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">User ID *</label>
-                                <input type="text" class="form-control" id="userId" name="userId" 
-                                       placeholder="Enter user ID" required>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Title *</label>
-                        <input type="text" class="form-control" id="title" name="title" 
-                               placeholder="Enter log title" required maxlength="200">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" id="description" name="description" 
-                                  placeholder="Enter log description (optional)" rows="3" maxlength="4000"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Entity ID *</label>
-                        <input type="text" class="form-control" id="entityId" name="entityId" 
-                               placeholder="Enter entity ID (project, document, etc.)" required>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="createTestLog()">
-                    <i class="fas fa-plus"></i> Create Log
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Log Details Modal -->
-<div class="modal fade" id="logDetailsModal" tabindex="-1">
+<div class="modal fade audit-modal" id="logDetailsModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-info-circle text-info"></i> Log Details
+                    <i class="fas fa-info-circle me-2"></i> Log Details
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -244,123 +309,118 @@
 
 @section Scripts {
     <script>
-        // Load log types when page loads
+        // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            loadLogTypes();
+            initializeSearchAndFilter();
         });
 
-        // Load available log types from API
-        async function loadLogTypes() {
-            try {
-                const response = await fetch('/AuditLogs/GetLogTypes');
-                const result = await response.json();
-                
-                if (result.success) {
-                    const select = document.getElementById('logType');
-                    select.innerHTML = '<option value="">Select log type...</option>';
-                    
-                    result.types.forEach(type => {
-                        const option = document.createElement('option');
-                        option.value = type;
-                        option.textContent = type;
-                        select.appendChild(option);
-                    });
+        // Initialize filter functionality
+        function initializeSearchAndFilter() {
+            // Close filter dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.filter-dropdown')) {
+                    document.getElementById('filterDropdown').classList.remove('show');
                 }
-            } catch (error) {
-                console.error('Error loading log types:', error);
-            }
+            });
+
+            // Ensure filter dropdown is closed on page load
+            document.getElementById('filterDropdown').classList.remove('show');
         }
 
-        // Create test audit log
-        async function createTestLog() {
-            const form = document.getElementById('createLogForm');
-            const formData = new FormData(form);
-            
-            const requestData = {
-                logType: formData.get('logType'),
-                title: formData.get('title'),
-                description: formData.get('description'),
-                userId: formData.get('userId'),
-                entityId: formData.get('entityId')
-            };
-
-            try {
-                const response = await fetch('/AuditLogs/CreateLog', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestData)
-                });
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    // Show success message
-                    showAlert('success', `Audit log created successfully! ID: ${result.id}`);
-                    
-                    // Close modal and refresh page
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('createLogModal'));
-                    modal.hide();
-                    
-                    // Refresh page after short delay
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
-                } else {
-                    showAlert('danger', result.message);
-                }
-            } catch (error) {
-                showAlert('danger', `Error creating audit log: ${error.message}`);
-            }
+        // Toggle filter dropdown
+        function toggleFilterDropdown() {
+            const dropdown = document.getElementById('filterDropdown');
+            dropdown.classList.toggle('show');
         }
+
+
 
         // View log details
         function viewLogDetails(logId) {
-            // Find the log in the model data
-            const log = @Html.Raw(Json.Serialize(Model));
-            const foundLog = log.find(l => l.id === logId);
+            console.log('Looking for log with ID:', logId);
             
-            if (foundLog) {
-                const content = document.getElementById('logDetailsContent');
-                content.innerHTML = `
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Log Information</h6>
-                            <table class="table table-sm">
-                                <tr><td><strong>ID:</strong></td><td><code>${foundLog.id}</code></td></tr>
-                                <tr><td><strong>Type:</strong></td><td><span class="badge bg-primary">${foundLog.logType}</span></td></tr>
-                                <tr><td><strong>Title:</strong></td><td>${foundLog.title}</td></tr>
-                                <tr><td><strong>Status:</strong></td><td>${foundLog.isActive ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>'}</td></tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Details</h6>
-                            <table class="table table-sm">
-                                <tr><td><strong>User ID:</strong></td><td><code>${foundLog.userId}</code></td></tr>
-                                <tr><td><strong>Entity ID:</strong></td><td><code>${foundLog.entityId}</code></td></tr>
-                                <tr><td><strong>Timestamp:</strong></td><td>${new Date(foundLog.timestampUtc).toLocaleString()}</td></tr>
-                                <tr><td><strong>Description:</strong></td><td>${foundLog.description || 'N/A'}</td></tr>
-                            </table>
+            // Find the log in the model data - try both camelCase and PascalCase
+            const logs = @Html.Raw(Json.Serialize(Model.Logs));
+            console.log('First log sample:', logs[0]);
+            console.log('Total logs:', logs.length);
+            
+            // Try camelCase first (ASP.NET Core default)
+            let foundLog = logs.find(l => l.id === logId || l.Id === logId);
+            
+            if (!foundLog) {
+                console.error('Log not found with ID:', logId);
+                console.log('Available log IDs:', logs.map(l => l.id || l.Id));
+                alert('Log not found');
+                return;
+            }
+            
+            // Use property names that exist (try both casings)
+            const log = foundLog;
+            const logId_value = log.id || log.Id;
+            const logType_value = log.logType || log.LogType;
+            const title_value = log.title || log.Title;
+            const userFullName_value = log.userFullName || log.UserFullName;
+            const userId_value = log.userId || log.UserId;
+            const entityId_value = log.entityId || log.EntityId;
+            const timestampUtc_value = log.timestampUtc || log.TimestampUtc;
+            const description_value = log.description || log.Description;
+            
+            const content = document.getElementById('logDetailsContent');
+            content.innerHTML = `
+                <div class="row">
+                    <div class="col-12">
+                        <div class="simple-info-card">
+                            <div class="info-row">
+                                <span class="info-label">Log ID:</span>
+                                <span class="info-value">${logId_value}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Type:</span>
+                                <span class="info-value"><span class="badge badge-primary">${logType_value}</span></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Title:</span>
+                                <span class="info-value">${title_value}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">User:</span>
+                                <span class="info-value">${userFullName_value || 'Unknown User'}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">User ID:</span>
+                                <span class="info-value"><code style="color: #F7EC59;">${userId_value}</code></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Entity ID:</span>
+                                <span class="info-value"><code style="color: #F7EC59;">${entityId_value}</code></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Timestamp:</span>
+                                <span class="info-value">${new Date(timestampUtc_value).toLocaleString()}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Description:</span>
+                                <span class="info-value">${description_value || 'N/A'}</span>
+                            </div>
                         </div>
                     </div>
-                `;
-                
-                const modal = new bootstrap.Modal(document.getElementById('logDetailsModal'));
-                modal.show();
-            }
+                </div>
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('logDetailsModal'));
+            modal.show();
         }
 
         // Show alert message
         function showAlert(type, message) {
             const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.className = `audit-alert audit-alert-${type} alert-dismissible fade show`;
             alertDiv.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i> ${message}
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i> ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
             
-            document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.d-flex.justify-content-between'));
+            document.querySelector('.audit-logs-container').insertBefore(alertDiv, document.querySelector('.audit-dashboard-header').nextSibling);
             
             // Auto-dismiss after 5 seconds
             setTimeout(() => {

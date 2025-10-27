@@ -2,6 +2,7 @@ using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Google.Cloud.Firestore;
 using Microsoft.Extensions.Configuration;
+using ICCMS_API.Models;
 
 namespace ICCMS_API.Services
 {
@@ -11,11 +12,14 @@ namespace ICCMS_API.Services
             where T : class;
         Task<List<T>> GetCollectionAsync<T>(string collection)
             where T : class;
+        Task<List<DocumentSnapshot>> GetRawCollectionAsync(string collection);
         Task<List<T>> GetCollectionWithFiltersAsync<T>(
             string collection,
             Dictionary<string, object> filters,
             int page = 1,
-            int pageSize = 20
+            int pageSize = 20,
+            string orderBy = "StartDate",
+            bool orderDescending = true
         )
             where T : class;
         Task<int> GetCollectionCountAsync<T>(string collection, Dictionary<string, object> filters)
@@ -25,6 +29,13 @@ namespace ICCMS_API.Services
         Task AddDocumentWithIdAsync<T>(string collection, string documentId, T document)
             where T : class;
         Task UpdateDocumentAsync<T>(string collection, string documentId, T document)
+            where T : class;
+        Task<bool> UpdateDocumentConditionallyAsync<T>(
+            string collection,
+            string documentId,
+            T document,
+            Dictionary<string, object> conditions
+        )
             where T : class;
         Task DeleteDocumentAsync(string collection, string documentId);
     }
@@ -70,7 +81,6 @@ namespace ICCMS_API.Services
                     ProjectId = projectId,
                     Credential = credential,
                 }.Build();
-                Console.WriteLine("FirestoreDb created successfully");
             }
             catch (Exception ex)
             {
@@ -84,8 +94,6 @@ namespace ICCMS_API.Services
         {
             try
             {
-                Console.WriteLine($"Getting document: {collection}/{documentId}");
-
                 var document = await _firestoreDb
                     .Collection(collection)
                     .Document(documentId)
@@ -93,13 +101,10 @@ namespace ICCMS_API.Services
 
                 if (!document.Exists)
                 {
-                    Console.WriteLine($"Document {documentId} does not exist");
                     return null;
                 }
 
-                Console.WriteLine($"Document {documentId} exists, converting to {typeof(T).Name}");
                 var result = document.ConvertTo<T>();
-                Console.WriteLine($"Successfully converted document {documentId}");
                 return result;
             }
             catch (Exception ex)
@@ -114,10 +119,78 @@ namespace ICCMS_API.Services
         {
             try
             {
-                Console.WriteLine($"Getting collection: {collection}");
                 var snapshot = await _firestoreDb.Collection(collection).GetSnapshotAsync();
-                var result = snapshot.Documents.Select(doc => doc.ConvertTo<T>()).ToList();
-                Console.WriteLine($"Retrieved {result.Count} documents from {collection}");
+                
+                var result = new List<T>();
+                foreach (var doc in snapshot.Documents)
+                {
+                    try
+                    {
+                        T converted;
+                        
+                        if (typeof(T) == typeof(Document) || typeof(T).Name == "Document")
+                        {
+                            // Always use manual conversion for Document objects since ConvertTo<T> returns default values
+                            
+                            // Debug: Log the actual field values being extracted
+                            var projectId = doc.GetValue<string>("projectId") ?? "";
+                            var fileName = doc.GetValue<string>("fileName") ?? "";
+                            var status = doc.GetValue<string>("status") ?? "";
+                            var fileType = doc.GetValue<string>("fileType") ?? "";
+                            var fileSize = doc.GetValue<long>("fileSize");
+                            var fileUrl = doc.GetValue<string>("fileUrl") ?? "";
+                            var uploadedBy = doc.GetValue<string>("uploadedBy") ?? "";
+                            var uploadedAt = doc.GetValue<DateTime>("uploadedAt");
+                            var description = doc.GetValue<string>("description") ?? "";
+                            
+                            var manualDoc = new Document
+                            {
+                                DocumentId = doc.Id,
+                                ProjectId = projectId,
+                                FileName = fileName,
+                                Status = status,
+                                FileType = fileType,
+                                FileSize = fileSize,
+                                FileUrl = fileUrl,
+                                UploadedBy = uploadedBy,
+                                UploadedAt = uploadedAt,
+                                Description = description
+                            };
+                            converted = (T)(object)manualDoc;
+                        }
+                        else if (typeof(T) == typeof(AuditLog) || typeof(T).Name == "AuditLog")
+                        {
+                            // Handle AuditLog - need to set the Id from doc.Id
+                            var auditLog = doc.ConvertTo<AuditLog>();
+                            if (auditLog != null)
+                            {
+                                auditLog.Id = doc.Id; // Set the Firestore document ID
+                            }
+                            converted = (T)(object)auditLog;
+                        }
+                        else
+                        {
+                            try
+                            {
+                                converted = doc.ConvertTo<T>();
+                            }
+                            catch (Exception convertEx)
+                            {
+                                Console.WriteLine($"ConvertTo<T> failed for document {doc.Id}: {convertEx.Message}");
+                                throw convertEx; // Re-throw for non-Document types
+                            }
+                        }
+                        
+                        result.Add(converted);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error converting document {doc.Id}: {ex.Message}");
+                        Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                        // Continue with other documents
+                    }
+                }
+                
                 return result;
             }
             catch (Exception ex)
@@ -127,14 +200,27 @@ namespace ICCMS_API.Services
             }
         }
 
+        public async Task<List<DocumentSnapshot>> GetRawCollectionAsync(string collection)
+        {
+            try
+            {
+                var snapshot = await _firestoreDb.Collection(collection).GetSnapshotAsync();
+                var result = snapshot.Documents.ToList();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting raw collection {collection}: {ex.Message}");
+                throw;
+            }
+        }
+
         public async Task<string> AddDocumentAsync<T>(string collection, T document)
             where T : class
         {
             try
             {
-                Console.WriteLine($"Adding document to {collection}");
                 var docRef = await _firestoreDb.Collection(collection).AddAsync(document);
-                Console.WriteLine($"Added document with ID: {docRef.Id}");
                 return docRef.Id;
             }
             catch (Exception ex)
@@ -153,9 +239,7 @@ namespace ICCMS_API.Services
         {
             try
             {
-                Console.WriteLine($"Adding document with ID: {collection}/{documentId}");
                 await _firestoreDb.Collection(collection).Document(documentId).SetAsync(document);
-                Console.WriteLine($"Added document with ID: {documentId}");
             }
             catch (Exception ex)
             {
@@ -169,9 +253,7 @@ namespace ICCMS_API.Services
         {
             try
             {
-                Console.WriteLine($"Updating document: {collection}/{documentId}");
                 await _firestoreDb.Collection(collection).Document(documentId).SetAsync(document);
-                Console.WriteLine($"Updated document: {documentId}");
             }
             catch (Exception ex)
             {
@@ -180,13 +262,60 @@ namespace ICCMS_API.Services
             }
         }
 
+        public async Task<bool> UpdateDocumentConditionallyAsync<T>(
+            string collection,
+            string documentId,
+            T document,
+            Dictionary<string, object> conditions
+        )
+            where T : class
+        {
+            try
+            {
+                return await _firestoreDb.RunTransactionAsync(async transaction =>
+                {
+                    var docRef = _firestoreDb.Collection(collection).Document(documentId);
+                    var snapshot = await transaction.GetSnapshotAsync(docRef);
+
+                    if (!snapshot.Exists)
+                    {
+                        return false;
+                    }
+
+                    // Check all conditions
+                    foreach (var condition in conditions)
+                    {
+                        if (!snapshot.ContainsField(condition.Key))
+                        {
+                            return false;
+                        }
+
+                        var fieldValue = snapshot.GetValue<object>(condition.Key);
+                        if (!fieldValue?.Equals(condition.Value) == true)
+                        {
+                            return false;
+                        }
+                    }
+
+                    // All conditions met, perform the update
+                    transaction.Set(docRef, document);
+                    return true;
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"Error conditionally updating document {documentId}: {ex.Message}"
+                );
+                throw;
+            }
+        }
+
         public async Task DeleteDocumentAsync(string collection, string documentId)
         {
             try
             {
-                Console.WriteLine($"Deleting document: {collection}/{documentId}");
                 await _firestoreDb.Collection(collection).Document(documentId).DeleteAsync();
-                Console.WriteLine($"Deleted document: {documentId}");
             }
             catch (Exception ex)
             {
@@ -199,16 +328,14 @@ namespace ICCMS_API.Services
             string collection,
             Dictionary<string, object> filters,
             int page = 1,
-            int pageSize = 20
+            int pageSize = 20,
+            string orderBy = "StartDate",
+            bool orderDescending = true
         )
             where T : class
         {
             try
             {
-                Console.WriteLine(
-                    $"Getting filtered collection: {collection} with {filters.Count} filters, page {page}, size {pageSize}"
-                );
-
                 Query query = _firestoreDb.Collection(collection);
 
                 // Apply filters
@@ -251,6 +378,12 @@ namespace ICCMS_API.Services
                                     filter.Value
                                 );
                                 break;
+                            case "assignedto":
+                                query = query.WhereEqualTo("assignedTo", filter.Value);
+                                break;
+                            case "taskid":
+                                query = query.WhereEqualTo("TaskId", filter.Value);
+                                break;
                             case "searchquery":
                                 // For text search, we'll need to implement a different approach
                                 // Firestore doesn't support full-text search natively
@@ -260,8 +393,15 @@ namespace ICCMS_API.Services
                     }
                 }
 
-                // Apply ordering and pagination
-                query = query.OrderByDescending("StartDate");
+                // Apply ordering
+                if (orderDescending)
+                {
+                    query = query.OrderByDescending(orderBy);
+                }
+                else
+                {
+                    query = query.OrderBy(orderBy);
+                }
 
                 // Get all results first (Firestore limitation - no direct offset support)
                 var snapshot = await query.GetSnapshotAsync();
@@ -288,7 +428,6 @@ namespace ICCMS_API.Services
                         .ToList();
                 }
 
-                Console.WriteLine($"Retrieved {result.Count} filtered documents from {collection}");
                 return result;
             }
             catch (Exception ex)
@@ -306,10 +445,6 @@ namespace ICCMS_API.Services
         {
             try
             {
-                Console.WriteLine(
-                    $"Getting count for collection: {collection} with {filters.Count} filters"
-                );
-
                 Query query = _firestoreDb.Collection(collection);
 
                 // Apply filters (same logic as GetCollectionWithFiltersAsync)
@@ -352,6 +487,12 @@ namespace ICCMS_API.Services
                                     filter.Value
                                 );
                                 break;
+                            case "assignedto":
+                                query = query.WhereEqualTo("assignedTo", filter.Value);
+                                break;
+                            case "taskid":
+                                query = query.WhereEqualTo("TaskId", filter.Value);
+                                break;
                         }
                     }
                 }
@@ -376,7 +517,6 @@ namespace ICCMS_API.Services
                     });
                 }
 
-                Console.WriteLine($"Count for {collection}: {count}");
                 return count;
             }
             catch (Exception ex)

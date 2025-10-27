@@ -1,4 +1,4 @@
-﻿@* ================================================
+@* ================================================
    _Layout.cshtml — Protend-Style Responsive Shell
    For ICCMS Web (Project Manager / Admin / Tester)
    ================================================ *@
@@ -220,7 +220,7 @@
         /* === MAIN CONTENT === */
         #content-area {
             margin-left: 250px;
-            padding: 90px 2rem 2rem;
+            padding: 2rem 2rem 2rem 2rem;
             flex: 1;
             transition: margin-left 0.3s ease;
         }
@@ -245,18 +245,46 @@
             <ul>
                 @if (User.Identity.IsAuthenticated)
                 {
+                    <!-- Messages - Available to all authenticated users -->
+                    <li>
+                        <a asp-controller="Messages" asp-action="Index">
+                            <i class="fa-solid fa-envelope"></i>
+                            <span>Messages</span>
+                            <span class="badge bg-warning ms-2" id="unreadCount" style="display: none;">0</span>
+                        </a>
+                    </li>
+                    
                     if (User.IsInRole("Project Manager") || User.IsInRole("Tester"))
                     {
                         <li><a asp-controller="ProjectManager" asp-action="Dashboard"><i
                                     class="fa-solid fa-gauge"></i><span>Dashboard</span></a></li>
                     }
-                    if (User.IsInRole("Admin"))
+                    if (User.IsInRole("Contractor") || User.IsInRole("Tester"))
                     {
-                        <li><a asp-controller="Users" asp-action="Index"><i class="fa-solid fa-users"></i><span>Users</span></a>
+                        <li>
+                            <a asp-controller="Contractor"
+                               asp-action="Dashboard"
+                               aria-label="My Tasks">
+                                <i class="fa-solid fa-helmet-safety" aria-hidden="true"></i>
+                                <span>My Tasks</span>
+                            </a>
                         </li>
-                        <li><a asp-controller="Data" asp-action="Index"><i class="fa-solid fa-database"></i><span>Database</span></a>
-                        </li>
-                    }
+                    }                                         if (User.IsInRole("Admin"))
+                     {
+                         <li><a asp-controller="SystemOverview" asp-action="Index"><i class="fa-solid fa-tachometer-alt"></i><span>System Overview</span></a>
+                         </li>
+                         <li><a asp-controller="Users" asp-action="Index"><i class="fa-solid fa-users"></i><span>Users Overview</span></a>
+                         </li>
+                         <li><a asp-controller="AuditLogs" asp-action="Index"><i class="fa-solid fa-clipboard-list"></i><span>Audit Logs Overview</span></a>
+                         </li>
+
+                         <li><a asp-controller="MessageDashboard" asp-action="Dashboard"><i class="fa-solid fa-envelope"></i><span>Messages Overview</span></a>
+                         </li>
+
+                         <li><a asp-controller="Documents" asp-action="Index"><i class="fa-solid fa-file-alt"></i><span>Documents Overview</span></a>
+                         </li>
+                    
+                     }
                     if (User.IsInRole("Tester"))
                     {
                         <li><a asp-controller="Testing" asp-action="Index"><i class="fa-solid fa-flask"></i><span>Testing</span></a>
@@ -310,6 +338,7 @@
             @RenderBody()
         </main>
 
+
         <!-- ===== SCRIPTS ===== -->
         <script src="~/lib/jquery/dist/jquery.min.js"></script>
         <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
@@ -328,6 +357,32 @@
             if (localStorage.getItem('sidebarCollapsed') === 'true') {
                 sidebar.classList.add('collapsed');
             }
+
+            // Update unread message count in navigation
+            function updateUnreadCount() {
+                fetch('/Messages/GetUnreadCount')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const badge = document.getElementById('unreadCount');
+                            if (data.count > 0) {
+                                badge.textContent = data.count;
+                                badge.style.display = 'inline-block';
+                            } else {
+                                badge.style.display = 'none';
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error updating unread count:', error);
+                    });
+            }
+
+            // Update unread count on page load and every 30 seconds
+            document.addEventListener('DOMContentLoaded', function() {
+                updateUnreadCount();
+                setInterval(updateUnreadCount, 30000);
+            });
         </script>
 
     @await RenderSectionAsync("Scripts", required: false)

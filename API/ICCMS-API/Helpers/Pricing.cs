@@ -1,5 +1,5 @@
-using ICCMS_API.Models;
 using System.Linq;
+using ICCMS_API.Models;
 
 namespace ICCMS_API.Helpers
 {
@@ -18,9 +18,10 @@ namespace ICCMS_API.Helpers
 
             // Apply markup to subtotal first
             var subtotalWithMarkup = quotation.Subtotal * (1 + quotation.MarkupRate);
-            quotation.TaxTotal = quotation.Items.Sum(item => (item.LineTotal * (1 + quotation.MarkupRate)) * item.TaxRate);
+            quotation.TaxTotal = quotation.Items.Sum(item =>
+                (item.LineTotal * (1 + quotation.MarkupRate)) * item.TaxRate
+            );
             quotation.GrandTotal = subtotalWithMarkup + quotation.TaxTotal;
-
 
             // Sync legacy Total field
             quotation.Total = quotation.GrandTotal;

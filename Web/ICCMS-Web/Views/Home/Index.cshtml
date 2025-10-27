@@ -1,4 +1,5 @@
-﻿@{
+@{
+    ViewData["Title"] = "ICCMS Dashboard";
     ViewData["Title"] = "ICCMS Dashboard";
 }
 
@@ -49,40 +50,6 @@
                     </div>
                 </div>
             }
-
-            <!-- Notifications Card -->
-            <div class="col-lg-4 col-md-6">
-                <div class="action-card notifications-card">
-                    <div class="card-icon">
-                        <i class="fa-solid fa-bell"></i>
-                    </div>
-                    <div class="card-content">
-                        <h3 class="card-title">Notifications</h3>
-                        <p class="card-description">View and manage your notifications and alerts</p>
-                        <a href="@Url.Action("Index", "Notifications")" class="btn btn-primary">
-                            <i class="fa-solid fa-arrow-right"></i>
-                            View Notifications
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Documents Card -->
-            <div class="col-lg-4 col-md-6">
-                <div class="action-card documents-card">
-                    <div class="card-icon">
-                        <i class="fa-slab fa-regular fa-file"></i>
-                    </div>
-                    <div class="card-content">
-                        <h3 class="card-title">Documents</h3>
-                        <p class="card-description">Access and manage your uploaded documents</p>
-                        <a href="@Url.Action("Index", "Documents")" class="btn btn-primary">
-                            <i class="fa-solid fa-arrow-right"></i>
-                            View Documents
-                        </a>
-                    </div>
-                </div>
-            </div>
 
             <!-- Quotes Card (for Project Managers) -->
             @if (User.IsInRole("ProjectManager") || User.IsInRole("Tester"))
@@ -143,10 +110,62 @@
                     </div>
                 </div>
             }
+
+            <!-- Contractor (for Contractors) -->
+            @if (User.IsInRole("Contractor"))
+            {
+                <div class="col-lg-4 col-md-6">
+                    <div class="action-card contractor-card">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-building"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-title">Contractor</h3>
+                            <p class="card-description">Access contractor tools and resources</p>
+                            <a href="@Url.Action("Dashboard", "Contractor")" class="btn btn-primary">
+                                <i class="fa-solid fa-arrow-right"></i>
+                                Contractor Tools
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Notifications Card -->
+            <div class="col-lg-4 col-md-6">
+                <div class="action-card notifications-card">
+                    <div class="card-icon">
+                        <i class="fa-solid fa-bell"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-title">Notifications</h3>
+                        <p class="card-description">View and manage your notifications and alerts</p>
+                        <a href="@Url.Action("Index", "Notifications")" class="btn btn-primary">
+                            <i class="fa-solid fa-arrow-right"></i>
+                            View Notifications
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents Card -->
+            <div class="col-lg-4 col-md-6">
+                <div class="action-card documents-card">
+                    <div class="card-icon">
+                        <i class="fa-regular fa-file"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-title">Documents</h3>
+                        <p class="card-description">Access and manage your uploaded documents</p>
+                        <a href="@Url.Action("Index", "Documents")" class="btn btn-primary">
+                            <i class="fa-solid fa-arrow-right"></i>
+                            View Documents
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
-
     </div>
-
     <style>
         .welcome-card {
             background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);

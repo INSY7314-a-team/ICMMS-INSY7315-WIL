@@ -64,4 +64,9 @@ namespace ICCMS_API.Models
         [FirestoreProperty("hasAttachments")]
         public bool HasAttachments { get; set; } = false;
     }
+
+    public class MessageWithSender : Message
+    {
+        public string SenderName { get; set; } = string.Empty;
+    }
 }

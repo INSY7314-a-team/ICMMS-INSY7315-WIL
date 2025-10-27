@@ -145,16 +145,20 @@ namespace ICCMS_API.Services
         {
             try
             {
-                // Create a custom token that the client can exchange for an ID token
+                // Firebase Admin SDK cannot directly create ID tokens for users
+                // Instead, we create a custom token that the client should exchange for an ID token
+                // However, for the Web app to use it, we need to provide the custom token
+                // which the Web app will exchange client-side
+                
                 var customToken = await FirebaseAuth.DefaultInstance.CreateCustomTokenAsync(uid);
-
-                // For now, return the custom token (client would normally exchange this for ID token)
-                // In a real implementation, you might want to handle the token exchange server-side
+                
+                // Return the custom token - the client should exchange this for an ID token
+                // using the Firebase client SDK before sending it back to verify-token
                 return customToken;
             }
             catch (Exception ex)
             {
-                throw new Exception($"Failed to create ID token: {ex.Message}");
+                throw new Exception($"Failed to create token: {ex.Message}");
             }
         }
     }

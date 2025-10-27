@@ -11,17 +11,21 @@ namespace ICCMS_API.Authentication
         public FirebaseAuthHandler(
             IOptionsMonitor<FirebaseAuthSchemeOptions> options,
             ILoggerFactory logger,
-            UrlEncoder encoder,
-            ISystemClock clock
+            UrlEncoder encoder
         )
-            : base(options, logger, encoder, clock) { }
+            : base(options, logger, encoder) { }
 
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            var token = Request.Headers["Authorization"].FirstOrDefault()?.Split(" ").Last();
+            var authHeader = Request.Headers["Authorization"].FirstOrDefault();
+            Console.WriteLine($"Authorization header: {authHeader}");
+            
+            var token = authHeader?.Split(" ").Last();
+            Console.WriteLine($"Extracted token: {token?.Substring(0, Math.Min(50, token?.Length ?? 0))}...");
 
             if (string.IsNullOrEmpty(token))
             {
+                Console.WriteLine("No token provided");
                 return AuthenticateResult.NoResult();
             }
 
@@ -32,8 +36,10 @@ namespace ICCMS_API.Authentication
                 var firebaseService =
                     Context.RequestServices.GetRequiredService<IFirebaseService>();
 
+                Console.WriteLine("Attempting to verify Firebase token...");
                 // Verify Firebase token
                 var firebaseToken = await authService.VerifyTokenAsync(token);
+                Console.WriteLine($"Token verified successfully for UID: {firebaseToken.Uid}");
                 
 
                 // Get user data from Firestore
@@ -66,6 +72,9 @@ namespace ICCMS_API.Authentication
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"Authentication failed: {ex.Message}");
+                Console.WriteLine($"Exception type: {ex.GetType().Name}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 return AuthenticateResult.Fail($"Authentication failed: {ex.Message}");
             }
         }

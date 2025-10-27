@@ -1,0 +1,126 @@
+@model ICCMS_Web.Models.ContractorDashboardViewModel
+@{
+    ViewData["Title"] = "Contractor Dashboard";
+    Layout = "_Layout";
+}
+
+@await Html.PartialAsync("_TaskDetailsModal")
+@await Html.PartialAsync("_ProgressReportModal")
+@await Html.PartialAsync("_CompletionRequestModal")
+
+<div class="contractor-dashboard-container">
+    <!-- Header Section -->
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">
+            <i class="fa-solid fa-hard-hat me-2" style="color: #F7EC59;"></i>@User.Identity.Name Dashboard
+        </h1>
+        <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Manage your assigned tasks and track progress
+        </p>
+    </div>
+
+    <!-- Stats Summary Cards -->
+    <div class="stats-container">
+        <div class="row g-2 mb-3">
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.TotalTasks</h4>
+                        <p class="stat-label">Total</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon pending">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.PendingTasks</h4>
+                        <p class="stat-label">Pending</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon in-progress">
+                        <i class="fa-solid fa-play"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.InProgressTasks</h4>
+                        <p class="stat-label">In Progress</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon completed">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.CompletedTasks</h4>
+                        <p class="stat-label">Completed</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon overdue">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.OverdueTasks</h4>
+                        <p class="stat-label">Overdue</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Projects Section -->
+    <div class="main-projects-section">
+        @* <div class="section-header construction-border-thin"> *@
+        <div class="section-header-content">
+            <h3 class="section-title">
+                <i class="fa-solid fa-folder-open me-2"></i>My Projects
+                <span class="badge bg-secondary">@(Model?.Projects?.Count ?? 0)</span>
+            </h3>
+            <div class="section-actions">
+                <div class="sort-controls">
+                    <label for="projectSortBy" class="sort-label">Sort by</label>
+                    <select id="projectSortBy" class="dashboard-select">
+                        <option value="name">Project Name</option>
+                        <option value="progress">Progress</option>
+                        <option value="budget">Budget</option>
+                        <option value="tasks">Number of Tasks</option>
+                        <option value="overdue">Overdue Tasks</option>
+                    </select>
+                </div>
+                <button class="dashboard-btn" id="refreshProjectsBtn">
+                    <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="projectsContainer" class="projects-container">
+        @await Html.PartialAsync("_ProjectsList", Model?.Projects ?? new List<ContractorProjectCardDto>())
+    </div>
+</div>
+
+<!-- Include dashboard CSS directly -->
+<link rel="stylesheet" href="~/css/contractor-dashboard.css" />
+<link rel="stylesheet" href="~/css/contractor-task-cards.css" />
+<link rel="stylesheet" href="~/css/contractor-collapsible-tasks.css" />
+<link rel="stylesheet" href="~/css/contractor-project-cards.css" />
+
+@section Scripts {
+    <script src="~/js/contractor-dashboard.js"></script>
+    <script src="~/js/contractor-task-actions.js"></script>
+    <script src="~/js/contractor-collapsible-tasks.js"></script>
+    <script src="~/js/contractor-project-cards.js"></script>
+}

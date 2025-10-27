@@ -23,6 +23,10 @@ namespace ICCMS_Web.Services
         private const int MAX_FAILURES = 3;
         private const int CIRCUIT_BREAKER_TIMEOUT_MINUTES = 5;
 
+        // Less aggressive circuit breaker for critical endpoints
+        private const int MAX_FAILURES_CRITICAL = 5;
+        private const int CIRCUIT_BREAKER_TIMEOUT_MINUTES_CRITICAL = 2;
+
         public ApiClient(
             HttpClient httpClient,
             IConfiguration config,
@@ -302,16 +306,27 @@ namespace ICCMS_Web.Services
                 if (!_failureCounts.ContainsKey(endpoint))
                     return false;
 
-                if (_failureCounts[endpoint] < MAX_FAILURES)
+                // Use different thresholds for critical endpoints
+                var isCriticalEndpoint = IsCriticalEndpoint(endpoint);
+                var maxFailures = isCriticalEndpoint ? MAX_FAILURES_CRITICAL : MAX_FAILURES;
+                var timeoutMinutes = isCriticalEndpoint
+                    ? CIRCUIT_BREAKER_TIMEOUT_MINUTES_CRITICAL
+                    : CIRCUIT_BREAKER_TIMEOUT_MINUTES;
+
+                if (_failureCounts[endpoint] < maxFailures)
                     return false;
 
                 // Check if enough time has passed to reset the circuit
                 if (_lastFailureTimes.ContainsKey(endpoint))
                 {
                     var timeSinceLastFailure = DateTime.UtcNow - _lastFailureTimes[endpoint];
-                    if (timeSinceLastFailure.TotalMinutes >= CIRCUIT_BREAKER_TIMEOUT_MINUTES)
+                    if (timeSinceLastFailure.TotalMinutes >= timeoutMinutes)
                     {
-                        _logger.LogInformation("Circuit breaker RESET for {Endpoint}", endpoint);
+                        _logger.LogInformation(
+                            "Circuit breaker RESET for {Endpoint} (timeout: {Timeout}min)",
+                            endpoint,
+                            timeoutMinutes
+                        );
                         _failureCounts.Remove(endpoint);
                         _lastFailureTimes.Remove(endpoint);
                         return false;
@@ -320,6 +335,15 @@ namespace ICCMS_Web.Services
 
                 return true;
             }
+        }
+
+        private bool IsCriticalEndpoint(string endpoint)
+        {
+            // Critical endpoints that should have less aggressive circuit breaker
+            return endpoint.Contains("/api/admin/users")
+                || endpoint.Contains("/api/projectmanager/projects")
+                || endpoint.Contains("/api/contractor/projects")
+                || endpoint.Contains("/api/client/projects");
         }
 
         private void RecordFailure(string endpoint)
@@ -362,6 +386,34 @@ namespace ICCMS_Web.Services
                     _failureCounts.Remove(endpoint);
                     _lastFailureTimes.Remove(endpoint);
                 }
+            }
+        }
+
+        // Public method to manually reset circuit breaker
+        public void ResetCircuitBreaker(string endpoint)
+        {
+            lock (_failureCounts)
+            {
+                if (_failureCounts.ContainsKey(endpoint))
+                {
+                    _logger.LogInformation(
+                        "Manually resetting circuit breaker for {Endpoint}",
+                        endpoint
+                    );
+                    _failureCounts.Remove(endpoint);
+                    _lastFailureTimes.Remove(endpoint);
+                }
+            }
+        }
+
+        // Public method to reset all circuit breakers
+        public void ResetAllCircuitBreakers()
+        {
+            lock (_failureCounts)
+            {
+                _logger.LogInformation("Resetting all circuit breakers");
+                _failureCounts.Clear();
+                _lastFailureTimes.Clear();
             }
         }
     }

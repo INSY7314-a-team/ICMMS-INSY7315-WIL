@@ -255,7 +255,7 @@ function getCurrentStatusFilter() {
 
 // Project card actions
 function viewProjectDetails(projectId) {
-  window.location.href = `/ProjectManager/ProjectDetails/${projectId}`;
+  window.location.href = `/ProjectManager/ProjectDetail?projectId=${projectId}`;
 }
 
 function requestEstimate(projectId) {
@@ -293,26 +293,9 @@ function deleteProject(projectId) {
   }
 }
 
-// Toast notification function
+// Toast functionality removed - using console logging instead
 function showToast(message, type = "info") {
-  // Create toast element
-  const toast = document.createElement("div");
-  toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-  toast.style.cssText =
-    "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
-  toast.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-
-  document.body.appendChild(toast);
-
-  // Auto remove after 5 seconds
-  setTimeout(() => {
-    if (toast.parentNode) {
-      toast.parentNode.removeChild(toast);
-    }
-  }, 5000);
+  console.log(`📢 ${type.toUpperCase()}: ${message}`);
 }
 
 function renderProjectsGrid(containerId, projects) {

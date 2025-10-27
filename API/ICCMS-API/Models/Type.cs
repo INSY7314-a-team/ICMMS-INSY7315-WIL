@@ -10,14 +10,26 @@ namespace ICCMS_API.Models
             "Document Upload",
             "Maintenance Update",
             "Project Update",
+            "Project Creation",
             "Quotation",
-            "New thing"
+            "Invoice",
+            "Payment",
+            "User Management",
+            "Estimate",
+            "Task Update",
+            "Contractor Update",
+            "Phase Created",
+            "Phase Updated",
+            "Task Created",
+            "Task Updated",
+            "Blueprint Processed",
+            "Estimate Converted to Quotation",
         };
 
         public static string[] GetAuditLogTypes() => _auditLogTypes;
+
         public static bool IsValidAuditLogType(string value) =>
             !string.IsNullOrWhiteSpace(value) && _auditLogTypes.Contains(value);
-
 
         // ----- User Roles (example; reuse pattern everywhere) -----
         private static readonly string[] _roles = new[]
@@ -26,13 +38,13 @@ namespace ICCMS_API.Models
             "ProjectManager",
             "Contractor",
             "Client",
-            "Employee"
+            "Employee",
         };
 
         public static string[] GetRoles() => _roles;
+
         public static bool IsValidRole(string value) =>
             !string.IsNullOrWhiteSpace(value) && _roles.Contains(value);
-
 
         // Add more picklists here as needed...
     }

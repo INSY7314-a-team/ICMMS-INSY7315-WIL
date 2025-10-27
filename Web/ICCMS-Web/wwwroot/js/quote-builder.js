@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
         category: "",
         unit: "",
         quantity: 0,
-        unitPrice: 0
+        unitPrice: 0,
       });
       renderItems(current);
     });
@@ -36,13 +36,16 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!projectId || !blueprintUrl)
         return alert("Please provide a valid blueprint URL.");
 
+      if (!projectId || !blueprintUrl)
+        return alert("Please provide a valid blueprint URL.");
+
       document.getElementById("qb-aiProgress").classList.remove("d-none");
 
       try {
         const res = await fetch("/ProjectManager/CreateEstimate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projectId, blueprintUrl })
+          body: JSON.stringify({ projectId, blueprintUrl }),
         });
 
         const data = await res.json();
@@ -55,9 +58,14 @@ document.addEventListener("DOMContentLoaded", () => {
         // ✅ Store the estimateId globally for later use during quote submission
         if (data.estimateId) {
           window.latestEstimateId = data.estimateId;
-          console.log("📎 Saved estimateId for quote submission:", window.latestEstimateId);
+          console.log(
+            "📎 Saved estimateId for quote submission:",
+            window.latestEstimateId
+          );
         } else {
-          console.warn("⚠️ No estimateId returned from CreateEstimate endpoint!");
+          console.warn(
+            "⚠️ No estimateId returned from CreateEstimate endpoint!"
+          );
         }
 
         document.getElementById("qb-aiResult").classList.remove("d-none");
@@ -77,7 +85,9 @@ document.addEventListener("DOMContentLoaded", () => {
       // Ensure we have an estimateId saved globally after AI parser
       const estimateId = window.latestEstimateId || null;
       if (!estimateId) {
-        console.warn("⚠️ No estimateId found. Make sure CreateEstimate completed before submitting quote.");
+        console.warn(
+          "⚠️ No estimateId found. Make sure CreateEstimate completed before submitting quote."
+        );
       }
 
       const quote = {
@@ -85,34 +95,43 @@ document.addEventListener("DOMContentLoaded", () => {
         clientId: document.getElementById("qb-clientId").value,
         contractorId: document.getElementById("qb-contractorId").value,
         estimateId: estimateId,
-        markupRate: (parseFloat(document.getElementById("qb-markupRate").value) || 0)/100,
-        taxRate: (parseFloat(document.getElementById("qb-taxRate").value) || 0),
+        markupRate:
+          (parseFloat(document.getElementById("qb-markupRate").value) || 0) /
+          100,
+        taxRate: parseFloat(document.getElementById("qb-taxRate").value) || 0,
         items: collectItems(),
         isAiGenerated: true,
-        description: "AI-generated estimate from blueprint"
+        description: "AI-generated estimate from blueprint",
       };
 
+      console.log("🧾 Payload being submitted:", quote);
       console.log("🧾 Payload being submitted:", quote);
 
       try {
         const res = await fetch("/Quotes/submit-quotation", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(quote)
+          body: JSON.stringify(quote),
         });
 
         let data;
         try {
           data = await res.json();
+          data = await res.json();
         } catch {
+          console.warn("⚠️ Empty or non-JSON response, treating as success.");
+          data = {};
           console.warn("⚠️ Empty or non-JSON response, treating as success.");
           data = {};
         }
 
-        if (!res.ok) throw new Error(data.error || "Failed to submit quotation.");
+        if (!res.ok)
+          throw new Error(data.error || "Failed to submit quotation.");
 
         showToast("✅ Quotation submitted successfully!");
         console.log("✅ Quotation submitted:", data);
+
+        // Auto refresh to update dashboard
 
         // Auto refresh to update dashboard
         setTimeout(() => window.location.reload(), 1200);
@@ -122,6 +141,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // Bind static controls once to prevent multiple event listeners
+  bindStaticControls();
 });
 
 // ===================================================
@@ -138,16 +160,30 @@ function renderItems(items) {
   }
 
   tableBody.innerHTML = "";
-  items.forEach(it => {
+  items.forEach((it) => {
     const row = `
       <tr>
-        <td><input class="form-control" value="${it.name || ""}" data-field="name"></td>
-        <td><input class="form-control" value="${it.description || ""}" data-field="description"></td>
-        <td><input class="form-control" value="${it.category || ""}" data-field="category"></td>
-        <td><input class="form-control" value="${it.unit || ""}" data-field="unit"></td>
-        <td><input type="number" value="${it.quantity || 0}" class="form-control qty-input"></td>
-        <td><input type="number" value="${it.unitPrice || 0}" class="form-control price-input"></td>
-        <td><input type="number" readonly class="form-control line-total" value="${it.lineTotal?.toFixed(2) || 0}"></td>
+        <td><input class="form-control" value="${
+          it.name || ""
+        }" data-field="name"></td>
+        <td><input class="form-control" value="${
+          it.description || ""
+        }" data-field="description"></td>
+        <td><input class="form-control" value="${
+          it.category || ""
+        }" data-field="category"></td>
+        <td><input class="form-control" value="${
+          it.unit || ""
+        }" data-field="unit"></td>
+        <td><input type="number" value="${
+          it.quantity || 0
+        }" class="form-control qty-input"></td>
+        <td><input type="number" value="${
+          it.unitPrice || 0
+        }" class="form-control price-input"></td>
+        <td><input type="number" readonly class="form-control line-total" value="${
+          it.lineTotal?.toFixed(2) || 0
+        }"></td>
         <td><button class="btn btn-sm btn-danger btn-remove">❌</button></td>
       </tr>`;
     tableBody.insertAdjacentHTML("beforeend", row);
@@ -158,11 +194,13 @@ function renderItems(items) {
 }
 
 /// ✅ Fixed Version
+/// ✅ Fixed Version
 function collectItems() {
   const rows = document.querySelectorAll("#qb-itemsTable tbody tr");
-  const taxRate = (parseFloat(document.getElementById("qb-taxRate").value) || 0) / 100;
+  const taxRate =
+    (parseFloat(document.getElementById("qb-taxRate").value) || 0) / 100;
 
-  return Array.from(rows).map(r => ({
+  return Array.from(rows).map((r) => ({
     name: r.querySelector('[data-field="name"]').value,
     description: r.querySelector('[data-field="description"]').value,
     category: r.querySelector('[data-field="category"]').value,
@@ -170,18 +208,19 @@ function collectItems() {
     quantity: parseFloat(r.querySelector(".qty-input").value) || 0,
     unitPrice: parseFloat(r.querySelector(".price-input").value) || 0,
     lineTotal: parseFloat(r.querySelector(".line-total").value) || 0,
-    taxRate: taxRate // ✅ add normalized tax rate for each item
+    taxRate: taxRate, // ✅ add normalized tax rate for each item
   }));
 }
 
-
 // Add listeners for recalculation and deletion
 function bindRecalc() {
-  document.querySelectorAll(".qty-input, .price-input, #qb-markupRate, #qb-taxRate")
-    .forEach(el => el.addEventListener("input", recalcTotals));
+  // Only bind row-level inputs to prevent accumulation on re-renders
+  document
+    .querySelectorAll(".qty-input, .price-input")
+    .forEach((el) => el.addEventListener("input", recalcTotals));
 
-  document.querySelectorAll(".btn-remove").forEach(btn =>
-    btn.addEventListener("click", e => {
+  document.querySelectorAll(".btn-remove").forEach((btn) =>
+    btn.addEventListener("click", (e) => {
       e.preventDefault();
       btn.closest("tr").remove();
       recalcTotals();
@@ -189,11 +228,28 @@ function bindRecalc() {
   );
 }
 
+// Bind static controls once to prevent multiple event listeners
+function bindStaticControls() {
+  const markupRateEl = document.getElementById("qb-markupRate");
+  const taxRateEl = document.getElementById("qb-taxRate");
+
+  // Guard against multiple bindings using a custom property
+  if (markupRateEl && !markupRateEl._recalcBound) {
+    markupRateEl.addEventListener("input", recalcTotals);
+    markupRateEl._recalcBound = true;
+  }
+
+  if (taxRateEl && !taxRateEl._recalcBound) {
+    taxRateEl.addEventListener("input", recalcTotals);
+    taxRateEl._recalcBound = true;
+  }
+}
+
 // Recalculate subtotal, tax, grand total
 function recalcTotals() {
   const rows = document.querySelectorAll("#qb-itemsTable tbody tr");
   let subtotal = 0;
-  rows.forEach(r => {
+  rows.forEach((r) => {
     const qty = parseFloat(r.querySelector(".qty-input").value) || 0;
     const price = parseFloat(r.querySelector(".price-input").value) || 0;
     const total = qty * price;
@@ -201,8 +257,10 @@ function recalcTotals() {
     subtotal += total;
   });
 
-  const markupRate = (parseFloat(document.getElementById("qb-markupRate").value) || 0) / 100;
-  const taxRate = (parseFloat(document.getElementById("qb-taxRate").value) || 0) / 100;
+  const markupRate =
+    (parseFloat(document.getElementById("qb-markupRate").value) || 0) / 100;
+  const taxRate =
+    (parseFloat(document.getElementById("qb-taxRate").value) || 0) / 100;
 
   const subtotalWithMarkup = subtotal * (1 + markupRate);
   const tax = subtotalWithMarkup * taxRate;
@@ -210,19 +268,30 @@ function recalcTotals() {
 
   // Update UI
   document.getElementById("qb-subtotal").innerText =
-    subtotalWithMarkup.toLocaleString("en-ZA", { style: "currency", currency: "ZAR" });
-  document.getElementById("qb-tax").innerText =
-    tax.toLocaleString("en-ZA", { style: "currency", currency: "ZAR" });
-  document.getElementById("qb-grandTotal").innerText =
-    grand.toLocaleString("en-ZA", { style: "currency", currency: "ZAR" });
+    subtotalWithMarkup.toLocaleString("en-ZA", {
+      style: "currency",
+      currency: "ZAR",
+    });
+  document.getElementById("qb-tax").innerText = tax.toLocaleString("en-ZA", {
+    style: "currency",
+    currency: "ZAR",
+  });
+  document.getElementById("qb-grandTotal").innerText = grand.toLocaleString(
+    "en-ZA",
+    { style: "currency", currency: "ZAR" }
+  );
 
   // Store totals for reference
   window._qbTotals = { subtotal, markupRate, taxRate, tax, grand };
 }
 
 // --- Patch navigation to Preview Tab ---
-document.addEventListener("click", e => {
-  if (e.target.matches('[data-bs-target="#tab-preview"], button[onclick*="#tab-preview"]')) {
+document.addEventListener("click", (e) => {
+  if (
+    e.target.matches(
+      '[data-bs-target="#tab-preview"], button[onclick*="#tab-preview"]'
+    )
+  ) {
     recalcTotals();
     console.log("📊 Preview totals updated:", window._qbTotals);
   }
@@ -238,7 +307,7 @@ function renderReviewItems() {
   const items = collectItems();
   reviewBody.innerHTML = "";
 
-  items.forEach(it => {
+  items.forEach((it) => {
     const total = (it.quantity * it.unitPrice).toFixed(2);
     const row = `
       <tr>
@@ -255,30 +324,31 @@ function renderReviewItems() {
 // =====================================
 //  Update Review Items on Tab Switch
 // =====================================
-document.addEventListener("click", e => {
-  if (e.target.matches('[data-bs-target="#tab-preview"], button[onclick*="#tab-preview"]')) {
+document.addEventListener("click", (e) => {
+  if (
+    e.target.matches(
+      '[data-bs-target="#tab-preview"], button[onclick*="#tab-preview"]'
+    )
+  ) {
     recalcTotals();
     renderReviewItems();
     console.log("📋 Review section refreshed with current line items.");
   }
 });
 
-// Toast feedback
+// Toast functionality removed - using console logging instead
 function showToast(msg) {
-  const toastEl = document.getElementById("qb-toast");
-  const body = toastEl.querySelector(".toast-body");
-  body.textContent = msg;
-  const toast = new bootstrap.Toast(toastEl);
-  toast.show();
+  console.log(`📢 INFO: ${msg}`);
 }
-
 
 async function simulateClientApproval(quoteId) {
   if (!quoteId) return alert("No quote ID found.");
   if (!confirm("Simulate client approval for this quote?")) return;
 
   try {
-    const res = await fetch(`/Quotes/simulate-client-approval/${quoteId}`, { method: "POST" });
+    const res = await fetch(`/Quotes/simulate-client-approval/${quoteId}`, {
+      method: "POST",
+    });
     if (!res.ok) throw new Error(`API error ${res.status}`);
     showToast("✅ Simulated client approval successfully!");
     setTimeout(() => window.location.reload(), 1000);

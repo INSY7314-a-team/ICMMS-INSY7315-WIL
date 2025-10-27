@@ -31,8 +31,15 @@ namespace ICCMS_API.Services
                     workflowMessage
                 );
 
-                // Send the workflow message
-                await SendWorkflowMessageAsync(workflowMessage);
+                // Update status to sent
+                workflowMessage.Status = "sent";
+                workflowMessage.SentAt = DateTime.UtcNow;
+
+                await _firebaseService.UpdateDocumentAsync(
+                    "workflow-messages",
+                    messageId,
+                    workflowMessage
+                );
 
                 return messageId;
             }
@@ -93,21 +100,21 @@ namespace ICCMS_API.Services
         {
             try
             {
-                var template = GetMessageTemplateAsync(
-                    systemEvent.EntityType,
+                var template = await GetMessageTemplateAsync(
+                    systemEvent.EventType,
                     systemEvent.Action
-                ).Result;
+                );
                 if (template == null)
                 {
                     Console.WriteLine(
-                        $"No template found for {systemEvent.EntityType} - {systemEvent.Action}"
+                        $"No template found for {systemEvent.EventType} - {systemEvent.Action}"
                     );
                     return false;
                 }
 
                 var workflowMessage = new WorkflowMessage
                 {
-                    WorkflowType = $"{systemEvent.EntityType}_{systemEvent.Action}",
+                    WorkflowType = systemEvent.EventType,
                     EntityId = systemEvent.EntityId,
                     EntityType = systemEvent.EntityType,
                     Action = systemEvent.Action,
@@ -138,9 +145,8 @@ namespace ICCMS_API.Services
         {
             try
             {
-                var quote = await _firebaseService
-                    .GetCollectionAsync<Quotation>("quotations")
-                    .ContinueWith(t => t.Result.FirstOrDefault(q => q.QuotationId == quoteId));
+                var quotations = await _firebaseService.GetCollectionAsync<Quotation>("quotations");
+                var quote = quotations.FirstOrDefault(q => q.QuotationId == quoteId);
 
                 if (quote == null)
                 {
@@ -185,9 +191,8 @@ namespace ICCMS_API.Services
         {
             try
             {
-                var invoice = await _firebaseService
-                    .GetCollectionAsync<Invoice>("invoices")
-                    .ContinueWith(t => t.Result.FirstOrDefault(i => i.InvoiceId == invoiceId));
+                var invoices = await _firebaseService.GetCollectionAsync<Invoice>("invoices");
+                var invoice = invoices.FirstOrDefault(i => i.InvoiceId == invoiceId);
 
                 if (invoice == null)
                 {
@@ -233,9 +238,8 @@ namespace ICCMS_API.Services
         {
             try
             {
-                var project = await _firebaseService
-                    .GetCollectionAsync<Project>("projects")
-                    .ContinueWith(t => t.Result.FirstOrDefault(p => p.ProjectId == projectId));
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var project = projects.FirstOrDefault(p => p.ProjectId == projectId);
 
                 if (project == null)
                 {
@@ -301,6 +305,467 @@ namespace ICCMS_API.Services
             }
         }
 
+        // Task workflow notifications
+        public async Task<bool> SendTaskAssignmentNotificationAsync(
+            string taskId,
+            string assignedToId,
+            string assignedById
+        )
+        {
+            try
+            {
+                // Get task details
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var task = tasks.FirstOrDefault(t => t.TaskId == taskId);
+
+                if (task == null)
+                {
+                    Console.WriteLine($"Task {taskId} not found");
+                    return false;
+                }
+
+                // Get project details
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var project = projects.FirstOrDefault(p => p.ProjectId == task.ProjectId);
+
+                if (project == null)
+                {
+                    Console.WriteLine($"Project {task.ProjectId} not found");
+                    return false;
+                }
+
+                // Get user details
+                var assignedToUser = await _firebaseService.GetDocumentAsync<User>(
+                    "users",
+                    assignedToId
+                );
+                var assignedByUser = await _firebaseService.GetDocumentAsync<User>(
+                    "users",
+                    assignedById
+                );
+
+                var systemEvent = new SystemEvent
+                {
+                    EventType = "task_assignment",
+                    EntityId = taskId,
+                    EntityType = "task",
+                    Action = "assigned",
+                    ProjectId = task.ProjectId,
+                    UserId = assignedById,
+                    Data = new Dictionary<string, object>
+                    {
+                        { "taskId", taskId },
+                        { "taskName", task.Name },
+                        { "taskDescription", task.Description },
+                        { "assignedToId", assignedToId },
+                        { "assignedToName", assignedToUser?.FullName ?? "Contractor" },
+                        { "assignedById", assignedById },
+                        { "assignedByName", assignedByUser?.FullName ?? "Project Manager" },
+                        { "projectId", task.ProjectId },
+                        { "projectName", project.Name },
+                        { "startDate", task.StartDate },
+                        { "dueDate", task.DueDate },
+                    },
+                };
+
+                return await ProcessSystemEventAsync(systemEvent);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending task assignment notification: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> SendTaskCompletionNotificationAsync(
+            string taskId,
+            string completedById
+        )
+        {
+            try
+            {
+                // Get task details
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var task = tasks.FirstOrDefault(t => t.TaskId == taskId);
+
+                if (task == null)
+                {
+                    Console.WriteLine($"Task {taskId} not found");
+                    return false;
+                }
+
+                // Get project details
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var project = projects.FirstOrDefault(p => p.ProjectId == task.ProjectId);
+
+                if (project == null)
+                {
+                    Console.WriteLine($"Project {task.ProjectId} not found");
+                    return false;
+                }
+
+                // Get user details
+                var completedByUser = await _firebaseService.GetDocumentAsync<User>(
+                    "users",
+                    completedById
+                );
+
+                var systemEvent = new SystemEvent
+                {
+                    EventType = "task_completion",
+                    EntityId = taskId,
+                    EntityType = "task",
+                    Action = "completed",
+                    ProjectId = task.ProjectId,
+                    UserId = completedById,
+                    Data = new Dictionary<string, object>
+                    {
+                        { "taskId", taskId },
+                        { "taskName", task.Name },
+                        { "completedById", completedById },
+                        { "completedByName", completedByUser?.FullName ?? "Contractor" },
+                        { "projectId", task.ProjectId },
+                        { "projectName", project.Name },
+                        { "projectManagerId", project.ProjectManagerId },
+                    },
+                };
+
+                return await ProcessSystemEventAsync(systemEvent);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending task completion notification: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> SendProgressReportNotificationAsync(
+            string reportId,
+            string submittedById
+        )
+        {
+            try
+            {
+                // Get progress report details
+                var reports = await _firebaseService.GetCollectionAsync<ProgressReport>(
+                    "progressReports"
+                );
+                var report = reports.FirstOrDefault(r => r.ProgressReportId == reportId);
+
+                if (report == null)
+                {
+                    Console.WriteLine($"Progress report {reportId} not found");
+                    return false;
+                }
+
+                // Get task details
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var task = tasks.FirstOrDefault(t => t.TaskId == report.TaskId);
+
+                if (task == null)
+                {
+                    Console.WriteLine($"Task {report.TaskId} not found");
+                    return false;
+                }
+
+                // Get project details
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var project = projects.FirstOrDefault(p => p.ProjectId == task.ProjectId);
+
+                if (project == null)
+                {
+                    Console.WriteLine($"Project {task.ProjectId} not found");
+                    return false;
+                }
+
+                // Get user details
+                var submittedByUser = await _firebaseService.GetDocumentAsync<User>(
+                    "users",
+                    submittedById
+                );
+
+                var systemEvent = new SystemEvent
+                {
+                    EventType = "progress_report",
+                    EntityId = reportId,
+                    EntityType = "progress_report",
+                    Action = "submitted",
+                    ProjectId = task.ProjectId,
+                    UserId = submittedById,
+                    Data = new Dictionary<string, object>
+                    {
+                        { "reportId", reportId },
+                        { "taskId", report.TaskId },
+                        { "taskName", task.Name },
+                        { "progressPercentage", "N/A" }, // ProgressReport doesn't have this property
+                        { "submittedById", submittedById },
+                        { "submittedByName", submittedByUser?.FullName ?? "Contractor" },
+                        { "projectId", task.ProjectId },
+                        { "projectName", project.Name },
+                        { "projectManagerId", project.ProjectManagerId },
+                        { "reportDate", report.SubmittedAt },
+                        { "notes", report.Description },
+                    },
+                };
+
+                return await ProcessSystemEventAsync(systemEvent);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending progress report notification: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> SendCompletionRequestNotificationAsync(
+            string taskId,
+            string requestedById
+        )
+        {
+            try
+            {
+                // Get task details
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var task = tasks.FirstOrDefault(t => t.TaskId == taskId);
+
+                if (task == null)
+                {
+                    Console.WriteLine($"Task {taskId} not found");
+                    return false;
+                }
+
+                // Get project details
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var project = projects.FirstOrDefault(p => p.ProjectId == task.ProjectId);
+
+                if (project == null)
+                {
+                    Console.WriteLine($"Project {task.ProjectId} not found");
+                    return false;
+                }
+
+                // Get user details
+                var requestedByUser = await _firebaseService.GetDocumentAsync<User>(
+                    "users",
+                    requestedById
+                );
+
+                var systemEvent = new SystemEvent
+                {
+                    EventType = "completion_request",
+                    EntityId = taskId,
+                    EntityType = "task",
+                    Action = "completion_requested",
+                    ProjectId = task.ProjectId,
+                    UserId = requestedById,
+                    Data = new Dictionary<string, object>
+                    {
+                        { "taskId", taskId },
+                        { "taskName", task.Name },
+                        { "requestedById", requestedById },
+                        { "requestedByName", requestedByUser?.FullName ?? "Contractor" },
+                        { "projectId", task.ProjectId },
+                        { "projectName", project.Name },
+                        { "projectManagerId", project.ProjectManagerId },
+                    },
+                };
+
+                return await ProcessSystemEventAsync(systemEvent);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending completion request notification: {ex.Message}");
+                return false;
+            }
+        }
+
+        // Quotation workflow notifications
+        public async Task<bool> SendQuotationSentNotificationAsync(
+            string quotationId,
+            string sentById
+        )
+        {
+            try
+            {
+                // Get quotation details
+                var quotations = await _firebaseService.GetCollectionAsync<Quotation>("quotations");
+                var quotation = quotations.FirstOrDefault(q => q.QuotationId == quotationId);
+
+                if (quotation == null)
+                {
+                    Console.WriteLine($"Quotation {quotationId} not found");
+                    return false;
+                }
+
+                // Get project details
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var project = projects.FirstOrDefault(p => p.ProjectId == quotation.ProjectId);
+
+                if (project == null)
+                {
+                    Console.WriteLine($"Project {quotation.ProjectId} not found");
+                    return false;
+                }
+
+                // Get user details
+                var sentByUser = await _firebaseService.GetDocumentAsync<User>("users", sentById);
+
+                var systemEvent = new SystemEvent
+                {
+                    EventType = "quotation_workflow",
+                    EntityId = quotationId,
+                    EntityType = "quotation",
+                    Action = "sent",
+                    ProjectId = quotation.ProjectId,
+                    UserId = sentById,
+                    Data = new Dictionary<string, object>
+                    {
+                        { "quotationId", quotationId },
+                        { "quotationNumber", quotation.QuotationId },
+                        { "totalAmount", quotation.GrandTotal },
+                        { "clientId", quotation.ClientId },
+                        { "sentById", sentById },
+                        { "sentByName", sentByUser?.FullName ?? "Project Manager" },
+                        { "projectId", quotation.ProjectId },
+                        { "projectName", project.Name },
+                    },
+                };
+
+                return await ProcessSystemEventAsync(systemEvent);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending quotation sent notification: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> SendQuotationApprovedNotificationAsync(
+            string quotationId,
+            string approvedById
+        )
+        {
+            try
+            {
+                // Get quotation details
+                var quotations = await _firebaseService.GetCollectionAsync<Quotation>("quotations");
+                var quotation = quotations.FirstOrDefault(q => q.QuotationId == quotationId);
+
+                if (quotation == null)
+                {
+                    Console.WriteLine($"Quotation {quotationId} not found");
+                    return false;
+                }
+
+                // Get project details
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var project = projects.FirstOrDefault(p => p.ProjectId == quotation.ProjectId);
+
+                if (project == null)
+                {
+                    Console.WriteLine($"Project {quotation.ProjectId} not found");
+                    return false;
+                }
+
+                // Get user details
+                var approvedByUser = await _firebaseService.GetDocumentAsync<User>(
+                    "users",
+                    approvedById
+                );
+
+                var systemEvent = new SystemEvent
+                {
+                    EventType = "quotation_workflow",
+                    EntityId = quotationId,
+                    EntityType = "quotation",
+                    Action = "approved",
+                    ProjectId = quotation.ProjectId,
+                    UserId = approvedById,
+                    Data = new Dictionary<string, object>
+                    {
+                        { "quotationId", quotationId },
+                        { "quotationNumber", quotation.QuotationId },
+                        { "totalAmount", quotation.GrandTotal },
+                        { "approvedById", approvedById },
+                        { "approvedByName", approvedByUser?.FullName ?? "Client" },
+                        { "projectId", quotation.ProjectId },
+                        { "projectName", project.Name },
+                        { "projectManagerId", project.ProjectManagerId },
+                    },
+                };
+
+                return await ProcessSystemEventAsync(systemEvent);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending quotation approved notification: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> SendQuotationRejectedNotificationAsync(
+            string quotationId,
+            string rejectedById
+        )
+        {
+            try
+            {
+                // Get quotation details
+                var quotations = await _firebaseService.GetCollectionAsync<Quotation>("quotations");
+                var quotation = quotations.FirstOrDefault(q => q.QuotationId == quotationId);
+
+                if (quotation == null)
+                {
+                    Console.WriteLine($"Quotation {quotationId} not found");
+                    return false;
+                }
+
+                // Get project details
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var project = projects.FirstOrDefault(p => p.ProjectId == quotation.ProjectId);
+
+                if (project == null)
+                {
+                    Console.WriteLine($"Project {quotation.ProjectId} not found");
+                    return false;
+                }
+
+                // Get user details
+                var rejectedByUser = await _firebaseService.GetDocumentAsync<User>(
+                    "users",
+                    rejectedById
+                );
+
+                var systemEvent = new SystemEvent
+                {
+                    EventType = "quotation_workflow",
+                    EntityId = quotationId,
+                    EntityType = "quotation",
+                    Action = "rejected",
+                    ProjectId = quotation.ProjectId,
+                    UserId = rejectedById,
+                    Data = new Dictionary<string, object>
+                    {
+                        { "quotationId", quotationId },
+                        { "quotationNumber", quotation.QuotationId },
+                        { "totalAmount", quotation.GrandTotal },
+                        { "rejectedById", rejectedById },
+                        { "rejectedByName", rejectedByUser?.FullName ?? "Client" },
+                        { "projectId", quotation.ProjectId },
+                        { "projectName", project.Name },
+                        { "projectManagerId", project.ProjectManagerId },
+                    },
+                };
+
+                return await ProcessSystemEventAsync(systemEvent);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending quotation rejected notification: {ex.Message}");
+                return false;
+            }
+        }
+
         public async Task<List<WorkflowMessageTemplate>> GetMessageTemplatesAsync()
         {
             return _messageTemplates;
@@ -320,6 +785,9 @@ namespace ICCMS_API.Services
         {
             try
             {
+                // Generate a single thread ID for all recipients of this workflow message
+                var sharedThreadId = Guid.NewGuid().ToString();
+
                 // Create regular message for each recipient
                 foreach (var recipientId in workflowMessage.Recipients)
                 {
@@ -333,7 +801,7 @@ namespace ICCMS_API.Services
                         Content = workflowMessage.Content,
                         SentAt = DateTime.UtcNow,
                         MessageType = "workflow",
-                        ThreadId = Guid.NewGuid().ToString(),
+                        ThreadId = sharedThreadId, // Use the same thread ID for all recipients
                         IsThreadStarter = true,
                         ThreadDepth = 0,
                     };
@@ -395,15 +863,69 @@ namespace ICCMS_API.Services
                 var users = await _firebaseService.GetCollectionAsync<User>("users");
                 var projectUsers = users.Where(u => u.IsActive).ToList();
 
-                // Add relevant users based on event type
-                switch (systemEvent.EntityType)
+                // Add relevant users based on event type and action
+                switch (systemEvent.EventType)
                 {
+                    case "task_assignment":
+                        // Notify the assigned contractor
+                        if (systemEvent.Data.ContainsKey("assignedToId"))
+                        {
+                            recipients.Add(systemEvent.Data["assignedToId"].ToString());
+                        }
+                        break;
+
+                    case "task_completion":
+                        // Notify the project manager
+                        if (systemEvent.Data.ContainsKey("projectManagerId"))
+                        {
+                            recipients.Add(systemEvent.Data["projectManagerId"].ToString());
+                        }
+                        break;
+
+                    case "progress_report":
+                        // Notify the project manager
+                        if (systemEvent.Data.ContainsKey("projectManagerId"))
+                        {
+                            recipients.Add(systemEvent.Data["projectManagerId"].ToString());
+                        }
+                        break;
+
+                    case "completion_request":
+                        // Notify the project manager
+                        if (systemEvent.Data.ContainsKey("projectManagerId"))
+                        {
+                            recipients.Add(systemEvent.Data["projectManagerId"].ToString());
+                        }
+                        break;
+
+                    case "quotation_workflow":
+                        switch (systemEvent.Action)
+                        {
+                            case "sent":
+                                // Notify the client
+                                if (systemEvent.Data.ContainsKey("clientId"))
+                                {
+                                    recipients.Add(systemEvent.Data["clientId"].ToString());
+                                }
+                                break;
+                            case "approved":
+                            case "rejected":
+                                // Notify the project manager
+                                if (systemEvent.Data.ContainsKey("projectManagerId"))
+                                {
+                                    recipients.Add(systemEvent.Data["projectManagerId"].ToString());
+                                }
+                                break;
+                        }
+                        break;
+
                     case "quotation":
-                        var quote = await _firebaseService
-                            .GetCollectionAsync<Quotation>("quotations")
-                            .ContinueWith(t =>
-                                t.Result.FirstOrDefault(q => q.QuotationId == systemEvent.EntityId)
-                            );
+                        var quotations = await _firebaseService.GetCollectionAsync<Quotation>(
+                            "quotations"
+                        );
+                        var quote = quotations.FirstOrDefault(q =>
+                            q.QuotationId == systemEvent.EntityId
+                        );
                         if (quote != null)
                         {
                             recipients.Add(quote.ClientId);
@@ -414,11 +936,12 @@ namespace ICCMS_API.Services
                         break;
 
                     case "invoice":
-                        var invoice = await _firebaseService
-                            .GetCollectionAsync<Invoice>("invoices")
-                            .ContinueWith(t =>
-                                t.Result.FirstOrDefault(i => i.InvoiceId == systemEvent.EntityId)
-                            );
+                        var invoices = await _firebaseService.GetCollectionAsync<Invoice>(
+                            "invoices"
+                        );
+                        var invoice = invoices.FirstOrDefault(i =>
+                            i.InvoiceId == systemEvent.EntityId
+                        );
                         if (invoice != null)
                         {
                             recipients.Add(invoice.ClientId);
@@ -426,9 +949,21 @@ namespace ICCMS_API.Services
                         }
                         break;
 
-                    case "project":
+                    case "project_update":
                         // Add all project participants
                         recipients.AddRange(projectUsers.Select(u => u.UserId));
+                        break;
+
+                    case "system_alert":
+                        // Use the recipients from the system event
+                        if (systemEvent.Data.ContainsKey("recipients"))
+                        {
+                            var recipientList = systemEvent.Data["recipients"] as List<string>;
+                            if (recipientList != null)
+                            {
+                                recipients.AddRange(recipientList);
+                            }
+                        }
                         break;
 
                     default:
@@ -465,33 +1000,98 @@ namespace ICCMS_API.Services
         {
             return new List<WorkflowMessageTemplate>
             {
+                // Task workflow templates
                 new WorkflowMessageTemplate
                 {
-                    WorkflowType = "quotation",
-                    Action = "created",
-                    SubjectTemplate = "New Quotation Created - {quoteId}",
+                    WorkflowType = "task_assignment",
+                    Action = "assigned",
+                    SubjectTemplate = "🎯 New Task Assignment: {taskName}",
                     ContentTemplate =
-                        "A new quotation has been created for project {projectId}. Amount: {quoteTotal:C}. Please review and approve.",
-                    Priority = "normal",
-                },
-                new WorkflowMessageTemplate
-                {
-                    WorkflowType = "quotation",
-                    Action = "approved",
-                    SubjectTemplate = "Quotation Approved - {quoteId}",
-                    ContentTemplate =
-                        "Quotation {quoteId} has been approved. Amount: {quoteTotal:C}. You can proceed with the work.",
+                        "You have been assigned a new task in project **{projectName}**.\n\n"
+                        + "**Task:** {taskName}\n"
+                        + "**Description:** {taskDescription}\n"
+                        + "**Start Date:** {startDate:MMM dd, yyyy}\n"
+                        + "**Due Date:** {dueDate:MMM dd, yyyy}\n\n"
+                        + "Please review the task details and begin work as soon as possible.",
                     Priority = "high",
                 },
                 new WorkflowMessageTemplate
                 {
-                    WorkflowType = "quotation",
-                    Action = "rejected",
-                    SubjectTemplate = "Quotation Rejected - {quoteId}",
+                    WorkflowType = "task_completion",
+                    Action = "completed",
+                    SubjectTemplate = "✅ Task Completed: {taskName} in Project {projectName}",
                     ContentTemplate =
-                        "Quotation {quoteId} has been rejected. Please review and resubmit with necessary changes.",
+                        "Contractor **{completedByName}** has marked task **{taskName}** as completed in project **{projectName}**.\n\n"
+                        + "Please review the task and confirm its completion.",
                     Priority = "normal",
                 },
+                new WorkflowMessageTemplate
+                {
+                    WorkflowType = "progress_report",
+                    Action = "submitted",
+                    SubjectTemplate = "📊 Progress Report: {taskName} in Project {projectName}",
+                    ContentTemplate =
+                        "Contractor **{submittedByName}** has submitted a progress report for task **{taskName}** in project **{projectName}**.\n\n"
+                        + "**Current progress:** {progressPercentage}%\n"
+                        + "**Report Date:** {reportDate:MMM dd, yyyy}\n"
+                        + "**Notes:** {notes}\n\n"
+                        + "Please review the report for details.",
+                    Priority = "normal",
+                },
+                new WorkflowMessageTemplate
+                {
+                    WorkflowType = "completion_request",
+                    Action = "completion_requested",
+                    SubjectTemplate = "🔍 Completion Request: {taskName} in Project {projectName}",
+                    ContentTemplate =
+                        "Contractor **{requestedByName}** has requested completion for task **{taskName}** in project **{projectName}**.\n\n"
+                        + "Please review the task and approve its completion.",
+                    Priority = "normal",
+                },
+                // Quotation workflow templates
+                new WorkflowMessageTemplate
+                {
+                    WorkflowType = "quotation_workflow",
+                    Action = "sent",
+                    SubjectTemplate = "📋 New Quotation for Project: {projectName}",
+                    ContentTemplate =
+                        "A new quotation has been sent to you for project **{projectName}**.\n\n"
+                        + "**Quotation ID:** {quotationId}\n"
+                        + "**Total Amount:** {totalAmount:C}\n\n"
+                        + "Please review the quotation in your client dashboard and approve or reject it at your earliest convenience.",
+                    Priority = "normal",
+                },
+                new WorkflowMessageTemplate
+                {
+                    WorkflowType = "quotation_workflow",
+                    Action = "approved",
+                    SubjectTemplate = "✅ Quotation Approved: {projectName}",
+                    ContentTemplate =
+                        "Client **{approvedByName}** has approved quotation **{quotationId}** for project **{projectName}**.\n\n"
+                        + "**Total Amount:** {totalAmount:C}\n\n"
+                        + "You can now proceed with project planning and task assignments.",
+                    Priority = "high",
+                },
+                new WorkflowMessageTemplate
+                {
+                    WorkflowType = "quotation_workflow",
+                    Action = "rejected",
+                    SubjectTemplate = "❌ Quotation Rejected: {projectName}",
+                    ContentTemplate =
+                        "Client **{rejectedByName}** has rejected quotation **{quotationId}** for project **{projectName}**.\n\n"
+                        + "Please review the client's feedback and take appropriate action.",
+                    Priority = "normal",
+                },
+                new WorkflowMessageTemplate
+                {
+                    WorkflowType = "quotation",
+                    Action = "created",
+                    SubjectTemplate = "New Quotation Created - {quotationId}",
+                    ContentTemplate =
+                        "A new quotation has been created for project {projectId}. Amount: {totalAmount:C}. Please review and approve.",
+                    Priority = "normal",
+                },
+                // Invoice workflow templates
                 new WorkflowMessageTemplate
                 {
                     WorkflowType = "invoice",
@@ -519,6 +1119,7 @@ namespace ICCMS_API.Services
                         "Invoice {invoiceNumber} is now overdue. Amount: {invoiceAmount:C}. Please process payment as soon as possible.",
                     Priority = "urgent",
                 },
+                // Project workflow templates
                 new WorkflowMessageTemplate
                 {
                     WorkflowType = "project",
@@ -537,6 +1138,7 @@ namespace ICCMS_API.Services
                         "A milestone has been reached for project {projectName}. Great progress!",
                     Priority = "normal",
                 },
+                // System templates
                 new WorkflowMessageTemplate
                 {
                     WorkflowType = "system",

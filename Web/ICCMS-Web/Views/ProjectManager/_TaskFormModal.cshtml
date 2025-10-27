@@ -1,0 +1,332 @@
+<!-- Task Form Modal -->
+<div class="modal fade" id="taskFormModal" tabindex="-1" aria-labelledby="taskFormModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="taskFormModalLabel">
+                    <i class="fa-solid fa-tasks me-2"></i><span id="taskModalTitle">Add Task</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="taskForm">
+                <div class="modal-body">
+                    <input type="hidden" id="taskId" name="TaskId" />
+                    <input type="hidden" id="taskProjectId" name="ProjectId" value="@Model.Project.ProjectId" />
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="taskName" class="form-label">Task Name *</label>
+                                <input type="text" class="form-control" id="taskName" name="Name" required>
+                                <div class="invalid-feedback">Please provide a task name.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="taskPriority" class="form-label">Priority</label>
+                                <select class="form-select" id="taskPriority" name="Priority">
+                                    <option value="Low">Low</option>
+                                    <option value="Medium" selected>Medium</option>
+                                    <option value="High">High</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="taskDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="taskDescription" name="Description" rows="3"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="taskPhase" class="form-label">Phase *</label>
+                                <select class="form-select" id="taskPhase" name="PhaseId" required>
+                                    <option value="">Select Phase</option>
+                                    @foreach (var phase in Model.Phases)
+                                    {
+                                        <option value="@phase.PhaseId">@phase.Name</option>
+                                    }
+                                </select>
+                                <div class="invalid-feedback">Please select a phase.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="taskAssignedTo" class="form-label">Assigned To *</label>
+                                <select class="form-select" id="taskAssignedTo" name="AssignedTo" required>
+                                    <option value="">Select Contractor</option>
+                                    @foreach (var contractor in Model.ContractorMap.Values)
+                                    {
+                                        <option value="@contractor.UserId">@contractor.FullName</option>
+                                    }
+                                </select>
+                                <div class="invalid-feedback">Please select a contractor.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="taskStartDate" class="form-label">Start Date *</label>
+                                <input type="date" class="form-control" id="taskStartDate" name="StartDate" required>
+                                <div class="invalid-feedback">Please select a start date.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="taskDueDate" class="form-label">Due Date *</label>
+                                <input type="date" class="form-control" id="taskDueDate" name="DueDate" required>
+                                <div class="invalid-feedback">Please select a due date.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="taskStatus" class="form-label">Status</label>
+                                <select class="form-select" id="taskStatus" name="Status">
+                                    <option value="Pending" selected>Pending</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Awaiting Approval">Awaiting Approval</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="taskBudget" class="form-label">Budget</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R</span>
+                                    <input type="number" class="form-control" id="taskBudget" name="Budget" step="0.01" min="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="taskProgress" class="form-label">Progress (%)</label>
+                                <input type="range" class="form-range" id="taskProgress" name="Progress" min="0"
+                                    max="100" value="0">
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-muted">0%</small>
+                                    <small class="text-muted">50%</small>
+                                    <small class="text-muted">100%</small>
+                                </div>
+                                <div class="text-center">
+                                    <span id="progressValue">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="taskEstimatedHours" class="form-label">Estimated Hours</label>
+                                <input type="number" class="form-control" id="taskEstimatedHours" name="EstimatedHours"
+                                    step="0.5" min="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="taskActualHours" class="form-label">Actual Hours</label>
+                                <input type="number" class="form-control" id="taskActualHours" name="ActualHours"
+                                    step="0.5" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveTaskBtn">
+                        <i class="fa-solid fa-save me-1"></i><span id="saveTaskBtnText">Save Task</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const taskForm = document.getElementById('taskForm');
+        const taskModalElement = document.getElementById('taskFormModal');
+        const taskModal = new bootstrap.Modal(taskModalElement);
+        const taskModalTitle = document.getElementById('taskModalTitle');
+        const saveTaskBtnText = document.getElementById('saveTaskBtnText');
+        const saveTaskBtn = document.getElementById('saveTaskBtn');
+        const progressSlider = document.getElementById('taskProgress');
+        const progressValue = document.getElementById('progressValue');
+
+        // Update progress display
+        progressSlider.addEventListener('input', function () {
+            progressValue.textContent = this.value + '%';
+        });
+
+        // Reset form when modal is shown
+        taskModalElement.addEventListener('show.bs.modal', function () {
+            resetTaskForm();
+        });
+
+        // Handle form submission
+        taskForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            if (!validateTaskForm()) {
+                return;
+            }
+
+            const formData = new FormData(taskForm);
+            const taskData = Object.fromEntries(formData);
+
+            // Convert dates to proper format
+            taskData.StartDate = new Date(taskData.StartDate).toISOString();
+            taskData.DueDate = new Date(taskData.DueDate).toISOString();
+
+            // Convert numeric fields
+            taskData.Progress = parseInt(taskData.Progress);
+            taskData.EstimatedHours = parseFloat(taskData.EstimatedHours) || 0;
+            taskData.ActualHours = parseFloat(taskData.ActualHours) || 0;
+            taskData.Budget = parseFloat(taskData.Budget) || 0;
+
+            // Show loading state
+            saveTaskBtn.disabled = true;
+            saveTaskBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Saving...';
+
+            // Determine if this is an edit or create
+            const taskId = document.getElementById('taskId').value;
+            const isEdit = taskId && taskId.trim() !== '';
+
+            const url = isEdit
+                ? `/ProjectManager/UpdateTask/${taskId}`
+                : '/ProjectManager/CreateTask';
+
+            const method = isEdit ? 'PUT' : 'POST';
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(taskData)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showSuccessMessage(isEdit ? 'Task updated successfully!' : 'Task created successfully!');
+                        taskModal.hide();
+                        // Refresh tasks list
+                        if (typeof refreshTasksList === 'function') {
+                            refreshTasksList();
+                        }
+                    } else {
+                        showErrorMessage(data.error || 'Failed to save task');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error saving task:', error);
+                    showErrorMessage('An error occurred while saving the task');
+                })
+                .finally(() => {
+                    saveTaskBtn.disabled = false;
+                    saveTaskBtn.innerHTML = `<i class="fa-solid fa-save me-1"></i>${isEdit ? 'Update Task' : 'Save Task'}`;
+                });
+        });
+
+        function resetTaskForm() {
+            taskForm.reset();
+            document.getElementById('taskId').value = '';
+            taskModalTitle.textContent = 'Add Task';
+            saveTaskBtnText.textContent = 'Save Task';
+
+            // Set default dates
+            const today = new Date().toISOString().split('T')[0];
+            const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            document.getElementById('taskStartDate').value = today;
+            document.getElementById('taskDueDate').value = nextWeek;
+
+            // Reset progress slider
+            progressSlider.value = 0;
+            progressValue.textContent = '0%';
+        }
+
+        function validateTaskForm() {
+            const name = document.getElementById('taskName').value.trim();
+            const phase = document.getElementById('taskPhase').value;
+            const assignedTo = document.getElementById('taskAssignedTo').value;
+            const startDate = document.getElementById('taskStartDate').value;
+            const dueDate = document.getElementById('taskDueDate').value;
+
+            let isValid = true;
+
+            // Validate name
+            if (!name) {
+                document.getElementById('taskName').classList.add('is-invalid');
+                isValid = false;
+            } else {
+                document.getElementById('taskName').classList.remove('is-invalid');
+            }
+
+            // Validate phase
+            if (!phase) {
+                document.getElementById('taskPhase').classList.add('is-invalid');
+                isValid = false;
+            } else {
+                document.getElementById('taskPhase').classList.remove('is-invalid');
+            }
+
+            // Validate assigned to
+            if (!assignedTo) {
+                document.getElementById('taskAssignedTo').classList.add('is-invalid');
+                isValid = false;
+            } else {
+                document.getElementById('taskAssignedTo').classList.remove('is-invalid');
+            }
+
+            // Validate dates
+            if (!startDate) {
+                document.getElementById('taskStartDate').classList.add('is-invalid');
+                isValid = false;
+            } else {
+                document.getElementById('taskStartDate').classList.remove('is-invalid');
+            }
+
+            if (!dueDate) {
+                document.getElementById('taskDueDate').classList.add('is-invalid');
+                isValid = false;
+            } else {
+                document.getElementById('taskDueDate').classList.remove('is-invalid');
+            }
+
+            // Validate date logic
+            if (startDate && dueDate && new Date(startDate) >= new Date(dueDate)) {
+                document.getElementById('taskDueDate').classList.add('is-invalid');
+                document.getElementById('taskDueDate').setCustomValidity('Due date must be after start date');
+                isValid = false;
+            } else {
+                document.getElementById('taskDueDate').classList.remove('is-invalid');
+                document.getElementById('taskDueDate').setCustomValidity('');
+            }
+
+            return isValid;
+        }
+
+        // Global function to show task modal
+        window.showTaskModal = function () {
+            taskModal.show();
+        };
+
+        // Global function to edit task (called from task management)
+        window.editTask = function (taskId) {
+            // This will be implemented in pm-task-management.js
+            console.log('Edit task:', taskId);
+        };
+    });
+</script>

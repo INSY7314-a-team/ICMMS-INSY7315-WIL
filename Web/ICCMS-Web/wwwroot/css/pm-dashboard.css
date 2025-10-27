@@ -1,9 +1,116 @@
-/* Project Manager Dashboard Styles */
+/* Project Manager Dashboard Styles - Following Design System */
+
+:root {
+  --primary-bg: #1a1b25; /* Dark navy - main background */
+  --secondary-bg: #2a2b35; /* Lighter dark - card backgrounds */
+  --accent-yellow: #f7ec59; /* Construction yellow - primary CTA */
+  --accent-red: #ff5964; /* Alert/overdue color */
+  --accent-green: #198754; /* Success/completed color */
+  --accent-cyan: #0dcaf0; /* Info/in-progress color */
+  --text-primary: #ffffff; /* Primary text - always white */
+  --text-secondary: #ffffff; /* Secondary text - white with different font weight */
+  --text-muted: #ffffff; /* Muted text - white with opacity */
+  --text-dark: #1a1b25; /* Text on light backgrounds */
+  --border-primary: rgba(247, 236, 89, 0.2); /* Default borders */
+  --border-active: #f7ec59; /* Active/focus borders */
+}
 
 .pm-dashboard-container {
     padding: 20px;
-    background-color: #1A1B25;
+    background-color: var(--primary-bg);
     min-height: 100vh;
+    color: var(--text-primary);
+}
+
+/* ===========================================
+   DASHBOARD HEADER
+   =========================================== */
+
+.dashboard-header {
+    color: var(--text-primary);
+    padding: 25px 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+}
+
+.dashboard-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: var(--text-primary);
+}
+
+.dashboard-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+/* ===========================================
+   STATS CONTAINER
+   =========================================== */
+
+.stats-container {
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: var(--secondary-bg);
+    color: var(--text-primary);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(247, 236, 89, 0.2);
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-color: var(--border-active);
+}
+
+.stat-card .stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+}
+
+.stat-card .stat-icon.in-progress {
+    background: var(--accent-cyan);
+}
+
+.stat-card .stat-icon.completed {
+    background: #198754;
+}
+
+.stat-card .stat-icon.overdue {
+    background: #FF5964;
+    color: var(--text-primary);
+}
+
+.stat-card .stat-content {
+    color: var(--text-primary);
+}
+
+.stat-card .stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: #F7EC59;
+}
+
+.stat-card .stat-label {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin: 0;
 }
 
 /* ===========================================
@@ -14,10 +121,10 @@
     border: 3px solid;
     border-image: repeating-linear-gradient(
         45deg,
-        #1A1B25,
-        #1A1B25 8px,
-        #F7EC59 8px,
-        #F7EC59 16px
+        var(--primary-bg),
+        var(--primary-bg) 8px,
+        var(--accent-yellow) 8px,
+        var(--accent-yellow) 16px
     ) 1;
 }
 
@@ -25,10 +132,10 @@
     border: 2px solid;
     border-image: repeating-linear-gradient(
         45deg,
-        #1A1B25,
-        #1A1B25 6px,
-        #F7EC59 6px,
-        #F7EC59 12px
+        var(--primary-bg),
+        var(--primary-bg) 6px,
+        var(--accent-yellow) 6px,
+        var(--accent-yellow) 12px
     ) 1;
 }
 
@@ -37,9 +144,9 @@
    =========================================== */
 
 .filter-toggle-btn {
-    background: #F7EC59;
+    background: var(--accent-yellow);
     border: none;
-    color: #1A1B25;
+    color: var(--text-dark);
     padding: 12px 24px;
     border-radius: 25px;
     font-weight: 600;
@@ -51,16 +158,17 @@
 .filter-toggle-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(247, 236, 89, 0.4);
-    color: #1A1B25;
+    color: var(--text-dark);
 }
 
 .filters-panel {
-    background: #1A1B25 !important;
+    background: var(--secondary-bg) !important;
     border-radius: 15px;
     padding: 25px;
     margin-top: 20px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     animation: slideDown 0.3s ease-out;
+    border: 1px solid var(--border-primary);
 }
 
 @keyframes slideDown {
@@ -75,7 +183,7 @@
 }
 
 .filters-container {
-    color: #1A1B25;
+    color: var(--text-primary);
 }
 
 .filter-group {
@@ -91,7 +199,7 @@
 
 .filter-group-header {
     margin-bottom: 15px;
-    color: #F7EC59;
+    color: var(--accent-yellow);
 }
 
 .filter-group-header h6 {
@@ -112,7 +220,7 @@
     align-items: center;
     padding: 10px 16px;
     background: rgba(255, 255, 255, 0.1);
-    color: #FFFFFF;
+    color: var(--text-primary);
     text-decoration: none;
     border-radius: 20px;
     border: 2px solid transparent;
@@ -123,16 +231,16 @@
 
 .status-filter-btn:hover {
     background: rgba(247, 236, 89, 0.2);
-    border-color: #F7EC59;
-    color: #F7EC59;
+    border-color: var(--accent-yellow);
+    color: var(--accent-yellow);
     transform: translateY(-2px);
     text-decoration: none;
 }
 
 .status-filter-btn.active {
-    background: #F7EC59;
-    color: #1A1B25;
-    border-color: #F7EC59;
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    border-color: var(--accent-yellow);
     font-weight: 600;
 }
 
@@ -163,7 +271,7 @@
 }
 
 .filter-label {
-    color: #F7EC59;
+    color: var(--accent-yellow);
     font-weight: 600;
     margin-bottom: 8px;
     font-size: 0.9rem;
@@ -173,7 +281,7 @@
 .filter-select {
     background: rgba(255, 255, 255, 0.1);
     border: 2px solid rgba(255, 255, 255, 0.2);
-    color: #FFFFFF;
+    color: var(--text-primary);
     padding: 12px 16px;
     border-radius: 10px;
     font-size: 0.9rem;
@@ -183,7 +291,7 @@
 .filter-input:focus,
 .filter-select:focus {
     outline: none;
-    border-color: #F7EC59;
+    border-color: var(--accent-yellow);
     background: rgba(247, 236, 89, 0.1);
     box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.2);
 }
@@ -193,8 +301,8 @@
 }
 
 .filter-select option {
-    background: #1A1B25;
-    color: #FFFFFF;
+    background: var(--primary-bg);
+    color: var(--text-primary);
 }
 
 /* Budget Range */
@@ -209,7 +317,7 @@
 }
 
 .range-separator {
-    color: #F7EC59;
+    color: var(--accent-yellow);
     font-weight: 600;
     font-size: 0.9rem;
 }
@@ -238,8 +346,8 @@
 }
 
 .filter-action-btn.primary {
-    background: #F7EC59;
-    color: #1A1B25;
+    background: var(--accent-yellow);
+    color: var(--text-dark);
     box-shadow: 0 2px 8px rgba(247, 236, 89, 0.2);
 }
 
@@ -250,20 +358,20 @@
 
 .filter-action-btn.secondary {
     background: rgba(255, 255, 255, 0.1);
-    color: #FFFFFF;
+    color: var(--text-primary);
     border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 .filter-action-btn.secondary:hover {
     background: rgba(255, 255, 255, 0.2);
-    border-color: #FFFFFF;
+    border-color: var(--text-primary);
     transform: translateY(-2px);
 }
 
 .filter-action-btn.tertiary {
     background: rgba(247, 236, 89, 0.1);
-    color: #F7EC59;
-    border: 2px solid #F7EC59;
+    color: var(--accent-yellow);
+    border: 2px solid var(--accent-yellow);
 }
 
 .filter-action-btn.tertiary:hover {
@@ -293,34 +401,15 @@
     }
 }
 
-.dashboard-header {
-    background: #0D1821;
-    color: #FFFFFF;
-    padding: 25px 30px;
-    border-radius: 15px;
-    margin-bottom: 30px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
-
-.dashboard-title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin-bottom: 15px;
-    color: #FFFFFF;
-}
-
-.dashboard-subtitle {
-    font-size: 1.1rem;
-    opacity: 0.9;
-    margin: 0;
-}
+/* Dashboard header styles are already defined above */
 
 .dashboard-controls {
-    background: #1A1B25;
+    background: var(--secondary-bg);
     padding: 25px;
     border-radius: 15px;
     margin-bottom: 30px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    border: 1px solid var(--border-primary);
 }
 
 .search-section {
@@ -328,12 +417,12 @@
 }
 
 .ProjectsContainer {
-    background: #0D1821;
+    background: var(--secondary-bg);
     padding: 25px;
     border-radius: 15px;
     margin-bottom: 30px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    border: 2px solid #F7EC59;
+    border: 2px solid var(--accent-yellow);
 }
 
 .search-input-group {
@@ -349,12 +438,20 @@
     border-radius: 25px;
     font-size: 1rem;
     transition: all 0.3s ease;
+    background: var(--secondary-bg);
+    color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 .search-input:focus {
-    border-color: #F7EC59;
+    border-color: var(--accent-yellow);
     box-shadow: 0 0 0 0.2rem rgba(247, 236, 89, 0.25);
     outline: none;
+    background: var(--primary-bg);
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
 }
 
 .search-btn, .clear-search-btn {
@@ -362,9 +459,9 @@
     right: 5px;
     top: 50%;
     transform: translateY(-50%);
-    background: #F7EC59;
+    background: var(--accent-yellow);
     border: none;
-    color: #1A1B25;
+    color: var(--text-dark);
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -376,8 +473,8 @@
 
 .clear-search-btn {
     right: 50px;
-    background: #FF5964;
-    color: #FFFFFF;
+    background: var(--accent-red);
+    color: var(--text-primary);
 }
 
 .search-btn:hover, .clear-search-btn:hover {
@@ -389,13 +486,13 @@
 }
 
 .create-project-btn {
-    background: #F7EC59;
+    background: var(--accent-yellow);
     border: none;
     padding: 15px 30px;
     border-radius: 25px;
     font-weight: 600;
     font-size: 1.1rem;
-    color: #1A1B25;
+    color: var(--text-dark);
     box-shadow: 0 2px 8px rgba(247, 236, 89, 0.2);
     transition: all 0.3s ease;
 }
@@ -403,7 +500,7 @@
 .create-project-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(247, 236, 89, 0.4);
-    color: #1A1B25;
+    color: var(--text-dark);
 }
 
 .filter-section {
@@ -437,27 +534,25 @@
 }
 
 .section-header {
-    background: #1A1B25;
-    color: #FFFFFF;
+    color: var(--text-primary);
     padding: 20px 25px;
     border-radius: 15px;
     margin-bottom: 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 .section-title {
     font-size: 1.5rem;
     font-weight: 600;
     margin: 0;
-    color: #FFFFFF;
+    color: var(--text-primary);
 }
 
 .badge {
-    background: #6BF178 !important;
-    color: #1A1B25;
+    background: var(--accent-green) !important;
+    color: var(--text-dark);
     padding: 5px 10px;
     border-radius: 15px;
     font-size: 0.8rem;
@@ -477,45 +572,47 @@
 }
 
 .project-card {
-    background: #FFFFFF;
+    background: var(--secondary-bg);
     border-radius: 15px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     transition: all 0.3s ease;
-    border: 1px solid #e9ecef;
+    border: 1px solid var(--border-primary);
     overflow: hidden;
 }
 
 .project-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-color: var(--border-active);
 }
 
 .project-card .card-header {
-    background: linear-gradient(135deg, #FFFFFF 0%, #f8f9fa 100%);
-    border-bottom: 1px solid #dee2e6;
+    background: linear-gradient(135deg, var(--secondary-bg) 0%, var(--primary-bg) 100%);
+    border-bottom: 1px solid var(--border-primary);
     padding: 20px;
 }
 
 .project-card .card-title {
-    color: #1A1B25;
+    color: var(--text-primary);
     font-size: 1.2rem;
     font-weight: 600;
     margin-bottom: 8px;
 }
 
 .project-card .card-subtitle {
-    color: #6c757d;
+    color: var(--text-muted);
     font-size: 0.9rem;
     margin: 0;
 }
 
 .project-card .card-body {
     padding: 20px;
+    color: var(--text-primary);
 }
 
 .project-card .card-footer {
-    background: #f8f9fa;
-    border-top: 1px solid #dee2e6;
+    background: var(--primary-bg);
+    border-top: 1px solid var(--border-primary);
     padding: 15px 20px;
 }
 
@@ -526,7 +623,7 @@
 }
 
 .collapsible-header:hover {
-    background: linear-gradient(135deg, #2A2B35 0%, #1A1B25 100%);
+    background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
     transform: translateY(-1px);
 }
 
@@ -541,17 +638,19 @@
 .no-projects-message {
     text-align: center;
     padding: 60px 20px;
-    background: #1A1B25 !important;
+    background: var(--secondary-bg) !important;
     border-radius: 15px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    border: 1px solid var(--border-primary);
 }
 
 .pagination-container {
-    background: #FFFFFF;
+    background: var(--secondary-bg);
     padding: 20px;
     border-radius: 15px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     margin-top: 20px;
+    border: 1px solid var(--border-primary);
 }
 
 .pagination {
@@ -560,27 +659,28 @@
 
 .pagination .page-link {
     border: none;
-    color: #1A1B25;
+    color: var(--text-primary);
     padding: 10px 15px;
     margin: 0 2px;
     border-radius: 8px;
     transition: all 0.3s ease;
+    background: var(--primary-bg);
 }
 
 .pagination .page-link:hover {
-    background: #F7EC59;
-    color: #1A1B25;
+    background: var(--accent-yellow);
+    color: var(--text-dark);
     transform: translateY(-1px);
 }
 
 .pagination .page-item.active .page-link {
-    background: #F7EC59;
-    border-color: #F7EC59;
-    color: #1A1B25;
+    background: var(--accent-yellow);
+    border-color: var(--accent-yellow);
+    color: var(--text-dark);
 }
 
 .pagination-info {
-    color: #6c757d;
+    color: var(--text-muted);
     font-size: 0.9rem;
     text-align: center;
 }
@@ -590,41 +690,41 @@
    Theme alignment with dashboard
    ========================== */
 #projectCreationWizardModal .modal-content {
-    border: 2px solid #F7EC59;
+    border: 2px solid var(--accent-yellow);
     border-radius: 15px;
     box-shadow: 0 8px 25px rgba(0,0,0,0.3);
 }
 #planEditorModal .modal-content {
-    border: 2px solid #F7EC59;
+    border: 2px solid var(--accent-yellow);
     border-radius: 15px;
     box-shadow: 0 8px 25px rgba(0,0,0,0.3);
 }
 
 #projectCreationWizardModal .modal-header {
-    background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);
-    color: #FFFFFF;
+    background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+    color: var(--text-primary);
     border-bottom: 1px solid rgba(247, 236, 89, 0.4);
 }
 #planEditorModal .modal-header {
-    background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);
-    color: #FFFFFF;
+    background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+    color: var(--text-primary);
     border-bottom: 1px solid rgba(247, 236, 89, 0.4);
 }
 
 #projectCreationWizardModal .modal-title i {
-    color: #F7EC59;
+    color: var(--accent-yellow);
 }
 #planEditorModal .modal-title i {
-    color: #F7EC59;
+    color: var(--accent-yellow);
 }
 
 #projectCreationWizardModal .modal-body {
-    background: #0D1821;
-    color: #FFFFFF;
+    background: var(--primary-bg);
+    color: var(--text-primary);
 }
 #planEditorModal .modal-body {
-    background: #0D1821;
-    color: #FFFFFF;
+    background: var(--primary-bg);
+    color: var(--text-primary);
 }
 
 #projectCreationWizardModal .wizard-progress .progress {
@@ -634,32 +734,32 @@
 }
 
 #projectCreationWizardModal .wizard-progress .progress-bar {
-    background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+    background: linear-gradient(135deg, var(--accent-yellow) 0%, #E6D547 100%);
 }
 
 #projectCreationWizardModal .wizard-step h6,
 #projectCreationWizardModal .wizard-step .form-label {
-    color: #F7EC59;
+    color: var(--accent-yellow);
 }
 #planEditorModal h6,
 #planEditorModal .form-label {
-    color: #F7EC59;
+    color: var(--accent-yellow);
 }
 
 #projectCreationWizardModal .form-control,
 #projectCreationWizardModal .form-select,
 #projectCreationWizardModal textarea {
-    background: #0D1821;
+    background: var(--primary-bg);
     border: 2px solid rgba(255, 255, 255, 0.15);
-    color: #FFFFFF;
+    color: var(--text-primary);
     border-radius: 10px;
 }
 #planEditorModal .form-control,
 #planEditorModal .form-select,
 #planEditorModal textarea {
-    background: #0D1821;
+    background: var(--primary-bg);
     border: 2px solid rgba(255, 255, 255, 0.15);
-    color: #FFFFFF;
+    color: var(--text-primary);
     border-radius: 10px;
 }
 
@@ -667,59 +767,59 @@
 #projectCreationWizardModal .form-select:focus,
 #projectCreationWizardModal textarea:focus {
     outline: none;
-    border-color: #F7EC59;
-    background: #a79b01;
+    border-color: var(--accent-yellow);
+    background: var(--secondary-bg);
     box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.15);
 }
 #planEditorModal .form-control:focus,
 #planEditorModal .form-select:focus,
 #planEditorModal textarea:focus {
     outline: none;
-    border-color: #F7EC59;
-    background: #a79b01;
+    border-color: var(--accent-yellow);
+    background: var(--secondary-bg);
     box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.15);
 }
 
 #projectCreationWizardModal .form-select option {
-    background: #0D1821;
-    color: #FFFFFF;
+    background: var(--primary-bg);
+    color: var(--text-primary);
 }
 #planEditorModal .form-select option {
-    background: #0D1821;
-    color: #FFFFFF;
+    background: var(--primary-bg);
+    color: var(--text-primary);
 }
 
 #projectCreationWizardModal .card {
-    background: #1A1B25;
-    color: #FFFFFF;
+    background: var(--secondary-bg);
+    color: var(--text-primary);
     border: 1px solid rgba(247, 236, 89, 0.2);
 }
 #planEditorModal .card {
-    background: #1A1B25;
-    color: #FFFFFF;
+    background: var(--secondary-bg);
+    color: var(--text-primary);
     border: 1px solid rgba(247, 236, 89, 0.2);
 }
 
 #projectCreationWizardModal .btn-primary {
-    background: linear-gradient(135deg, #F7EC59 0%, #f4d03f 100%);
+    background: linear-gradient(135deg, var(--accent-yellow) 0%, #f4d03f 100%);
     border: none;
-    color: #1A1B25;
+    color: var(--text-dark);
     font-weight: 600;
 }
 #planEditorModal .btn-primary {
-    background: linear-gradient(135deg, #F7EC59 0%, #f4d03f 100%);
+    background: linear-gradient(135deg, var(--accent-yellow) 0%, #f4d03f 100%);
     border: none;
-    color: #1A1B25;
+    color: var(--text-dark);
     font-weight: 600;
 }
 
 #projectCreationWizardModal .btn-outline-primary {
-    border: 2px solid #F7EC59;
-    color: #F7EC59;
+    border: 2px solid var(--accent-yellow);
+    color: var(--accent-yellow);
 }
 #planEditorModal .btn-outline-primary {
-    border: 2px solid #F7EC59;
-    color: #F7EC59;
+    border: 2px solid var(--accent-yellow);
+    color: var(--accent-yellow);
 }
 
 #projectCreationWizardModal .btn-outline-primary:hover {
@@ -731,32 +831,32 @@
 
 #projectCreationWizardModal .btn-outline-secondary {
     border: 2px solid rgba(255,255,255,0.3);
-    color: #FFFFFF;
+    color: var(--text-primary);
 }
 #planEditorModal .btn-outline-secondary {
     border: 2px solid rgba(255,255,255,0.3);
-    color: #FFFFFF;
+    color: var(--text-primary);
 }
 
 #projectCreationWizardModal .btn-success {
-    background: #6BF178;
+    background: var(--accent-green);
     border: none;
-    color: #1A1B25;
+    color: var(--text-dark);
     font-weight: 600;
 }
 #planEditorModal .btn-success {
-    background: #6BF178;
+    background: var(--accent-green);
     border: none;
-    color: #1A1B25;
+    color: var(--text-dark);
     font-weight: 600;
 }
 
 #projectCreationWizardModal .modal-footer {
-    background: #0D1821;
+    background: var(--primary-bg);
     border-top: 1px solid rgba(247, 236, 89, 0.2);
 }
 #planEditorModal .modal-footer {
-    background: #0D1821;
+    background: var(--primary-bg);
     border-top: 1px solid rgba(247, 236, 89, 0.2);
 }
 

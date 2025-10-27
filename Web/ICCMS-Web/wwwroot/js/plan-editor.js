@@ -215,7 +215,7 @@
           dueDate:
             this.parseDateInput(card.querySelector(".pt-due")?.value) ||
             new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          status: "Not Started",
+          status: "Pending",
           priority: "Medium",
           progress: 0,
           estimatedHours: 0,

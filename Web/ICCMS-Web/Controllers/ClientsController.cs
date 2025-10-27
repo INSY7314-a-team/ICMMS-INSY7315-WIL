@@ -1,20 +1,23 @@
-using System.Security.Claims;
-using System.Text.Json;
-using ICCMS_Web.Models;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
-using ICCMS_Web.Services;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
+using System.Threading.Tasks;
 using DinkToPdf;
 using DinkToPdf.Contracts;
-using System.Text;
-using Microsoft.AspNetCore.Mvc.ViewEngines;
+using ICCMS_Web.Models;
+using ICCMS_Web.Models;
+using ICCMS_Web.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.Extensions.Configuration;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -32,21 +35,23 @@ namespace ICCMS_Web.Controllers
         private readonly IConfiguration _configuration;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly string _apiBaseUrl;
+        private readonly IMessagingService _messagingService;
 
         public ClientsController(
             IApiClient apiClient,
             ILogger<ClientsController> logger,
             IConfiguration configuration,
-            IHttpClientFactory httpClientFactory
+            IHttpClientFactory httpClientFactory,
+            IMessagingService messagingService
         )
         {
             _apiClient = apiClient;
             _logger = logger;
             _configuration = configuration;
             _httpClientFactory = httpClientFactory;
+            _messagingService = messagingService;
             _apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7136";
         }
-
 
         public async Task<IActionResult> Index()
         {
@@ -55,8 +60,12 @@ namespace ICCMS_Web.Controllers
                 var firebaseToken = User.FindFirst("FirebaseToken")?.Value;
                 if (string.IsNullOrEmpty(firebaseToken))
                 {
-                    _logger.LogWarning("No FirebaseToken found for user {User}", User.Identity?.Name);
-                    TempData["ErrorMessage"] = "Authentication token not found. Please login again.";
+                    _logger.LogWarning(
+                        "No FirebaseToken found for user {User}",
+                        User.Identity?.Name
+                    );
+                    TempData["ErrorMessage"] =
+                        "Authentication token not found. Please login again.";
                     return RedirectToAction("Login", "Auth");
                 }
 
@@ -64,35 +73,42 @@ namespace ICCMS_Web.Controllers
                 var quotations = new List<QuotationDto>();
                 var maintenanceRequests = new List<MaintenanceRequestDto>();
 
-               // === 🔧 Get Client Maintenance Requests ===
+                // === 🔧 Get Client Maintenance Requests ===
                 try
                 {
                     _logger.LogInformation("🚀 [Index] Fetching Maintenance Requests via API...");
-                    maintenanceRequests = await _apiClient.GetAsync<List<MaintenanceRequestDto>>(
-                        "/api/clients/maintenanceRequests",
-                        User
-                    ) ?? new List<MaintenanceRequestDto>();
+                    maintenanceRequests =
+                        await _apiClient.GetAsync<List<MaintenanceRequestDto>>(
+                            "/api/clients/maintenanceRequests",
+                            User
+                        ) ?? new List<MaintenanceRequestDto>();
 
                     if (maintenanceRequests.Any())
-                        _logger.LogInformation("✅ [Index] Loaded {Count} maintenance requests", maintenanceRequests.Count);
+                        _logger.LogInformation(
+                            "✅ [Index] Loaded {Count} maintenance requests",
+                            maintenanceRequests.Count
+                        );
                     else
-                        _logger.LogWarning("⚠️ [Index] No maintenance requests found for this client.");
+                        _logger.LogWarning(
+                            "⚠️ [Index] No maintenance requests found for this client."
+                        );
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "🔥 [Index] Failed to retrieve maintenance requests via API.");
+                    _logger.LogError(
+                        ex,
+                        "🔥 [Index] Failed to retrieve maintenance requests via API."
+                    );
                     maintenanceRequests = new List<MaintenanceRequestDto>();
                 }
-
 
                 // === 🏗 Get Client Projects ===
                 try
                 {
                     _logger.LogInformation("🚀 [Index] Fetching Projects via API...");
-                    projects = await _apiClient.GetAsync<List<ProjectDto>>(
-                        "/api/clients/projects",
-                        User
-                    ) ?? new List<ProjectDto>();
+                    projects =
+                        await _apiClient.GetAsync<List<ProjectDto>>("/api/clients/projects", User)
+                        ?? new List<ProjectDto>();
 
                     if (projects.Any())
                         _logger.LogInformation("✅ [Index] Loaded {Count} projects", projects.Count);
@@ -107,36 +123,38 @@ namespace ICCMS_Web.Controllers
                         new ProjectDto
                         {
                             Name = "Sample Project",
-                            Description = "API service unavailable"
-                        }
+                            Description = "API service unavailable",
+                        },
                     };
                 }
-
 
                 // === 💼 Get Client Quotations ===
                 try
                 {
                     _logger.LogInformation("🚀 [Index] Fetching Quotations via API...");
-                    quotations = await _apiClient.GetAsync<List<QuotationDto>>(
-                        "/api/clients/quotations",
-                        User
-                    ) ?? new List<QuotationDto>();
+                    quotations =
+                        await _apiClient.GetAsync<List<QuotationDto>>(
+                            "/api/clients/quotations",
+                            User
+                        ) ?? new List<QuotationDto>();
 
                     if (quotations.Any())
-                        _logger.LogInformation("✅ [Index] Loaded {Count} quotations", quotations.Count);
+                        _logger.LogInformation(
+                            "✅ [Index] Loaded {Count} quotations",
+                            quotations.Count
+                        );
                     else
                         _logger.LogWarning("⚠️ [Index] No quotations found for this client.");
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "🔥 [Index] Failed to retrieve client quotations via API.");
+                    _logger.LogError(
+                        ex,
+                        "🔥 [Index] Failed to retrieve client quotations via API."
+                    );
                     quotations = new List<QuotationDto>
                     {
-                        new QuotationDto
-                        {
-                            QuotationId = "demo-1",
-                            Status = "API Unavailable"
-                        }
+                        new QuotationDto { QuotationId = "demo-1", Status = "API Unavailable" },
                     };
                 }
 
@@ -185,24 +203,20 @@ namespace ICCMS_Web.Controllers
                         new ProjectDto
                         {
                             Name = "Service Unavailable",
-                            Description = "API connection failed"
-                        }
+                            Description = "API connection failed",
+                        },
                     },
                     Quotations = new List<QuotationDto>
                     {
-                        new QuotationDto
-                        {
-                            QuotationId = "demo-1",
-                            Status = "Service Unavailable"
-                        }
-                    }
+                        new QuotationDto { QuotationId = "demo-1", Status = "Service Unavailable" },
+                    },
                 };
 
-                TempData["ErrorMessage"] = "API service is currently unavailable. Showing demo data.";
+                TempData["ErrorMessage"] =
+                    "API service is currently unavailable. Showing demo data.";
                 return View(fallbackViewModel);
             }
         }
-
 
         public async Task<IActionResult> ProjectDetails(string id)
         {
@@ -214,7 +228,10 @@ namespace ICCMS_Web.Controllers
                     return RedirectToAction("Index");
                 }
 
-                var project = await _apiClient.GetAsync<ProjectDto>($"/api/clients/project/{id}", User);
+                var project = await _apiClient.GetAsync<ProjectDto>(
+                    $"/api/clients/project/{id}",
+                    User
+                );
 
                 if (project != null)
                 {
@@ -231,7 +248,6 @@ namespace ICCMS_Web.Controllers
                 return RedirectToAction("Index");
             }
         }
-        
 
         public async Task<IActionResult> MaintenanceRequestDetails(string id)
         {
@@ -243,7 +259,10 @@ namespace ICCMS_Web.Controllers
                     return RedirectToAction("Index");
                 }
 
-                var request = await _apiClient.GetAsync<MaintenanceRequestDto>($"/api/maintenanceRequest/{id}", User);
+                var request = await _apiClient.GetAsync<MaintenanceRequestDto>(
+                    $"/api/maintenanceRequest/{id}",
+                    User
+                );
 
                 if (request != null)
                 {
@@ -261,7 +280,6 @@ namespace ICCMS_Web.Controllers
             }
         }
 
-
         public async Task<IActionResult> QuotationDetails(string id)
         {
             try
@@ -272,7 +290,10 @@ namespace ICCMS_Web.Controllers
                     return RedirectToAction("Index");
                 }
 
-                var quotation = await _apiClient.GetAsync<QuotationDto>($"/api/clients/quotation/{id}", User);
+                var quotation = await _apiClient.GetAsync<QuotationDto>(
+                    $"/api/clients/quotation/{id}",
+                    User
+                );
 
                 if (quotation != null)
                 {
@@ -294,7 +315,10 @@ namespace ICCMS_Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ApproveQuotation(string quotationId)
         {
-            _logger.LogInformation("🟢 [ApproveQuotation] Triggered with quotationId={QuotationId}", quotationId);
+            _logger.LogInformation(
+                "🟢 [ApproveQuotation] Triggered with quotationId={QuotationId}",
+                quotationId
+            );
 
             try
             {
@@ -305,36 +329,51 @@ namespace ICCMS_Web.Controllers
                 }
 
                 var endpoint = $"/api/clients/approve/quotation/{quotationId}";
-                _logger.LogInformation("🌐 [ApproveQuotation] Sending PUT request to {Endpoint}", endpoint);
+                _logger.LogInformation(
+                    "🌐 [ApproveQuotation] Sending PUT request to {Endpoint}",
+                    endpoint
+                );
 
                 var result = await _apiClient.PutAsync<object>(endpoint, null, User);
 
                 if (result != null)
                 {
-                    _logger.LogInformation("✅ [ApproveQuotation] Quotation approved successfully for {QuotationId}", quotationId);
+                    _logger.LogInformation(
+                        "✅ [ApproveQuotation] Quotation approved successfully for {QuotationId}",
+                        quotationId
+                    );
                     TempData["SuccessMessage"] = "Quotation approved successfully.";
                 }
                 else
                 {
-                    _logger.LogError("❌ [ApproveQuotation] API returned null for quotation {QuotationId}", quotationId);
+                    _logger.LogError(
+                        "❌ [ApproveQuotation] API returned null for quotation {QuotationId}",
+                        quotationId
+                    );
                     TempData["ErrorMessage"] = "Failed to approve quotation.";
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🔥 [ApproveQuotation] Unexpected error while approving quotation {QuotationId}", quotationId);
+                _logger.LogError(
+                    ex,
+                    "🔥 [ApproveQuotation] Unexpected error while approving quotation {QuotationId}",
+                    quotationId
+                );
                 TempData["ErrorMessage"] = $"Error: {ex.Message}";
             }
 
             return RedirectToAction("Index");
         }
 
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RejectQuotation(string quotationId)
         {
-            _logger.LogInformation("🟠 [RejectQuotation] Triggered with quotationId={QuotationId}", quotationId);
+            _logger.LogInformation(
+                "🟠 [RejectQuotation] Triggered with quotationId={QuotationId}",
+                quotationId
+            );
 
             try
             {
@@ -345,24 +384,37 @@ namespace ICCMS_Web.Controllers
                 }
 
                 var endpoint = $"/api/clients/reject/quotation/{quotationId}";
-                _logger.LogInformation("🌐 [RejectQuotation] Sending PUT request to {Endpoint}", endpoint);
+                _logger.LogInformation(
+                    "🌐 [RejectQuotation] Sending PUT request to {Endpoint}",
+                    endpoint
+                );
 
                 var result = await _apiClient.PutAsync<object>(endpoint, null, User);
 
                 if (result != null)
                 {
-                    _logger.LogInformation("✅ [RejectQuotation] Quotation rejected successfully for {QuotationId}", quotationId);
+                    _logger.LogInformation(
+                        "✅ [RejectQuotation] Quotation rejected successfully for {QuotationId}",
+                        quotationId
+                    );
                     TempData["SuccessMessage"] = "Quotation rejected successfully.";
                 }
                 else
                 {
-                    _logger.LogError("❌ [RejectQuotation] API returned null for quotation {QuotationId}", quotationId);
+                    _logger.LogError(
+                        "❌ [RejectQuotation] API returned null for quotation {QuotationId}",
+                        quotationId
+                    );
                     TempData["ErrorMessage"] = "Failed to reject quotation.";
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🔥 [RejectQuotation] Unexpected error while rejecting quotation {QuotationId}", quotationId);
+                _logger.LogError(
+                    ex,
+                    "🔥 [RejectQuotation] Unexpected error while rejecting quotation {QuotationId}",
+                    quotationId
+                );
                 TempData["ErrorMessage"] = $"Error: {ex.Message}";
             }
 
@@ -376,7 +428,10 @@ namespace ICCMS_Web.Controllers
         [Route("Clients/DownloadQuotation/{id}")]
         public async Task<IActionResult> DownloadQuotation(string id)
         {
-            _logger.LogInformation("📄 [Client-DownloadQuotation] Generating PDF for quotation {Id}", id);
+            _logger.LogInformation(
+                "📄 [Client-DownloadQuotation] Generating PDF for quotation {Id}",
+                id
+            );
 
             QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
@@ -389,9 +444,8 @@ namespace ICCMS_Web.Controllers
             var client = await _apiClient.GetAsync<UserDto>($"/api/users/{project.ClientId}", User)
                         ?? new UserDto { FullName = "Unknown Client" };
 
-            var fileBytes = Document.Create(container =>
-            {
-                container.Page(page =>
+            var fileBytes = Document
+                .Create(container =>
                 {
                     page.Size(PageSizes.A4);
                     page.Margin(40);
@@ -480,7 +534,6 @@ namespace ICCMS_Web.Controllers
                                         .FontColor("#777").Italic();
                                 }
                             });
-                        });
 
                         // --- Totals Section ---
                         stack.Item().PaddingTop(15).AlignRight().Column(tot =>
@@ -683,15 +736,25 @@ namespace ICCMS_Web.Controllers
 
 
         [HttpPost]
-        public async Task<IActionResult> CreateMaintenanceRequest([FromBody] MaintenanceRequestDto request)
+        public async Task<IActionResult> CreateMaintenanceRequest(
+            [FromBody] MaintenanceRequestDto request
+        )
         {
-            _logger.LogInformation("🧱 [CreateMaintenanceRequest] Triggered for project {ProjectId}", request.ProjectId);
+            _logger.LogInformation(
+                "🧱 [CreateMaintenanceRequest] Triggered for project {ProjectId}",
+                request.ProjectId
+            );
 
             try
             {
                 // ✅ Validate input
-                if (string.IsNullOrWhiteSpace(request.ProjectId) || string.IsNullOrWhiteSpace(request.Description))
-                    return Json(new { success = false, error = "Project and Description are required." });
+                if (
+                    string.IsNullOrWhiteSpace(request.ProjectId)
+                    || string.IsNullOrWhiteSpace(request.Description)
+                )
+                    return Json(
+                        new { success = false, error = "Project and Description are required." }
+                    );
 
                 // 🧩 Fill required fields
                 request.MaintenanceRequestId = Guid.NewGuid().ToString("N");
@@ -709,11 +772,19 @@ namespace ICCMS_Web.Controllers
 
                 if (created == null || string.IsNullOrEmpty(created.MaintenanceRequestId))
                 {
-                    _logger.LogWarning("❌ [CreateMaintenanceRequest] API returned null or invalid response for {ProjectId}", request.ProjectId);
-                    return Json(new { success = false, error = "Failed to create maintenance request." });
+                    _logger.LogWarning(
+                        "❌ [CreateMaintenanceRequest] API returned null or invalid response for {ProjectId}",
+                        request.ProjectId
+                    );
+                    return Json(
+                        new { success = false, error = "Failed to create maintenance request." }
+                    );
                 }
 
-                _logger.LogInformation("✅ [CreateMaintenanceRequest] Created successfully with ID {Id}", created.MaintenanceRequestId);
+                _logger.LogInformation(
+                    "✅ [CreateMaintenanceRequest] Created successfully with ID {Id}",
+                    created.MaintenanceRequestId
+                );
                 return Json(new { success = true, requestId = created.MaintenanceRequestId });
             }
             catch (Exception ex)
@@ -723,11 +794,12 @@ namespace ICCMS_Web.Controllers
             }
         }
 
-
         [HttpGet]
         public async Task<IActionResult> GetMaintenanceRequests()
         {
-            _logger.LogInformation("📡 [GetMaintenanceRequests] Fetching all maintenance requests for current client...");
+            _logger.LogInformation(
+                "📡 [GetMaintenanceRequests] Fetching all maintenance requests for current client..."
+            );
 
             try
             {
@@ -742,7 +814,10 @@ namespace ICCMS_Web.Controllers
                     return Json(new List<MaintenanceRequestDto>());
                 }
 
-                _logger.LogInformation("✅ [GetMaintenanceRequests] {Count} requests loaded", requests.Count);
+                _logger.LogInformation(
+                    "✅ [GetMaintenanceRequests] {Count} requests loaded",
+                    requests.Count
+                );
                 return Json(requests);
             }
             catch (Exception ex)
@@ -752,9 +827,12 @@ namespace ICCMS_Web.Controllers
             }
         }
 
-
         [HttpPost]
-        public async Task<IActionResult> UploadDocument(IFormFile file, string projectId, string description)
+        public async Task<IActionResult> UploadDocument(
+            IFormFile file,
+            string projectId,
+            string description
+        )
         {
             if (file == null || file.Length == 0)
                 return BadRequest("No file uploaded");
@@ -775,7 +853,11 @@ namespace ICCMS_Web.Controllers
             var body = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("❌ Upload failed with status {Status}: {Body}", response.StatusCode, body);
+                _logger.LogError(
+                    "❌ Upload failed with status {Status}: {Body}",
+                    response.StatusCode,
+                    body
+                );
                 return StatusCode((int)response.StatusCode, body);
             }
 
@@ -786,23 +868,35 @@ namespace ICCMS_Web.Controllers
         [HttpGet]
         public async Task<IActionResult> MaintenanceRequestDetailsPartial(string id)
         {
-            _logger.LogInformation("🟡 [ClientsController] Entered MaintenanceRequestDetailsPartial() with ID: {Id}", id);
+            _logger.LogInformation(
+                "🟡 [ClientsController] Entered MaintenanceRequestDetailsPartial() with ID: {Id}",
+                id
+            );
 
             if (string.IsNullOrWhiteSpace(id))
             {
-                _logger.LogWarning("⚠️ [ClientsController] No ID provided to MaintenanceRequestDetailsPartial()");
+                _logger.LogWarning(
+                    "⚠️ [ClientsController] No ID provided to MaintenanceRequestDetailsPartial()"
+                );
                 return BadRequest("Missing request ID");
             }
 
             try
             {
-                _logger.LogInformation("📡 [ClientsController] Calling API endpoint for maintenance request...");
+                _logger.LogInformation(
+                    "📡 [ClientsController] Calling API endpoint for maintenance request..."
+                );
                 var endpoint = $"/api/clients/maintenanceRequest/{id}";
-                _logger.LogInformation("➡️ [ClientsController] Full API path: {Endpoint}", endpoint);
+                _logger.LogInformation(
+                    "➡️ [ClientsController] Full API path: {Endpoint}",
+                    endpoint
+                );
 
                 var request = await _apiClient.GetAsync<MaintenanceRequestDto>(endpoint, User);
-                _logger.LogInformation("🧾 [ClientsController] Retrieved model: {@Request}", request);
-
+                _logger.LogInformation(
+                    "🧾 [ClientsController] Retrieved model: {@Request}",
+                    request
+                );
 
                 if (request == null)
                 {
@@ -810,12 +904,19 @@ namespace ICCMS_Web.Controllers
                     return NotFound($"Maintenance request not found for ID {id}");
                 }
 
-                _logger.LogInformation("✅ [ClientsController] Maintenance request retrieved successfully for ID: {Id}", id);
+                _logger.LogInformation(
+                    "✅ [ClientsController] Maintenance request retrieved successfully for ID: {Id}",
+                    id
+                );
                 return PartialView("_MaintenanceRequestDetailsPartial", request);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🔥 [ClientsController] Exception in MaintenanceRequestDetailsPartial() for ID: {Id}", id);
+                _logger.LogError(
+                    ex,
+                    "🔥 [ClientsController] Exception in MaintenanceRequestDetailsPartial() for ID: {Id}",
+                    id
+                );
                 return StatusCode(500, "Error fetching maintenance details");
             }
         }
@@ -823,7 +924,10 @@ namespace ICCMS_Web.Controllers
         [HttpGet]
         public async Task<IActionResult> ProjectDetailsPartial(string id)
         {
-            _logger.LogInformation("🟡 [ClientsController] Entered ProjectDetailsPartial() with ID: {Id}", id);
+            _logger.LogInformation(
+                "🟡 [ClientsController] Entered ProjectDetailsPartial() with ID: {Id}",
+                id
+            );
 
             if (string.IsNullOrWhiteSpace(id))
                 return BadRequest("Missing project ID");
@@ -831,22 +935,35 @@ namespace ICCMS_Web.Controllers
             try
             {
                 var endpoint = $"/api/clients/project/{id}";
-                _logger.LogInformation("➡️ [ClientsController] Full API path: {Endpoint}", endpoint);
+                _logger.LogInformation(
+                    "➡️ [ClientsController] Full API path: {Endpoint}",
+                    endpoint
+                );
 
                 var project = await _apiClient.GetAsync<ProjectDto>(endpoint, User);
 
                 if (project == null)
                 {
-                    _logger.LogWarning("❌ [ClientsController] API returned NULL for project ID {Id}", id);
+                    _logger.LogWarning(
+                        "❌ [ClientsController] API returned NULL for project ID {Id}",
+                        id
+                    );
                     return NotFound($"Project not found for ID {id}");
                 }
 
-                _logger.LogInformation("✅ [ClientsController] Project retrieved successfully for ID: {Id}", id);
+                _logger.LogInformation(
+                    "✅ [ClientsController] Project retrieved successfully for ID: {Id}",
+                    id
+                );
                 return PartialView("_ProjectDetailsPartial", project);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🔥 [ClientsController] Exception in ProjectDetailsPartial() for ID: {Id}", id);
+                _logger.LogError(
+                    ex,
+                    "🔥 [ClientsController] Exception in ProjectDetailsPartial() for ID: {Id}",
+                    id
+                );
                 return StatusCode(500, "Error fetching project details");
             }
         }
@@ -854,7 +971,10 @@ namespace ICCMS_Web.Controllers
         [HttpGet]
         public async Task<IActionResult> QuotationDetailsPartial(string id)
         {
-            _logger.LogInformation("🧾 [ClientsController] Fetching quotation partial for ID: {Id}", id);
+            _logger.LogInformation(
+                "🧾 [ClientsController] Fetching quotation partial for ID: {Id}",
+                id
+            );
 
             if (string.IsNullOrWhiteSpace(id))
                 return BadRequest("Missing quotation ID");

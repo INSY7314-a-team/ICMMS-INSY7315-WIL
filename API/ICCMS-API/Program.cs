@@ -69,6 +69,9 @@ builder.Services.AddScoped<IWorkflowMessageService, WorkflowMessageService>();
 builder.Services.AddScoped<IQuoteWorkflowService, QuoteWorkflowService>();
 builder.Services.AddScoped<IInvoiceWorkflowService, InvoiceWorkflowService>();
 
+// Add audit log service
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+
 // Add HttpClient for external API calls
 builder.Services.AddHttpClient();
 
