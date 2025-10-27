@@ -64,13 +64,13 @@ fun ClientInvoicesScreen(
                     )
                     StatCard(
                         title = "Pending",
-                        value = uiState.invoices.count { it.Status.lowercase() == "pending" }.toString(),
+                        value = uiState.invoices.count { it.status.lowercase() == "pending" }.toString(),
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f)
                     )
                     StatCard(
                         title = "Paid",
-                        value = uiState.invoices.count { it.Status.lowercase() == "paid" }.toString(),
+                        value = uiState.invoices.count { it.status.lowercase() == "paid" }.toString(),
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.weight(1f)
                     )
@@ -99,7 +99,7 @@ fun ClientInvoicesScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "R ${NumberFormat.getNumberInstance().format(uiState.invoices.filter { it.Status.lowercase() == "pending" }.sumOf { it.TotalAmount })}",
+                                text = "R ${NumberFormat.getNumberInstance().format(uiState.invoices.filter { it.status.lowercase() == "pending" }.sumOf { it.totalAmount })}",
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold
                             )
@@ -146,22 +146,22 @@ fun ClientInvoicesScreen(
                 items(uiState.invoices) { invoice ->
                     InvoiceCard(
                         invoice = invoice,
-                        onClick = { onNavigateToInvoiceDetails(invoice.InvoiceId) },
+                        onClick = { onNavigateToInvoiceDetails(invoice.invoiceId) },
                         onPay = { 
                             val payment = Payment(
                                 paymentId = "",
-                                invoiceId = invoice.InvoiceId,
-                                amount = invoice.TotalAmount,
+                                invoiceId = invoice.invoiceId,
+                                amount = invoice.totalAmount,
                                 paymentDate = "",
                                 method = "Card",
                                 status = "Paid",
                                 transactionId = "",
                                 notes = "",
                                 processedAt = "",
-                                projectId = invoice.ProjectId,
-                                clientId = invoice.ClientId
+                                projectId = invoice.projectId,
+                                clientId = invoice.clientId
                             )
-                            viewModel.payInvoice(invoice.InvoiceId, payment)
+                            viewModel.payInvoice(invoice.invoiceId, payment)
                         }
                     )
                 }
@@ -203,18 +203,18 @@ fun InvoiceCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = invoice.Description,
+                        text = invoice.description,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "Invoice #${invoice.InvoiceNumber}",
+                        text = "Invoice #${invoice.invoiceNumber}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
-                StatusChip(status = invoice.Status)
+                StatusChip(status = invoice.status)
             }
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -231,7 +231,7 @@ fun InvoiceCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "R ${NumberFormat.getNumberInstance().format(invoice.TotalAmount)}",
+                        text = "R ${NumberFormat.getNumberInstance().format(invoice.totalAmount)}",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -244,7 +244,7 @@ fun InvoiceCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = formatDate(invoice.DueDate),
+                        text = formatDate(invoice.dueDate),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -259,20 +259,20 @@ fun InvoiceCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Issued: ${formatDate(invoice.IssuedDate)}",
+                    text = "Issued: ${formatDate(invoice.issuedDate)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (invoice.PaidDate != null) {
+                if (invoice.paidDate != null) {
                     Text(
-                        text = "Paid: ${formatDate(invoice.PaidDate)}",
+                        text = "Paid: ${formatDate(invoice.paidDate)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.tertiary
                     )
                 }
             }
             
-            if (invoice.Status.lowercase() == "pending") {
+            if (invoice.status.lowercase() == "pending") {
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = onPay,

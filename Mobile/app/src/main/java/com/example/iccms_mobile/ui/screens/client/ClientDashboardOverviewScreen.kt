@@ -167,7 +167,7 @@ fun ClientDashboardOverviewScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = "R ${NumberFormat.getNumberInstance().format(uiState.invoices.filter { it.Status.lowercase() == "pending" }.sumOf { it.TotalAmount })}",
+                                    text = "R ${NumberFormat.getNumberInstance().format(uiState.invoices.filter { it.status.lowercase() == "pending" }.sumOf { it.totalAmount })}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.error

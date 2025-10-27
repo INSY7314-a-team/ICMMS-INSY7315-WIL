@@ -116,8 +116,8 @@ class ClientDashboardViewModel : ViewModel() {
                 .onSuccess { newPayment ->
                     // Update the invoice status in the list
                     val updatedInvoices = _uiState.value.invoices.map { invoice ->
-                        if (invoice.InvoiceId == invoiceId) {
-                            invoice.copy(Status = "Paid", PaidDate = newPayment.paymentDate)
+                        if (invoice.invoiceId == invoiceId) {
+                            invoice.copy(status = "Paid", paidDate = newPayment.paymentDate)
                         } else {
                             invoice
                         }

@@ -3,45 +3,69 @@ package com.example.iccms_mobile.data.models
 import com.google.gson.annotations.SerializedName
 
 data class Invoice(
-    @SerializedName("InvoiceId")
-    val InvoiceId: String = "",
-    
-    @SerializedName("ProjectId")
-    val ProjectId: String = "",
-    
-    @SerializedName("ClientId")
-    val ClientId: String = "",
-    
-    @SerializedName("ContractorId")
-    val ContractorId: String = "",
-    
-    @SerializedName("InvoiceNumber")
-    val InvoiceNumber: String = "",
-    
-    @SerializedName("Description")
-    val Description: String = "",
-    
-    @SerializedName("Amount")
-    val Amount: Double = 0.0,
-    
-    @SerializedName("TaxAmount")
-    val TaxAmount: Double = 0.0,
-    
-    @SerializedName("TotalAmount")
-    val TotalAmount: Double = 0.0,
-    
-    @SerializedName("Status")
-    val Status: String = "",
-    
-    @SerializedName("DueDate")
-    val DueDate: String = "",
-    
-    @SerializedName("IssuedDate")
-    val IssuedDate: String = "",
-    
-    @SerializedName("PaidDate")
-    val PaidDate: String? = null,
-    
-    @SerializedName("PaidBy")
-    val PaidBy: String = ""
+    @SerializedName("invoiceId")
+    val invoiceId: String = "",
+
+    @SerializedName("projectId")
+    val projectId: String = "",
+
+    @SerializedName("clientId")
+    val clientId: String = "",
+
+    @SerializedName("contractorId")
+    val contractorId: String = "",
+
+    @SerializedName("invoiceNumber")
+    val invoiceNumber: String = "",
+
+    @SerializedName("description")
+    val description: String = "",
+
+    @SerializedName("amount")
+    val amount: Double = 0.0,
+
+    @SerializedName("taxAmount")
+    val taxAmount: Double = 0.0,
+
+    @SerializedName("totalAmount")
+    val totalAmount: Double = 0.0,
+
+    @SerializedName("status")
+    val status: String = "",
+
+    @SerializedName("dueDate")
+    val dueDate: String = "",
+
+    @SerializedName("issuedDate")
+    val issuedDate: String = "",
+
+    @SerializedName("paidDate")
+    val paidDate: String? = null,
+
+    @SerializedName("paidBy")
+    val paidBy: String = "",
+
+    @SerializedName("items")
+    val items: List<InvoiceItem> = emptyList(),
+
+    @SerializedName("subtotal")
+    val subtotal: Double = 0.0,
+
+    @SerializedName("taxTotal")
+    val taxTotal: Double = 0.0,
+
+    @SerializedName("markupRate")
+    val markupRate: Double = 1.0,
+
+    @SerializedName("currency")
+    val currency: String = "ZAR",
+
+    @SerializedName("quotationId")
+    val quotationId: String? = null,
+
+    @SerializedName("createdAt")
+    val createdAt: String = "",
+
+    @SerializedName("updatedAt")
+    val updatedAt: String = ""
 )
