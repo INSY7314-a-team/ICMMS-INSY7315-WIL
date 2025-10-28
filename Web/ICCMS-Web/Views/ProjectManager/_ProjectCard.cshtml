@@ -26,7 +26,7 @@
                 <h6 class="card-title mb-1 fw-bold">
                     @Model.Name
                 </h6>
-                <p class="card-subtitle small mb-0">
+                <p class="card-subtitle small mb-0 client-name">
                     @{
                         // Prefer client name if available
                         var clientName = ViewBag.ClientName as string;
@@ -377,49 +377,8 @@
     }
 
     function continueProjectSetup(projectId) {
-        // Open the wizard modal and preload existing draft data
-        const modalEl = document.getElementById('projectCreationWizardModal');
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
-
-        // After wizard created, set its projectId and load data
-        setTimeout(async () => {
-            if (!window.__pcwInstance) return;
-            window.__pcwInstance.projectId = projectId;
-            try {
-                // Load basic project
-                const res = await fetch(`/ProjectManager/GetDraftProject?id=${encodeURIComponent(projectId)}`);
-                const proj = await res.json();
-                if (proj && proj.projectId) {
-                    document.getElementById('projectName').value = proj.name || '';
-                    document.getElementById('projectDescription').value = proj.description || '';
-                    document.getElementById('clientSelect').value = proj.clientId || '';
-                    if (proj.startDate) document.getElementById('startDate').value = (new Date(proj.startDate)).toISOString().slice(0, 10);
-                    if (proj.endDatePlanned) document.getElementById('endDatePlanned').value = (new Date(proj.endDatePlanned)).toISOString().slice(0, 10);
-                    if (typeof proj.budgetPlanned === 'number') document.getElementById('budgetPlanned').value = proj.budgetPlanned;
-                }
-
-                // Load phases
-                const phasesRes = await fetch(`/ProjectManager/GetProjectPhases?id=${encodeURIComponent(projectId)}`);
-                const phases = await phasesRes.json();
-                const phasesContainer = document.getElementById('phasesContainer');
-                phasesContainer.innerHTML = '';
-                phases?.forEach(p => {
-                    phasesContainer.appendChild(window.__pcwInstance.buildPhaseRow(p));
-                });
-
-                // Load tasks
-                const tasksRes = await fetch(`/ProjectManager/GetProjectTasks?id=${encodeURIComponent(projectId)}`);
-                const tasks = await tasksRes.json();
-                const tasksContainer = document.getElementById('tasksContainer');
-                tasksContainer.innerHTML = '';
-                tasks?.forEach(t => {
-                    tasksContainer.appendChild(window.__pcwInstance.buildTaskRow(t));
-                });
-            } catch (e) {
-                console.warn('Failed to preload draft', e);
-            }
-        }, 300);
+        // Use the new editDraftProject function
+        editDraftProject(projectId);
     }
 
     function activateMaintenance(projectId) {

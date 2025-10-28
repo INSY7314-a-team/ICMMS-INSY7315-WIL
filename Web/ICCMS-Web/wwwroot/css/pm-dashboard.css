@@ -543,6 +543,7 @@
     margin-top: 20px;
     margin-bottom: 25px;
     clear: both;
+    text-align: center;
 }
 
 .filters-panel {
@@ -803,13 +804,300 @@
     border-radius: 10px;
 }
 
+#projectCreationWizardModal .form-label {
+    color: #F7EC59 !important;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+#projectCreationWizardModal .form-control,
+#projectCreationWizardModal .form-select,
+#projectCreationWizardModal textarea {
+    background: var(--secondary-bg) !important;
+    border: 2px solid rgba(255, 255, 255, 0.15) !important;
+    color: var(--text-primary) !important;
+    border-radius: 10px !important;
+    padding: 12px 16px !important;
+}
+
 #projectCreationWizardModal .form-control:focus,
 #projectCreationWizardModal .form-select:focus,
 #projectCreationWizardModal textarea:focus {
-    outline: none;
-    border-color: var(--accent-yellow);
-    background: var(--secondary-bg);
-    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.15);
+    outline: none !important;
+    border-color: #F7EC59 !important;
+    background: var(--primary-bg) !important;
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.15) !important;
+}
+
+#projectCreationWizardModal .card {
+    background: var(--secondary-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(247, 236, 89, 0.2) !important;
+    border-radius: 12px !important;
+}
+
+#projectCreationWizardModal .card-title {
+    color: #F7EC59 !important;
+    font-weight: 600;
+}
+
+#projectCreationWizardModal .input-group-text {
+    background: #F7EC59 !important;
+    color: #1A1B25 !important;
+    border: 2px solid rgba(255, 255, 255, 0.15) !important;
+    border-right: none !important;
+    font-weight: 600 !important;
+    padding: 12px 16px !important;
+}
+
+#projectCreationWizardModal .input-group .form-control {
+    border-left: none !important;
+}
+
+#projectCreationWizardModal .input-group .form-control:focus {
+    border-left: none !important;
+}
+
+#projectCreationWizardModal .card {
+    background: var(--secondary-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(247, 236, 89, 0.2) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+#projectCreationWizardModal .card-body {
+    padding: 20px !important;
+}
+
+#projectCreationWizardModal .btn-outline-danger {
+    background: transparent !important;
+    color: #DC3545 !important;
+    border: 2px solid #DC3545 !important;
+    border-radius: 8px !important;
+    padding: 6px 12px !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+}
+
+#projectCreationWizardModal .btn-outline-danger:hover {
+    background: #DC3545 !important;
+    color: #FFFFFF !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3) !important;
+}
+
+#projectCreationWizardModal .form-select {
+    background: var(--secondary-bg) !important;
+    border: 2px solid rgba(255, 255, 255, 0.15) !important;
+    color: var(--text-primary) !important;
+    border-radius: 10px !important;
+    padding: 12px 16px !important;
+}
+
+#projectCreationWizardModal .form-select:focus {
+    outline: none !important;
+    border-color: #F7EC59 !important;
+    background: var(--primary-bg) !important;
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.15) !important;
+}
+
+#projectCreationWizardModal .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Professional spacing and layout improvements */
+#projectCreationWizardModal .row {
+    margin-bottom: 15px;
+}
+
+#projectCreationWizardModal .row:last-child {
+    margin-bottom: 0;
+}
+
+#projectCreationWizardModal .form-label {
+    margin-bottom: 8px !important;
+    font-size: 0.9rem !important;
+}
+
+#projectCreationWizardModal .card.mb-2 {
+    margin-bottom: 20px !important;
+    transition: all 0.3s ease !important;
+}
+
+#projectCreationWizardModal .card.mb-2:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Enhanced input group styling */
+#projectCreationWizardModal .input-group {
+    border-radius: 10px !important;
+    overflow: hidden !important;
+}
+
+#projectCreationWizardModal .input-group .form-control {
+    border-radius: 0 10px 10px 0 !important;
+}
+
+#projectCreationWizardModal .input-group-text {
+    border-radius: 10px 0 0 10px !important;
+}
+
+/* Professional button styling */
+#projectCreationWizardModal .btn {
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+}
+
+#projectCreationWizardModal .btn-sm {
+    padding: 6px 12px !important;
+    font-size: 0.85rem !important;
+}
+
+/* Save as Draft button styling */
+#projectCreationWizardModal #saveAsDraftBtn {
+    background: #6C757D !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 10px 20px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+}
+
+#projectCreationWizardModal #saveAsDraftBtn:hover {
+    background: #5A6268 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3) !important;
+}
+
+/* Project Edit Wizard Modal Styling */
+#projectEditWizardModal .modal-content {
+    border: 2px solid var(--accent-yellow);
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+#projectEditWizardModal .modal-header {
+    background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(247, 236, 89, 0.4);
+}
+#projectEditWizardModal .modal-title i {
+    color: var(--accent-yellow);
+}
+#projectEditWizardModal .modal-body {
+    background: var(--primary-bg);
+    color: var(--text-primary);
+}
+#projectEditWizardModal .wizard-progress .progress {
+    background: rgba(247, 236, 89, 0.15);
+    height: 10px;
+    border-radius: 8px;
+}
+#projectEditWizardModal .wizard-progress .progress-bar {
+    background: linear-gradient(135deg, var(--accent-yellow) 0%, #E6D547 100%);
+}
+#projectEditWizardModal .wizard-step h6,
+#projectEditWizardModal .wizard-step .form-label {
+    color: var(--accent-yellow);
+}
+#projectEditWizardModal .form-label {
+    color: #F7EC59 !important;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+#projectEditWizardModal .form-control,
+#projectEditWizardModal .form-select,
+#projectEditWizardModal textarea {
+    background: var(--secondary-bg) !important;
+    border: 2px solid rgba(255, 255, 255, 0.15) !important;
+    color: var(--text-primary) !important;
+    border-radius: 10px !important;
+    padding: 12px 16px !important;
+}
+#projectEditWizardModal .form-control:focus,
+#projectEditWizardModal .form-select:focus,
+#projectEditWizardModal textarea:focus {
+    outline: none !important;
+    border-color: #F7EC59 !important;
+    background: var(--primary-bg) !important;
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.15) !important;
+}
+#projectEditWizardModal .card {
+    background: var(--secondary-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(247, 236, 89, 0.2) !important;
+    border-radius: 12px !important;
+}
+#projectEditWizardModal .card-title {
+    color: #F7EC59 !important;
+    font-weight: 600;
+}
+#projectEditWizardModal .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+#projectEditWizardModal .modal-footer {
+    background: var(--primary-bg);
+    border-top: 1px solid rgba(247, 236, 89, 0.2);
+}
+#projectEditWizardModal .input-group-text {
+    background: #F7EC59 !important;
+    color: #1A1B25 !important;
+    border: 2px solid rgba(255, 255, 255, 0.15) !important;
+    border-right: none !important;
+    font-weight: 600 !important;
+    padding: 12px 16px !important;
+    border-radius: 10px 0 0 10px !important;
+}
+#projectEditWizardModal .input-group .form-control {
+    border-left: none !important;
+    border-radius: 0 10px 10px 0 !important;
+}
+#projectEditWizardModal .card.mb-2 {
+    margin-bottom: 20px !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+#projectEditWizardModal .card.mb-2:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+}
+#projectEditWizardModal .btn-outline-danger {
+    background: transparent !important;
+    color: #DC3545 !important;
+    border: 2px solid #DC3545 !important;
+    border-radius: 8px !important;
+    padding: 6px 12px !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+}
+#projectEditWizardModal .btn-outline-danger:hover {
+    background: #DC3545 !important;
+    color: #FFFFFF !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3) !important;
+}
+#projectEditWizardModal #editSaveAsDraftBtn {
+    background: #6C757D !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 10px 20px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+}
+#projectEditWizardModal #editSaveAsDraftBtn:hover {
+    background: #5A6268 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3) !important;
+}
+
+#projectCreationWizardModal #saveAsDraftBtn:active {
+    transform: translateY(0) !important;
 }
 #planEditorModal .form-control:focus,
 #planEditorModal .form-select:focus,
