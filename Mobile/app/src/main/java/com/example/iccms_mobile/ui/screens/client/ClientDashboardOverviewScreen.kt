@@ -18,6 +18,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import com.example.iccms_mobile.data.models.UserInfo
 import com.example.iccms_mobile.ui.viewmodel.ClientDashboardViewModel
 import java.text.NumberFormat
@@ -68,7 +69,7 @@ fun ClientDashboardOverviewScreen(
                         horizontalAlignment = Alignment.Start
                     ) {
                         Text(
-                            text = "👤 CLIENT DASHBOARD",
+                            text = "👤   CLIENT DASHBOARD",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -95,8 +96,15 @@ fun ClientDashboardOverviewScreen(
                     text = "Quick Overview",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, // light grey from theme
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
+                /*Text(
+                    text = "Quick Overview",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )*/
             }
             
             item {
@@ -140,18 +148,13 @@ fun ClientDashboardOverviewScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 12.dp)
-                        .shadow(
-                            elevation = 12.dp,
-                            shape = RoundedCornerShape(20.dp),
-                            ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
-                            spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                        ),
+                        .padding(vertical = 12.dp),
+
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
                     Column(
                         modifier = Modifier
@@ -166,15 +169,16 @@ fun ClientDashboardOverviewScreen(
                                     end = Offset.Infinite
                                 )
                             )
-                            .padding(24.dp)
+                            .padding(24.dp),
+
                     ) {
                         // Header
                         Text(
-                            text = "💰 Latest Project Financial Overview",
+                            text = "💰   Latest Project Financial Overview",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(bottom = 20.dp)
+                            modifier = Modifier.padding(bottom = 20.dp),
                         )
 
                         Row(
@@ -189,10 +193,10 @@ fun ClientDashboardOverviewScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = "R ${NumberFormat.getNumberInstance().format(uiState.projects.sumOf { it.budgetPlanned.toDouble() })}",
+                                    text = "R${NumberFormat.getNumberInstance().format(uiState.projects.sumOf { it.budgetPlanned.toDouble() })}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.onSurface//primary
                                 )
                             }
 
@@ -204,7 +208,7 @@ fun ClientDashboardOverviewScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = "R ${NumberFormat.getNumberInstance().format(uiState.invoices.filter { it.status.lowercase() == "pending" }.sumOf { it.totalAmount })}",
+                                    text = "R${NumberFormat.getNumberInstance().format(uiState.invoices.filter { it.status.lowercase() == "pending" }.sumOf { it.totalAmount })}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.error
@@ -212,14 +216,16 @@ fun ClientDashboardOverviewScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                       // Spacer(modifier = Modifier.height(16.dp))
 
+                        /* Remove Code
                         // Optional subtle footer for context
                         Text(
                             text = "This overview gives you a snapshot of your latest project finances.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        )*/
+
                     }
                 }
             }
@@ -282,8 +288,19 @@ fun ClientDashboardOverviewScreen(
                     text = "Recent Activity",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, // light grey from theme
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
+
+                /* Old Recent Activity: Remove code
+                Text(
+
+                    text = "Recent Activity",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+                */
             }
             
             // Recent Projects
@@ -293,18 +310,18 @@ fun ClientDashboardOverviewScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 12.dp)
-                            .shadow(
+                            .padding(vertical = 12.dp),
+                           /* .shadow(
                                 elevation = 12.dp,
                                 shape = RoundedCornerShape(20.dp),
                                 ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                                 spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                            ),
+                            ),*/
                         shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surface
                         ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Column(
                             modifier = Modifier
@@ -313,7 +330,7 @@ fun ClientDashboardOverviewScreen(
                         ) {
                             // Header
                             Text(
-                                text = "📁 Recent Projects",
+                                text = "📁   Recent Projects",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -358,11 +375,12 @@ fun ClientDashboardOverviewScreen(
                                     Spacer(modifier = Modifier.width(12.dp))
 
                                     Text(
-                                        text = "R ${NumberFormat.getNumberInstance().format(project.budgetPlanned)}",
+                                        text = "R${NumberFormat.getNumberInstance().format(project.budgetPlanned)}",
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = Color(0xFF2E7D32) // Dark green
                                     )
+
                                 }
 
                                 if (index < uiState.projects.take(3).lastIndex) {
@@ -442,18 +460,13 @@ fun ClientDashboardOverviewScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 12.dp)
-                            .shadow(
-                                elevation = 12.dp,
-                                shape = RoundedCornerShape(20.dp),
-                                ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                            ),
+                            .padding(vertical = 12.dp),
+
                         shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surface
                         ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Column(
                             modifier = Modifier
@@ -462,7 +475,7 @@ fun ClientDashboardOverviewScreen(
                         ) {
                             // Header
                             Text(
-                                text = "🛠️ Recent Maintenance Requests",
+                                text = "🛠️   Recent Maintenance Requests",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
