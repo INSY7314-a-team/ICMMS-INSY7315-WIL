@@ -432,6 +432,16 @@ namespace ICCMS_API.Controllers
                 if (quotation == null)
                     return NotFound();
 
+                // Log quote sent to client
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Quotation",
+                    "Quote Sent to Client",
+                    $"Quote {quotation.QuotationId} sent to client {quotation.ClientId} for project {quotation.ProjectId}",
+                    userId ?? "system",
+                    quotation.QuotationId
+                );
+
                 // Send workflow notification to client
                 var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (!string.IsNullOrEmpty(currentUserId))

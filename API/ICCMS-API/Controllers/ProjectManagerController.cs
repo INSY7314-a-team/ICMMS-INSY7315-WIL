@@ -775,6 +775,16 @@ namespace ICCMS_API.Controllers
                     Console.WriteLine(
                         $"SaveProject: Created new project {request.Project.ProjectId}"
                     );
+
+                    // Log project creation
+                    var userId = User.UserId();
+                    _auditLogService.LogAsync(
+                        "Project Creation",
+                        "Project Created",
+                        $"Project {request.Project.Name} ({request.Project.ProjectId}) created for client {request.Project.ClientId}",
+                        userId ?? "system",
+                        request.Project.ProjectId
+                    );
                 }
 
                 // 5. Save phases if provided
