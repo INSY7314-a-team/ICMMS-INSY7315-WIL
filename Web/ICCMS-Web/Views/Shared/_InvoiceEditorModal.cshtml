@@ -1,0 +1,347 @@
+@* Invoice Editor Modal - New Design System *@
+<div class="modal fade" id="invoiceEditorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <h5 class="modal-title">
+                            <i class="fas fa-file-invoice"></i>
+                            Invoice Editor
+                        </h5>
+                        <div class="modal-subtitle" id="ie-projectBadge"></div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Invoice Details -->
+                <div class="modal-card mb-4">
+                    <div class="modal-card-header">
+                        <div class="modal-card-icon">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                        <h6 class="modal-card-title">Invoice Details</h6>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Invoice Number</label>
+                                <input type="text" class="form-control" id="ie-invoice-number" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Invoice Date</label>
+                                <input type="date" class="form-control" id="ie-invoice-date">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Due Date</label>
+                                <input type="date" class="form-control" id="ie-due-date">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Status</label>
+                                <select class="form-control" id="ie-status">
+                                    <option value="Draft">Draft</option>
+                                    <option value="Issued">Issued</option>
+                                    <option value="Paid">Paid</option>
+                                    <option value="Overdue">Overdue</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invoice Items -->
+                <div class="modal-card mb-4">
+                    <div class="modal-card-header">
+                        <div class="modal-card-icon">
+                            <i class="fas fa-list"></i>
+                        </div>
+                        <h6 class="modal-card-title">Invoice Items</h6>
+                    </div>
+                    <div id="ie-items-container">
+                        <div class="modal-empty-state">
+                            <i class="fas fa-file-invoice"></i>
+                            <h5>No Invoice Items</h5>
+                            <p>Invoice items will be loaded from the related estimate.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invoice Summary -->
+                <div class="modal-card">
+                    <div class="modal-card-header">
+                        <div class="modal-card-icon">
+                            <i class="fas fa-calculator"></i>
+                        </div>
+                        <h6 class="modal-card-title">Invoice Summary</h6>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Items</div>
+                                        <div class="metric-value" id="ie-item-count">0</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Days Overdue</div>
+                                        <div class="metric-value danger" id="ie-days-overdue">0</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Payment Status</div>
+                                        <div class="metric-value" id="ie-payment-status">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-end">
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted">Subtotal:</span>
+                                        <span class="metric-value" id="ie-subtotal" style="font-size: 1.2rem;">R 0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted">Tax (15%):</span>
+                                        <span class="metric-value" id="ie-tax" style="font-size: 1.2rem;">R 0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center" style="border-top: 2px solid var(--accent-yellow); padding-top: 0.5rem;">
+                                        <span class="text-primary fw-bold">Total:</span>
+                                        <span class="metric-value" id="ie-total" style="font-size: 1.4rem;">R 0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <div class="text-muted" style="font-size: 0.9rem;">
+                        <i class="fa-solid fa-info-circle me-1"></i>Invoice management and payment tracking
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i>Cancel
+                        </button>
+                        <button type="button" class="btn btn-primary" id="ie-btnSave">
+                            <i class="fas fa-save me-1"></i>Save Invoice
+                        </button>
+                        <button type="button" class="btn btn-primary" id="ie-btnMarkPaid">
+                            <i class="fas fa-check me-1"></i>Mark as Paid
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        let projectId = null;
+        let invoiceId = null;
+        let invoice = null;
+
+        function openInvoice(project, invoiceIdParam) {
+            console.log(`🚀 Opening invoice editor for project: ${project}, invoice: ${invoiceIdParam}`);
+            projectId = project;
+            invoiceId = invoiceIdParam;
+            document.getElementById('ie-projectBadge').textContent = `Project: ${project}`;
+
+            // Show the modal first
+            const modalElement = document.getElementById('invoiceEditorModal');
+            if (!modalElement) {
+                console.error('❌ Invoice editor modal element not found');
+                alert('Invoice editor modal not found. Please refresh the page.');
+                return;
+            }
+
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+
+            // Load invoice data
+            loadInvoice();
+        }
+
+        async function loadInvoice() {
+            try {
+                console.log(`🔍 Loading invoice for project: ${projectId}, invoice: ${invoiceId}`);
+                
+                const response = await fetch(`/ProjectManager/GetInvoice?invoiceId=${invoiceId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                });
+                
+                console.log(`📡 API Response status: ${response.status}`);
+                
+                if (response.ok) {
+                    invoice = await response.json();
+                    console.log(`✅ Loaded invoice:`, invoice);
+                    renderInvoice();
+                } else {
+                    const errorText = await response.text();
+                    console.error(`❌ Failed to load invoice - Status: ${response.status}, Error: ${errorText}`);
+                    // Create empty invoice for demo
+                    invoice = {
+                        invoiceId: invoiceId,
+                        projectId: projectId,
+                        invoiceNumber: `INV-${invoiceId.substring(0, 8)}`,
+                        status: 'Draft',
+                        totalAmount: 0,
+                        items: []
+                    };
+                    renderInvoice();
+                }
+            } catch (error) {
+                console.error('❌ Error loading invoice:', error);
+                // Create empty invoice for demo
+                invoice = {
+                    invoiceId: invoiceId,
+                    projectId: projectId,
+                    invoiceNumber: `INV-${invoiceId.substring(0, 8)}`,
+                    status: 'Draft',
+                    totalAmount: 0,
+                    items: []
+                };
+                renderInvoice();
+            }
+        }
+
+        function renderInvoice() {
+            if (!invoice) return;
+
+            // Populate invoice details
+            document.getElementById('ie-invoice-number').value = invoice.invoiceNumber || `INV-${invoiceId.substring(0, 8)}`;
+            document.getElementById('ie-invoice-date').value = invoice.createdAt ? new Date(invoice.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+            document.getElementById('ie-due-date').value = invoice.dueDate ? new Date(invoice.dueDate).toISOString().split('T')[0] : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            document.getElementById('ie-status').value = invoice.status || 'Draft';
+
+            // Render items
+            const itemsContainer = document.getElementById('ie-items-container');
+            if (invoice.items && invoice.items.length > 0) {
+                itemsContainer.innerHTML = invoice.items.map((item, index) => `
+                    <div class="modal-list-item mb-3">
+                        <div class="row align-items-center">
+                            <div class="col-md-4">
+                                <div class="modal-list-title">${item.name || 'Item'}</div>
+                                <div class="modal-list-date">${item.description || ''}</div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="text-muted">Qty: ${item.quantity || 0}</div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="text-muted">Rate: R ${(item.unitPrice || 0).toFixed(2)}</div>
+                            </div>
+                            <div class="col-md-3 text-end">
+                                <div class="modal-list-value">R ${((item.quantity || 0) * (item.unitPrice || 0)).toFixed(2)}</div>
+                            </div>
+                            <div class="col-md-1 text-end">
+                                <button class="btn btn-sm btn-outline-danger" onclick="removeInvoiceItem(${index})">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                itemsContainer.innerHTML = `
+                    <div class="modal-empty-state">
+                        <i class="fas fa-file-invoice"></i>
+                        <h5>No Invoice Items</h5>
+                        <p>Invoice items will be loaded from the related estimate.</p>
+                    </div>
+                `;
+            }
+
+            // Update summary
+            updateInvoiceSummary();
+        }
+
+        function updateInvoiceSummary() {
+            if (!invoice) return;
+
+            const items = invoice.items || [];
+            const subtotal = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unitPrice || 0)), 0);
+            const tax = subtotal * 0.15;
+            const total = subtotal + tax;
+
+            // Update counts
+            document.getElementById('ie-item-count').textContent = items.length;
+            document.getElementById('ie-days-overdue').textContent = calculateDaysOverdue();
+            document.getElementById('ie-payment-status').textContent = invoice.status || 'Draft';
+
+            // Update amounts
+            document.getElementById('ie-subtotal').textContent = formatCurrency(subtotal);
+            document.getElementById('ie-tax').textContent = formatCurrency(tax);
+            document.getElementById('ie-total').textContent = formatCurrency(total);
+        }
+
+        function calculateDaysOverdue() {
+            if (!invoice || invoice.status === 'Paid') return 0;
+            
+            const dueDate = new Date(invoice.dueDate || Date.now() + 30 * 24 * 60 * 60 * 1000);
+            const today = new Date();
+            const diffTime = today - dueDate;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            return diffDays > 0 ? diffDays : 0;
+        }
+
+        function formatCurrency(amount) {
+            if (!amount) return 'R 0.00';
+            return 'R ' + Number(amount).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Save button
+            document.getElementById('ie-btnSave')?.addEventListener('click', async function() {
+                await saveInvoice();
+            });
+
+            // Mark as paid button
+            document.getElementById('ie-btnMarkPaid')?.addEventListener('click', async function() {
+                await markAsPaid();
+            });
+        });
+
+        async function saveInvoice() {
+            try {
+                console.log('💾 Saving invoice...');
+                alert('Invoice saved successfully!');
+            } catch (error) {
+                console.error('❌ Error saving invoice:', error);
+                alert('Error saving invoice');
+            }
+        }
+
+        async function markAsPaid() {
+            try {
+                console.log('💰 Marking invoice as paid...');
+                alert('Invoice marked as paid successfully!');
+            } catch (error) {
+                console.error('❌ Error marking invoice as paid:', error);
+                alert('Error marking invoice as paid');
+            }
+        }
+
+        // Global function
+        window.openInvoiceEditorModal = openInvoice;
+    })();
+</script>

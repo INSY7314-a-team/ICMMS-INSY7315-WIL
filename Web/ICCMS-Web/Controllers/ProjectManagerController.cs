@@ -88,13 +88,71 @@ namespace ICCMS_Web.Controllers
                     }
                 }
 
+                // Load estimates efficiently - only for non-draft projects
+                var projectDetails = new Dictionary<string, ProjectDetails>();
+                var nonDraftProjects = allProjects.Where(p => p.Status != "Draft").ToList();
+                
+                // Load estimates for non-draft projects only (much fewer API calls)
+                foreach (var project in nonDraftProjects)
+                {
+                    try
+                    {
+                        // Get latest estimate for this project
+                        var estimates = await _apiClient.GetAsync<List<EstimateDto>>(
+                            $"/api/estimates/project/{project.ProjectId}",
+                            User
+                        ) ?? new List<EstimateDto>();
+                        
+                        var latestEstimate = estimates.OrderByDescending(e => e.CreatedAt).FirstOrDefault();
+                        
+                        projectDetails[project.ProjectId] = new ProjectDetails
+                        {
+                            Estimate = latestEstimate,
+                            Progress = 0, // Will be calculated below
+                            StatusBadgeClass = "badge-light" // Will be set below
+                        };
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to load estimates for project {ProjectId}", project.ProjectId);
+                        projectDetails[project.ProjectId] = new ProjectDetails
+                        {
+                            Estimate = null,
+                            Progress = 0,
+                            StatusBadgeClass = "badge-light"
+                        };
+                    }
+                }
+                
+                // Initialize draft projects without estimates (they don't need them)
+                foreach (var project in allProjects.Where(p => p.Status == "Draft"))
+                {
+                    projectDetails[project.ProjectId] = new ProjectDetails
+                    {
+                        Estimate = null, // Draft projects don't have estimates
+                        Progress = 0,
+                        StatusBadgeClass = "badge-light"
+                    };
+                }
+
                 var vm = new DashboardViewModel
                 {
                     DraftProjects = allProjects.Where(p => p.Status == "Draft").ToList(),
                     FilteredProjects = allProjects.Where(p => p.Status != "Draft").ToList(),
                     TotalProjects = allProjects.Count,
                     Clients = clients,
+                    ProjectDetails = projectDetails,
                 };
+
+                // Update progress and status badge classes now that vm exists
+                foreach (var project in allProjects)
+                {
+                    if (projectDetails.ContainsKey(project.ProjectId))
+                    {
+                        projectDetails[project.ProjectId].Progress = vm.GetProjectProgress(project);
+                        projectDetails[project.ProjectId].StatusBadgeClass = vm.GetStatusBadgeClass(project.Status);
+                    }
+                }
 
                 _logger.LogInformation("✅ Dashboard ready with {Total} projects", vm.TotalProjects);
                 return View(vm);
@@ -185,6 +243,20 @@ namespace ICCMS_Web.Controllers
                         User
                     ) ?? new List<ProjectTaskDto>();
 
+                // Get project estimates
+                _logger.LogInformation("Fetching estimates for project {ProjectId}", projectId);
+                var estimates = await _apiClient.GetAsync<List<EstimateDto>>(
+                    $"/api/estimates/project/{projectId}",
+                    User
+                ) ?? new List<EstimateDto>();
+
+                // Get project invoices
+                _logger.LogInformation("Fetching invoices for project {ProjectId}", projectId);
+                var invoices = await _apiClient.GetAsync<List<InvoiceDto>>(
+                    $"/api/invoices/project/{projectId}",
+                    User
+                ) ?? new List<InvoiceDto>();
+
                 // Get pending progress reports
                 _logger.LogInformation("Fetching pending progress reports");
                 var pendingReports =
@@ -253,6 +325,8 @@ namespace ICCMS_Web.Controllers
                     Project = project,
                     Phases = phases,
                     Tasks = tasks,
+                    Estimates = estimates,
+                    Invoices = invoices,
                     PendingProgressReports = projectPendingReports,
                     TasksAwaitingCompletion = tasksAwaitingCompletion,
                     ContractorMap = contractorMap,
@@ -812,6 +886,29 @@ namespace ICCMS_Web.Controllers
                     projectId
                 );
                 return Json(new List<EstimateDto>());
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetLatestEstimateForProject(string projectId)
+        {
+            try
+            {
+                var estimates = await _apiClient.GetAsync<List<EstimateDto>>(
+                    $"/api/estimates/project/{projectId}",
+                    User
+                );
+                if (estimates == null || !estimates.Any())
+                {
+                    return Json(null);
+                }
+                var latestEstimate = estimates.OrderByDescending(e => e.CreatedAt).FirstOrDefault();
+                return Json(latestEstimate);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching latest estimate for project {ProjectId}", projectId);
+                return Json(null);
             }
         }
 

@@ -1,0 +1,680 @@
+/* ===========================================
+   UNIFIED MODAL DESIGN SYSTEM
+   =========================================== */
+
+:root {
+  --primary-bg: #1a1b25;
+  --secondary-bg: #2a2b35;
+  --accent-yellow: #f7ec59;
+  --accent-red: #ff5964;
+  --accent-green: #198754;
+  --accent-cyan: #0dcaf0;
+  --text-primary: #ffffff;
+  --text-secondary: #ffffff;
+  --text-muted: #ffffff;
+  --text-dark: #1a1b25;
+  --border-primary: rgba(247, 236, 89, 0.2);
+  --border-active: #f7ec59;
+  --shadow-primary: 0 10px 30px rgba(0, 0, 0, 0.3);
+  --shadow-hover: 0 15px 40px rgba(0, 0, 0, 0.4);
+  --gradient-primary: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+  --gradient-accent: linear-gradient(135deg, var(--accent-yellow) 0%, #e6d547 100%);
+  --gradient-success: linear-gradient(135deg, var(--accent-green) 0%, #157347 100%);
+}
+
+/* ===========================================
+   BASE MODAL STYLING
+   =========================================== */
+
+.modal-content {
+  background: var(--gradient-primary) !important;
+  border: 2px solid var(--border-primary) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--shadow-primary) !important;
+  color: var(--text-primary) !important;
+  overflow: hidden;
+  position: relative;
+}
+
+.modal-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-accent);
+  z-index: 1;
+}
+
+.modal-content:hover {
+  border-color: var(--border-active) !important;
+  box-shadow: var(--shadow-hover) !important;
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+/* Fullscreen Modal Specific Styling */
+.modal-fullscreen .modal-content {
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-fullscreen .modal-content::before {
+  display: none;
+}
+
+.modal-fullscreen .modal-content:hover {
+  transform: none;
+}
+
+.modal-fullscreen .modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+  background: var(--primary-bg);
+}
+
+.modal-fullscreen .modal-header {
+  background: var(--secondary-bg);
+  border-bottom: 2px solid var(--border-primary);
+  padding: 1.5rem 2rem;
+  flex-shrink: 0;
+}
+
+.modal-fullscreen .modal-footer {
+  background: var(--secondary-bg);
+  border-top: 2px solid var(--border-primary);
+  padding: 1.5rem 2rem;
+  flex-shrink: 0;
+}
+
+/* ===========================================
+   MODAL HEADER STYLING
+   =========================================== */
+
+.modal-header {
+  background: var(--gradient-primary) !important;
+  border-bottom: 2px solid var(--border-active) !important;
+  padding: 1.5rem 2rem !important;
+  position: relative;
+}
+
+.modal-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--gradient-accent);
+  opacity: 0.3;
+}
+
+.modal-title {
+  color: var(--text-primary) !important;
+  font-weight: 700 !important;
+  font-size: 1.4rem !important;
+  margin: 0 !important;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.modal-title i {
+  color: var(--accent-yellow);
+  font-size: 1.2rem;
+}
+
+.modal-subtitle {
+  color: var(--text-muted) !important;
+  font-size: 0.9rem !important;
+  opacity: 0.8;
+  margin-top: 0.25rem;
+}
+
+.btn-close {
+  background: var(--gradient-accent) !important;
+  border-radius: 50% !important;
+  width: 32px !important;
+  height: 32px !important;
+  opacity: 1 !important;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.btn-close:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(247, 236, 89, 0.4);
+}
+
+.btn-close::before {
+  content: '×';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--text-dark);
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+/* ===========================================
+   MODAL BODY STYLING
+   =========================================== */
+
+.modal-body {
+  padding: 2rem !important;
+  background: var(--secondary-bg);
+  position: relative;
+}
+
+.modal-body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--gradient-accent);
+  opacity: 0.2;
+}
+
+/* ===========================================
+   MODAL FOOTER STYLING
+   =========================================== */
+
+.modal-footer {
+  background: var(--gradient-primary) !important;
+  border-top: 2px solid var(--border-active) !important;
+  padding: 1.5rem 2rem !important;
+  position: relative;
+}
+
+.modal-footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--gradient-accent);
+  opacity: 0.3;
+}
+
+/* ===========================================
+   BUTTON STYLING SYSTEM
+   =========================================== */
+
+.btn-primary {
+  background: var(--gradient-accent) !important;
+  border: 2px solid var(--accent-yellow) !important;
+  color: var(--text-dark) !important;
+  font-weight: 600 !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-primary:hover::before {
+  left: 100%;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(247, 236, 89, 0.4);
+}
+
+.btn-secondary {
+  background: var(--gradient-primary) !important;
+  border: 2px solid var(--border-primary) !important;
+  color: var(--text-primary) !important;
+  font-weight: 500 !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+}
+
+.btn-secondary:hover {
+  border-color: var(--border-active) !important;
+  background: var(--secondary-bg) !important;
+  transform: translateY(-1px);
+}
+
+.btn-outline-primary {
+  background: transparent !important;
+  border: 2px solid var(--accent-yellow) !important;
+  color: var(--accent-yellow) !important;
+  font-weight: 500 !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+}
+
+.btn-outline-primary:hover {
+  background: var(--accent-yellow) !important;
+  color: var(--text-dark) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(247, 236, 89, 0.3);
+}
+
+/* ===========================================
+   FORM ELEMENT STYLING
+   =========================================== */
+
+.form-control {
+  background: var(--primary-bg) !important;
+  border: 2px solid var(--border-primary) !important;
+  color: var(--text-primary) !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1rem !important;
+  transition: all 0.3s ease !important;
+  word-wrap: break-word !important;
+  white-space: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+.form-control:focus {
+  border-color: var(--border-active) !important;
+  box-shadow: 0 0 0 0.2rem rgba(247, 236, 89, 0.25) !important;
+  background: var(--secondary-bg) !important;
+}
+
+.form-label {
+  color: var(--text-primary) !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* ===========================================
+   CARD STYLING SYSTEM
+   =========================================== */
+
+.modal-card {
+  background: var(--gradient-primary);
+  border: 2px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient-accent);
+}
+
+.modal-card:hover {
+  border-color: var(--border-active);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.modal-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.modal-card-title {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.modal-card-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--gradient-accent);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dark);
+  font-size: 1.1rem;
+}
+
+/* ===========================================
+   METRIC DISPLAY STYLING
+   =========================================== */
+
+.metric-card {
+  background: var(--gradient-primary);
+  border: 2px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient-accent);
+}
+
+.metric-card:hover {
+  border-color: var(--border-active);
+  transform: translateY(-2px);
+}
+
+.metric-label {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.metric-value {
+  color: var(--accent-yellow);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.metric-value.success {
+  color: var(--accent-green);
+}
+
+.metric-value.danger {
+  color: var(--accent-red);
+}
+
+/* ===========================================
+   LIST ITEM STYLING
+   =========================================== */
+
+.modal-list-item {
+  background: var(--gradient-primary);
+  border: 2px solid var(--border-primary);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-list-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--gradient-accent);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.modal-list-item:hover::before {
+  transform: scaleX(1);
+}
+
+.modal-list-item:hover {
+  border-color: var(--border-active);
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.modal-list-item:last-child {
+  margin-bottom: 0;
+}
+
+.modal-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.modal-list-title {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.modal-list-value {
+  color: var(--accent-yellow);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.modal-list-status {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  display: inline-block;
+}
+
+.modal-list-status.pending {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.modal-list-status.approved {
+  background: rgba(25, 135, 84, 0.2);
+  color: var(--accent-green);
+  border: 1px solid rgba(25, 135, 84, 0.3);
+}
+
+.modal-list-status.rejected {
+  background: rgba(220, 53, 69, 0.2);
+  color: var(--accent-red);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.modal-list-date {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+/* ===========================================
+   EMPTY STATE STYLING
+   =========================================== */
+
+.modal-empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--text-muted);
+}
+
+.modal-empty-state i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+  color: var(--accent-yellow);
+}
+
+.modal-empty-state h5 {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.modal-empty-state p {
+  opacity: 0.8;
+  margin-bottom: 0;
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN
+   =========================================== */
+
+@media (max-width: 768px) {
+  .modal-content {
+    margin: 1rem;
+    border-radius: 12px;
+  }
+  
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 1rem !important;
+  }
+  
+  .modal-title {
+    font-size: 1.2rem !important;
+  }
+  
+  .btn-primary,
+  .btn-secondary,
+  .btn-outline-primary {
+    padding: 0.6rem 1.2rem !important;
+    font-size: 0.9rem !important;
+  }
+}
+
+/* ===========================================
+   COMPACT ESTIMATE LINE ITEMS
+   =========================================== */
+
+.estimate-line-item {
+  padding: 0.25rem 0.5rem !important;
+  margin-bottom: 0.25rem !important;
+  border-radius: 0.375rem;
+}
+
+.estimate-line-item .form-control-sm {
+  padding: 0.25rem 0.5rem !important;
+  font-size: 0.875rem !important;
+  line-height: 1.25 !important;
+  height: auto !important;
+  min-height: 1.75rem !important;
+}
+
+.estimate-line-item .btn-sm {
+  padding: 0.125rem 0.375rem !important;
+  font-size: 0.75rem !important;
+  line-height: 1.25 !important;
+}
+
+.estimate-line-item .metric-value {
+  font-size: 0.75rem !important;
+  line-height: 1.1 !important;
+  padding: 0.25rem 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+/* Unit Price Field - Show at least 6 digits */
+.estimate-line-item input[data-f="unitPrice"] {
+    min-width: 120px !important;
+    font-family: 'Courier New', monospace !important;
+}
+
+/* Quantity Field - Better spacing */
+.estimate-line-item input[data-f="quantity"] {
+    min-width: 80px !important;
+    font-family: 'Courier New', monospace !important;
+}
+
+/* Item Name Field - More space */
+.estimate-line-item input[data-f="name"] {
+    min-width: 200px !important;
+}
+
+/* Fullscreen Modal Line Items Container */
+.modal-fullscreen #ee-line-items-container {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-primary);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+}
+
+/* Fullscreen Modal Action Buttons */
+.modal-fullscreen .d-flex.justify-content-between {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-primary);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Details Toggle Button */
+.estimate-line-item .btn-outline-info {
+  padding: 0.125rem 0.25rem !important;
+  border-color: var(--accent-cyan) !important;
+  color: var(--accent-cyan) !important;
+  font-size: 0.75rem !important;
+}
+
+.estimate-line-item .btn-outline-info:hover {
+  background-color: var(--accent-cyan) !important;
+  color: var(--text-dark) !important;
+}
+
+/* Details Box */
+.estimate-details-box {
+  background: var(--primary-bg);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 0.5rem;
+  position: relative;
+}
+
+.estimate-details-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--gradient-accent);
+  opacity: 0.5;
+}
+
+.estimate-details-box .form-label {
+  font-size: 0.8rem !important;
+  color: var(--text-muted) !important;
+  margin-bottom: 0.25rem !important;
+  font-weight: 500 !important;
+}
+
+.estimate-details-box .form-control {
+  font-size: 0.875rem !important;
+  padding: 0.5rem 0.75rem !important;
+}

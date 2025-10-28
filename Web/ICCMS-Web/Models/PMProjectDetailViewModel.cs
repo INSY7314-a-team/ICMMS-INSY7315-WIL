@@ -61,6 +61,14 @@ namespace ICCMS_Web.Models
         [JsonPropertyName("completedPhases")]
         public int CompletedPhases { get; set; }
 
+        // Project estimates
+        [JsonPropertyName("estimates")]
+        public List<EstimateDto> Estimates { get; set; } = new();
+
+        // Project invoices
+        [JsonPropertyName("invoices")]
+        public List<InvoiceDto> Invoices { get; set; } = new();
+
         // Helper methods for UI
         public string GetStatusBadgeClass(string status)
         {

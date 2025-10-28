@@ -181,68 +181,19 @@
     </div>
 
     <div class="card-footer">
-        <div class="action-buttons">
-            @if (string.Equals(Model.Status, "Draft", StringComparison.OrdinalIgnoreCase))
+        <div class="estimate-footer">
+            @if (estimate != null)
             {
-                <!-- Primary action for Draft projects -->
-                <button type="button" class="btn-action btn-primary" onclick="continueProjectSetup('@Model.ProjectId')"
-                    title="Continue project setup">
-                    Continue Setup
-                </button>
-            }
-            else if (string.Equals(Model.Status, "Active", StringComparison.OrdinalIgnoreCase))
-            {
-                <!-- Primary action for Active projects -->
-                <button type="button" class="btn-action btn-primary" onclick="viewProjectDetails('@Model.ProjectId')"
-                    title="View Progress">
-                    View Progress
-                </button>
-
-                <!-- Secondary actions dropdown -->
-                <div class="dropdown">
-                    <button class="btn-action btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        Manage
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#" onclick="openPlanEditor('@Model.ProjectId','phases')">Add
-                                Phases</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="openPlanEditor('@Model.ProjectId','tasks')">Assign
-                                Tasks</a></li>
-                    </ul>
+                <div class="estimate-price-display">
+                    <small class="estimate-label">Latest Estimate</small>
+                    <div class="estimate-amount">R @estimate.TotalAmount.ToString("N0")</div>
+                    <small class="estimate-date">@estimate.CreatedAt.ToString("MMM dd, yyyy")</small>
                 </div>
             }
             else
             {
-                <!-- Primary action for Planning and other statuses -->
-                <button type="button" class="btn-action btn-primary" onclick="openProjectEstimates('@Model.ProjectId')"
-                    title="View Estimates">
-                    View Estimates
-                </button>
-
-                <!-- Secondary actions dropdown -->
-                <div class="dropdown">
-                    <button class="btn-action btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        Manage
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#" onclick="openPlanEditor('@Model.ProjectId','phases')">Add
-                                Phases</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="openPlanEditor('@Model.ProjectId','tasks')">Assign
-                                Tasks</a></li>
-                        @if (estimate == null)
-                        {
-                            <li><a class="dropdown-item" href="#"
-                                    onclick="openBlueprintPicker('@Model.ProjectId', function(url){ processBlueprintAndOpen('@Model.ProjectId', url); })">Process
-                                    Blueprint</a></li>
-                        }
-                        else
-                        {
-                            <li><a class="dropdown-item" href="#" onclick="openEstimateEditor('@Model.ProjectId')">Edit Line
-                                    Items</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="openEstimateEditor('@Model.ProjectId')">Send
-                                    Quote</a></li>
-                        }
-                    </ul>
+                <div class="no-estimate-display">
+                    <small class="no-estimate-text">No estimate yet</small>
                 </div>
             }
         </div>
