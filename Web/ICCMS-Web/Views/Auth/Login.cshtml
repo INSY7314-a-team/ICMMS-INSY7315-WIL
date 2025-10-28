@@ -4,9 +4,11 @@
     ViewData["Title"] = "Login";
 }
 
+<link href="~/css/login.css?v=@DateTime.Now.Ticks" rel="stylesheet" />
+
 <div class="login-form-wrapper">
 
-    <h2 class="login-title mb-4">Login to ICMMS</h2>
+    <h2 class="login-title mb-4">Login to TaskIt</h2>
 
     <!-- 🔔 SESSION EXPIRED / AUTH ERROR -->
     @if (TempData["AuthErrorMessage"] != null)
@@ -51,7 +53,6 @@
             <button type="submit" class="btn btn-primary" id="loginButton">Login</button>
         </div>
     </form>
-
 </div>
 
 @section Scripts {
@@ -71,22 +72,22 @@
                 submitBtn.disabled = true;
 
                 console.log('[Login] Signing in with Firebase for', email);
-                
+
                 // Use Firebase Client SDK to sign in with email and password
                 // This properly verifies the password on the client side
                 const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
                 console.log('[Login] Firebase sign-in successful');
-                
+
                 // Get the ID token from the authenticated user
                 const idToken = await userCredential.user.getIdToken();
                 console.log('[Login] Got ID token from Firebase');
-                
+
                 // Verify the ID token with the Web Auth controller to create the session
                 console.log('[Login] Verifying token with Web auth');
                 const verifyResponse = await fetch('/Auth/VerifyToken', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         idToken: idToken,
                         email: email,
                         rememberMe: rememberMe
@@ -108,7 +109,7 @@
             } catch (error) {
                 console.error('[Login] Error:', error);
                 let errorMessage = 'Login failed: ' + error.message;
-                
+
                 // Provide user-friendly error messages
                 if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
                     errorMessage = 'Invalid email or password.';
@@ -119,7 +120,7 @@
                 } else if (error.code === 'auth/too-many-requests') {
                     errorMessage = 'Too many failed attempts. Please try again later.';
                 }
-                
+
                 alert(errorMessage);
             } finally {
                 submitBtn.textContent = originalText;
@@ -128,34 +129,3 @@
         });
     </script>
 }
-
-<style>
-    .login-form-wrapper {
-        max-width: 100%;
-        width: 100%;
-        text-align: left;
-        padding: 0 1rem;
-    }
-
-    .login-title {
-        text-align: center;
-        font-weight: 700;
-        color: #222;
-        font-size: 1.6rem;
-    }
-
-    form {
-        margin-top: 1.5rem;
-    }
-
-    input.form-control {
-        height: 48px;
-        border-radius: 10px;
-        font-size: 1rem;
-    }
-
-    .btn-primary {
-        height: 48px;
-        font-size: 1.05rem;
-    }
-</style>

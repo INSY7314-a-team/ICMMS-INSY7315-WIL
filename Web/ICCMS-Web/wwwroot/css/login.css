@@ -1,0 +1,169 @@
+/* ===========================================
+   LOGIN PAGE STYLING
+   =========================================== */
+
+.login-form-wrapper {
+    max-width: 100%;
+    width: 100%;
+    text-align: left;
+    padding: 0 1rem;
+}
+
+.login-title {
+    text-align: center;
+    font-weight: 700;
+    color: #ffff;
+    font-size: 1.6rem;
+}
+
+.login-form-wrapper form {
+    margin-top: 1.5rem;
+}
+
+.login-form-wrapper input.form-control {
+    height: 48px;
+    border-radius: 10px;
+    font-size: 1rem;
+}
+
+.login-form-wrapper .btn-primary {
+    height: 48px;
+    font-size: 1.05rem;
+}
+
+/* ===========================================
+   LOGIN FORM ENHANCEMENTS
+   =========================================== */
+
+.login-form-wrapper .form-label {
+    font-weight: 600;
+    color: var(--text-primary, #ffffff);
+    margin-bottom: 0.5rem;
+}
+
+.login-form-wrapper .form-control {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-primary, #ffffff);
+    transition: all 0.3s ease;
+}
+
+.login-form-wrapper .form-control:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: var(--accent-yellow, #F7EC59);
+    box-shadow: 0 0 0 0.2rem rgba(247, 236, 89, 0.25);
+    color: var(--text-primary, #ffffff);
+}
+
+.login-form-wrapper .form-control::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.login-form-wrapper .btn-primary {
+    background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+    border: 2px solid transparent;
+    color: #1A1B25;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.login-form-wrapper .btn-primary:hover {
+    background: linear-gradient(135deg, #E6D547 0%, #D4C435 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(247, 236, 89, 0.3);
+    color: #1A1B25;
+}
+
+.login-form-wrapper .btn-primary:disabled {
+    opacity: 0.6;
+    transform: none;
+    box-shadow: none;
+}
+
+.login-form-wrapper .form-check-input:checked {
+    background-color: var(--accent-yellow, #F7EC59);
+    border-color: var(--accent-yellow, #F7EC59);
+}
+
+.login-form-wrapper .form-check-label {
+    color: var(--text-primary, #ffffff);
+    font-weight: 500;
+}
+
+/* ===========================================
+   ALERT STYLING
+   =========================================== */
+
+.login-form-wrapper .alert {
+    border-radius: 10px;
+    border: none;
+    font-weight: 500;
+}
+
+.login-form-wrapper .alert-warning {
+    background-color: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    color: #ffc107;
+}
+
+/* ===========================================
+   LOCKOUT MESSAGE STYLING
+   =========================================== */
+
+#lockoutMessage {
+    background-color: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 10px;
+    color: #ffc107;
+}
+
+#lockoutMessage h5 {
+    color: #ffc107;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+#lockoutMessage .progress {
+    height: 8px;
+    background-color: rgba(255, 193, 7, 0.2);
+    border-radius: 4px;
+    margin-top: 1rem;
+}
+
+#lockoutMessage .progress-bar {
+    background-color: #ffc107;
+    border-radius: 4px;
+    transition: width 1s ease;
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN
+   =========================================== */
+
+@media (max-width: 768px) {
+    .login-form-wrapper {
+        padding: 0 0.5rem;
+    }
+    
+    .login-title {
+        font-size: 1.4rem;
+    }
+    
+    .login-form-wrapper input.form-control,
+    .login-form-wrapper .btn-primary {
+        height: 44px;
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .login-title {
+        font-size: 1.2rem;
+    }
+    
+    .login-form-wrapper input.form-control,
+    .login-form-wrapper .btn-primary {
+        height: 40px;
+        font-size: 0.9rem;
+    }
+}
