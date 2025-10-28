@@ -1,8 +1,8 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 using System.Text.Json;
 using ICCMS_Web.Models;
-using System.Diagnostics;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ICCMS_Web.Controllers
 {
@@ -13,29 +13,49 @@ namespace ICCMS_Web.Controllers
         private readonly IConfiguration _configuration;
         private readonly ILogger<DocumentsController> _logger;
 
-        public DocumentsController(HttpClient httpClient, IConfiguration configuration, ILogger<DocumentsController> logger)
+        public DocumentsController(
+            HttpClient httpClient,
+            IConfiguration configuration,
+            ILogger<DocumentsController> logger
+        )
         {
             _httpClient = httpClient;
             _configuration = configuration;
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index(int page = 1, int pageSize = 25, string projectFilter = "all", string categoryFilter = "all", string searchTerm = "")
+        public async Task<IActionResult> Index(
+            int page = 1,
+            int pageSize = 25,
+            string projectFilter = "all",
+            string typeFilter = "all",
+            string searchTerm = ""
+        )
         {
             try
             {
-                _logger.LogInformation("Loading documents management dashboard for user: {User}", User.Identity?.Name);
+                _logger.LogInformation(
+                    "Loading documents management dashboard for user: {User}",
+                    User.Identity?.Name
+                );
 
                 var apiBaseUrl = _configuration["ApiSettings:BaseUrl"];
                 // Debug: Log all available claims
                 _logger.LogInformation("Available user claims:");
                 foreach (var claim in User.Claims)
                 {
-                    _logger.LogInformation("Claim: {Type} = {Value}", claim.Type, claim.Value?.Substring(0, Math.Min(50, claim.Value?.Length ?? 0)) + "...");
+                    _logger.LogInformation(
+                        "Claim: {Type} = {Value}",
+                        claim.Type,
+                        claim.Value?.Substring(0, Math.Min(50, claim.Value?.Length ?? 0)) + "..."
+                    );
                 }
 
                 var firebaseToken = User.FindFirst("FirebaseToken")?.Value;
-                _logger.LogInformation("Firebase token found: {HasToken}", !string.IsNullOrEmpty(firebaseToken));
+                _logger.LogInformation(
+                    "Firebase token found: {HasToken}",
+                    !string.IsNullOrEmpty(firebaseToken)
+                );
 
                 if (string.IsNullOrEmpty(firebaseToken))
                 {
@@ -47,79 +67,134 @@ namespace ICCMS_Web.Controllers
                 _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {firebaseToken}");
 
                 // Get documents with filtering
-                var documentsResponse = await GetDocuments(apiBaseUrl, projectFilter, searchTerm);
-                _logger.LogInformation("Retrieved {Count} documents from API", documentsResponse.Count);
-                
+                var documentsResponse = await GetDocuments(apiBaseUrl, projectFilter);
+                _logger.LogInformation(
+                    "Retrieved {Count} documents from API",
+                    documentsResponse.Count
+                );
+
                 // Get projects for filter dropdown
                 var projectsResponse = await GetProjects(apiBaseUrl);
-                _logger.LogInformation("Retrieved {Count} projects from API", projectsResponse.Count);
-                
+                _logger.LogInformation(
+                    "Projects response: {ProjectsResponse}",
+                    JsonSerializer.Serialize(projectsResponse)
+                );
+                _logger.LogInformation(
+                    "Retrieved {Count} projects from API",
+                    projectsResponse.Count
+                );
+
                 // Get users for display
                 var usersResponse = await GetUsers(apiBaseUrl);
                 _logger.LogInformation("Retrieved {Count} users from API", usersResponse.Count);
 
                 // Populate project names in documents
-                _logger.LogInformation("Available projects: {ProjectCount}", projectsResponse.Count);
-                foreach (var proj in projectsResponse.Take(3)) // Log first 3 projects
+                _logger.LogInformation(
+                    "Available projects: {ProjectCount}",
+                    projectsResponse.Count
+                );
+
+                // Debug: Log all project IDs and names
+                foreach (var proj in projectsResponse)
                 {
-                    _logger.LogInformation("Project ID: {ProjectId}, Name: {ProjectName}", proj.Id, proj.Name);
+                    _logger.LogInformation(
+                        "Available Project - ID: '{ProjectId}', Name: '{ProjectName}'",
+                        proj.Id,
+                        proj.Name
+                    );
                 }
-                
+
                 foreach (var doc in documentsResponse)
                 {
-                    _logger.LogInformation("Looking for project ID: {ProjectId} for document: {FileName}", doc.ProjectId, doc.FileName);
+                    _logger.LogInformation(
+                        "Document - FileName: '{FileName}', ProjectId: '{ProjectId}'",
+                        doc.FileName,
+                        doc.ProjectId
+                    );
+
                     var project = projectsResponse.FirstOrDefault(p => p.Id == doc.ProjectId);
                     if (project != null)
                     {
                         doc.ProjectName = project.Name;
-                        _logger.LogInformation("Populated project name for document {FileName}: {ProjectName}", doc.FileName, project.Name);
+                        _logger.LogInformation(
+                            "✅ MATCH FOUND - Document {FileName} -> Project: {ProjectName}",
+                            doc.FileName,
+                            project.Name
+                        );
                     }
                     else
                     {
-                        _logger.LogWarning("No project found for ProjectId: {ProjectId} in document {FileName}", doc.ProjectId, doc.FileName);
+                        _logger.LogWarning(
+                            "❌ NO MATCH - Document {FileName} has ProjectId '{ProjectId}' but no matching project found",
+                            doc.FileName,
+                            doc.ProjectId
+                        );
                     }
                 }
 
+                // Apply search term filtering after all data is populated
+                var filteredDocuments = documentsResponse
+                    .Where(doc =>
+                        string.IsNullOrEmpty(searchTerm)
+                        || doc.FileName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                        || (
+                            doc.Description != null
+                            && doc.Description.Contains(
+                                searchTerm,
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                        )
+                        || doc.ProjectName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                    )
+                    .ToList();
+
                 var viewModel = new DocumentsViewModel
                 {
-                    Documents = documentsResponse,
+                    Documents = filteredDocuments, // Use filtered list
                     AvailableProjects = projectsResponse,
                     AvailableUsers = usersResponse,
                     CurrentPage = page,
                     PageSize = pageSize,
                     CurrentProjectFilter = projectFilter,
-                    CurrentCategoryFilter = categoryFilter,
+                    CurrentTypeFilter = typeFilter,
                     CurrentSearchTerm = searchTerm,
-                    TotalDocuments = documentsResponse.Count,
-                    TotalPages = (int)Math.Ceiling((double)documentsResponse.Count / pageSize)
+                    TotalDocuments = filteredDocuments.Count, // Use filtered count
+                    TotalPages = (int)Math.Ceiling((double)filteredDocuments.Count / pageSize),
                 };
 
                 // Apply pagination
-                viewModel.Documents = documentsResponse
+                viewModel.Documents = filteredDocuments
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .ToList();
 
-                _logger.LogInformation("Documents dashboard loaded successfully with {Count} documents", viewModel.Documents.Count);
-                
-                    // Debug: Log first document details
-                    if (viewModel.Documents.Count > 0)
-                    {
-                        var firstDoc = viewModel.Documents[0];
-                        _logger.LogInformation("First document in view model: FileName={FileName}, ProjectId={ProjectId}, ProjectName={ProjectName}", 
-                            firstDoc.FileName, firstDoc.ProjectId, firstDoc.ProjectName);
-                        
-                        // Debug: Log all properties of the first document
-                        _logger.LogInformation("First document all properties:");
-                        _logger.LogInformation("  FileName: '{FileName}'", firstDoc.FileName);
-                        _logger.LogInformation("  ProjectId: '{ProjectId}'", firstDoc.ProjectId);
-                        _logger.LogInformation("  ProjectName: '{ProjectName}'", firstDoc.ProjectName);
-                        _logger.LogInformation("  Description: '{Description}'", firstDoc.Description);
-                        _logger.LogInformation("  UploadedBy: '{UploadedBy}'", firstDoc.UploadedBy);
-                        _logger.LogInformation("  FileSize: {FileSize}", firstDoc.FileSize);
-                        _logger.LogInformation("  ContentType: '{ContentType}'", firstDoc.ContentType);
-                        _logger.LogInformation("  IsApproved: {IsApproved}", firstDoc.IsApproved);
-                    }
+                _logger.LogInformation(
+                    "Documents dashboard loaded successfully with {Count} documents",
+                    viewModel.Documents.Count
+                );
+
+                // Debug: Log first document details
+                if (viewModel.Documents.Count > 0)
+                {
+                    var firstDoc = viewModel.Documents[0];
+                    _logger.LogInformation(
+                        "First document in view model: FileName={FileName}, ProjectId={ProjectId}, ProjectName={ProjectName}",
+                        firstDoc.FileName,
+                        firstDoc.ProjectId,
+                        firstDoc.ProjectName
+                    );
+
+                    // Debug: Log all properties of the first document
+                    _logger.LogInformation("First document all properties:");
+                    _logger.LogInformation("  FileName: '{FileName}'", firstDoc.FileName);
+                    _logger.LogInformation("  ProjectId: '{ProjectId}'", firstDoc.ProjectId);
+                    _logger.LogInformation("  ProjectName: '{ProjectName}'", firstDoc.ProjectName);
+                    _logger.LogInformation("  Description: '{Description}'", firstDoc.Description);
+                    _logger.LogInformation("  UploadedBy: '{UploadedBy}'", firstDoc.UploadedBy);
+                    _logger.LogInformation("  FileSize: {FileSize}", firstDoc.FileSize);
+                    _logger.LogInformation("  ContentType: '{ContentType}'", firstDoc.ContentType);
+                    _logger.LogInformation("  IsApproved: {IsApproved}", firstDoc.IsApproved);
+                }
 
                 return View(viewModel);
             }
@@ -131,7 +206,11 @@ namespace ICCMS_Web.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Upload(IFormFile file, string projectId, string description)
+        public async Task<IActionResult> Upload(
+            IFormFile file,
+            string projectId,
+            string description
+        )
         {
             try
             {
@@ -156,11 +235,17 @@ namespace ICCMS_Web.Controllers
                     content.Add(new StringContent(description), "description");
                 }
 
-                var response = await _httpClient.PostAsync($"{apiBaseUrl}/api/documents/upload", content);
+                var response = await _httpClient.PostAsync(
+                    $"{apiBaseUrl}/api/documents/upload",
+                    content
+                );
 
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.LogInformation("Document uploaded successfully: {FileName}", file.FileName);
+                    _logger.LogInformation(
+                        "Document uploaded successfully: {FileName}",
+                        file.FileName
+                    );
                     return Json(new { success = true, message = "Document uploaded successfully" });
                 }
                 else
@@ -195,7 +280,9 @@ namespace ICCMS_Web.Controllers
                 _httpClient.DefaultRequestHeaders.Clear();
                 _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {firebaseToken}");
 
-                var response = await _httpClient.DeleteAsync($"{apiBaseUrl}/api/documents/{fileName}");
+                var response = await _httpClient.DeleteAsync(
+                    $"{apiBaseUrl}/api/documents/{fileName}"
+                );
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -225,7 +312,7 @@ namespace ICCMS_Web.Controllers
 
                 var apiBaseUrl = _configuration["ApiSettings:BaseUrl"];
                 var firebaseToken = User.FindFirst("FirebaseToken")?.Value;
-                
+
                 if (string.IsNullOrEmpty(firebaseToken))
                 {
                     return RedirectToAction("Login", "Auth");
@@ -236,21 +323,34 @@ namespace ICCMS_Web.Controllers
 
                 var response = await _httpClient.GetAsync($"{apiBaseUrl}/api/documents/{fileName}");
 
-                _logger.LogInformation("Download API response status: {StatusCode}", response.StatusCode);
-                
+                _logger.LogInformation(
+                    "Download API response status: {StatusCode}",
+                    response.StatusCode
+                );
+
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsByteArrayAsync();
-                    var contentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
-                    
-                    _logger.LogInformation("Document downloaded successfully: {FileName}, Size: {Size} bytes, ContentType: {ContentType}", 
-                        fileName, content.Length, contentType);
+                    var contentType =
+                        response.Content.Headers.ContentType?.ToString()
+                        ?? "application/octet-stream";
+
+                    _logger.LogInformation(
+                        "Document downloaded successfully: {FileName}, Size: {Size} bytes, ContentType: {ContentType}",
+                        fileName,
+                        content.Length,
+                        contentType
+                    );
                     return File(content, contentType, fileName);
                 }
                 else
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
-                    _logger.LogWarning("Document download failed: {StatusCode}, Error: {Error}", response.StatusCode, errorContent);
+                    _logger.LogWarning(
+                        "Document download failed: {StatusCode}, Error: {Error}",
+                        response.StatusCode,
+                        errorContent
+                    );
                     return NotFound();
                 }
             }
@@ -261,7 +361,10 @@ namespace ICCMS_Web.Controllers
             }
         }
 
-        private async Task<List<DocumentViewModel>> GetDocuments(string apiBaseUrl, string projectFilter, string searchTerm)
+        private async Task<List<DocumentViewModel>> GetDocuments(
+            string apiBaseUrl,
+            string projectFilter
+        )
         {
             try
             {
@@ -272,68 +375,114 @@ namespace ICCMS_Web.Controllers
                 }
 
                 var response = await _httpClient.GetAsync(url);
-                
-                _logger.LogInformation("API call to {Url} returned status {StatusCode}", url, response.StatusCode);
-                
+
+                _logger.LogInformation(
+                    "API call to {Url} returned status {StatusCode}",
+                    url,
+                    response.StatusCode
+                );
+
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsStringAsync();
                     _logger.LogInformation("Received {Length} characters from API", content.Length);
-                    
+
                     var documents = JsonSerializer.Deserialize<List<JsonElement>>(content);
                     _logger.LogInformation("Deserialized {Count} documents", documents?.Count ?? 0);
-                    
+
                     // Debug: Log the first document structure
                     if (documents?.Count > 0)
                     {
-                        _logger.LogInformation("First document structure: {DocumentJson}", documents[0].GetRawText());
-                        
+                        _logger.LogInformation(
+                            "First document structure: {DocumentJson}",
+                            documents[0].GetRawText()
+                        );
+
                         // Debug: Log individual field values
                         var firstDoc = documents[0];
                         _logger.LogInformation("First document fields:");
-                        _logger.LogInformation("  fileName: {FileName}", firstDoc.TryGetProperty("fileName", out var fn) ? fn.GetString() : "NOT_FOUND");
-                        _logger.LogInformation("  projectId: {ProjectId}", firstDoc.TryGetProperty("projectId", out var pid) ? pid.GetString() : "NOT_FOUND");
-                        _logger.LogInformation("  fileSize: {FileSize}", firstDoc.TryGetProperty("fileSize", out var fs) ? fs.GetInt64() : -1);
-                        _logger.LogInformation("  status: {Status}", firstDoc.TryGetProperty("status", out var st) ? st.GetString() : "NOT_FOUND");
-                        _logger.LogInformation("  uploadedBy: {UploadedBy}", firstDoc.TryGetProperty("uploadedBy", out var ub) ? ub.GetString() : "NOT_FOUND");
-                        
+                        _logger.LogInformation(
+                            "  fileName: {FileName}",
+                            firstDoc.TryGetProperty("fileName", out var fn)
+                                ? fn.GetString()
+                                : "NOT_FOUND"
+                        );
+                        _logger.LogInformation(
+                            "  projectId: {ProjectId}",
+                            firstDoc.TryGetProperty("projectId", out var pid)
+                                ? pid.GetString()
+                                : "NOT_FOUND"
+                        );
+                        _logger.LogInformation(
+                            "  fileSize: {FileSize}",
+                            firstDoc.TryGetProperty("fileSize", out var fs) ? fs.GetInt64() : -1
+                        );
+                        _logger.LogInformation(
+                            "  status: {Status}",
+                            firstDoc.TryGetProperty("status", out var st)
+                                ? st.GetString()
+                                : "NOT_FOUND"
+                        );
+                        _logger.LogInformation(
+                            "  uploadedBy: {UploadedBy}",
+                            firstDoc.TryGetProperty("uploadedBy", out var ub)
+                                ? ub.GetString()
+                                : "NOT_FOUND"
+                        );
+
                         // Debug: Log all available properties
                         _logger.LogInformation("All available properties in first document:");
                         foreach (var prop in firstDoc.EnumerateObject())
                         {
-                            _logger.LogInformation("  {PropertyName}: {PropertyValue}", prop.Name, prop.Value);
+                            _logger.LogInformation(
+                                "  {PropertyName}: {PropertyValue}",
+                                prop.Name,
+                                prop.Value
+                            );
                         }
                     }
-                    
+
                     var documentViewModels = new List<DocumentViewModel>();
-                    
+
                     foreach (var doc in documents)
                     {
                         var documentViewModel = new DocumentViewModel
                         {
-                            FileName = doc.TryGetProperty("fileName", out var fileName) ? fileName.GetString() : "Unknown",
-                            ProjectId = doc.TryGetProperty("projectId", out var projectId) ? projectId.GetString() : "",
+                            FileName = doc.TryGetProperty("fileName", out var fileName)
+                                ? fileName.GetString()
+                                : "Unknown",
+                            ProjectId = doc.TryGetProperty("projectId", out var projectId)
+                                ? projectId.GetString()
+                                : "",
                             ProjectName = "Unknown Project", // Will be populated later
-                            Description = doc.TryGetProperty("description", out var description) ? description.GetString() : "",
-                            UploadedBy = doc.TryGetProperty("uploadedBy", out var uploadedBy) ? 
-                                (!string.IsNullOrEmpty(uploadedBy.GetString()) ? uploadedBy.GetString() : "System") : "Unknown",
-                            UploadedAt = doc.TryGetProperty("uploadedAt", out var uploadedAt) ? uploadedAt.GetDateTime() : DateTime.UtcNow,
-                            FileSize = doc.TryGetProperty("fileSize", out var fileSize) ? fileSize.GetInt64() : 0,
-                            ContentType = doc.TryGetProperty("fileType", out var fileType) ? fileType.GetString() : "application/octet-stream",
+                            Description = doc.TryGetProperty("description", out var description)
+                                ? description.GetString()
+                                : "",
+                            UploadedBy = doc.TryGetProperty("uploadedBy", out var uploadedBy)
+                                ? (
+                                    !string.IsNullOrEmpty(uploadedBy.GetString())
+                                        ? uploadedBy.GetString()
+                                        : "System"
+                                )
+                                : "Unknown",
+                            UploadedAt = doc.TryGetProperty("uploadedAt", out var uploadedAt)
+                                ? uploadedAt.GetDateTime()
+                                : DateTime.UtcNow,
+                            FileSize = doc.TryGetProperty("fileSize", out var fileSize)
+                                ? fileSize.GetInt64()
+                                : 0,
+                            ContentType = doc.TryGetProperty("fileType", out var fileType)
+                                ? fileType.GetString()
+                                : "application/octet-stream",
                             Category = "General", // Default category
-                            IsApproved = doc.TryGetProperty("status", out var status) ? status.GetString() == "Active" : false,
+                            IsApproved = doc.TryGetProperty("status", out var status)
+                                ? status.GetString() == "Active"
+                                : false,
                             ApprovedBy = "",
-                            ApprovedAt = null
+                            ApprovedAt = null,
                         };
 
-                        // Apply search filter
-                        if (string.IsNullOrEmpty(searchTerm) || 
-                            documentViewModel.FileName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                            documentViewModel.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                            documentViewModel.ProjectName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-                        {
-                            documentViewModels.Add(documentViewModel);
-                        }
+                        documentViewModels.Add(documentViewModel);
                     }
 
                     return documentViewModels.OrderByDescending(d => d.UploadedAt).ToList();
@@ -341,9 +490,13 @@ namespace ICCMS_Web.Controllers
                 else
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
-                    _logger.LogError("API call failed with status {StatusCode}: {Error}", response.StatusCode, errorContent);
+                    _logger.LogError(
+                        "API call failed with status {StatusCode}: {Error}",
+                        response.StatusCode,
+                        errorContent
+                    );
                 }
-                
+
                 return new List<DocumentViewModel>();
             }
             catch (Exception ex)
@@ -357,20 +510,52 @@ namespace ICCMS_Web.Controllers
         {
             try
             {
-                var response = await _httpClient.GetAsync($"{apiBaseUrl}/api/projectmanager/projects");
-                
+                var response = await _httpClient.GetAsync(
+                    $"{apiBaseUrl}/api/documents/projects-with-documents"
+                );
+
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsStringAsync();
                     var projects = JsonSerializer.Deserialize<List<JsonElement>>(content);
-                    
-                    return projects.Select(p => new Models.ProjectSummary
+
+                    _logger.LogInformation(
+                        "Projects API returned {Count} projects",
+                        projects?.Count ?? 0
+                    );
+
+                    // Debug: Log the first project structure to see field names
+                    if (projects?.Count > 0)
                     {
-                        Id = p.TryGetProperty("projectId", out var id) ? id.GetString() : "",
-                        Name = p.TryGetProperty("name", out var name) ? name.GetString() : "Unknown Project"
-                    }).ToList();
+                        var firstProject = projects[0];
+                        _logger.LogInformation(
+                            "First project structure: {ProjectJson}",
+                            firstProject.GetRawText()
+                        );
+
+                        // Log all available properties
+                        _logger.LogInformation("Available properties in first project:");
+                        foreach (var prop in firstProject.EnumerateObject())
+                        {
+                            _logger.LogInformation(
+                                "  {PropertyName}: {PropertyValue}",
+                                prop.Name,
+                                prop.Value
+                            );
+                        }
+                    }
+
+                    return projects
+                        .Select(p => new Models.ProjectSummary
+                        {
+                            Id = p.TryGetProperty("projectId", out var id) ? id.GetString() : "",
+                            Name = p.TryGetProperty("name", out var name)
+                                ? name.GetString()
+                                : "Unknown Project",
+                        })
+                        .ToList();
                 }
-                
+
                 return new List<Models.ProjectSummary>();
             }
             catch (Exception ex)
@@ -385,20 +570,26 @@ namespace ICCMS_Web.Controllers
             try
             {
                 var response = await _httpClient.GetAsync($"{apiBaseUrl}/api/admin/users");
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsStringAsync();
                     var users = JsonSerializer.Deserialize<List<JsonElement>>(content);
-                    
-                    return users.Select(u => new Models.UserSummary
-                    {
-                        Id = u.TryGetProperty("userId", out var id) ? id.GetString() : "",
-                        FullName = u.TryGetProperty("fullName", out var fullName) ? fullName.GetString() : "Unknown User",
-                        Email = u.TryGetProperty("email", out var email) ? email.GetString() : ""
-                    }).ToList();
+
+                    return users
+                        .Select(u => new Models.UserSummary
+                        {
+                            Id = u.TryGetProperty("userId", out var id) ? id.GetString() : "",
+                            FullName = u.TryGetProperty("fullName", out var fullName)
+                                ? fullName.GetString()
+                                : "Unknown User",
+                            Email = u.TryGetProperty("email", out var email)
+                                ? email.GetString()
+                                : "",
+                        })
+                        .ToList();
                 }
-                
+
                 return new List<Models.UserSummary>();
             }
             catch (Exception ex)

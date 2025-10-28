@@ -474,15 +474,16 @@
    =========================================== */
 
 .pagination-container {
-    background: #0D1821;
     padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     margin-top: 20px;
+    justify-content: center;
+    align-items: center;
 }
 
 .pagination {
     margin-bottom: 15px;
+    justify-content: center;
+    align-items: center;
 }
 
 .pagination .page-link {
@@ -505,6 +506,13 @@
     background: #F7EC59;
     border-color: #F7EC59;
     color: #1A1B25;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #B0B0B0;
+    pointer-events: none;
+    background-color: #1A1B25;
+    border-color: #1A1B25;
 }
 
 .pagination-info {
@@ -842,4 +850,139 @@
     .audit-card-header {
         padding: 15px 20px;
     }
+}
+
+/* ===========================================
+   BUTTON STYLING
+   =========================================== */
+
+.user-btn {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+}
+
+.user-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.user-btn:hover::before {
+    left: 100%;
+}
+
+.user-btn-primary {
+    background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+    color: #1A1B25;
+    box-shadow: 0 4px 15px rgba(247, 236, 89, 0.3);
+}
+
+.user-btn-primary:hover {
+    background: linear-gradient(135deg, #E6D547 0%, #D4C435 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(247, 236, 89, 0.5);
+    color: #1A1B25;
+}
+
+.user-btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #FFFFFF;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.user-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #FFFFFF;
+    transform: translateY(-2px);
+    color: #FFFFFF;
+}
+
+.user-btn-danger {
+    background: linear-gradient(135deg, #FF5964 0%, #E53E3E 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(255, 89, 100, 0.3);
+}
+
+.user-btn-danger:hover {
+    background: linear-gradient(135deg, #E53E3E 0%, #C82333 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 89, 100, 0.5);
+    color: #ffffff;
+}
+
+.user-btn-info {
+    background: #F7EC59;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(247, 236, 89, 0.3);
+}
+
+.user-btn-info:hover {
+    background: #E6D547;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(247, 236, 89, 0.5);
+    color: #ffffff;
+}
+
+.user-btn-sm {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    border-radius: 15px;
+}
+
+/* ===========================================
+   DROPDOWN MENU STYLING
+   =========================================== */
+
+.user-dropdown-menu {
+    background: #1A1B25 !important;
+    border: 1px solid rgba(247, 236, 89, 0.2);
+    border-radius: 10px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    padding: 10px 0;
+    z-index: 1050 !important;
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    position: absolute !important;
+    min-width: 200px !important;
+    pointer-events: auto !important;
+}
+
+.user-dropdown-item {
+    color: #FFFFFF;
+    padding: 12px 20px;
+    transition: all 0.3s ease;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    display: flex;
+    align-items: center;
+}
+
+.user-dropdown-item:hover {
+    background: rgba(247, 236, 89, 0.1);
+    color: #F7EC59;
+}
+
+.user-dropdown-item i {
+    margin-right: 10px;
+    width: 16px;
 }

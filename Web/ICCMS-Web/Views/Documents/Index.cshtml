@@ -63,7 +63,7 @@
             <button type="button" class="search-btn" onclick="applyFilters()">
                 <i class="fas fa-search"></i>
             </button>
-            <button type="button" class="clear-search-btn" onclick="clearFilters()">
+            <button type="button" class="clear-search-btn" onclick="clearSearch()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -80,60 +80,23 @@
     </div>
         <!-- Search and Filters -->
          <div class="filters-panel" id="filtersPanel" style="display: none;">
-            <div class="filters-panel-content">
-                <div class="filters-container">
-                    <div class="advanced-filters-grid">
-                        <div class="filter-item">
-                            <label class="filter-label">Category</label>
-                            <select id="categoryFilter" class="filter-select">
-                                <option value="all">All Categories</option>
-                                @if (Model.CurrentCategoryFilter == "pdf")
-                                {
-                                    <option value="pdf" selected>PDF Documents</option>
-                                }
-                                else
-                                {
-                                    <option value="pdf">PDF Documents</option>
-                                }
-
-                                @if (Model.CurrentCategoryFilter == "image")
-                                {
-                                    <option value="image" selected>Images</option>
-                                }
-                                else
-                                {
-                                    <option value="image">Images</option>
-                                }
-
-                                @if (Model.CurrentCategoryFilter == "document")
-                                {
-                                    <option value="document" selected>Documents</option>
-                                }
-                                else
-                                {
-                                    <option value="document">Documents</option>
-                                }
-
-                                @if (Model.CurrentCategoryFilter == "other")
-                                {
-                                    <option value="other" selected>Other Files</option>
-                                }
-                                else
-                                {
-                                    <option value="other">Other Files</option>
-                                }
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="filter-actions">
-                        <button type="button" class="filter-action-btn primary" onclick="applyFilters()">
-                            <i class="fas fa-filter"></i> Apply Filters
-                        </button>
-                        <button type="button" class="filter-action-btn secondary" onclick="clearFilters()">
-                            <i class="fas fa-times"></i> Clear All
-                        </button>
-                    </div>
+            <!-- Project Filter -->
+            <div class="filter-group">
+                <div class="filter-group-header">
+                    <h6 class="mb-0">Filter by Project</h6>
+                </div>
+                <div class="status-filters">
+                    <a href="javascript:void(0)" onclick="applyProjectFilter('all')" 
+                       class="status-filter-btn @(Model.CurrentProjectFilter == "all" ? "active" : "")">
+                        <i class="fas fa-list"></i> All Projects
+                    </a>
+                    @foreach (var project in Model.AvailableProjects.OrderBy(p => p.Name))
+                    {
+                        <a href="javascript:void(0)" onclick="applyProjectFilter('@project.Id')" 
+                           class="status-filter-btn @(Model.CurrentProjectFilter == project.Id ? "active" : "")">
+                            <i class="fas fa-project-diagram"></i> @project.Name
+                        </a>
+                    }
                 </div>
             </div>
         </div>
@@ -206,25 +169,25 @@
                                     <div style="color: #B0B0B0; font-size: 0.8rem;">@document.UploadedAt.ToString("HH:mm")</div>
                                 </td>
                                 <td>
-                                    <div class="dropdown">
-                                        <button class="documents-btn documents-btn-sm documents-btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <div class="btn-group" role="group">
+                                        <button class="user-btn user-btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                             <i class="fas fa-ellipsis-v"></i>
                                         </button>
-                                        <ul class="dropdown-menu documents-dropdown-menu">
-                                            <li><a class="dropdown-item documents-dropdown-item" href="#" onclick="viewDocumentDetails('@document.FileName')">
+                                        <ul class="user-dropdown-menu dropdown-menu dropdown-menu-end">
+                                            <li><a class="user-dropdown-item dropdown-item" href="#" onclick="viewDocumentDetails('@document.FileName')">
                                                 <i class="fas fa-eye"></i> View Details
                                             </a></li>
-                                            <li><a class="dropdown-item documents-dropdown-item" href="#" onclick="downloadDocument('@document.FileName')">
+                                            <li><a class="user-dropdown-item dropdown-item" href="#" onclick="downloadDocument('@document.FileName')">
                                                 <i class="fas fa-download"></i> Download
                                             </a></li>
                                             @if (!document.IsApproved)
                                             {
-                                                <li><a class="dropdown-item documents-dropdown-item" href="#" onclick="approveDocument('@document.FileName')">
+                                                <li><a class="user-dropdown-item dropdown-item" href="#" onclick="approveDocument('@document.FileName')">
                                                     <i class="fas fa-check"></i> Approve
                                                 </a></li>
                                             }
                                             <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item documents-dropdown-item" href="#" onclick="deleteDocument('@document.FileName')" style="color: #FF5964;">
+                                            <li><a class="user-dropdown-item dropdown-item" href="#" onclick="deleteDocument('@document.FileName')" style="color: #FF5964;">
                                                 <i class="fas fa-trash"></i> Delete
                                             </a></li>
                                         </ul>
@@ -254,7 +217,7 @@
                         @if (Model.CurrentPage > 1)
                         {
                             <li class="page-item">
-                                <a class="page-link" href="@Url.Action("Index", new { page = Model.CurrentPage - 1, pageSize = Model.PageSize, projectFilter = Model.CurrentProjectFilter, categoryFilter = Model.CurrentCategoryFilter, searchTerm = Model.CurrentSearchTerm })">
+                                <a class="page-link" href="@Url.Action("Index", new { page = Model.CurrentPage - 1, pageSize = Model.PageSize, projectFilter = Model.CurrentProjectFilter, searchTerm = Model.CurrentSearchTerm })">
                                     <i class="fas fa-chevron-left"></i>
                                 </a>
                             </li>
@@ -263,14 +226,14 @@
                         @for (int i = Math.Max(1, Model.CurrentPage - 2); i <= Math.Min(Model.TotalPages, Model.CurrentPage + 2); i++)
                         {
                             <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
-                                <a class="page-link" href="@Url.Action("Index", new { page = i, pageSize = Model.PageSize, projectFilter = Model.CurrentProjectFilter, categoryFilter = Model.CurrentCategoryFilter, searchTerm = Model.CurrentSearchTerm })">@i</a>
+                                <a class="page-link" href="@Url.Action("Index", new { page = i, pageSize = Model.PageSize, projectFilter = Model.CurrentProjectFilter, searchTerm = Model.CurrentSearchTerm })">@i</a>
                             </li>
                         }
 
                         @if (Model.CurrentPage < Model.TotalPages)
                         {
                             <li class="page-item">
-                                <a class="page-link" href="@Url.Action("Index", new { page = Model.CurrentPage + 1, pageSize = Model.PageSize, projectFilter = Model.CurrentProjectFilter, categoryFilter = Model.CurrentCategoryFilter, searchTerm = Model.CurrentSearchTerm })">
+                                <a class="page-link" href="@Url.Action("Index", new { page = Model.CurrentPage + 1, pageSize = Model.PageSize, projectFilter = Model.CurrentProjectFilter, searchTerm = Model.CurrentSearchTerm })">
                                     <i class="fas fa-chevron-right"></i>
                                 </a>
                             </li>
@@ -294,20 +257,12 @@
                     <i class="fas fa-file-alt"></i>
                     Document Details
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="user-btn user-btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times" style="padding-right: 10px;"></i> Close
+                </button>
             </div>
             <div class="modal-body" id="documentDetailsContent">
                 <!-- Content will be populated by JavaScript -->
-            </div>
-            <div class="modal-footer">
-                <div class="modal-footer-content">
-                    <button type="button" class="documents-btn documents-btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times"></i> Close
-                    </button>
-                    <button type="button" class="documents-btn documents-btn-primary" id="downloadDocumentBtn" onclick="downloadDocumentFromModal()">
-                        <i class="fas fa-download"></i> Download
-                    </button>
-                </div>
             </div>
         </div>
     </div>
@@ -316,27 +271,41 @@
 <script>
 
 
+    // Individual filter functions for card-based filters
+    function applyProjectFilter(projectId) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('projectFilter', projectId);
+        url.searchParams.set('page', '1');
+        window.location.href = url.toString();
+    }
+
+    function applyTypeFilter(type) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('typeFilter', type);
+        url.searchParams.set('page', '1');
+        window.location.href = url.toString();
+    }
+
     function applyFilters() {
         const searchTerm = document.getElementById('searchTerm').value;
-        const projectFilter = document.getElementById('projectFilter').value;
-        const categoryFilter = document.getElementById('categoryFilter').value;
-        const statusFilter = document.getElementById('statusFilter').value;
-
         const url = new URL(window.location);
         url.searchParams.set('searchTerm', searchTerm);
-        url.searchParams.set('projectFilter', projectFilter);
-        url.searchParams.set('categoryFilter', categoryFilter);
-        url.searchParams.set('statusFilter', statusFilter);
         url.searchParams.set('page', '1');
-
         window.location.href = url.toString();
     }
 
     function clearFilters() {
         document.getElementById('searchTerm').value = '';
-        document.getElementById('projectFilter').value = 'all';
-        document.getElementById('categoryFilter').value = 'all';
-        document.getElementById('statusFilter').value = 'all';
+        const url = new URL(window.location);
+        url.searchParams.set('searchTerm', '');
+        url.searchParams.set('projectFilter', 'all');
+        url.searchParams.set('typeFilter', 'all');
+        url.searchParams.set('page', '1');
+        window.location.href = url.toString();
+    }
+    
+    function clearSearch() {
+        document.getElementById('searchTerm').value = '';
         applyFilters();
     }
 
@@ -359,34 +328,22 @@
                     Category: "@Html.Raw(doc.Category)",
                     IsApproved: @doc.IsApproved.ToString().ToLower(),
                     ApprovedBy: "@Html.Raw(doc.ApprovedBy)",
-                    ApprovedAt: @(doc.ApprovedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "null")
+                    ApprovedAt: @(doc.ApprovedAt == null ? "null" : $"\"{doc.ApprovedAt:yyyy-MM-dd HH:mm:ss}\"")
                 },</text>
             }
         ];
         
-        console.log('Available documents:', documents);
-        console.log('Number of documents:', documents.length);
-        
-        // Debug: Log the first document's properties
-        if (documents.length > 0) {
-            console.log('First document properties:', Object.keys(documents[0]));
-            console.log('First document values:', documents[0]);
-        }
-        
-        // Find the document by fileName
         const foundDoc = documents.find(d => d.FileName === fileName);
-        console.log('Found document:', foundDoc);
         
         if (foundDoc) {
             const content = generateDocumentDetailsContent(foundDoc);
             document.getElementById('documentDetailsContent').innerHTML = content;
-            document.getElementById('downloadDocumentBtn').setAttribute('data-filename', fileName);
+            //document.getElementById('downloadDocumentBtn').setAttribute('data-filename', fileName);
             
             const modal = new bootstrap.Modal(document.getElementById('documentDetailsModal'));
             modal.show();
         } else {
             console.error('Document not found:', fileName);
-            console.error('Available file names:', documents.map(d => d.FileName));
             alert('Document details not found for: ' + fileName);
         }
     }
@@ -430,16 +387,9 @@
                 <div class="document-details-header">
                     <div class="document-header-content">
                         <div class="document-title-section">
-                            <div class="document-title">${doc.FileName}</div>
+                            <div class="document-title" style="font-size: 1.2rem !important;">${doc.FileName}</div>
                             <div class="document-meta-info">
-                                <span class="document-filename">${doc.FileName}</span>
                                 <span class="document-type-badge ${fileExtension}">${typeBadge}</span>
-                            </div>
-                        </div>
-                        <div class="document-status-section">
-                            <div class="status-indicator ${doc.IsApproved ? 'approved' : 'pending'}">
-                                <i class="fas fa-${doc.IsApproved ? 'check-circle' : 'clock'}"></i>
-                                <span>${doc.IsApproved ? 'Approved' : 'Pending'}</span>
                             </div>
                         </div>
                     </div>
@@ -451,7 +401,7 @@
                     <div class="document-stats-column">
                         <div class="stats-section">
                             <h6 class="section-title">
-                                <i class="fas fa-chart-bar"></i>
+                                <i class="fas fa-info-circle"></i>
                                 Document Information
                             </h6>
                             <div class="document-stats-grid">
@@ -460,37 +410,34 @@
                                         <i class="fas fa-weight-hanging"></i>
                                     </div>
                                     <div class="stat-content">
-                                        <div class="stat-number">${formatFileSize(doc.FileSize)}</div>
+                                        <div class="stat-number" style="font-size: 1rem !important;">${formatFileSize(doc.FileSize)}</div>
                                         <div class="stat-label">File Size</div>
                                     </div>
                                 </div>
-                                
                                 <div class="stat-card">
                                     <div class="stat-icon">
                                         <i class="fas fa-user-circle"></i>
                                     </div>
                                     <div class="stat-content">
-                                        <div class="stat-number">${doc.UploadedBy}</div>
+                                        <div class="stat-number" style="font-size: 1rem !important;">${doc.UploadedBy}</div>
                                         <div class="stat-label">Uploaded By</div>
                                     </div>
                                 </div>
-                                
                                 <div class="stat-card">
                                     <div class="stat-icon">
                                         <i class="fas fa-calendar-alt"></i>
                                     </div>
                                     <div class="stat-content">
-                                        <div class="stat-number">${formattedDate}</div>
+                                        <div class="stat-number" style="font-size: 1rem !important;">${formattedDate}</div>
                                         <div class="stat-label">Upload Date</div>
                                     </div>
                                 </div>
-                                
                                 <div class="stat-card">
                                     <div class="stat-icon">
                                         <i class="fas fa-clock"></i>
                                     </div>
                                     <div class="stat-content">
-                                        <div class="stat-number">${formattedTime}</div>
+                                        <div class="stat-number" style="font-size: 1rem !important;">${formattedTime}</div>
                                         <div class="stat-label">Upload Time</div>
                                     </div>
                                 </div>
@@ -671,9 +618,10 @@
         }
     });
 
-    document.getElementById('projectFilter').addEventListener('change', applyFilters);
-    document.getElementById('categoryFilter').addEventListener('change', applyFilters);
-    document.getElementById('statusFilter').addEventListener('change', applyFilters);
+    const projectFilter = document.getElementById('projectFilter');
+    if (projectFilter) {
+        projectFilter.addEventListener('change', applyFilters);
+    }
 </script>
 
 @functions {

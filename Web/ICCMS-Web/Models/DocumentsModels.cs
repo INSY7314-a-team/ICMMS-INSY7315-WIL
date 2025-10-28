@@ -13,7 +13,7 @@ namespace ICCMS_Web.Models
         public int TotalDocuments { get; set; } = 0;
         public int TotalPages { get; set; } = 0;
         public string CurrentProjectFilter { get; set; } = "all";
-        public string CurrentCategoryFilter { get; set; } = "all";
+        public string CurrentTypeFilter { get; set; } = "all";
         public string CurrentSearchTerm { get; set; } = "";
     }
 
@@ -32,5 +32,4 @@ namespace ICCMS_Web.Models
         public string ApprovedBy { get; set; } = "";
         public DateTime? ApprovedAt { get; set; }
     }
-
 }

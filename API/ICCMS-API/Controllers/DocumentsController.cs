@@ -1,10 +1,10 @@
+using System.IO;
 using ICCMS_API.Auth;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
-using System.IO;
 
 namespace ICCMS_API.Controllers
 {
@@ -45,13 +45,15 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpGet("metadata")]
-        public async Task<ActionResult<List<Document>>> GetDocumentsMetadata([FromQuery] string? projectId = null)
+        public async Task<ActionResult<List<Document>>> GetDocumentsMetadata(
+            [FromQuery] string? projectId = null
+        )
         {
             try
             {
                 var documents = await _firebaseService.GetCollectionAsync<Document>("documents");
                 Console.WriteLine($"Found {documents.Count} documents in Firebase");
-                
+
                 // Debug: Log the first document to see what we're getting
                 if (documents.Count > 0)
                 {
@@ -65,36 +67,50 @@ namespace ICCMS_API.Controllers
                     Console.WriteLine($"  UploadedBy: '{firstDoc.UploadedBy}'");
                     Console.WriteLine($"  UploadedAt: {firstDoc.UploadedAt}");
                     Console.WriteLine($"  Description: '{firstDoc.Description}'");
-                    
+
                     // Debug: Check if the values are actually populated
                     Console.WriteLine($"Field population check:");
-                    Console.WriteLine($"  FileName is null or empty: {string.IsNullOrEmpty(firstDoc.FileName)}");
-                    Console.WriteLine($"  ProjectId is null or empty: {string.IsNullOrEmpty(firstDoc.ProjectId)}");
-                    Console.WriteLine($"  Status is null or empty: {string.IsNullOrEmpty(firstDoc.Status)}");
+                    Console.WriteLine(
+                        $"  FileName is null or empty: {string.IsNullOrEmpty(firstDoc.FileName)}"
+                    );
+                    Console.WriteLine(
+                        $"  ProjectId is null or empty: {string.IsNullOrEmpty(firstDoc.ProjectId)}"
+                    );
+                    Console.WriteLine(
+                        $"  Status is null or empty: {string.IsNullOrEmpty(firstDoc.Status)}"
+                    );
                 }
-                
+
                 // Filter by project if specified
                 if (!string.IsNullOrEmpty(projectId))
                 {
                     documents = documents.Where(d => d.ProjectId == projectId).ToList();
-                    Console.WriteLine($"Filtered to {documents.Count} documents for project {projectId}");
+                    Console.WriteLine(
+                        $"Filtered to {documents.Count} documents for project {projectId}"
+                    );
                 }
-                
+
                 // Normalize URLs for all documents
                 foreach (var doc in documents)
                 {
-                    if (string.IsNullOrWhiteSpace(doc.FileUrl) && !string.IsNullOrWhiteSpace(doc.FileName))
+                    if (
+                        string.IsNullOrWhiteSpace(doc.FileUrl)
+                        && !string.IsNullOrWhiteSpace(doc.FileName)
+                    )
                     {
                         var bucket = _supabaseService.SupabaseClient.Storage.From("upload");
                         doc.FileUrl = bucket.GetPublicUrl(doc.FileName);
                     }
-                    else if (!string.IsNullOrWhiteSpace(doc.FileUrl) && doc.FileUrl.Contains("icmms-storage"))
+                    else if (
+                        !string.IsNullOrWhiteSpace(doc.FileUrl)
+                        && doc.FileUrl.Contains("icmms-storage")
+                    )
                     {
                         var bucket = _supabaseService.SupabaseClient.Storage.From("upload");
                         doc.FileUrl = bucket.GetPublicUrl(doc.FileName);
                     }
                 }
-                
+
                 return Ok(documents);
             }
             catch (Exception ex)
@@ -105,7 +121,10 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpGet("{fileName}")]
-        public async Task<IActionResult> GetDocument(string fileName, [FromQuery] bool download = false)
+        public async Task<IActionResult> GetDocument(
+            string fileName,
+            [FromQuery] bool download = false
+        )
         {
             try
             {
@@ -113,25 +132,31 @@ namespace ICCMS_API.Controllers
                 var document = await _supabaseService.DownloadFileAsync("upload", fileName);
                 if (document == null || document.Length == 0)
                     return NotFound();
-                
+
                 Console.WriteLine($"Document found: {fileName}");
-                
+
                 // Only log if this is an actual download request, not just viewing
                 if (download)
                 {
                     var userId = User.UserId();
-                    _auditLogService.LogAsync("Document Download", "Document Downloaded", $"File {fileName} downloaded", userId ?? "system", fileName);
+                    _auditLogService.LogAsync(
+                        "Document Download",
+                        "Document Downloaded",
+                        $"File {fileName} downloaded",
+                        userId ?? "system",
+                        fileName
+                    );
                 }
-                
+
                 // Determine content type based on file extension
                 var contentType = GetContentType(fileName);
-                
+
                 // If download=true, set the content-disposition header to force download
                 if (download)
                 {
                     return File(document, contentType, fileName);
                 }
-                
+
                 // Otherwise, just return the file for viewing (browser can open it)
                 return File(document, contentType);
             }
@@ -149,11 +174,13 @@ namespace ICCMS_API.Controllers
             {
                 ".pdf" => "application/pdf",
                 ".doc" => "application/msword",
-                ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ".docx" =>
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 ".xls" => "application/vnd.ms-excel",
                 ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 ".ppt" => "application/vnd.ms-powerpoint",
-                ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                ".pptx" =>
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
                 ".txt" => "text/plain",
                 ".jpg" or ".jpeg" => "image/jpeg",
                 ".png" => "image/png",
@@ -161,7 +188,7 @@ namespace ICCMS_API.Controllers
                 ".bmp" => "image/bmp",
                 ".zip" => "application/zip",
                 ".rar" => "application/x-rar-compressed",
-                _ => "application/octet-stream"
+                _ => "application/octet-stream",
             };
         }
 
@@ -263,10 +290,16 @@ namespace ICCMS_API.Controllers
                 await _firebaseService.AddDocumentAsync("documents", document);
 
                 Console.WriteLine("Document metadata created successfully");
-                
+
                 var userId = User.UserId();
-                _auditLogService.LogAsync("Document Upload", "Document Uploaded", $"File {file.FileName} ({document.DocumentId}) uploaded to project {projectId}", userId ?? "system", document.DocumentId);
-                
+                _auditLogService.LogAsync(
+                    "Document Upload",
+                    "Document Uploaded",
+                    $"File {file.FileName} ({document.DocumentId}) uploaded to project {projectId}",
+                    userId ?? "system",
+                    document.DocumentId
+                );
+
                 return Ok(document);
             }
             catch (Exception ex)
@@ -301,7 +334,13 @@ namespace ICCMS_API.Controllers
                 );
 
                 var userId = User.UserId();
-                _auditLogService.LogAsync("Document Upload", "Document Updated", $"File {fileName} updated", userId ?? "system", fileName);
+                _auditLogService.LogAsync(
+                    "Document Upload",
+                    "Document Updated",
+                    $"File {fileName} updated",
+                    userId ?? "system",
+                    fileName
+                );
 
                 return NoContent();
             }
@@ -317,10 +356,16 @@ namespace ICCMS_API.Controllers
             try
             {
                 await _supabaseService.DeleteFileAsync("upload", fileName);
-                
+
                 var userId = User.UserId();
-                _auditLogService.LogAsync("Document Upload", "Document Deleted", $"File {fileName} deleted from storage", userId ?? "system", fileName);
-                
+                _auditLogService.LogAsync(
+                    "Document Upload",
+                    "Document Deleted",
+                    $"File {fileName} deleted from storage",
+                    userId ?? "system",
+                    fileName
+                );
+
                 return NoContent();
             }
             catch (Exception ex)
@@ -354,7 +399,13 @@ namespace ICCMS_API.Controllers
                 await _firebaseService.DeleteDocumentAsync("documents", documentId);
 
                 var userId = User.UserId();
-                _auditLogService.LogAsync("Document Upload", "Document Deleted", $"Document {document.FileName} ({documentId}) deleted from storage and database", userId ?? "system", documentId);
+                _auditLogService.LogAsync(
+                    "Document Upload",
+                    "Document Deleted",
+                    $"Document {document.FileName} ({documentId}) deleted from storage and database",
+                    userId ?? "system",
+                    documentId
+                );
 
                 return Ok(
                     new { message = "Document deleted successfully from both storage and database" }
@@ -485,44 +536,47 @@ namespace ICCMS_API.Controllers
             try
             {
                 Console.WriteLine("Debug fields endpoint called");
-                
+
                 // Get raw Firestore documents
                 var snapshot = await _firebaseService.GetRawCollectionAsync("documents");
                 Console.WriteLine($"Found {snapshot.Count} raw documents");
-                
+
                 if (snapshot.Count > 0)
                 {
                     var firstDoc = snapshot.First();
                     var fields = firstDoc.ToDictionary();
-                    
+
                     Console.WriteLine($"First document ID: {firstDoc.Id}");
                     Console.WriteLine($"Available fields: {string.Join(", ", fields.Keys)}");
-                    
+
                     // Show each field and its value
                     foreach (var field in fields)
                     {
-                        Console.WriteLine($"Field '{field.Key}': {field.Value} (Type: {field.Value?.GetType().Name})");
+                        Console.WriteLine(
+                            $"Field '{field.Key}': {field.Value} (Type: {field.Value?.GetType().Name})"
+                        );
                     }
-                    
-                    return Ok(new
-                    {
-                        message = "Field debug successful",
-                        documentId = firstDoc.Id,
-                        availableFields = fields.Keys.ToList(),
-                        fieldDetails = fields.Select(f => new { 
-                            name = f.Key, 
-                            value = f.Value?.ToString(), 
-                            type = f.Value?.GetType().Name 
-                        }).ToList()
-                    });
+
+                    return Ok(
+                        new
+                        {
+                            message = "Field debug successful",
+                            documentId = firstDoc.Id,
+                            availableFields = fields.Keys.ToList(),
+                            fieldDetails = fields
+                                .Select(f => new
+                                {
+                                    name = f.Key,
+                                    value = f.Value?.ToString(),
+                                    type = f.Value?.GetType().Name,
+                                })
+                                .ToList(),
+                        }
+                    );
                 }
                 else
                 {
-                    return Ok(new
-                    {
-                        message = "No documents found",
-                        documentCount = 0
-                    });
+                    return Ok(new { message = "No documents found", documentCount = 0 });
                 }
             }
             catch (Exception ex)
@@ -538,16 +592,18 @@ namespace ICCMS_API.Controllers
             try
             {
                 Console.WriteLine("Testing metadata endpoint...");
-                
+
                 var documents = await _firebaseService.GetCollectionAsync<Document>("documents");
                 Console.WriteLine($"Found {documents.Count} documents in Firebase");
-                
-                return Ok(new
-                {
-                    message = "Metadata endpoint working",
-                    documentCount = documents.Count,
-                    sampleDocument = documents.FirstOrDefault()
-                });
+
+                return Ok(
+                    new
+                    {
+                        message = "Metadata endpoint working",
+                        documentCount = documents.Count,
+                        sampleDocument = documents.FirstOrDefault(),
+                    }
+                );
             }
             catch (Exception ex)
             {
@@ -562,22 +618,73 @@ namespace ICCMS_API.Controllers
             try
             {
                 Console.WriteLine("Debug bucket files endpoint called");
-                
+
                 var allFiles = await _supabaseService.ListFilesAsync("upload");
                 Console.WriteLine($"Found {allFiles.Count} files in upload bucket");
-                
-                return Ok(new
-                {
-                    message = "Bucket files debug successful",
-                    bucket = "upload",
-                    fileCount = allFiles.Count,
-                    files = allFiles
-                });
+
+                return Ok(
+                    new
+                    {
+                        message = "Bucket files debug successful",
+                        bucket = "upload",
+                        fileCount = allFiles.Count,
+                        files = allFiles,
+                    }
+                );
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in debug bucket files endpoint: {ex.Message}");
                 return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+            }
+        }
+
+        [HttpGet("projects-with-documents")]
+        public async Task<IActionResult> GetProjectsWithDocuments()
+        {
+            try
+            {
+                Console.WriteLine("Getting projects that have documents...");
+
+                // Get all documents
+                var documents = await _firebaseService.GetCollectionAsync<Document>("documents");
+                Console.WriteLine($"Found {documents.Count} documents");
+
+                // Get all projects
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                Console.WriteLine($"Found {projects.Count} projects");
+
+                // Get unique project IDs from documents
+                var documentProjectIds = documents
+                    .Where(d => !string.IsNullOrEmpty(d.ProjectId))
+                    .Select(d => d.ProjectId)
+                    .Distinct()
+                    .ToList();
+
+                Console.WriteLine(
+                    $"Documents reference {documentProjectIds.Count} unique project IDs"
+                );
+
+                // Create a mapping of project IDs to project names
+                var projectMap = projects
+                    .Where(p => documentProjectIds.Contains(p.ProjectId))
+                    .Select(p => new
+                    {
+                        projectId = p.ProjectId,
+                        name = p.Name,
+                        description = p.Description,
+                        status = p.Status,
+                    })
+                    .ToList();
+
+                Console.WriteLine($"Found {projectMap.Count} projects that have documents");
+
+                return Ok(projectMap);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting projects with documents: {ex.Message}");
+                return StatusCode(500, new { error = ex.Message });
             }
         }
 
@@ -599,9 +706,11 @@ namespace ICCMS_API.Controllers
                 if (!fileExists)
                 {
                     // Try to find similar files
-                    var similarFiles = allFiles.Where(f => f.Contains(fileName.Split('_').Last())).ToList();
+                    var similarFiles = allFiles
+                        .Where(f => f.Contains(fileName.Split('_').Last()))
+                        .ToList();
                     Console.WriteLine($"Similar files found: {string.Join(", ", similarFiles)}");
-                    
+
                     return NotFound(
                         new
                         {
@@ -609,7 +718,7 @@ namespace ICCMS_API.Controllers
                             fileName = fileName,
                             bucket = "upload",
                             allFiles = allFiles,
-                            similarFiles = similarFiles
+                            similarFiles = similarFiles,
                         }
                     );
                 }
@@ -637,7 +746,7 @@ namespace ICCMS_API.Controllers
                             message = "File found but empty or download failed",
                             fileName = fileName,
                             bucket = "upload",
-                            allFiles = allFiles
+                            allFiles = allFiles,
                         }
                     );
                 }
@@ -654,7 +763,7 @@ namespace ICCMS_API.Controllers
                         message = "Failed to access file",
                         fileName = fileName,
                         bucket = "upload",
-                        stackTrace = ex.StackTrace
+                        stackTrace = ex.StackTrace,
                     }
                 );
             }

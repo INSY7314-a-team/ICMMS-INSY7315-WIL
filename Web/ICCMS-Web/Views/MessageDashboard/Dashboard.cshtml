@@ -89,12 +89,12 @@
             <button type="button" class="search-btn" onclick="applyFilters()" title="Search">
                 <i class="fas fa-search"></i>
             </button>
-            <button type="button" class="clear-search-btn" onclick="clearFilters()" title="Clear Search">
+            <button type="button" class="clear-search-btn" onclick="clearSearch()" title="Clear Search">
                 <i class="fas fa-times"></i>
             </button>
         </div>
     </div>
-
+    
     <div class="filter-section">
         <div class="d-flex justify-content-center mb-3">
             <button type="button" class="filter-toggle-btn" onclick="toggleFilters()">
@@ -106,84 +106,29 @@
     </div>
 
     <div class="filters-panel" id="filtersPanel" style="display: none;">
+        <!-- User Filter -->
         <div class="filter-group">
-                <div class="filter-group-header">
-                        <h6 class="mb-0">Filters</h6>
-                    </div>
-                <div class="advanced-filters-grid">
-                    <div class="filter-item">
-                        <label class="filter-label">Message Type</label>
-                        <select class="filter-select" id="filterType">
-                            <option value="all" selected="@(Model.CurrentFilter == "all")">All Types</option>
-                            <option value="direct" selected="@(Model.CurrentFilter == "direct")">Direct</option>
-                            <option value="thread" selected="@(Model.CurrentFilter == "thread")">Thread</option>
-                            <option value="broadcast" selected="@(Model.CurrentFilter == "broadcast")">Broadcast</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-item">
-                        <label class="filter-label">Project</label>
-                        <select class="filter-select" id="projectFilter">
-                            <option value="all" selected="@(Model.ProjectFilter == "all")">All Projects</option>
-                            @if (Model.AvailableProjects != null)
-                            {
-                                @foreach (var project in Model.AvailableProjects)
-                                {
-                                    <option value="@project.ProjectId" selected="@(Model.ProjectFilter == project.ProjectId)">@project.ProjectName</option>
-                                }
-                            }
-                        </select>
-                    </div>
-                    
-                    <div class="filter-item">
-                        <label class="filter-label">User</label>
-                        <select class="filter-select" id="userFilter">
-                            <option value="all" selected="@(Model.UserFilter == "all")">All Users</option>
-                            @if (Model.AvailableUsers != null)
-                            {
-                                @foreach (var user in Model.AvailableUsers)
-                                {
-                                    <option value="@user.UserId" selected="@(Model.UserFilter == user.UserId)">@user.UserName</option>
-                                }
-                            }
-                        </select>
-                    </div>
-                    
-                    <div class="filter-item">
-                        <label class="filter-label">Read Status</label>
-                        <select class="filter-select" id="readFilter">
-                            <option value="all" selected="@(Model.ReadFilter == "all")">All Messages</option>
-                            <option value="read" selected="@(Model.ReadFilter == "read")">Read Only</option>
-                            <option value="unread" selected="@(Model.ReadFilter == "unread")">Unread Only</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-item">
-                        <label class="filter-label">Start Date</label>
-                        <div class="date-picker-container">
-                            <input type="date" class="filter-input" id="startDate" value="@Model.StartDate?.ToString("yyyy-MM-dd")">
-                        </div>
-                    </div>
-                    
-                    <div class="filter-item">
-                        <label class="filter-label">End Date</label>
-                        <div class="date-picker-container">
-                            <input type="date" class="filter-input" id="endDate" value="@Model.EndDate?.ToString("yyyy-MM-dd")">
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Filter Actions -->
-                <div class="filter-actions">
-                    <button class="filter-action-btn primary" onclick="applyFilters()">
-                        <i class="fas fa-filter me-2"></i>Apply Filters
-                    </button>
-                    <button class="filter-action-btn secondary" onclick="clearFilters()">
-                        <i class="fas fa-eraser me-2"></i>Clear All
-                    </button>
-                </div>
-                </div>
+            <div class="filter-group-header">
+                <h6 class="mb-0">Filter by User</h6>
             </div>
+            <div class="status-filters">
+                <a href="javascript:void(0)" onclick="applyUserFilter('all')" 
+                   class="status-filter-btn @(Model.UserFilter == "all" ? "active" : "")">
+                    <i class="fas fa-users"></i> All Users
+                </a>
+                @if (Model.AvailableUsers != null)
+                {
+                    @foreach (var user in Model.AvailableUsers.OrderBy(u => u.UserName))
+                    {
+                        <a href="javascript:void(0)" onclick="applyUserFilter('@user.UserId')" 
+                           class="status-filter-btn @(Model.UserFilter == user.UserId ? "active" : "")">
+                            <i class="fas fa-user"></i> @user.UserName
+                        </a>
+                    }
+                }
+            </div>
+        </div>
+    </div>
 
     <!-- Message Threads Display -->
      <div class="section-header">
@@ -281,19 +226,19 @@
                                     </td>
                                     <td class="text-end" onclick="event.stopPropagation();">
                                         <div class="btn-group" role="group">
-                                            <button type="button" class="messages-btn messages-btn-secondary dropdown-toggle" 
+                                            <button type="button" class="user-btn user-btn-secondary dropdown-toggle" 
                                                     data-bs-toggle="dropdown" aria-expanded="false">
                                                 <i class="fas fa-ellipsis-v"></i>
                                             </button>
-                                            <ul class="messages-dropdown-menu dropdown-menu dropdown-menu-end">
+                                            <ul class="user-dropdown-menu dropdown-menu dropdown-menu-end">
                                                 <li>
-                                                    <a class="messages-dropdown-item dropdown-item" href="#" onclick="viewThreadDetails('@thread.ThreadId')">
+                                                    <a class="user-dropdown-item dropdown-item" href="#" onclick="viewThreadDetails('@thread.ThreadId')">
                                                         <i class="fas fa-info-circle"></i>Thread Details
                                                     </a>
                                                 </li>
                                                 <li><hr class="dropdown-divider"></li>
                                                 <li>
-                                                    <a class="messages-dropdown-item dropdown-item" href="#" onclick="confirmDeleteThread('@thread.ThreadId', '@thread.Subject')">
+                                                    <a class="user-dropdown-item dropdown-item" href="#" onclick="confirmDeleteThread('@thread.ThreadId', '@thread.Subject')">
                                                         <i class="fas fa-trash"></i>Delete Thread
                                                     </a>
                                                 </li>
@@ -346,11 +291,11 @@
                                                                 </span>
                                                             }
                                                             
-                                                            <button class="messages-btn messages-btn-info messages-btn-sm" onclick="viewThreadDetails('@thread.ThreadId')">
+                                                            <button class="user-btn user-btn-info user-btn-sm" onclick="viewThreadDetails('@thread.ThreadId')">
                                                                 <i class="fas fa-info-circle"></i> Thread Details
                                                             </button>
                                                             
-                                                            <button class="messages-btn messages-btn-danger messages-btn-sm" onclick="confirmDeleteMessage('@message.MessageId', '@message.SenderName')">
+                                                            <button class="user-btn user-btn-danger user-btn-sm" onclick="confirmDeleteMessage('@message.MessageId', '@message.SenderName')">
                                                                 <i class="fas fa-trash"></i> Delete
                                                             </button>
                                                         </div>
@@ -651,11 +596,11 @@
                                     </span>
                                 ` : ''}
                                 
-                                <button class="messages-btn messages-btn-info messages-btn-sm" onclick="viewThreadDetails('${threadId}')">
+                                <button class="user-btn user-btn-info user-btn-sm" onclick="viewThreadDetails('${threadId}')">
                                     <i class="fas fa-info-circle"></i> Thread Details
                                 </button>
                                 
-                                <button class="messages-btn messages-btn-danger messages-btn-sm" onclick="confirmDeleteMessage('${message.messageId}', '${message.senderName}')">
+                                <button class="user-btn user-btn-danger user-btn-sm" onclick="confirmDeleteMessage('${message.messageId}', '${message.senderName}')">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
                             </div>
@@ -678,13 +623,7 @@
         async function viewThreadDetails(threadId) {
             // Find the thread in the model data
             const threads = @Html.Raw(Json.Serialize(Model.Threads));
-            let foundThread = null;
-            
-            threads.forEach(thread => {
-                if (thread.threadId === threadId) {
-                    foundThread = thread;
-                }
-            });
+            let foundThread = threads.find(t => (t.threadId || t.ThreadId) === threadId);
             
             if (foundThread) {
                 const content = document.getElementById('messageDetailsContent');
@@ -707,9 +646,10 @@
                     const response = await fetch(`/MessageDashboard/GetThreadMessages?threadId=${threadId}`);
                     const data = await response.json();
                     
+                    const participants = foundThread.participants || foundThread.Participants || [];
                     let participantsHtml = '';
-                    if (foundThread.participants && foundThread.participants.length > 0) {
-                        participantsHtml = foundThread.participants.map(participant => 
+                    if (participants.length > 0) {
+                        participantsHtml = participants.map(participant => 
                             `<span class="participant-badge">${participant}</span>`
                         ).join('');
                     } else {
@@ -732,25 +672,37 @@
                         messagesHtml = '<div class="text-muted">No recent messages available</div>';
                     }
                     
-                    const threadAge = Math.floor((new Date() - new Date(foundThread.lastMessageAt)) / (1000 * 60 * 60 * 24));
-                    const activityStatus = threadAge < 1 ? 'Very Active' : threadAge < 7 ? 'Active' : threadAge < 30 ? 'Moderate' : 'Inactive';
-                    const statusColor = threadAge < 1 ? '#6BF178' : threadAge < 7 ? '#F7EC59' : threadAge < 30 ? '#FFB347' : '#FF5964';
+                    const lastMessageAt = new Date(foundThread.lastMessageAt || foundThread.LastMessageAt);
+                    const threadAge = Math.floor((new Date() - lastMessageAt) / (1000 * 60 * 60 * 24));
                     
+                    let activityStatus = 'Inactive';
+                    let activityClass = 'inactive';
+                    if (threadAge < 1) { activityStatus = 'Very Active'; activityClass = 'very-active'; }
+                    else if (threadAge < 7) { activityStatus = 'Active'; activityClass = 'active'; }
+                    else if (threadAge < 30) { activityStatus = 'Moderate'; activityClass = 'moderate'; }
+
+                    const subject = foundThread.subject || foundThread.Subject;
+                    const threadIdShort = (foundThread.threadId || foundThread.ThreadId).substring(0, 8);
+                    const threadType = foundThread.threadType || foundThread.ThreadType;
+                    const messageCount = foundThread.messageCount || foundThread.MessageCount;
+                    const projectName = foundThread.projectName || foundThread.ProjectName;
+                    const projectId = foundThread.projectId || foundThread.ProjectId;
+
                     content.innerHTML = `
                         <div class="thread-details-container">
                             <!-- Thread Header -->
                             <div class="thread-details-header">
                                 <div class="thread-title-section">
                                     <h4 class="thread-title">
-                                        <i class="fas fa-comments me-2"></i>${foundThread.subject}
+                                        <i class="fas fa-comments me-2"></i>${subject}
                                     </h4>
                                     <div class="thread-meta-info">
-                                        <span class="thread-id">ID: ${foundThread.threadId.substring(0, 8)}...</span>
-                                        <span class="thread-type-badge ${foundThread.threadType.toLowerCase()}">${foundThread.threadType}</span>
+                                        <span class="thread-id">ID: ${threadIdShort}...</span>
+                                        <span class="thread-type-badge ${threadType.toLowerCase()}">${threadType}</span>
                                     </div>
                                 </div>
                                 <div class="thread-status-section">
-                                    <div class="activity-indicator" style="background: ${statusColor}">
+                                    <div class="activity-indicator ${activityClass}">
                                         <i class="fas fa-circle"></i>
                                         ${activityStatus}
                                     </div>
@@ -764,7 +716,7 @@
                                         <i class="fas fa-comment-dots"></i>
                                     </div>
                                     <div class="stat-content">
-                                        <div class="stat-number">${foundThread.messageCount}</div>
+                                        <div class="stat-number">${messageCount}</div>
                                         <div class="stat-label">Messages</div>
                                     </div>
                                 </div>
@@ -773,7 +725,7 @@
                                         <i class="fas fa-users"></i>
                                     </div>
                                     <div class="stat-content">
-                                        <div class="stat-number">${foundThread.participants ? foundThread.participants.length : 0}</div>
+                                        <div class="stat-number">${participants.length}</div>
                                         <div class="stat-label">Participants</div>
                                     </div>
                                 </div>
@@ -791,7 +743,7 @@
                                         <i class="fas fa-folder"></i>
                                     </div>
                                     <div class="stat-content">
-                                        <div class="stat-number">${foundThread.projectName ? '1' : '0'}</div>
+                                        <div class="stat-number">${projectName ? '1' : '0'}</div>
                                         <div class="stat-label">Projects</div>
                                     </div>
                                 </div>
@@ -803,15 +755,15 @@
                                     <i class="fas fa-project-diagram"></i> Project Information
                                 </h6>
                                 <div class="project-info">
-                                    <div class="project-name">${foundThread.projectName || 'No Project Assigned'}</div>
-                                    <div class="project-id">Project ID: ${foundThread.projectId || 'N/A'}</div>
+                                    <div class="project-name">${projectName || 'No Project Assigned'}</div>
+                                    <div class="project-id">Project ID: ${projectId || 'N/A'}</div>
                                 </div>
                             </div>
                             
                             <!-- Participants -->
                             <div class="info-section">
                                 <h6 class="info-section-title">
-                                    <i class="fas fa-users"></i> Participants (${foundThread.participants ? foundThread.participants.length : 0})
+                                    <i class="fas fa-users"></i> Participants (${participants.length})
                                 </h6>
                                 <div class="participants-container">
                                     ${participantsHtml}
@@ -838,14 +790,14 @@
                                         <div class="timeline-marker created"></div>
                                         <div class="timeline-content">
                                             <div class="timeline-title">Thread Created</div>
-                                            <div class="timeline-time">${new Date(foundThread.lastMessageAt).toLocaleString()}</div>
+                                            <div class="timeline-time">${lastMessageAt.toLocaleString()}</div>
                                         </div>
                                     </div>
                                     <div class="timeline-item">
                                         <div class="timeline-marker active"></div>
                                         <div class="timeline-content">
                                             <div class="timeline-title">Last Activity</div>
-                                            <div class="timeline-time">${new Date(foundThread.lastMessageAt).toLocaleString()}</div>
+                                            <div class="timeline-time">${lastMessageAt.toLocaleString()}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -1005,12 +957,12 @@
             
             // Get all filter values
             const searchTerm = document.getElementById('searchTerm').value;
-            const filterType = document.getElementById('filterType').value;
-            const projectFilter = document.getElementById('projectFilter').value;
-            const userFilter = document.getElementById('userFilter').value;
-            const readFilter = document.getElementById('readFilter').value;
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
+            const filterType = document.getElementById('filterType') ? document.getElementById('filterType').value : 'all';
+            const projectFilter = document.getElementById('projectFilter') ? document.getElementById('projectFilter').value : 'all';
+            const userFilter = document.getElementById('userFilter') ? document.getElementById('userFilter').value : 'all';
+            const readFilter = document.getElementById('readFilter') ? document.getElementById('readFilter').value : 'all';
+            const startDate = document.getElementById('startDate') ? document.getElementById('startDate').value : '';
+            const endDate = document.getElementById('endDate') ? document.getElementById('endDate').value : '';
             
             // Build URL with all parameters
             const url = new URL(window.location.href);
@@ -1035,13 +987,53 @@
         // Clear filters
         function clearFilters() {
             document.getElementById('searchTerm').value = '';
-            document.getElementById('filterType').value = 'all';
-            document.getElementById('projectFilter').value = 'all';
-            document.getElementById('userFilter').value = 'all';
-            document.getElementById('readFilter').value = 'all';
-            document.getElementById('startDate').value = '';
-            document.getElementById('endDate').value = '';
+            const filterType = document.getElementById('filterType');
+            if(filterType) filterType.value = 'all';
+            const projectFilter = document.getElementById('projectFilter');
+            if(projectFilter) projectFilter.value = 'all';
+            const userFilter = document.getElementById('userFilter');
+            if(userFilter) userFilter.value = 'all';
+            const readFilter = document.getElementById('readFilter');
+            if(readFilter) readFilter.value = 'all';
+            const startDate = document.getElementById('startDate');
+            if(startDate) startDate.value = '';
+            const endDate = document.getElementById('endDate');
+            if(endDate) endDate.value = '';
             
+            applyFilters();
+        }
+
+        // Individual filter functions for card-based filters
+        function applyUserFilter(userId) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('userFilter', userId);
+            url.searchParams.set('page', '1');
+            window.location.href = url.toString();
+        }
+
+        function applyProjectFilter(projectId) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('projectFilter', projectId);
+            url.searchParams.set('page', '1');
+            window.location.href = url.toString();
+        }
+
+        function applyThreadFilter(threadType) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('threadFilter', threadType);
+            url.searchParams.set('page', '1');
+            window.location.href = url.toString();
+        }
+
+        function applyReadFilter(readStatus) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('readFilter', readStatus);
+            url.searchParams.set('page', '1');
+            window.location.href = url.toString();
+        }
+        
+        function clearSearch() {
+            document.getElementById('searchTerm').value = '';
             applyFilters();
         }
 

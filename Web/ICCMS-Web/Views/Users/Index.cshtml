@@ -454,5 +454,23 @@
                 }
             });
         });
+
+        function toggleFilters() {
+            const filtersPanel = document.getElementById('filtersPanel');
+            const filterToggleText = document.getElementById('filterToggleText');
+            const filterToggleIcon = document.getElementById('filterToggleIcon');
+
+            if (filtersPanel.style.display === 'none' || filtersPanel.style.display === '') {
+                filtersPanel.style.display = 'block';
+                filterToggleText.textContent = 'Hide Filters';
+                filterToggleIcon.classList.remove('fa-chevron-down');
+                filterToggleIcon.classList.add('fa-chevron-up');
+            } else {
+                filtersPanel.style.display = 'none';
+                filterToggleText.textContent = 'Show Filters';
+                filterToggleIcon.classList.remove('fa-chevron-up');
+                filterToggleIcon.classList.add('fa-chevron-down');
+            }
+        }
     </script>
 }
