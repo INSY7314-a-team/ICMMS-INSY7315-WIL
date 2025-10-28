@@ -17,17 +17,14 @@ namespace ICCMS_API.Authentication
 
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            var authHeader = Request.Headers["Authorization"].FirstOrDefault();
-            Console.WriteLine($"Authorization header: {authHeader}");
-            
-            var token = authHeader?.Split(" ").Last();
-            Console.WriteLine($"Extracted token: {token?.Substring(0, Math.Min(50, token?.Length ?? 0))}...");
+            if (!Request.Headers.ContainsKey("Authorization"))
+                return AuthenticateResult.Fail("Authorization header was not found.");
 
-            if (string.IsNullOrEmpty(token))
-            {
-                Console.WriteLine("No token provided");
-                return AuthenticateResult.NoResult();
-            }
+            string? bearerToken = Request.Headers["Authorization"];
+            if (string.IsNullOrEmpty(bearerToken) || !bearerToken.StartsWith("Bearer "))
+                return AuthenticateResult.Fail("Invalid token format.");
+
+            var token = bearerToken.Substring("Bearer ".Length);
 
             try
             {
@@ -40,7 +37,6 @@ namespace ICCMS_API.Authentication
                 // Verify Firebase token
                 var firebaseToken = await authService.VerifyTokenAsync(token);
                 Console.WriteLine($"Token verified successfully for UID: {firebaseToken.Uid}");
-                
 
                 // Get user data from Firestore
                 var user = await firebaseService.GetDocumentAsync<Models.User>(

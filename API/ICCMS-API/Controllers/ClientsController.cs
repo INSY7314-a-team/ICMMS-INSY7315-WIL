@@ -17,18 +17,21 @@ namespace ICCMS_API.Controllers
         private readonly ISupabaseService _supabaseService;
         private readonly IQuoteWorkflowService _quoteWorkflow;
         private readonly IAuditLogService _auditLogService;
+        private readonly IWorkflowMessageService _workflowMessageService;
 
         public ClientsController(
             IFirebaseService firebaseService,
             ISupabaseService supabaseService,
             IQuoteWorkflowService quoteWorkflow,
-            IAuditLogService auditLogService
+            IAuditLogService auditLogService,
+            IWorkflowMessageService workflowMessageService
         )
         {
             _firebaseService = firebaseService;
             _supabaseService = supabaseService;
             _quoteWorkflow = quoteWorkflow;
             _auditLogService = auditLogService;
+            _workflowMessageService = workflowMessageService;
         }
 
         [HttpGet("projects")]
@@ -554,6 +557,20 @@ namespace ICCMS_API.Controllers
                     return StatusCode(500, new { error = "Failed to apply client decision" });
                 }
 
+                // Notify Project Manager
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    quotation.ProjectId
+                );
+                if (project != null && !string.IsNullOrEmpty(project.ProjectManagerId))
+                {
+                    await _workflowMessageService.SendQuoteApprovalNotificationAsync(
+                        id,
+                        "Approved",
+                        project.ProjectManagerId
+                    );
+                }
+
                 // Attempt to convert to invoice. This is idempotent in the workflow service.
                 try
                 {
@@ -601,6 +618,21 @@ namespace ICCMS_API.Controllers
                 }
                 quotation.Status = "Rejected";
                 await _firebaseService.UpdateDocumentAsync("quotations", id, quotation);
+
+                // Notify Project Manager
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    quotation.ProjectId
+                );
+                if (project != null && !string.IsNullOrEmpty(project.ProjectManagerId))
+                {
+                    await _workflowMessageService.SendQuoteApprovalNotificationAsync(
+                        id,
+                        "Rejected",
+                        project.ProjectManagerId
+                    );
+                }
+
                 return Ok(quotation);
             }
             catch (Exception ex)

@@ -54,6 +54,51 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpGet("messaging/available-users")]
+        public async Task<IActionResult> GetAvailableUsersForMessaging()
+        {
+            try
+            {
+                var pmId = User.UserId();
+                if (string.IsNullOrEmpty(pmId))
+                {
+                    return Unauthorized("Project Manager not identified.");
+                }
+
+                // Get all projects managed by this PM
+                var allProjects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var pmProjects = allProjects.Where(p => p.ProjectManagerId == pmId).ToList();
+                var pmClientIds = new HashSet<string>(pmProjects.Select(p => p.ClientId));
+
+                // Get all users
+                var allUsers = await _firebaseService.GetCollectionAsync<User>("users");
+
+                // Filter users based on the rule
+                var availableUsers = allUsers
+                    .Where(u =>
+                        u.UserId != pmId
+                        && // Exclude self
+                        u.Role != "Project Manager"
+                        && // Exclude other Project Managers
+                        (
+                            u.Role != "Client"
+                            || (u.Role == "Client" && pmClientIds.Contains(u.UserId))
+                        )
+                    )
+                    .ToList();
+
+                return Ok(availableUsers);
+            }
+            catch (Exception ex)
+            {
+                // Log exception
+                return StatusCode(
+                    500,
+                    "An error occurred while fetching available users for messaging."
+                );
+            }
+        }
+
         [HttpGet("projects/paginated")]
         public async Task<ActionResult<object>> GetProjectsPaginated(
             [FromQuery] int page = 1,
@@ -460,6 +505,8 @@ namespace ICCMS_API.Controllers
                     return Unauthorized(new { error = "Not authorized" });
                 }
 
+                var currentUserId = User.UserId();
+
                 foreach (var task in tasks)
                 {
                     task.ProjectId = id;
@@ -496,6 +543,18 @@ namespace ICCMS_API.Controllers
                         task.TaskId,
                         normalizedTask
                     );
+
+                    if (
+                        !string.IsNullOrEmpty(normalizedTask.AssignedTo)
+                        && !string.IsNullOrEmpty(currentUserId)
+                    )
+                    {
+                        await _workflowMessageService.SendTaskAssignmentNotificationAsync(
+                            normalizedTask.TaskId,
+                            normalizedTask.AssignedTo,
+                            currentUserId
+                        );
+                    }
                 }
                 return Ok(new { saved = tasks.Count });
             }
@@ -946,15 +1005,37 @@ namespace ICCMS_API.Controllers
                     "tasks",
                     taskId
                 );
+
+                var currentUserId = User.UserId();
+                var isNowAssigned = !string.IsNullOrEmpty(normalizedTask.AssignedTo);
+
                 if (existing != null)
                 {
+                    var assignmentChanged = existing.AssignedTo != normalizedTask.AssignedTo;
                     await _firebaseService.UpdateDocumentAsync("tasks", taskId, normalizedTask);
                     Console.WriteLine($"SaveTask: Updated existing task {taskId}");
+
+                    if (assignmentChanged && isNowAssigned && !string.IsNullOrEmpty(currentUserId))
+                    {
+                        await _workflowMessageService.SendTaskAssignmentNotificationAsync(
+                            normalizedTask.TaskId,
+                            normalizedTask.AssignedTo,
+                            currentUserId
+                        );
+                    }
                 }
                 else
                 {
                     await _firebaseService.AddDocumentWithIdAsync("tasks", taskId, normalizedTask);
                     Console.WriteLine($"SaveTask: Created new task {taskId}");
+                    if (isNowAssigned && !string.IsNullOrEmpty(currentUserId))
+                    {
+                        await _workflowMessageService.SendTaskAssignmentNotificationAsync(
+                            normalizedTask.TaskId,
+                            normalizedTask.AssignedTo,
+                            currentUserId
+                        );
+                    }
                 }
             }
             catch (Exception ex)

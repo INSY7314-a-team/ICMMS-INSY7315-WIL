@@ -32,23 +32,16 @@ namespace ICCMS_API.Models
 
     public class CreateMessageRequest
     {
-        [Required(ErrorMessage = "Sender ID is required")]
         public string SenderId { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Receiver ID is required")]
         public string ReceiverId { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Project ID is required")]
         public string ProjectId { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Subject is required")]
         [StringLength(
             MessageValidationRules.MaxSubjectLength,
             ErrorMessage = "Subject cannot exceed 200 characters"
         )]
         public string Subject { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Content is required")]
         [StringLength(
             MessageValidationRules.MaxContentLength,
             MinimumLength = MessageValidationRules.MinContentLength,

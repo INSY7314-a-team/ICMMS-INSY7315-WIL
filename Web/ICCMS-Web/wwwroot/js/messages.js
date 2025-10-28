@@ -151,6 +151,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function renderMessages(messages) {
     const messagesContainer = document.getElementById("messagesContainer");
+    messagesContainer.innerHTML = ""; // Clear existing messages to prevent duplication
     if (!messages || messages.length === 0) {
       messagesContainer.innerHTML =
         "<p>No messages in this conversation yet.</p>";
@@ -266,6 +267,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function markThreadAsRead(threadId) {
+    console.log(`[markThreadAsRead] Marking thread ${threadId} as read.`);
     fetch("/Messages/MarkThreadAsRead", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -273,17 +275,25 @@ document.addEventListener("DOMContentLoaded", function () {
     })
       .then((res) => res.json())
       .then((data) => {
+        console.log("[markThreadAsRead] Response from server:", data);
         if (data.success) {
+          console.log("[markThreadAsRead] Server reported success.");
           const threadItem = document.querySelector(
             `.thread-item[data-thread-id="${threadId}"]`
           );
           if (threadItem) threadItem.classList.remove("unread");
+          updateUnreadCountBadge(data.unreadCount);
           // Since this might affect the total count, let's refresh the threads
           // This will ensure the data is consistent
           const activeTab = document
             .querySelector(".tab-button.active")
             .id.replace("-tab", "");
           loadThreads(activeTab);
+        } else {
+          console.warn(
+            "[markThreadAsRead] Server reported failure:",
+            data.message
+          );
         }
       });
   }
@@ -301,6 +311,22 @@ document.addEventListener("DOMContentLoaded", function () {
       .forEach((el) => el.classList.remove("active"));
     threadView.style.display = "none";
     noThreadSelected.style.display = "flex";
+    document.getElementById("messagesContainer").innerHTML = ""; // Clear messages on close
+  }
+
+  function updateUnreadCountBadge(count) {
+    const badge = document.getElementById("unreadMessagesCount");
+    if (badge) {
+      console.log(
+        `[updateUnreadCountBadge] Updating badge with count: ${count}`
+      );
+      if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
+      }
+    }
   }
 
   // --- Run ---

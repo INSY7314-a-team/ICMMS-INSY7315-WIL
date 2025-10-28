@@ -38,19 +38,32 @@ namespace ICCMS_API.Services
         {
             var result = new MessageValidationResult { IsValid = true };
 
+            // If ThreadId is provided, we're replying to an existing thread
+            // In this case, some fields will be populated from the thread data
+            bool isThreadReply = !string.IsNullOrEmpty(request.ThreadId);
+
             // Basic field validation
             if (string.IsNullOrWhiteSpace(request.SenderId))
                 result.Errors.Add("Sender ID is required");
 
-            if (string.IsNullOrWhiteSpace(request.ReceiverId))
-                result.Errors.Add("Receiver ID is required");
+            // For thread replies, ReceiverId, ProjectId, and Subject will be populated from thread
+            if (!isThreadReply)
+            {
+                if (string.IsNullOrWhiteSpace(request.ReceiverId))
+                    result.Errors.Add("Receiver ID is required");
 
-            if (string.IsNullOrWhiteSpace(request.ProjectId))
-                result.Errors.Add("Project ID is required");
+                if (string.IsNullOrWhiteSpace(request.ProjectId))
+                    result.Errors.Add("Project ID is required");
 
-            if (string.IsNullOrWhiteSpace(request.Subject))
-                result.Errors.Add("Subject is required");
-            else if (request.Subject.Length > MessageValidationRules.MaxSubjectLength)
+                if (string.IsNullOrWhiteSpace(request.Subject))
+                    result.Errors.Add("Subject is required");
+            }
+
+            // Subject length validation (only if subject is provided)
+            if (
+                !string.IsNullOrWhiteSpace(request.Subject)
+                && request.Subject.Length > MessageValidationRules.MaxSubjectLength
+            )
                 result.Errors.Add(
                     $"Subject cannot exceed {MessageValidationRules.MaxSubjectLength} characters"
                 );
@@ -77,7 +90,8 @@ namespace ICCMS_API.Services
                     result.Errors.Add("Sender not found");
             }
 
-            if (!string.IsNullOrEmpty(request.ReceiverId))
+            // Only validate receiver if it's provided (not a thread reply)
+            if (!isThreadReply && !string.IsNullOrEmpty(request.ReceiverId))
             {
                 var receiver = await _firebaseService.GetDocumentAsync<User>(
                     "users",
@@ -87,8 +101,11 @@ namespace ICCMS_API.Services
                     result.Errors.Add("Receiver not found");
             }
 
-            // Spam detection
-            if (await IsSpamAsync(request.SenderId, request.Content, request.ProjectId))
+            // Spam detection (only if we have a ProjectId)
+            if (
+                !string.IsNullOrEmpty(request.ProjectId)
+                && await IsSpamAsync(request.SenderId, request.Content, request.ProjectId)
+            )
             {
                 result.Errors.Add("Message appears to be spam");
                 result.Severity = ValidationSeverity.Critical;

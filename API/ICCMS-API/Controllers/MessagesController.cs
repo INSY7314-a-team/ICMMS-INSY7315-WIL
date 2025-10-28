@@ -426,7 +426,17 @@ namespace ICCMS_API.Controllers
         {
             try
             {
-                // 1. Validate the request
+                // 1. Get sender ID from authenticated user
+                var senderId = User.UserId();
+                if (string.IsNullOrEmpty(senderId))
+                {
+                    return Unauthorized("Sender not identified.");
+                }
+
+                // 2. Populate sender ID in request for validation
+                request.SenderId = senderId;
+
+                // 3. Validate the request
                 var validationResult = await _validationService.ValidateMessageAsync(request);
                 if (!validationResult.IsValid)
                 {
@@ -440,16 +450,10 @@ namespace ICCMS_API.Controllers
                     );
                 }
 
-                var senderId = User.UserId();
-                if (string.IsNullOrEmpty(senderId))
-                {
-                    return Unauthorized("Sender not identified.");
-                }
-
                 MessageThread thread;
                 bool isNewThread = false;
 
-                // 2. Find or Create the Thread
+                // 4. Find or Create the Thread
                 if (!string.IsNullOrEmpty(request.ThreadId))
                 {
                     // A threadId was provided, so we're replying.
@@ -457,9 +461,78 @@ namespace ICCMS_API.Controllers
                         "threads",
                         request.ThreadId
                     );
+
                     if (thread == null)
                     {
-                        return BadRequest("Thread not found.");
+                        // Thread not found in threads collection. Try to reconstruct from existing messages.
+                        Console.WriteLine(
+                            $"[CreateMessage] Thread {request.ThreadId} not found in threads collection. Attempting to reconstruct from messages."
+                        );
+
+                        var messages = await _firebaseService.GetCollectionAsync<Message>(
+                            "messages"
+                        );
+                        var threadMessages = messages
+                            .Where(m => m.ThreadId == request.ThreadId)
+                            .ToList();
+
+                        if (!threadMessages.Any())
+                        {
+                            return BadRequest(
+                                "Thread not found - no messages exist for this thread."
+                            );
+                        }
+
+                        var firstMessage = threadMessages.OrderBy(m => m.SentAt).First();
+
+                        // Reconstruct thread from message data
+                        thread = new MessageThread
+                        {
+                            ThreadId = request.ThreadId,
+                            Subject = firstMessage.Subject,
+                            ProjectId = firstMessage.ProjectId,
+                            Participants = firstMessage.ThreadParticipants ?? new List<string>(),
+                            CreatedAt = firstMessage.SentAt,
+                            IsActive = true,
+                            ThreadType =
+                                (firstMessage.ThreadParticipants?.Count ?? 0) > 2
+                                    ? "group"
+                                    : "direct",
+                            StarterMessageId = firstMessage.MessageId,
+                            LastMessageId = threadMessages
+                                .OrderByDescending(m => m.SentAt)
+                                .First()
+                                .MessageId,
+                            LastMessageAt = threadMessages.Max(m => m.SentAt),
+                        };
+
+                        // Save the reconstructed thread to the threads collection
+                        await _firebaseService.AddDocumentWithIdAsync(
+                            "threads",
+                            thread.ThreadId,
+                            thread
+                        );
+                        Console.WriteLine(
+                            $"[CreateMessage] Reconstructed and saved thread {thread.ThreadId} to threads collection."
+                        );
+                    }
+
+                    Console.WriteLine(
+                        $"[CreateMessage] Replying to thread {thread.ThreadId}. Populating details."
+                    );
+
+                    // Populate request fields from thread for validation and message creation
+                    request.ProjectId = thread.ProjectId;
+                    request.Subject = thread.Subject;
+                    request.ThreadParticipants = thread.Participants;
+
+                    // If replying to a thread, and ReceiverId is not provided, find it.
+                    if (string.IsNullOrEmpty(request.ReceiverId))
+                    {
+                        request.ReceiverId = thread.Participants.FirstOrDefault(p => p != senderId);
+                        Console.WriteLine(
+                            $"[CreateMessage] ReceiverId was missing. Inferred as {request.ReceiverId}."
+                        );
                     }
                 }
                 else if (
@@ -500,7 +573,7 @@ namespace ICCMS_API.Controllers
                     return BadRequest("New direct messages must have exactly two participants.");
                 }
 
-                // 3. Create the Message
+                // 5. Create the Message
                 var message = new Message
                 {
                     MessageId = Guid.NewGuid().ToString(),
@@ -516,9 +589,13 @@ namespace ICCMS_API.Controllers
                     IsRead = false,
                     MessageType = "direct",
                 };
-                await _firebaseService.AddDocumentAsync("messages", message);
+                await _firebaseService.AddDocumentWithIdAsync(
+                    "messages",
+                    message.MessageId,
+                    message
+                );
 
-                // 4. Update and Save the Thread Document
+                // 6. Update and Save the Thread Document
                 thread.LastMessageAt = message.SentAt;
                 if (isNewThread)
                 {
@@ -529,7 +606,7 @@ namespace ICCMS_API.Controllers
                     await _firebaseService.UpdateDocumentAsync("threads", thread.ThreadId, thread);
                 }
 
-                // 5. Return a detailed success response
+                // 7. Return a detailed success response
                 return Ok(
                     new
                     {
@@ -595,7 +672,11 @@ namespace ICCMS_API.Controllers
                     ThreadParticipants = parentMessage.ThreadParticipants,
                 };
 
-                await _firebaseService.AddDocumentAsync("messages", replyMessage);
+                await _firebaseService.AddDocumentWithIdAsync(
+                    "messages",
+                    replyMessage.MessageId,
+                    replyMessage
+                );
 
                 // Update thread information
                 await UpdateThreadAsync(replyMessage);
@@ -801,21 +882,44 @@ namespace ICCMS_API.Controllers
                     return Unauthorized(new { message = "User not authenticated." });
                 }
 
+                // First, verify the thread exists in the threads collection
+                var thread = await _firebaseService.GetDocumentAsync<MessageThread>(
+                    "threads",
+                    threadId
+                );
+                if (thread == null)
+                {
+                    Console.WriteLine(
+                        $"======== [MarkThreadAsRead] Thread {threadId} not found in threads collection ========"
+                    );
+                    return BadRequest("Thread not found.");
+                }
+
+                // Check if user is a participant of this thread
+                if (thread.Participants == null || !thread.Participants.Contains(userId))
+                {
+                    Console.WriteLine(
+                        $"======== [MarkThreadAsRead] User {userId} is not a participant of thread {threadId} ========"
+                    );
+                    return Forbid("User is not a participant of this thread.");
+                }
+
                 var messages = await _firebaseService.GetCollectionAsync<Message>("messages");
                 var threadMessages = messages.Where(m => m.ThreadId == threadId).ToList();
 
-                if (!threadMessages.Any())
+                Console.WriteLine(
+                    $"======== [MarkThreadAsRead] Found {threadMessages.Count} total messages in thread {threadId} ========"
+                );
+                foreach (var msg in threadMessages)
                 {
-                    return Ok(new { message = "Thread not found or no messages in thread." });
+                    Console.WriteLine(
+                        $"======== [MarkThreadAsRead] Message {msg.MessageId}: Sender={msg.SenderId}, Receiver={msg.ReceiverId}, IsRead={msg.IsRead}, Participants={string.Join(",", msg.ThreadParticipants ?? new List<string>())} ========"
+                    );
                 }
 
-                var firstMessage = threadMessages.First();
-                if (
-                    firstMessage.ThreadParticipants == null
-                    || !firstMessage.ThreadParticipants.Contains(userId)
-                )
+                if (!threadMessages.Any())
                 {
-                    return Forbid("User is not a participant of this thread.");
+                    return Ok(new { message = "No messages found in thread." });
                 }
 
                 var messagesToUpdate = threadMessages
@@ -832,6 +936,17 @@ namespace ICCMS_API.Controllers
                     )
                     .ToList();
 
+                Console.WriteLine(
+                    $"======== [MarkThreadAsRead] Found {messagesToUpdate.Count} messages to mark as read for user {userId} in thread {threadId} ========"
+                );
+
+                if (messagesToUpdate.Count > 0)
+                {
+                    Console.WriteLine(
+                        $"======== [MarkThreadAsRead] Message IDs to update: {string.Join(", ", messagesToUpdate.Select(m => m.MessageId))} ========"
+                    );
+                }
+
                 var updateTasks = new List<Task>();
                 foreach (var message in messagesToUpdate)
                 {
@@ -843,13 +958,103 @@ namespace ICCMS_API.Controllers
                 }
 
                 await Task.WhenAll(updateTasks);
+                Console.WriteLine(
+                    $"======== [MarkThreadAsRead] Completed updating {updateTasks.Count} messages in Firebase ========"
+                );
 
-                return Ok(new { message = $"{messagesToUpdate.Count} message(s) marked as read." });
+                // Verify the updates worked by re-fetching
+                var verifyMessages = await _firebaseService.GetCollectionAsync<Message>("messages");
+                var verifyThreadMessages = verifyMessages
+                    .Where(m => m.ThreadId == threadId)
+                    .ToList();
+                var stillUnread = verifyThreadMessages
+                    .Where(m =>
+                        (
+                            m.ReceiverId == userId
+                            || (
+                                m.ThreadParticipants != null
+                                && m.ThreadParticipants.Contains(userId)
+                            )
+                        )
+                        && m.SenderId != userId
+                        && !m.IsRead
+                    )
+                    .ToList();
+
+                Console.WriteLine(
+                    $"======== [MarkThreadAsRead] After update verification: {stillUnread.Count} messages still unread in this thread ========"
+                );
+                if (stillUnread.Any())
+                {
+                    foreach (var msg in stillUnread)
+                    {
+                        Console.WriteLine(
+                            $"======== [MarkThreadAsRead] Still unread: {msg.MessageId} (IsRead={msg.IsRead}) ========"
+                        );
+                    }
+                }
+
+                var unreadCount = await GetUnreadCountForUser(userId);
+                Console.WriteLine(
+                    $"======== [MarkThreadAsRead] Recalculated unread count for user {userId} is {unreadCount}. ========"
+                );
+
+                return Ok(
+                    new
+                    {
+                        message = $"{messagesToUpdate.Count} message(s) marked as read.",
+                        unreadCount = unreadCount,
+                    }
+                );
             }
             catch (Exception ex)
             {
                 // Log the exception
                 return StatusCode(500, new { message = $"An error occurred: {ex.Message}" });
+            }
+        }
+
+        [HttpPost("cleanup-duplicates")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public async Task<IActionResult> CleanupDuplicateMessages()
+        {
+            try
+            {
+                var messages = await _firebaseService.GetCollectionAsync<Message>("messages");
+                var groupedByMessageId = messages.GroupBy(m => m.MessageId);
+
+                var duplicatesRemoved = 0;
+                foreach (var group in groupedByMessageId.Where(g => g.Count() > 1))
+                {
+                    // Keep the most recently read message, or if none are read, keep the most recent one
+                    var messagesToRemove = group
+                        .OrderByDescending(m => m.IsRead)
+                        .ThenByDescending(m => m.SentAt)
+                        .Skip(1) // Skip the first (best) one
+                        .ToList();
+
+                    foreach (var message in messagesToRemove)
+                    {
+                        // We need to find the document by its Firestore ID, not MessageId
+                        // This is tricky because we don't have the Firestore document ID stored
+                        // For now, we'll just log the issue
+                        Console.WriteLine(
+                            $"======== [Cleanup] Found duplicate MessageId: {message.MessageId}, IsRead: {message.IsRead} ========"
+                        );
+                        duplicatesRemoved++;
+                    }
+                }
+
+                return Ok(
+                    new
+                    {
+                        message = $"Found {duplicatesRemoved} duplicate messages. Manual cleanup required due to Firestore ID mismatch.",
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Error during cleanup: {ex.Message}" });
             }
         }
 
@@ -1480,6 +1685,72 @@ namespace ICCMS_API.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"Error getting unread count: {ex.Message}");
+                return 0;
+            }
+        }
+
+        private async Task<int> GetUnreadCountForUser(string userId)
+        {
+            try
+            {
+                var messages = await _firebaseService.GetCollectionAsync<Message>("messages");
+
+                // Group messages by MessageId to handle duplicates
+                var messagesById = messages.GroupBy(m => m.MessageId);
+
+                var unreadMessageIds = new HashSet<string>();
+                foreach (var messageGroup in messagesById)
+                {
+                    // A message is considered unread if ANY of its duplicates is unread
+                    // (since we might have updated some but not all duplicates)
+                    var isAnyUnread = messageGroup.Any(m =>
+                        !m.IsRead
+                        && m.SenderId != userId
+                        && (
+                            m.ReceiverId == userId
+                            || (
+                                m.ThreadParticipants != null
+                                && m.ThreadParticipants.Contains(userId)
+                            )
+                        )
+                    );
+
+                    if (isAnyUnread)
+                    {
+                        unreadMessageIds.Add(messageGroup.Key);
+                    }
+                }
+
+                Console.WriteLine(
+                    $"======== [GetUnreadCountForUser] Found {unreadMessageIds.Count} unique unread messages for user {userId} ========"
+                );
+
+                if (unreadMessageIds.Any())
+                {
+                    // Get thread breakdown
+                    var unreadMessages = messages
+                        .Where(m => unreadMessageIds.Contains(m.MessageId))
+                        .ToList();
+                    var unreadByThread = unreadMessages.GroupBy(m => m.ThreadId ?? "NoThread");
+                    foreach (var threadGroup in unreadByThread)
+                    {
+                        Console.WriteLine(
+                            $"======== [GetUnreadCountForUser] Thread {threadGroup.Key}: {threadGroup.Count()} unread messages ========"
+                        );
+                        foreach (var msg in threadGroup)
+                        {
+                            Console.WriteLine(
+                                $"======== [GetUnreadCountForUser]   - Message {msg.MessageId}: Sender={msg.SenderId}, Receiver={msg.ReceiverId} ========"
+                            );
+                        }
+                    }
+                }
+
+                return unreadMessageIds.Count;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting unread count for user {userId}: {ex.Message}");
                 return 0;
             }
         }

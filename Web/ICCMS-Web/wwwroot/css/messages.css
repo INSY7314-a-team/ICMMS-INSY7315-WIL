@@ -294,8 +294,8 @@ body {
 }
 
 .user-message-right .message-content {
-    background-color: var(--accent-yellow);
-    color: var(--text-dark);
+    background-color: var(--secondary-bg);
+    color: var(--text-primary);
     border-top-right-radius: 4px;
     border: 1px solid var(--accent-yellow);
 }

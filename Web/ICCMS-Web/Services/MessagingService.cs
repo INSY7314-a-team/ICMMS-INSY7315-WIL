@@ -55,7 +55,7 @@ namespace ICCMS_Web.Services
                     subject
                 );
 
-                var result = await _apiClient.PostAsync<string>(
+                var result = await _apiClient.PostAsync<CreateMessageResponse>(
                     "/api/messages",
                     messageRequest,
                     currentUser
@@ -63,7 +63,7 @@ namespace ICCMS_Web.Services
 
                 _logger.LogInformation("Message creation result: {Result}", result);
 
-                if (!string.IsNullOrEmpty(result))
+                if (result != null && !string.IsNullOrEmpty(result.MessageId))
                 {
                     _logger.LogInformation(
                         "Message sent successfully from {SenderId} to {ReceiverId}",
@@ -224,7 +224,22 @@ namespace ICCMS_Web.Services
                 if (messages == null)
                     return 0;
 
-                return messages.Count(m => !m.IsRead && m.ReceiverId == userId);
+                // Handle duplicates: group by MessageId and count unique unread messages
+                return messages
+                    .GroupBy(m => m.MessageId)
+                    .Count(msgGroup =>
+                        msgGroup.Any(m =>
+                            !m.IsRead
+                            && m.SenderId != userId
+                            && (
+                                m.ReceiverId == userId
+                                || (
+                                    m.ThreadParticipants != null
+                                    && m.ThreadParticipants.Contains(userId)
+                                )
+                            )
+                        )
+                    );
             }
             catch (Exception ex)
             {
@@ -233,7 +248,7 @@ namespace ICCMS_Web.Services
             }
         }
 
-        public async Task<bool> MarkThreadAsReadAsync(string threadId, string userId)
+        public async Task<MarkAsReadResponse?> MarkThreadAsReadAsync(string threadId, string userId)
         {
             try
             {
@@ -241,21 +256,32 @@ namespace ICCMS_Web.Services
                 if (currentUser == null)
                 {
                     _logger.LogWarning("No authenticated user found for marking thread as read");
-                    return false;
+                    return null;
                 }
 
-                var response = await _apiClient.PostAsync<object>(
+                var response = await _apiClient.PostAsync<MarkAsReadResponse>(
                     $"/api/messages/thread/{threadId}/mark-as-read",
                     new { }, // Empty body
                     currentUser
                 );
 
-                return response != null;
+                if (response != null)
+                {
+                    _logger.LogInformation(
+                        $"[MarkThreadAsReadAsync] Successfully marked thread {threadId} as read. New unread count from API: {response.UnreadCount}"
+                    );
+                    return response;
+                }
+
+                _logger.LogWarning(
+                    $"[MarkThreadAsReadAsync] Failed to mark thread {threadId} as read. API response was null."
+                );
+                return null;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error marking thread {ThreadId} as read", threadId);
-                return false;
+                return null;
             }
         }
 

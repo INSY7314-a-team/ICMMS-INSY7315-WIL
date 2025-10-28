@@ -303,52 +303,21 @@ namespace ICCMS_Web.Controllers
                     currentUserId
                 );
 
-                // Get the thread to find the other participant
-                var threadMessages = await _apiClient.GetAsync<List<MessageDto>>(
-                    $"/api/messages/user/{currentUserId}",
-                    User
-                );
-
-                if (threadMessages == null || !threadMessages.Any())
-                {
-                    return Json(new { success = false, message = "No messages found" });
-                }
-
-                // Find a message from this thread to get the other participant
-                var threadMessage = threadMessages.FirstOrDefault(m =>
-                    m.ThreadId == request.ThreadId
-                );
-                if (threadMessage == null)
-                {
-                    return Json(new { success = false, message = "Thread not found" });
-                }
-
-                // Determine the receiver (the other participant in the thread)
-                var receiverId =
-                    threadMessage.SenderId == currentUserId
-                        ? threadMessage.ReceiverId
-                        : threadMessage.SenderId;
-
-                // Create a new message in the thread
+                // Let the API handle the logic of finding participants and details.
+                // The web client only needs to provide the thread and the content.
                 var messageRequest = new CreateMessageRequest
                 {
-                    SenderId = currentUserId,
-                    ReceiverId = receiverId,
-                    ProjectId = threadMessage.ProjectId,
-                    Subject = threadMessage.Subject, // Keep the same subject
                     Content = request.Content,
-                    MessageType = "thread", // This will be a thread message
-                    ThreadId = request.ThreadId, // Use existing thread ID
-                    ThreadParticipants = threadMessage.ThreadParticipants,
+                    ThreadId = request.ThreadId,
                 };
 
-                var result = await _apiClient.PostAsync<string>(
+                var result = await _apiClient.PostAsync<CreateMessageResponse>(
                     "/api/messages",
                     messageRequest,
                     User
                 );
 
-                if (!string.IsNullOrEmpty(result))
+                if (result != null && !string.IsNullOrEmpty(result.MessageId))
                 {
                     _logger.LogInformation(
                         "Thread message sent successfully to thread {ThreadId}",
@@ -421,13 +390,13 @@ namespace ICCMS_Web.Controllers
                     content = request.Content,
                 };
 
-                var result = await _apiClient.PostAsync<string>(
+                var result = await _apiClient.PostAsync<CreateMessageResponse>(
                     "/api/messages/reply",
                     replyRequest,
                     User
                 );
 
-                if (!string.IsNullOrEmpty(result))
+                if (result != null && !string.IsNullOrEmpty(result.MessageId))
                 {
                     _logger.LogInformation(
                         "Reply sent successfully to message {ParentMessageId}",
@@ -474,19 +443,43 @@ namespace ICCMS_Web.Controllers
                     return Json(new { success = false, message = "Thread ID is required" });
                 }
 
-                var success = await _messagingService.MarkThreadAsReadAsync(
+                _logger.LogInformation(
+                    $"[MarkThreadAsRead] Attempting to mark thread {request.ThreadId} as read for user {currentUserId}."
+                );
+
+                var response = await _messagingService.MarkThreadAsReadAsync(
                     request.ThreadId,
                     currentUserId
                 );
-                return Json(
-                    new
-                    {
-                        success = success,
-                        message = success
-                            ? "Thread marked as read"
-                            : "Failed to mark thread as read",
-                    }
-                );
+
+                if (response != null)
+                {
+                    _logger.LogInformation(
+                        $"[MarkThreadAsRead] Service returned success. New unread count is {response.UnreadCount}."
+                    );
+                    return Json(
+                        new
+                        {
+                            success = true,
+                            message = "Thread marked as read",
+                            unreadCount = response.UnreadCount,
+                        }
+                    );
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        $"[MarkThreadAsRead] Service returned failure for thread {request.ThreadId}."
+                    );
+                    return Json(
+                        new
+                        {
+                            success = false,
+                            message = "Failed to mark thread as read",
+                            unreadCount = -1,
+                        }
+                    );
+                }
             }
             catch (Exception ex)
             {
@@ -760,8 +753,17 @@ namespace ICCMS_Web.Controllers
                                 .ToList(),
                             ParticipantNames = new List<string>(), // Will be populated if needed
                             ThreadType = "direct",
-                            HasUnreadMessages = group.Any(m => !m.IsRead),
-                            UnreadCount = group.Count(m => !m.IsRead),
+                            // Handle duplicates: group by MessageId and check if any duplicate is unread
+                            HasUnreadMessages = group
+                                .GroupBy(m => m.MessageId)
+                                .Any(msgGroup =>
+                                    msgGroup.Any(m => !m.IsRead && m.SenderId != userId)
+                                ),
+                            UnreadCount = group
+                                .GroupBy(m => m.MessageId)
+                                .Count(msgGroup =>
+                                    msgGroup.Any(m => !m.IsRead && m.SenderId != userId)
+                                ),
                             IsActive = false,
                         })
                         .OrderByDescending(t => t.LastMessageAt)
@@ -1042,6 +1044,16 @@ namespace ICCMS_Web.Controllers
                         _logger.LogInformation("No client users returned from API or empty array");
                     }
                 }
+                else if (userRole == "Project Manager")
+                {
+                    _logger.LogInformation("Using project manager-specific endpoint for users");
+                    allUsers =
+                        await _apiClient.GetAsync<List<UserDto>>(
+                            "/api/projectmanager/messaging/available-users",
+                            User
+                        ) ?? new List<UserDto>();
+                    allUsers = allUsers.Where(u => u.UserId != currentUserId).ToList();
+                }
                 else
                 {
                     // Admins and PMs use the original endpoint
@@ -1055,30 +1067,7 @@ namespace ICCMS_Web.Controllers
 
                 _logger.LogInformation("Retrieved {Count} total users from API", allUsers.Count);
 
-                var filteredUsers = new List<UserDto>();
-
-                foreach (var user in allUsers)
-                {
-                    // Skip self
-                    if (user.UserId == currentUserId)
-                        continue;
-
-                    // Apply role-based filtering
-                    if (CanUserMessage(currentUserId, userRole, user.UserId, user.Role))
-                    {
-                        // The API endpoints already handle complex filtering for Contractors and Clients
-                        // No need for additional filtering here - trust the API
-                        filteredUsers.Add(user);
-                    }
-                    else
-                    {
-                        _logger.LogInformation(
-                            "User {UserId} ({Role}) filtered out due to role restrictions",
-                            user.UserId,
-                            user.Role
-                        );
-                    }
-                }
+                var filteredUsers = allUsers.Where(u => u.UserId != currentUserId).ToList();
 
                 _logger.LogInformation(
                     "Filtered {Count} available users for {Role} user {UserId}",
