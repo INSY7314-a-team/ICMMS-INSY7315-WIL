@@ -1248,7 +1248,18 @@ namespace ICCMS_Web.Controllers
 
             // 4. Validate required fields and set status
             bool isComplete = ValidateRequiredFields(request.Project);
-            request.Project.Status = isComplete ? "Planning" : "Draft";
+            
+            // Respect explicit Draft status from frontend, otherwise use validation logic
+            if (request.Project.Status?.Equals("Draft", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                // Keep as Draft if explicitly requested
+                request.Project.Status = "Draft";
+            }
+            else
+            {
+                // Use validation logic for other cases
+                request.Project.Status = isComplete ? "Planning" : "Draft";
+            }
 
             _logger.LogInformation(
                 "SaveProject: ProjectId={ProjectId}, Status={Status}, IsComplete={IsComplete}",
@@ -1527,6 +1538,33 @@ namespace ICCMS_Web.Controllers
             {
                 _logger.LogError(ex, "Error retrieving draft project {Id}", id);
                 return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get a single project by ID (for editing drafts)
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetProject(string id)
+        {
+            try
+            {
+                var project = await _apiClient.GetAsync<ProjectDto>(
+                    $"/api/projectmanager/project/{id}",
+                    User
+                );
+                
+                if (project == null)
+                {
+                    return Json(new { success = false, error = "Project not found" });
+                }
+                
+                return Json(project);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving project {Id}", id);
+                return Json(new { success = false, error = "Failed to retrieve project" });
             }
         }
 

@@ -43,7 +43,7 @@ namespace ICCMS_API.Controllers
             [FromBody] TokenVerificationRequest request
         )
         {
-j            string? userId = null;
+            string? userId = null;
             string? userEmail = null;
             
             try

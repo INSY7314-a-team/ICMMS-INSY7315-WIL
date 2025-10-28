@@ -11,6 +11,7 @@
 @await Html.PartialAsync("_EstimateEditorModal")
 @await Html.PartialAsync("_ProjectEstimatesModal")
 @await Html.PartialAsync("_ProjectCreationWizard", Model)
+@await Html.PartialAsync("_ProjectEditWizard")
 @await Html.PartialAsync("_PlanEditorModal")
 
 <div class="pm-dashboard-container">
@@ -18,10 +19,10 @@
     <div class="dashboard-header">
         <div class="d-flex justify-content-between align-items-center">
             <div>
-                <h1 class="dashboard-title">
+        <h1 class="dashboard-title">
                     <i class="fa-solid fa-user-tie me-3" style="color: #F7EC59;"></i>@User.Identity.Name Dashboard
-                </h1>
-                <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Manage your projects and quotations</p>
+        </h1>
+        <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Manage your projects and quotations</p>
             </div>
         </div>
     </div>
@@ -113,7 +114,7 @@
 
     <!-- Enhanced Filters Section -->
     <div class="filter-section">
-        <div class="d-flex justify-content-center">
+        <div class="d-flex justify-content-center mb-3">
             <button type="button" class="filter-toggle-btn" onclick="toggleFilters()">
                 <i class="fa-solid fa-sliders-h me-2"></i>
                 <span id="filterToggleText">Show Filters</span>
@@ -121,100 +122,45 @@
             </button>
         </div>
     </div>
-
-    <!-- Enhanced Filters Panel -->
     <div class="filters-panel" id="filtersPanel" style="display: none;">
-        <div class="filters-container">
-            <!-- Quick Status Filters -->
-            <div class="filter-group">
-                <div class="filter-group-header">
-                    <h6 class="mb-0">Project Status</h6>
-                </div>
-                <div class="status-filters">
-                    @{
-                        var statuses = (Model.AvailableStatuses ?? new List<string>());
-                    }
-                    @{
-                        if (!statuses.Contains("Planning"))
-                        {
-                            statuses =
-                            statuses.Concat(new[] { "Planning" }).ToList();
-                        }
-                    }
-                    @foreach (var status in statuses)
+        <div class="filter-group">
+            <div class="filter-group-header">
+                <h6 class="mb-0">Project Status</h6>
+            </div>
+            <div class="status-filters">
+                @{
+                    var statuses = (Model.AvailableStatuses ?? new List<string>());
+                }
+                @{
+                    if (!statuses.Contains("Planning"))
                     {
-                        var icon = status == "Draft" ? "fa-file-lines"
-                        : status == "Planning" ? "fa-project-diagram"
-                        : status == "Active" ? "fa-play"
-                        : status == "Completed" ? "fa-check-circle"
-                        : status == "Maintenance" ? "fa-wrench" : "fa-list";
-                        <a href="@Url.Action("Dashboard")" class="status-filter-btn" data-status="@status">
-                            <i class="fa-solid @icon me-2"></i>
-                            @status
-
-                        </a>
+                        statuses = statuses.Concat(new[] { "Planning" }).ToList();
                     }
-                </div>
+                }
+                @foreach (var status in statuses)
+                {
+                    var icon = status == "Draft" ? "fa-file-lines"
+                    : status == "Planning" ? "fa-project-diagram"
+                    : status == "Active" ? "fa-play"
+                    : status == "Completed" ? "fa-check-circle"
+                    : status == "Maintenance" ? "fa-wrench" : "fa-list";
+                    <a href="#" class="status-filter-btn" data-status="@status">
+                        <i class="fa-solid @icon me-2"></i>
+                        @status
+                    </a>
+                }
             </div>
-
-            <!-- Advanced Filters -->
-            <div class="filter-group">
-                <div class="filter-group-header">
-                    <h6 class="mb-0">Filters</h6>
-                </div>
-                <div class="filter-item">
-                    <label class="filter-label">
-                        Client
-                    </label>
-                    <select class="filter-select" id="clientFilter">
-                        <option value="">All Clients</option>
-                        @foreach (var client in Model.Clients)
-                        {
-                            <option value="@client.UserId">
-                                @client.FullName
-                            </option>
-                        }
-                    </select>
-                </div>
-                <div class="advanced-filters-grid">
-                    <div class="filter-item">
-                        <label class="filter-label">
-                            Start Date From
-                        </label>
-                        <input type="date" class="filter-input" id="startDateFrom" value="">
-                    </div>
-                    <div class="filter-item">
-                        <label class="filter-label">
-                            Start Date To
-                        </label>
-                        <input type="date" class="filter-input" id="startDateTo" value="">
-                    </div>
-                </div>
-                <div class="advanced-filters-grid">
-                    <div class="filter-item">
-                        <label class="filter-label">
-                            Budget Range
-                        </label>
-                        <div class="budget-range">
-                            <input type="number" class="filter-input" id="budgetMin" placeholder="Min Budget" value="">
-                            <span class="range-separator">to</span>
-                            <input type="number" class="filter-input" id="budgetMax" placeholder="Max Budget" value="">
-                        </div>
-                    </div>
-                </div>
+        </div>
+        <div class="filter-group">
+            <div class="filter-group-header">
+                <h6 class="mb-0">Client</h6>
             </div>
-
-            <!-- Filter Actions -->
-            <div class="filter-actions">
-                <button type="button" class="filter-action-btn primary" onclick="applyAdvancedFilters()">
-                    <i class="fa-solid fa-search me-2"></i>Apply Filters
-                </button>
-                <button type="button" class="filter-action-btn secondary" onclick="clearAdvancedFilters()">
-                    <i class="fa-solid fa-times me-2"></i>Clear All
-                </button>
-                <button type="button" class="filter-action-btn tertiary" onclick="toggleFilters()">
-                    <i class="fa-solid fa-chevron-up me-2"></i>Close
-                </button>
+            <div class="status-filters">
+                <a href="#" class="status-filter-btn active" data-client="">All Clients</a>
+                @foreach (var client in Model.Clients)
+                {
+                    <a href="#" class="status-filter-btn" data-client="@client.UserId">@client.FullName</a>
+                }
             </div>
         </div>
     </div>
@@ -355,14 +301,42 @@
 @section Scripts {
     <script src="~/js/quote-builder.js"></script>
     <script src="~/js/project-creation-wizard.js"></script>
+    <script src="~/js/project-edit-wizard.js"></script>
     <script src="~/js/pm-dashboard.js"></script>
     <script src="~/js/plan-editor.js"></script>
+
+    <script>
+        // Make clients data available to JavaScript with proper mapping
+        @{
+            var clientsData = new List<object>();
+            if (Model.Clients != null)
+            {
+                foreach (var client in Model.Clients)
+                {
+                    clientsData.Add(new { userId = client.UserId, fullName = client.FullName });
+                }
+            }
+        }
+        window.dashboardClients = @Html.Raw(Json.Serialize(clientsData));
+        
+        // Create a client ID to name mapping for easy lookup
+        window.clientIdToNameMap = {};
+        if (window.dashboardClients) {
+            window.dashboardClients.forEach(client => {
+                window.clientIdToNameMap[client.userId] = client.fullName;
+            });
+        }
+        console.log('Client ID to Name Map:', window.clientIdToNameMap);
+    </script>
 
     <script>
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function () {
             initializeDashboard();
             initializeDraftProjectsToggle();
+            
+            // Resolve client names for initial load
+            resolveClientNames();
         });
 
         // Initialize draft projects toggle functionality
@@ -449,58 +423,241 @@
             window.location.href = '@Url.Action("Dashboard")';
         }
 
-        function toggleFilters() {
-            const panel = document.getElementById('filtersPanel');
-            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        // Handle filter clicks (both status and client)
+        document.addEventListener('click', function(e) {
+            console.log('=== FILTER CLICK START ===');
+            console.log('Click target:', e.target);
+            console.log('Click target closest:', e.target.closest('.status-filter-btn'));
+            
+            if (e.target.closest('.status-filter-btn')) {
+                e.preventDefault();
+                const btn = e.target.closest('.status-filter-btn');
+                console.log('Button element:', btn);
+                console.log('Button classes:', btn.className);
+                console.log('Button has data-status:', btn.hasAttribute('data-status'));
+                console.log('Button has data-client:', btn.hasAttribute('data-client'));
+                
+                // Check if it's a status filter
+                if (btn.hasAttribute('data-status')) {
+                    const status = btn.getAttribute('data-status');
+                    
+                    // Remove active class from all status buttons
+                    document.querySelectorAll('.status-filter-btn[data-status]').forEach(b => b.classList.remove('active'));
+                    // Add active class to clicked button
+                    btn.classList.add('active');
+                    
+                    console.log('Status filter clicked:', status);
+                    console.log('Button after adding active class:', btn.className);
+                }
+                
+                // Check if it's a client filter
+                if (btn.hasAttribute('data-client')) {
+                    const clientId = btn.getAttribute('data-client');
+                    
+                    console.log('CLIENT FILTER DEBUG:');
+                    console.log('- Button element:', btn);
+                    console.log('- Button text:', btn.textContent);
+                    console.log('- Client ID from data-client:', clientId);
+                    console.log('- Client ID type:', typeof clientId);
+                    console.log('- Client ID length:', clientId?.length);
+                    console.log('- Is empty string:', clientId === '');
+                    
+                    // Remove active class from all client buttons
+                    document.querySelectorAll('.status-filter-btn[data-client]').forEach(b => b.classList.remove('active'));
+                    // Add active class to clicked button
+                    btn.classList.add('active');
+                    
+                    console.log('Client filter clicked:', clientId);
+                    console.log('Button after adding active class:', btn.className);
+                    console.log('Button element:', btn);
+                }
+                
+                console.log('About to call applyFilters()');
+                // Apply the filter
+                applyFilters();
+                console.log('=== FILTER CLICK END ===');
+            }
+        });
+
+        // Function to resolve client names in project cards
+        function resolveClientNames() {
+            console.log('=== RESOLVE CLIENT NAMES START ===');
+            console.log('Client ID to Name Map:', window.clientIdToNameMap);
+            console.log('Client ID to Name Map keys:', Object.keys(window.clientIdToNameMap));
+            console.log('Client ID to Name Map values:', Object.values(window.clientIdToNameMap));
+            
+            // Get all project cards
+            const projectCards = document.querySelectorAll('.project-card');
+            console.log('Found project cards:', projectCards.length);
+            
+            projectCards.forEach((card, index) => {
+                console.log(`--- Processing card ${index + 1} ---`);
+                const clientElement = card.querySelector('.client-name');
+                console.log('Client element:', clientElement);
+                
+                if (clientElement) {
+                    const clientId = clientElement.textContent.trim();
+                    console.log('Client ID from element:', clientId);
+                    console.log('Client ID length:', clientId.length);
+                    console.log('Client ID includes dash:', clientId.includes('-'));
+                    
+                    // Check if it's a client ID (Firebase IDs are long alphanumeric strings without dashes)
+                    if (clientId && clientId.length > 20 && /^[a-zA-Z0-9]+$/.test(clientId)) {
+                        console.log('Looking up client ID:', clientId);
+                        console.log('Available client IDs in map:', Object.keys(window.clientIdToNameMap));
+                        console.log('Exact match found:', window.clientIdToNameMap.hasOwnProperty(clientId));
+                        
+                        // Use the mapping to get client name
+                        const clientName = window.clientIdToNameMap[clientId];
+                        console.log('Found client name:', clientName);
+                        
+                        if (clientName) {
+                            console.log('Updating client name from', clientId, 'to', clientName);
+                            clientElement.textContent = clientName;
+                            console.log('Updated client name to:', clientName);
+                        } else {
+                            console.log('No client name found for ID:', clientId);
+                            console.log('Available client IDs:', Object.keys(window.clientIdToNameMap));
+                        }
+                    } else {
+                        console.log('Already a client name, no resolution needed:', clientId);
+                    }
+                } else {
+                    console.log('No client element found in card');
+                }
+            });
+            console.log('=== RESOLVE CLIENT NAMES END ===');
         }
 
-        async function applyAdvancedFilters() {
+        async function applyFilters() {
+            console.log('=== APPLY FILTERS START ===');
             try {
-                const clientId = document.getElementById('clientFilter').value;
-                // infer selected status from active quick buttons if any
-                const activeStatusBtn = document.querySelector('.status-filter-btn.active');
+                // Get selected status
+                const activeStatusBtn = document.querySelector('.status-filter-btn[data-status].active');
                 const status = activeStatusBtn ? activeStatusBtn.getAttribute('data-status') : '';
+                console.log('Active status button:', activeStatusBtn);
+                console.log('Status from button:', status);
+
+                // Get selected client
+                const activeClientBtn = document.querySelector('.status-filter-btn[data-client].active');
+                const clientId = activeClientBtn ? activeClientBtn.getAttribute('data-client') : '';
+
+                console.log('Active client button:', activeClientBtn);
+                console.log('Client ID from button:', clientId);
+                console.log('Client ID type:', typeof clientId);
+                console.log('Client ID length:', clientId?.length);
+                console.log('Applying filters - Status:', status, 'Client:', clientId);
 
                 const params = new URLSearchParams();
-                if (clientId) params.set('clientId', clientId);
-                if (status && status !== 'All') params.set('status', status);
+                if (clientId) {
+                    console.log('Adding clientId to params:', clientId);
+                    params.set('clientId', clientId);
+                } else {
+                    console.log('No clientId - not adding to params');
+                }
+                if (status && status !== 'All') {
+                    console.log('Adding status to params:', status);
+                    params.set('status', status);
+                } else {
+                    console.log('No status or status is All - not adding to params');
+                }
+
+                console.log('Filter URL:', `/ProjectManager/SearchProjects?${params.toString()}`);
 
                 const res = await fetch(`/ProjectManager/SearchProjects?${params.toString()}`);
+                console.log('Fetch response status:', res.status);
+                console.log('Fetch response ok:', res.ok);
+                
                 if (!res.ok) throw new Error('Filter failed');
                 const data = await res.json();
 
+                console.log('Filter response:', data);
+                console.log('Projects HTML length:', data.projectsHtml?.length);
+                console.log('Drafts HTML length:', data.draftsHtml?.length);
+
                 // If a specific status (non-draft) is applied, hide drafts; otherwise update both
                 if (status && status.toLowerCase() !== 'draft' && status !== 'All') {
+                    console.log('Hiding drafts section and updating projects grid');
                     document.getElementById('draftSection')?.style && (document.getElementById('draftSection').style.display = 'none');
                     document.getElementById('projectsGrid').innerHTML = data.projectsHtml;
                 } else {
+                    console.log('Showing drafts section and updating both grids');
                     document.getElementById('draftSection')?.style && (document.getElementById('draftSection').style.display = 'block');
                     document.getElementById('projectsGrid').innerHTML = data.projectsHtml;
                     const draftsGrid = document.getElementById('draftProjectsGrid');
                     if (draftsGrid) draftsGrid.innerHTML = data.draftsHtml;
                 }
+                
+                console.log('About to call resolveClientNames()');
+                // Resolve client names in the updated HTML
+                resolveClientNames();
+                
+                // Add a small delay to ensure DOM updates are visible
+                setTimeout(() => {
+                    console.log('DOM update completed - client names should now be visible');
+                }, 100);
+                
+                console.log('=== APPLY FILTERS END ===');
             } catch (e) {
-                console.error(e);
+                console.error('Filter error:', e);
+                console.log('=== APPLY FILTERS ERROR ===');
             }
         }
 
-        async function clearAdvancedFilters() {
-            document.getElementById('clientFilter').value = '';
-            document.getElementById('startDateFrom').value = '';
-            document.getElementById('startDateTo').value = '';
-            document.getElementById('budgetMin').value = '';
-            document.getElementById('budgetMax').value = '';
+        function toggleFilters() {
+            const filtersPanel = document.getElementById('filtersPanel');
+            const filterToggleText = document.getElementById('filterToggleText');
+            const filterToggleIcon = document.getElementById('filterToggleIcon');
 
-            try {
-                const res = await fetch(`/ProjectManager/SearchProjects`);
-                if (!res.ok) throw new Error('Clear filters failed');
-                const data = await res.json();
-                document.getElementById('draftSection')?.style && (document.getElementById('draftSection').style.display = 'block');
-                document.getElementById('projectsGrid').innerHTML = data.projectsHtml;
-                const draftsGrid = document.getElementById('draftProjectsGrid');
-                if (draftsGrid) draftsGrid.innerHTML = data.draftsHtml;
-            } catch (e) {
-                console.error(e);
+            if (filtersPanel.style.display === 'none' || filtersPanel.style.display === '') {
+                filtersPanel.style.display = 'block';
+                filterToggleText.textContent = 'Hide Filters';
+                filterToggleIcon.classList.remove('fa-chevron-down');
+                filterToggleIcon.classList.add('fa-chevron-up');
+            } else {
+                filtersPanel.style.display = 'none';
+                filterToggleText.textContent = 'Show Filters';
+                filterToggleIcon.classList.remove('fa-chevron-up');
+                filterToggleIcon.classList.add('fa-chevron-down');
+            }
+        }
+
+        function openCreateProjectWizard(draftProjectId = null) {
+            const modal = document.getElementById('projectCreationWizardModal');
+            if (modal) {
+                // Set the draft project ID if provided
+                if (draftProjectId) {
+                    modal.setAttribute('data-draft-project-id', draftProjectId);
+                } else {
+                    modal.removeAttribute('data-draft-project-id');
+                }
+                
+                // Show the modal
+                const bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
+                
+                // Manually trigger our initialization since Bootstrap events might not fire
+                setTimeout(() => {
+                    if (window.__pcwInstance) {
+                        window.__pcwInstance.initializeWizard();
+                    }
+                }, 100);
+            }
+        }
+
+            function editDraftProject(projectId) {
+                openEditProjectWizard(projectId);
+            }
+
+            function openEditProjectWizard(projectId) {
+                const modal = document.getElementById('projectEditWizardModal');
+                if (modal) {
+                    // Set the project ID for editing
+                    modal.setAttribute('data-project-id', projectId);
+                    
+                    // Show the modal
+                    const bsModal = new bootstrap.Modal(modal);
+                    bsModal.show();
             }
         }
     </script>

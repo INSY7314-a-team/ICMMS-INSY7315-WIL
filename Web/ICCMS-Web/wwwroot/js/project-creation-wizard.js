@@ -3,6 +3,8 @@
  * Handles the multi-step project creation process
  */
 
+console.log("CREATE WIZARD: Script file loaded!");
+
 class ProjectCreationWizard {
   constructor() {
     this.currentStep = 1;
@@ -10,18 +12,18 @@ class ProjectCreationWizard {
     this.formData = {};
     this.clients = [];
     this.contractors = [];
-    this.projectId = null; // created on StartDraft
+    this.projectId = null; // Will be set when loading existing draft or creating new draft
     this.autosaveIntervalId = null;
+    this.isEditingDraft = false; // Flag to track if we're editing an existing draft
 
     this.init();
   }
 
   init() {
     this.bindEvents();
-    this.loadClients();
-    this.loadContractors();
     this.setupFormValidation();
     this.setupAutosave();
+    // Don't load clients/contractors on init - load them when modal opens
   }
 
   bindEvents() {
@@ -29,7 +31,18 @@ class ProjectCreationWizard {
     document
       .getElementById("projectCreationWizardModal")
       ?.addEventListener("show.bs.modal", () => {
-        this.resetWizard();
+        // Only reset if we're not editing a draft
+        const modal = document.getElementById("projectCreationWizardModal");
+        const draftProjectId = modal?.getAttribute("data-draft-project-id");
+        if (!draftProjectId) {
+          this.resetWizard();
+        }
+      });
+
+    document
+      .getElementById("projectCreationWizardModal")
+      ?.addEventListener("shown.bs.modal", () => {
+        this.initializeWizard();
       });
 
     document
@@ -51,6 +64,13 @@ class ProjectCreationWizard {
       .getElementById("createProjectBtn")
       ?.addEventListener("click", () => {
         this.finalizeProject();
+      });
+
+    // Save as Draft button
+    document
+      .getElementById("saveAsDraftBtn")
+      ?.addEventListener("click", () => {
+        this.saveAsDraft();
       });
 
     // Form validation on input change
@@ -78,40 +98,43 @@ class ProjectCreationWizard {
 
   async loadClients() {
     try {
-      // First try to get clients from the dashboard data
-      if (window.dashboardClients && window.dashboardClients.length > 0) {
-        this.clients = window.dashboardClients;
-        this.populateClientSelect();
-        return;
-      }
-
-      // Fallback to API call if dashboard data is not available
+      console.log("🔥 CREATE WIZARD: loadClients() called!");
       const response = await fetch("/ProjectManager/GetClients");
+      console.log("🔥 CREATE WIZARD: API response status:", response.status);
       if (response.ok) {
         this.clients = await response.json();
+        console.log("🔥 CREATE WIZARD: Loaded clients:", this.clients);
         this.populateClientSelect();
       } else {
-        console.error("Failed to load clients:", response.statusText);
+        console.error("🔥 CREATE WIZARD: Failed to load clients:", response.statusText);
         this.showError("Failed to load clients. Please refresh the page.");
       }
     } catch (error) {
-      console.error("Error loading clients:", error);
+      console.error("🔥 CREATE WIZARD: Error loading clients:", error);
       this.showError("Error loading clients. Please check your connection.");
     }
   }
 
   populateClientSelect() {
+    console.log("🔥 CREATE WIZARD: populateClientSelect() called!");
     const clientSelect = document.getElementById("clientSelect");
-    if (!clientSelect) return;
-
-    clientSelect.innerHTML = '<option value="">Select a client...</option>';
-
-    this.clients.forEach((client) => {
-      const option = document.createElement("option");
-      option.value = client.userId;
-      option.textContent = `${client.fullName} (${client.email})`;
-      clientSelect.appendChild(option);
-    });
+    console.log("🔥 CREATE WIZARD: clientSelect element:", clientSelect);
+    console.log("🔥 CREATE WIZARD: clients array:", this.clients);
+    if (clientSelect && this.clients) {
+      console.log("🔥 CREATE WIZARD: Populating dropdown with", this.clients.length, "clients");
+      // Clear existing options except the first one
+      clientSelect.innerHTML = '<option value="">Select a client...</option>';
+      
+      this.clients.forEach(client => {
+        const option = document.createElement("option");
+        option.value = client.userId;
+        option.textContent = `${client.fullName} (${client.email})`;
+        clientSelect.appendChild(option);
+      });
+      console.log("🔥 CREATE WIZARD: Dropdown populated with", clientSelect.options.length, "options");
+    } else {
+      console.log("🔥 CREATE WIZARD: clientSelect element not found or clients not loaded");
+    }
   }
 
   async loadContractors() {
@@ -142,6 +165,12 @@ class ProjectCreationWizard {
 
       if (this.currentStep < this.totalSteps) {
         this.currentStep++;
+        
+        // Auto-save as draft when reaching phases page (step 3)
+        if (this.currentStep === 3 && !this.projectId) {
+          this.autoSaveAsDraft();
+        }
+        
         this.updateWizardDisplay();
       }
     }
@@ -357,45 +386,223 @@ class ProjectCreationWizard {
     }
   }
 
-  async ensureDraft() {
-    if (this.projectId) return;
+  async loadDraftProject(projectId) {
+    console.log("loadDraftProject called with ID:", projectId);
     try {
-      const projectData = {
-        project: { status: "Draft" },
-        phases: [],
-        tasks: [],
-      };
+      const response = await fetch(`/ProjectManager/GetProject/${projectId}`);
+      console.log("Response status:", response.status);
+      
+      if (response.ok) {
+        const projectData = await response.json();
+        console.log("Received project data:", projectData);
+        
+        if (projectData && projectData.status === "Draft") {
+          this.projectId = projectId;
+          this.isEditingDraft = true;
+          
+          // Populate form fields with existing data
+          this.populateFormWithDraftData(projectData);
+          
+          // Load phases and tasks separately
+          await this.loadProjectPhases(projectId);
+          await this.loadProjectTasks(projectId);
+          
+          console.log("Successfully loaded draft project:", projectId);
+          return true;
+        } else {
+          console.warn("Project is not a draft or data is invalid:", projectData);
+        }
+      } else {
+        console.error("Failed to fetch project:", response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error("Failed to load draft project:", error);
+    }
+    return false;
+  }
+
+  async loadProjectPhases(projectId) {
+    try {
+      console.log("Loading phases for project:", projectId);
+      const response = await fetch(`/ProjectManager/GetProjectPhases?id=${projectId}`);
+      if (response.ok) {
+        const phases = await response.json();
+        console.log("Received phases:", phases);
+        
+        if (phases && phases.length > 0) {
+          const phasesContainer = document.getElementById("phasesContainer");
+          if (phasesContainer) {
+            phasesContainer.innerHTML = ""; // Clear existing phases
+            phases.forEach(phase => {
+              const phaseElement = this.buildPhaseRow(phase);
+              phasesContainer.appendChild(phaseElement);
+            });
+            console.log("Loaded", phases.length, "phases");
+          }
+        }
+      } else {
+        console.warn("Failed to load phases:", response.status);
+      }
+    } catch (error) {
+      console.warn("Error loading phases:", error);
+    }
+  }
+
+  async loadProjectTasks(projectId) {
+    try {
+      console.log("Loading tasks for project:", projectId);
+      const response = await fetch(`/ProjectManager/GetProjectTasks?id=${projectId}`);
+      if (response.ok) {
+        const tasks = await response.json();
+        console.log("Received tasks:", tasks);
+        
+        if (tasks && tasks.length > 0) {
+          const tasksContainer = document.getElementById("tasksContainer");
+          if (tasksContainer) {
+            tasksContainer.innerHTML = ""; // Clear existing tasks
+            tasks.forEach(task => {
+              const taskElement = this.buildTaskRow(task);
+              tasksContainer.appendChild(taskElement);
+            });
+            console.log("Loaded", tasks.length, "tasks");
+          }
+        }
+      } else {
+        console.warn("Failed to load tasks:", response.status);
+      }
+    } catch (error) {
+      console.warn("Error loading tasks:", error);
+    }
+  }
+
+  populateFormWithDraftData(projectData) {
+    console.log("Populating form with draft data:", projectData);
+    
+    // Populate basic information
+    if (projectData.name) {
+      const nameField = document.getElementById("projectName");
+      if (nameField) {
+        nameField.value = projectData.name;
+        console.log("Set project name:", projectData.name);
+      }
+    }
+    
+    if (projectData.description) {
+      const descField = document.getElementById("projectDescription");
+      if (descField) {
+        descField.value = projectData.description;
+        console.log("Set project description:", projectData.description);
+      }
+    }
+    
+    if (projectData.clientId) {
+      const clientField = document.getElementById("clientSelect");
+      if (clientField) {
+        clientField.value = projectData.clientId;
+        console.log("Set client ID:", projectData.clientId);
+      }
+    }
+    
+    if (projectData.budgetPlanned) {
+      const budgetField = document.getElementById("budgetPlanned");
+      if (budgetField) {
+        budgetField.value = projectData.budgetPlanned;
+        console.log("Set budget:", projectData.budgetPlanned);
+      }
+    }
+    
+    if (projectData.startDate) {
+      const startField = document.getElementById("startDate");
+      if (startField) {
+        startField.value = new Date(projectData.startDate).toISOString().split('T')[0];
+        console.log("Set start date:", projectData.startDate);
+      }
+    }
+    
+    if (projectData.endDatePlanned) {
+      const endField = document.getElementById("endDatePlanned");
+      if (endField) {
+        endField.value = new Date(projectData.endDatePlanned).toISOString().split('T')[0];
+        console.log("Set end date:", projectData.endDatePlanned);
+      }
+    }
+  }
+
+  async initializeWizard() {
+    console.log("🔥 CREATE WIZARD: initializeWizard() called!");
+    // Load clients and contractors first (like edit wizard)
+    await this.loadClients();
+    await this.loadContractors();
+    
+    // Check if we're editing an existing draft project
+    const modal = document.getElementById("projectCreationWizardModal");
+    const draftProjectId = modal?.getAttribute("data-draft-project-id");
+    
+    if (draftProjectId) {
+      console.log("Loading draft project:", draftProjectId);
+      
+      // Add a small delay to ensure form elements are rendered
+      setTimeout(async () => {
+        const loaded = await this.loadDraftProject(draftProjectId);
+        if (loaded) {
+          console.log("Initialized wizard with existing draft project:", draftProjectId);
+          // Update the modal title to indicate we're editing
+          const titleElement = document.getElementById("projectCreationWizardModalLabel");
+          if (titleElement) {
+            titleElement.innerHTML = `<i class="fa-solid fa-edit me-2" style="color: #F7EC59;"></i>Edit Draft Project`;
+          }
+        } else {
+          console.error("Failed to load draft project:", draftProjectId);
+        }
+      }, 100);
+    } else {
+      console.log("Initialized wizard for new project creation");
+    }
+  }
+
+  async createDraftProject() {
+    if (this.projectId) return this.projectId; // Already have a draft
+    
+    try {
+      const projectData = this.collectProjectData();
+      projectData.status = "Draft"; // Ensure status is Draft
 
       const res = await fetch("/ProjectManager/SaveProject", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(projectData),
+        body: JSON.stringify({
+          project: projectData,
+          phases: this.collectPhases(),
+          tasks: this.collectTasks()
+        }),
       });
 
       const data = await res.json();
       if (data?.success) {
         this.projectId = data.projectId;
-        console.log("Draft project created:", this.projectId);
+        console.log("Draft project created with all form data:", this.projectId);
+        return this.projectId;
       }
     } catch (e) {
-      console.warn("SaveProject failed", e);
+      console.warn("CreateDraftProject failed", e);
     }
+    return null;
   }
 
   setupAutosave() {
-    // Start draft when modal opens
-    document
-      .getElementById("projectCreationWizardModal")
-      ?.addEventListener("shown.bs.modal", async () => {
-        await this.ensureDraft();
-      });
+    // Remove automatic draft creation - only create when user explicitly saves as draft
+    // Autosave every 10s (only if we have a projectId)
+    this.autosaveIntervalId = setInterval(() => {
+      if (this.projectId) {
+        this.autosave();
+      }
+    }, 10000);
 
-    // Autosave every 10s
-    this.autosaveIntervalId = setInterval(() => this.autosave(), 10000);
-
-    // Autosave on navigation/unload
+    // Autosave on navigation/unload (only if we have a projectId)
     window.addEventListener("beforeunload", () => {
+      if (this.projectId) {
       this.autosave(true);
+      }
     });
   }
 
@@ -595,12 +802,7 @@ class ProjectCreationWizard {
   }
 
   bindEvents() {
-    // existing
-    document
-      .getElementById("projectCreationWizardModal")
-      ?.addEventListener("show.bs.modal", () => {
-        this.resetWizard();
-      });
+    // Duplicate event listener removed - handled above
     document
       .getElementById("projectCreationWizardModal")
       ?.addEventListener("hidden.bs.modal", () => {
@@ -714,7 +916,7 @@ class ProjectCreationWizard {
         startDate: null,
         endDatePlanned: null,
         budgetPlanned: 0,
-        status: "Planning",
+        // status will be set by the calling function
       };
     }
 
@@ -735,16 +937,143 @@ class ProjectCreationWizard {
       ),
       budgetPlanned:
         parseFloat(form.querySelector("#budgetPlanned")?.value) || 0,
-      status: "Planning", // Set to Planning instead of Draft
+      // status will be set by the calling function (Draft, Planning, etc.)
       // projectManagerId will be set by the server from the current user
     };
   }
 
-  async finalizeProject() {
-    console.log("finalizeProject called - using NEW method");
-    console.log("Current projectId:", this.projectId);
+  async autoSaveAsDraft() {
+    console.log("Auto-saving as draft when reaching phases page");
+    
+    // Collect current project data
+    const projectData = this.collectProjectData();
+    
+    // Validate required fields for auto-save
+    if (!projectData.name || projectData.name.trim() === "") {
+      console.log("Skipping auto-save: Project name required");
+      return;
+    }
 
-    await this.ensureDraft();
+    if (!projectData.clientId || projectData.clientId.trim() === "") {
+      console.log("Skipping auto-save: Client required");
+      return;
+    }
+
+    try {
+      // Set project status to Draft
+      projectData.status = "Draft";
+      console.log("Setting project status to Draft:", projectData.status);
+
+      // Use the complete project creation endpoint
+      const completeRequest = {
+        project: projectData,
+        phases: [], // Empty phases for now
+        tasks: [],  // Empty tasks for now
+      };
+
+      console.log("Auto-saving as draft:", completeRequest);
+      console.log("Request payload status:", completeRequest.project.status);
+      
+      const createRes = await fetch(`/ProjectManager/SaveProject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(completeRequest),
+      });
+
+      console.log("Response status:", createRes.status);
+      
+      if (createRes.ok) {
+        const data = await createRes.json();
+        console.log("Response data:", data);
+        console.log("Created project status:", data?.project?.status || "Not provided in response");
+        
+        if (data?.success) {
+          this.projectId = data.projectId;
+          console.log("Auto-saved as draft successfully:", this.projectId);
+          
+          // Show subtle notification
+          this.showSuccess("Project auto-saved as draft", 2000);
+        } else {
+          console.warn("Auto-save failed:", data?.message || "Unknown error");
+        }
+      } else {
+        console.warn(`Auto-save failed: ${createRes.status} ${createRes.statusText}`);
+      }
+    } catch (error) {
+      console.warn("Auto-save failed:", error);
+    }
+  }
+
+  async saveAsDraft() {
+    
+    // Collect all project data
+    const projectData = this.collectProjectData();
+    const phases = this.collectPhases().filter((p) => p.name?.trim());
+    const tasks = this.collectTasks().filter((t) => t.name?.trim());
+
+    // Validate required fields for draft
+    if (!projectData.name || projectData.name.trim() === "") {
+      this.showError("Project name is required to save as draft.");
+      return;
+    }
+
+    if (!projectData.clientId || projectData.clientId.trim() === "") {
+      this.showError("Please select a client to save as draft.");
+      return;
+    }
+
+    try {
+      // Set project status to Draft
+      projectData.status = "Draft";
+
+      // Use the complete project creation endpoint
+      const completeRequest = {
+        project: projectData,
+        phases: phases,
+        tasks: tasks,
+      };
+
+      // If we have a projectId (from auto-save), include it
+      if (this.projectId) {
+        completeRequest.project.projectId = this.projectId;
+      }
+
+      console.log("Saving as draft:", completeRequest);
+      const createRes = await fetch(`/ProjectManager/SaveProject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(completeRequest),
+      });
+
+      if (createRes.ok) {
+        const data = await createRes.json();
+        if (data?.success) {
+          this.projectId = data.projectId;
+          this.showSuccess("Project saved as draft successfully!");
+          
+          // Close the modal after successful save
+          setTimeout(() => {
+            const modal = bootstrap.Modal.getInstance(document.getElementById("projectCreationWizardModal"));
+            if (modal) {
+              modal.hide();
+            }
+            // Reload the page to show the new draft
+            window.location.reload();
+          }, 1500);
+        } else {
+          this.showError("Failed to save draft: " + (data?.message || "Unknown error"));
+        }
+      } else {
+        this.showError(`Failed to save draft: ${createRes.status} ${createRes.statusText}`);
+      }
+    } catch (error) {
+      console.error("Save as draft failed:", error);
+      this.showError("Failed to save draft: " + error.message);
+    }
+  }
+
+  async finalizeProject() {
+    console.log("Current projectId:", this.projectId);
 
     // Collect all project data
     const projectData = this.collectProjectData();
@@ -774,12 +1103,20 @@ class ProjectCreationWizard {
     }
 
     try {
-      // Use the new complete project creation endpoint
+      // Set project status to Planning (finalized project)
+      projectData.status = "Planning";
+
+      // Use the complete project creation endpoint
       const completeRequest = {
         project: projectData,
         phases: phases,
         tasks: tasks,
       };
+
+      // If we have a projectId (from auto-save), include it
+      if (this.projectId) {
+        completeRequest.project.projectId = this.projectId;
+      }
 
       console.log("Calling SaveProject endpoint /ProjectManager/SaveProject");
       const createRes = await fetch(`/ProjectManager/SaveProject`, {
@@ -844,11 +1181,30 @@ class ProjectCreationWizard {
   resetWizard() {
     this.currentStep = 1;
     this.formData = {};
+    this.projectId = null;
+    this.isEditingDraft = false;
 
     // Reset form
     const form = document.getElementById("projectCreationForm");
     if (form) {
       form.reset();
+    }
+
+    // Clear phases and tasks containers
+    const phasesContainer = document.getElementById("phasesContainer");
+    if (phasesContainer) {
+      phasesContainer.innerHTML = "";
+    }
+
+    const tasksContainer = document.getElementById("tasksContainer");
+    if (tasksContainer) {
+      tasksContainer.innerHTML = "";
+    }
+
+    // Reset modal title
+    const titleElement = document.getElementById("projectCreationWizardModalLabel");
+    if (titleElement) {
+      titleElement.innerHTML = `<i class="fa-solid fa-plus-circle me-2" style="color: #F7EC59;"></i>Create Project`;
     }
 
     // Clear validation states
@@ -876,15 +1232,15 @@ class ProjectCreationWizard {
     }
   }
 
-  showSuccess(message) {
-    this.toast(message, "success");
+  showSuccess(message, duration = 3000) {
+    this.toast(message, "success", duration);
   }
 
   showError(message) {
     this.toast(message, "danger");
   }
 
-  toast(message, type = "info") {
+  toast(message, type = "info", duration = 3000) {
     try {
       const containerId = "toast-container";
       let container = document.getElementById(containerId);
@@ -906,7 +1262,7 @@ class ProjectCreationWizard {
           <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>`;
       container.appendChild(toastEl);
-      const bsToast = new bootstrap.Toast(toastEl, { delay: 2500 });
+      const bsToast = new bootstrap.Toast(toastEl, { delay: duration });
       bsToast.show();
       toastEl.addEventListener("hidden.bs.toast", () => toastEl.remove());
     } catch (e) {
@@ -926,8 +1282,13 @@ function openCreateProjectWizard() {
 
 // Initialize the wizard when the page loads
 document.addEventListener("DOMContentLoaded", function () {
+  console.log("🔥 CREATE WIZARD: Script loaded and DOMContentLoaded fired!");
   // Only initialize if the wizard modal exists on the page
   if (document.getElementById("projectCreationWizardModal")) {
+    console.log("🔥 CREATE WIZARD: Modal found, creating instance!");
     window.__pcwInstance = new ProjectCreationWizard();
+    console.log("🔥 CREATE WIZARD: Instance created:", window.__pcwInstance);
+  } else {
+    console.log("🔥 CREATE WIZARD: Modal NOT found!");
   }
 });
