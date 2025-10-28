@@ -42,12 +42,13 @@ class ClientDashboardViewModel : ViewModel() {
                 val maintenanceRequests = maintenanceRequestsResult.getOrElse { emptyList() }
                 
                 // Add mock quotations for testing
-                val mockQuotations = quotations + createMockQuotations()
-                
+                /* Old Code: Remove code
+                 val mockQuotations = quotations + createMockQuotations()
+                */
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     projects = projects,
-                    quotations = mockQuotations,
+                    quotations = quotations,//mockQuotations,
                     invoices = invoices,
                     maintenanceRequests = maintenanceRequests
                 )
@@ -210,7 +211,9 @@ class ClientDashboardViewModel : ViewModel() {
     fun clearMessages() {
         _uiState.value = _uiState.value.copy(errorMessage = null, successMessage = null)
     }
-    
+
+
+    /* Old Code: Remove code
     private fun createMockQuotations(): List<Quotation> {
         val currentDate = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
         val validUntilDate = java.util.Calendar.getInstance().apply {
@@ -285,5 +288,9 @@ class ClientDashboardViewModel : ViewModel() {
                 approvedAt = null
             )
         )
+
+
     }
+
+     */
 }
