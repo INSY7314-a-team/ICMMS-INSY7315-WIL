@@ -27,15 +27,16 @@
 
 .dashboard-header {
     color: var(--text-primary);
-    padding: 25px 30px;
+    padding: 30px 40px;
     border-radius: 15px;
     margin-bottom: 30px;
+    text-align: center;
 }
 
 .dashboard-title {
     font-size: 2.5rem;
     font-weight: 700;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     color: var(--text-primary);
 }
 
@@ -50,50 +51,62 @@
    =========================================== */
 
 .stats-container {
-    margin-bottom: 30px;
+    margin-bottom: 35px;
+    clear: both;
 }
 
 .stat-card {
     background: var(--secondary-bg);
     color: var(--text-primary);
-    border-radius: 15px;
-    padding: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     transition: all 0.3s ease;
     border: 1px solid rgba(247, 236, 89, 0.2);
 }
 
 .stat-card:hover {
-    background: rgba(247, 236, 89, 0.15);
+    background: rgba(247, 236, 89, 0.1);
     border-color: #F7EC59;
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(247, 236, 89, 0.2);
 }
 
-.stat-card .stat-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: var(--accent-yellow);
-    color: var(--text-dark);
+/* Stat card icons without circular backgrounds */
+.pm-dashboard-container .stat-card .stat-icon,
+.pm-dashboard-container .stat-card.compact .stat-icon {
+    width: auto !important;
+    height: auto !important;
+    border-radius: 0 !important;
+    background: none !important;
+    background-color: transparent !important;
+    color: var(--accent-yellow) !important;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.5rem;
-    margin-bottom: 15px;
+    margin-bottom: 8px;
+    border: none !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+}
+
+.pm-dashboard-container .stat-card.compact .stat-icon {
+    font-size: 1.3rem;
+    margin-right: 12px;
+    margin-bottom: 0;
 }
 
 .stat-card .stat-icon.in-progress {
-    background: var(--accent-cyan);
+    color: var(--accent-cyan) !important;
 }
 
 .stat-card .stat-icon.completed {
-    background: #198754;
+    color: #198754 !important;
 }
 
 .stat-card .stat-icon.overdue {
-    background: #FF5964;
-    color: var(--text-primary);
+    color: #FF5964 !important;
 }
 
 .stat-card .stat-content {
@@ -101,16 +114,31 @@
 }
 
 .stat-card .stat-number {
-    font-size: 2rem;
+    font-size: 1.8rem;
     font-weight: 700;
-    margin-bottom: 5px;
+    margin-bottom: 3px;
     color: #F7EC59;
 }
 
 .stat-card .stat-label {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     opacity: 0.8;
     margin: 0;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-card.compact {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+}
+
+.stat-card.compact .stat-number {
+    font-size: 1.6rem;
+    margin-bottom: 2px;
+    color: var(--accent-yellow);
 }
 
 /* ===========================================
@@ -147,17 +175,18 @@
     background: var(--accent-yellow);
     border: none;
     color: var(--text-dark);
-    padding: 12px 24px;
-    border-radius: 25px;
+    padding: 10px 20px;
+    border-radius: 20px;
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 0.9rem;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(247, 236, 89, 0.2);
+    box-shadow: 0 2px 8px rgba(247, 236, 89, 0.3);
+    margin-bottom: 15px;
 }
 
 .filter-toggle-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(247, 236, 89, 0.4);
+    box-shadow: 0 4px 15px rgba(247, 236, 89, 0.4);
     color: var(--text-dark);
 }
 
@@ -166,9 +195,11 @@
     border-radius: 15px;
     padding: 25px;
     margin-top: 20px;
+    margin-bottom: 25px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     animation: slideDown 0.3s ease-out;
     border: 1px solid var(--border-primary);
+    clear: both;
 }
 
 @keyframes slideDown {
@@ -413,7 +444,10 @@
 }
 
 .search-section {
-    margin-bottom: 20px;
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: center;
+    padding: 0 20px;
 }
 
 .ProjectsContainer {
@@ -427,8 +461,9 @@
 
 .search-input-group {
     position: relative;
-    max-width: 600px;
+    max-width: 500px;
     margin: 0 auto;
+    width: 100%;
 }
 
 .search-input {
@@ -482,16 +517,17 @@
 }
 
 .create-project-section {
-    margin: 20px 0;
+    margin: 25px 0;
+    clear: both;
 }
 
 .create-project-btn {
     background: var(--accent-yellow);
     border: none;
-    padding: 15px 30px;
-    border-radius: 25px;
+    padding: 12px 24px;
+    border-radius: 20px;
     font-weight: 600;
-    font-size: 1.1rem;
+    font-size: 1rem;
     color: var(--text-dark);
     box-shadow: 0 2px 8px rgba(247, 236, 89, 0.2);
     transition: all 0.3s ease;
@@ -499,12 +535,14 @@
 
 .create-project-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(247, 236, 89, 0.4);
+    box-shadow: 0 4px 15px rgba(247, 236, 89, 0.4);
     color: var(--text-dark);
 }
 
 .filter-section {
     margin-top: 20px;
+    margin-bottom: 25px;
+    clear: both;
 }
 
 .filters-panel {
@@ -541,6 +579,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 3px solid var(--accent-yellow);
 }
 
 .section-title {
@@ -670,7 +709,8 @@
 .pagination .page-link:hover {
     background: var(--accent-yellow);
     color: var(--text-dark);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(247, 236, 89, 0.3);
 }
 
 .pagination .page-item.active .page-link {

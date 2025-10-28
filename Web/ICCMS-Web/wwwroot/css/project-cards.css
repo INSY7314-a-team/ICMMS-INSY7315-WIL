@@ -1,15 +1,33 @@
 /* Project Card Styling - Dark Theme */
 .project-card {
     background-color: #2A2B35 !important;
-    border-radius: 8px;
+    border-radius: 32px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     height: 100%;
+    cursor: pointer;
+    position: relative;
 }
 
 .project-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Clickable area - everything except footer */
+.project-card .card-header,
+.project-card .card-body {
+    cursor: pointer;
+}
+
+/* Footer buttons should not trigger card click */
+.project-card .card-footer {
+    cursor: default;
+    pointer-events: auto;
+}
+
+.project-card .card-footer * {
+    pointer-events: auto;
 }
 
 /* Card Header */
@@ -33,15 +51,39 @@
     margin-bottom: 0;
 }
 
-/* Status Badge */
+/* Status Badge Colors */
 .project-card .status-badge {
-    background-color: #6BF178 !important;
-    color: #1A1B25 !important;
     font-size: 0.75rem;
     font-weight: 500;
     padding: 0.25rem 0.5rem;
     border-radius: 12px;
     border: none;
+}
+
+/* Status-specific colors */
+.project-card .status-badge.draft {
+    background-color: #6C757D !important;
+    color: #FFFFFF !important;
+}
+
+.project-card .status-badge.planning {
+    background-color: #17A2B8 !important;
+    color: #FFFFFF !important;
+}
+
+.project-card .status-badge.active {
+    background-color: #28A745 !important;
+    color: #FFFFFF !important;
+}
+
+.project-card .status-badge.complete {
+    background-color: #007BFF !important;
+    color: #FFFFFF !important;
+}
+
+.project-card .status-badge.maintenance {
+    background-color: #FFC107 !important;
+    color: #1A1B25 !important;
 }
 
 /* Remove collapse button - hide it completely */

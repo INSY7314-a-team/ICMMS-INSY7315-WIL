@@ -40,14 +40,7 @@
                 </p>
             </div>
             <div class="text-end d-flex align-items-center gap-2">
-                @if (!string.Equals(Model.Status, "Draft", StringComparison.OrdinalIgnoreCase))
-                {
-                    <button type="button" class="btn btn-sm btn-outline-primary" title="View details"
-                        onclick="viewProjectDetails('@Model.ProjectId')">
-                        <i class="fa-solid fa-eye"></i>
-                    </button>
-                }
-                <span class="status-badge">@Model.Status</span>
+                <span class="status-badge @Model.Status.ToLower()">@Model.Status</span>
             </div>
         </div>
     </div>
@@ -507,4 +500,23 @@
             document.body.removeChild(toast);
         });
     }
+
+    // Handle project card clicks
+    document.addEventListener('DOMContentLoaded', function() {
+        const projectCard = document.getElementById('project-@Model.ProjectId');
+        if (projectCard) {
+            // Add click handler to card header and body
+            const clickableElements = projectCard.querySelectorAll('.card-header, .card-body');
+            clickableElements.forEach(element => {
+                element.addEventListener('click', function(e) {
+                    // Don't trigger if clicking on buttons or interactive elements
+                    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.dropdown')) {
+                        return;
+                    }
+                    // Navigate to project details
+                    viewProjectDetails('@Model.ProjectId');
+                });
+            });
+        }
+    });
 </script>
