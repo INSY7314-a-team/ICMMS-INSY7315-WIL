@@ -15,7 +15,11 @@ namespace ICCMS_API.Controllers
         private readonly IFirebaseService _firebaseService;
         private readonly IAuditLogService _auditLogService;
 
-        public AuthController(IAuthService authService, IFirebaseService firebaseService, IAuditLogService auditLogService)
+        public AuthController(
+            IAuthService authService,
+            IFirebaseService firebaseService,
+            IAuditLogService auditLogService
+        )
         {
             _authService = authService;
             _firebaseService = firebaseService;
@@ -26,14 +30,19 @@ namespace ICCMS_API.Controllers
         public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
         {
             Console.WriteLine($"[AuthController] LOGIN METHOD CALLED - DEPRECATED");
-            Console.WriteLine($"[AuthController] This endpoint does not verify passwords and should not be used");
-            Console.WriteLine($"[AuthController] Use Firebase Client SDK for authentication instead");
-            
+            Console.WriteLine(
+                $"[AuthController] This endpoint does not verify passwords and should not be used"
+            );
+            Console.WriteLine(
+                $"[AuthController] Use Firebase Client SDK for authentication instead"
+            );
+
             return BadRequest(
-                new LoginResponse 
-                { 
-                    Success = false, 
-                    Message = "This endpoint cannot verify passwords. Please use Firebase Client SDK for authentication." 
+                new LoginResponse
+                {
+                    Success = false,
+                    Message =
+                        "This endpoint cannot verify passwords. Please use Firebase Client SDK for authentication.",
                 }
             );
         }
@@ -43,9 +52,9 @@ namespace ICCMS_API.Controllers
             [FromBody] TokenVerificationRequest request
         )
         {
-j            string? userId = null;
+            string? userId = null;
             string? userEmail = null;
-            
+
             try
             {
                 // Verify the Firebase ID token
@@ -68,7 +77,7 @@ j            string? userId = null;
                         userId ?? "unknown",
                         userId ?? "unknown"
                     );
-                    
+
                     return BadRequest(
                         new TokenVerificationResponse
                         {
@@ -79,7 +88,7 @@ j            string? userId = null;
                 }
 
                 userEmail = user.Email;
-                
+
                 // Log successful login
                 await _auditLogService.LogAsync(
                     "Login Attempt",
@@ -107,7 +116,7 @@ j            string? userId = null;
             catch (Exception ex)
             {
                 Console.WriteLine($"Token verification error: {ex}");
-                
+
                 // Log failed login attempt
                 await _auditLogService.LogAsync(
                     "Login Attempt",
@@ -116,7 +125,7 @@ j            string? userId = null;
                     userId ?? "unknown",
                     userId ?? "unknown"
                 );
-                
+
                 return BadRequest(
                     new TokenVerificationResponse
                     {

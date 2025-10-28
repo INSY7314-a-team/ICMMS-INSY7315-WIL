@@ -52,8 +52,8 @@ namespace ICCMS_API.Services
                 if (string.IsNullOrWhiteSpace(request.ReceiverId))
                     result.Errors.Add("Receiver ID is required");
 
-                if (string.IsNullOrWhiteSpace(request.ProjectId))
-                    result.Errors.Add("Project ID is required");
+                // if (string.IsNullOrWhiteSpace(request.ProjectId))
+                //     result.Errors.Add("Project ID is required");
 
                 if (string.IsNullOrWhiteSpace(request.Subject))
                     result.Errors.Add("Subject is required");

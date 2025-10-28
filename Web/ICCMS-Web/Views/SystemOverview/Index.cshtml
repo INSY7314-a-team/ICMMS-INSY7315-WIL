@@ -62,11 +62,11 @@
         <div class="col-lg-3 col-md-6">
             <div class="stat-card compact">
                 <div class="stat-icon">
-                    <i class="fas fa-dollar-sign"></i>
+                    <img src="~/images/south-africa-rand-yellow.png" alt="South Africa Rand">
                 </div>
                 <div class="stat-content">
-                    <h4 class="stat-number">R@(Model?.FinancialStatistics?.RevenueThisMonth.ToString("N0") ?? "0")</h4>
-                    <p class="stat-label">Monthly Revenue</p>
+                    <h4 class="stat-number">@(Model?.FinancialStatistics?.RevenueThisMonth.ToString("N0") ?? "0")</h4>
+                    <p class="stat-label">Revenue This Month</p>
                 </div>
             </div>
         </div>

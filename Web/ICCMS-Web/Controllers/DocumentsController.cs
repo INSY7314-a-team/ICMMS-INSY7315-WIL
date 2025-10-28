@@ -263,11 +263,11 @@ namespace ICCMS_Web.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Delete(string fileName)
+        public async Task<IActionResult> Delete([FromBody] DeleteDocumentRequest request)
         {
             try
             {
-                _logger.LogInformation("Deleting document: {FileName}", fileName);
+                _logger.LogInformation("Deleting document: {FileName}", request.FileName);
 
                 var apiBaseUrl = _configuration["ApiSettings:BaseUrl"];
                 var firebaseToken = User.FindFirst("FirebaseToken")?.Value;
@@ -281,12 +281,15 @@ namespace ICCMS_Web.Controllers
                 _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {firebaseToken}");
 
                 var response = await _httpClient.DeleteAsync(
-                    $"{apiBaseUrl}/api/documents/{fileName}"
+                    $"{apiBaseUrl}/api/documents/{request.FileName}"
                 );
 
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.LogInformation("Document deleted successfully: {FileName}", fileName);
+                    _logger.LogInformation(
+                        "Document deleted successfully: {FileName}",
+                        request.FileName
+                    );
                     return Json(new { success = true, message = "Document deleted successfully" });
                 }
                 else
@@ -598,5 +601,10 @@ namespace ICCMS_Web.Controllers
                 return new List<Models.UserSummary>();
             }
         }
+    }
+
+    public class DeleteDocumentRequest
+    {
+        public string FileName { get; set; } = string.Empty;
     }
 }

@@ -51,7 +51,6 @@ namespace ICCMS_API.Models
 
     public class CreateThreadRequest
     {
-        [Required(ErrorMessage = "Project ID is required")]
         public string ProjectId { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Subject is required")]

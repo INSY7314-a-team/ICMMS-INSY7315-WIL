@@ -1474,13 +1474,50 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpDelete("thread/{threadId}")]
+        [Authorize(Roles = "Admin,Tester")]
+        public async Task<IActionResult> DeleteThread(string threadId)
+        {
+            try
+            {
+                Console.WriteLine($"Deleting thread {threadId}");
+                // 1. Get all messages for the thread
+                var messages = await _firebaseService.GetCollectionAsync<Message>("messages");
+                var threadMessages = messages.Where(m => m.ThreadId == threadId).ToList();
+
+                // 2. Delete all messages in the thread
+                if (threadMessages.Any())
+                {
+                    var deleteMessageTasks = threadMessages
+                        .Select(message =>
+                            _firebaseService.DeleteDocumentAsync("messages", message.MessageId)
+                        )
+                        .ToList();
+                    await Task.WhenAll(deleteMessageTasks);
+                }
+
+                // 3. Delete the thread itself and get confirmation
+                await _firebaseService.DeleteDocumentAsync("threads", threadId);
+                return Ok(new { message = "Thread and all its messages deleted successfully." });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to delete thread {threadId}: {ex.Message}");
+                return StatusCode(
+                    500,
+                    new { message = $"An error occurred while deleting the thread: {ex.Message}" }
+                );
+            }
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteMessage(string id)
         {
             try
             {
                 await _firebaseService.DeleteDocumentAsync("messages", id);
-                return NoContent();
+
+                return Ok(new { message = "Message deleted successfully." });
             }
             catch (Exception ex)
             {
