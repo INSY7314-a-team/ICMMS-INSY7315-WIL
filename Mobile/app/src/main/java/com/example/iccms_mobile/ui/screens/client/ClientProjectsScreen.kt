@@ -177,7 +177,7 @@ fun StatCard(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = color),
         // Card shadow
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
