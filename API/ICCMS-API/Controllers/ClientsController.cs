@@ -405,6 +405,30 @@ namespace ICCMS_API.Controllers
                         Console.WriteLine(
                             $"🔧 Updated project {maintenanceRequest.ProjectId} status to 'Maintenance'"
                         );
+
+                        // Notify Project Manager about maintenance request
+                        if (!string.IsNullOrEmpty(project.ProjectManagerId))
+                        {
+                            var systemEvent = new SystemEvent
+                            {
+                                EventType = "project_update",
+                                EntityId = maintenanceRequest.ProjectId,
+                                EntityType = "project",
+                                Action = "maintenance_request_created",
+                                ProjectId = maintenanceRequest.ProjectId,
+                                UserId = project.ProjectManagerId,
+                                Data = new Dictionary<string, object>
+                                {
+                                    { "projectId", maintenanceRequest.ProjectId },
+                                    {
+                                        "updateType",
+                                        $"New maintenance request created: {maintenanceRequest.Description}"
+                                    },
+                                    { "userId", project.ProjectManagerId },
+                                },
+                            };
+                            await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
+                        }
                     }
                     else
                     {
@@ -466,6 +490,37 @@ namespace ICCMS_API.Controllers
                 invoice.PaidDate = DateTime.UtcNow;
                 invoice.PaidBy = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 await _firebaseService.UpdateDocumentAsync("invoices", id, invoice);
+
+                // Notify Project Manager about payment
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    invoice.ProjectId
+                );
+                if (project != null && !string.IsNullOrEmpty(project.ProjectManagerId))
+                {
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "invoice_workflow",
+                        EntityId = id,
+                        EntityType = "invoice",
+                        Action = "Paid",
+                        ProjectId = invoice.ProjectId,
+                        UserId = project.ProjectManagerId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "invoiceId", id },
+                            { "invoiceNumber", invoice.InvoiceNumber },
+                            { "invoiceAmount", invoice.TotalAmount },
+                            { "invoiceDescription", invoice.Description },
+                            { "clientId", invoice.ClientId },
+                            { "contractorId", invoice.ContractorId },
+                            { "action", "Paid" },
+                            { "userId", project.ProjectManagerId },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
+                }
+
                 return Ok(newPayment);
             }
             catch (Exception ex)
@@ -564,11 +619,24 @@ namespace ICCMS_API.Controllers
                 );
                 if (project != null && !string.IsNullOrEmpty(project.ProjectManagerId))
                 {
-                    await _workflowMessageService.SendQuoteApprovalNotificationAsync(
-                        id,
-                        "Approved",
-                        project.ProjectManagerId
-                    );
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "quotation_workflow",
+                        EntityId = id,
+                        EntityType = "quotation",
+                        Action = "approved",
+                        ProjectId = quotation.ProjectId,
+                        UserId = project.ProjectManagerId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "quotationId", id },
+                            { "projectName", project.Name },
+                            { "approvedByName", User.Identity.Name ?? "Client" },
+                            { "totalAmount", quotation.GrandTotal },
+                            { "projectManagerId", project.ProjectManagerId },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
                 }
 
                 // Attempt to convert to invoice. This is idempotent in the workflow service.
@@ -626,11 +694,24 @@ namespace ICCMS_API.Controllers
                 );
                 if (project != null && !string.IsNullOrEmpty(project.ProjectManagerId))
                 {
-                    await _workflowMessageService.SendQuoteApprovalNotificationAsync(
-                        id,
-                        "Rejected",
-                        project.ProjectManagerId
-                    );
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "quotation_workflow",
+                        EntityId = id,
+                        EntityType = "quotation",
+                        Action = "rejected",
+                        ProjectId = quotation.ProjectId,
+                        UserId = project.ProjectManagerId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "quotationId", id },
+                            { "projectName", project.Name },
+                            { "rejectedByName", User.Identity.Name ?? "Client" },
+                            { "totalAmount", quotation.GrandTotal },
+                            { "projectManagerId", project.ProjectManagerId },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
                 }
 
                 return Ok(quotation);

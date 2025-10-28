@@ -549,11 +549,23 @@ namespace ICCMS_API.Controllers
                         && !string.IsNullOrEmpty(currentUserId)
                     )
                     {
-                        await _workflowMessageService.SendTaskAssignmentNotificationAsync(
-                            normalizedTask.TaskId,
-                            normalizedTask.AssignedTo,
-                            currentUserId
-                        );
+                        var systemEvent = new SystemEvent
+                        {
+                            EventType = "task_assignment",
+                            EntityId = normalizedTask.TaskId,
+                            EntityType = "task",
+                            Action = "assigned",
+                            ProjectId = normalizedTask.ProjectId,
+                            UserId = currentUserId,
+                            Data = new Dictionary<string, object>
+                            {
+                                { "taskId", normalizedTask.TaskId },
+                                { "taskName", normalizedTask.Name },
+                                { "assignedToId", normalizedTask.AssignedTo },
+                                { "assignedById", currentUserId },
+                            },
+                        };
+                        await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
                     }
                 }
                 return Ok(new { saved = tasks.Count });
@@ -1017,11 +1029,23 @@ namespace ICCMS_API.Controllers
 
                     if (assignmentChanged && isNowAssigned && !string.IsNullOrEmpty(currentUserId))
                     {
-                        await _workflowMessageService.SendTaskAssignmentNotificationAsync(
-                            normalizedTask.TaskId,
-                            normalizedTask.AssignedTo,
-                            currentUserId
-                        );
+                        var systemEvent = new SystemEvent
+                        {
+                            EventType = "task_assignment",
+                            EntityId = normalizedTask.TaskId,
+                            EntityType = "task",
+                            Action = "assigned",
+                            ProjectId = normalizedTask.ProjectId,
+                            UserId = currentUserId,
+                            Data = new Dictionary<string, object>
+                            {
+                                { "taskId", normalizedTask.TaskId },
+                                { "taskName", normalizedTask.Name },
+                                { "assignedToId", normalizedTask.AssignedTo },
+                                { "assignedById", currentUserId },
+                            },
+                        };
+                        await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
                     }
                 }
                 else
@@ -1030,11 +1054,23 @@ namespace ICCMS_API.Controllers
                     Console.WriteLine($"SaveTask: Created new task {taskId}");
                     if (isNowAssigned && !string.IsNullOrEmpty(currentUserId))
                     {
-                        await _workflowMessageService.SendTaskAssignmentNotificationAsync(
-                            normalizedTask.TaskId,
-                            normalizedTask.AssignedTo,
-                            currentUserId
-                        );
+                        var systemEvent = new SystemEvent
+                        {
+                            EventType = "task_assignment",
+                            EntityId = normalizedTask.TaskId,
+                            EntityType = "task",
+                            Action = "assigned",
+                            ProjectId = normalizedTask.ProjectId,
+                            UserId = currentUserId,
+                            Data = new Dictionary<string, object>
+                            {
+                                { "taskId", normalizedTask.TaskId },
+                                { "taskName", normalizedTask.Name },
+                                { "assignedToId", normalizedTask.AssignedTo },
+                                { "assignedById", currentUserId },
+                            },
+                        };
+                        await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
                     }
                 }
             }
@@ -1159,11 +1195,23 @@ namespace ICCMS_API.Controllers
                     var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                     if (!string.IsNullOrEmpty(currentUserId))
                     {
-                        await _workflowMessageService.SendTaskAssignmentNotificationAsync(
-                            task.TaskId,
-                            task.AssignedTo,
-                            currentUserId
-                        );
+                        var systemEvent = new SystemEvent
+                        {
+                            EventType = "task_assignment",
+                            EntityId = task.TaskId,
+                            EntityType = "task",
+                            Action = "assigned",
+                            ProjectId = task.ProjectId,
+                            UserId = currentUserId,
+                            Data = new Dictionary<string, object>
+                            {
+                                { "taskId", task.TaskId },
+                                { "taskName", task.Name },
+                                { "assignedToId", task.AssignedTo },
+                                { "assignedById", currentUserId },
+                            },
+                        };
+                        await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
                     }
                 }
 
@@ -1343,11 +1391,22 @@ namespace ICCMS_API.Controllers
                             updateMessage = $"Task '{task.Name}' progress is now {task.Progress}%.";
                         }
 
-                        await _workflowMessageService.SendProjectUpdateNotificationAsync(
-                            task.ProjectId,
-                            updateMessage,
-                            project.ClientId
-                        );
+                        var systemEvent = new SystemEvent
+                        {
+                            EventType = "project_update",
+                            EntityId = task.ProjectId,
+                            EntityType = "project",
+                            Action = "task_update",
+                            ProjectId = task.ProjectId,
+                            UserId = project.ClientId,
+                            Data = new Dictionary<string, object>
+                            {
+                                { "projectId", task.ProjectId },
+                                { "updateType", updateMessage },
+                                { "userId", project.ClientId },
+                            },
+                        };
+                        await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
                     }
                 }
 
@@ -1357,11 +1416,23 @@ namespace ICCMS_API.Controllers
                     var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                     if (!string.IsNullOrEmpty(currentUserId))
                     {
-                        await _workflowMessageService.SendTaskAssignmentNotificationAsync(
-                            task.TaskId,
-                            task.AssignedTo,
-                            currentUserId
-                        );
+                        var systemEvent = new SystemEvent
+                        {
+                            EventType = "task_assignment",
+                            EntityId = task.TaskId,
+                            EntityType = "task",
+                            Action = "assigned",
+                            ProjectId = task.ProjectId,
+                            UserId = currentUserId,
+                            Data = new Dictionary<string, object>
+                            {
+                                { "taskId", task.TaskId },
+                                { "taskName", task.Name },
+                                { "assignedToId", task.AssignedTo },
+                                { "assignedById", currentUserId },
+                            },
+                        };
+                        await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
                     }
                 }
 
@@ -1815,11 +1886,22 @@ namespace ICCMS_API.Controllers
                 // Notify client of task completion
                 if (project != null && !string.IsNullOrEmpty(project.ClientId))
                 {
-                    await _workflowMessageService.SendProjectUpdateNotificationAsync(
-                        project.ProjectId,
-                        $"Task '{task.Name}' has been completed.",
-                        project.ClientId
-                    );
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "project_update",
+                        EntityId = project.ProjectId,
+                        EntityType = "project",
+                        Action = "task_completed",
+                        ProjectId = project.ProjectId,
+                        UserId = project.ClientId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "projectId", project.ProjectId },
+                            { "updateType", $"Task '{task.Name}' has been completed." },
+                            { "userId", project.ClientId },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
                 }
 
                 Console.WriteLine($"[ApproveTaskCompletion] Successfully approved task {taskId}");
@@ -2059,6 +2141,27 @@ namespace ICCMS_API.Controllers
                 report.ReviewedBy = pmId;
                 await _firebaseService.UpdateDocumentAsync("completionReports", id, report);
 
+                // Notify contractor about approval
+                if (!string.IsNullOrEmpty(report.SubmittedBy))
+                {
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "project_update",
+                        EntityId = report.ProjectId,
+                        EntityType = "project",
+                        Action = "completion_request_approved",
+                        ProjectId = report.ProjectId,
+                        UserId = report.SubmittedBy,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "projectId", report.ProjectId },
+                            { "updateType", "Your completion request for task has been approved." },
+                            { "userId", report.SubmittedBy },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
+                }
+
                 // Update the associated task status to "Completed"
                 var task = await _firebaseService.GetDocumentAsync<ProjectTask>(
                     "tasks",
@@ -2081,10 +2184,21 @@ namespace ICCMS_API.Controllers
                     var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                     if (!string.IsNullOrEmpty(currentUserId))
                     {
-                        await _workflowMessageService.SendTaskCompletionNotificationAsync(
-                            report.TaskId,
-                            report.SubmittedBy
-                        );
+                        var systemEvent = new SystemEvent
+                        {
+                            EventType = "task_completion",
+                            EntityId = report.TaskId,
+                            EntityType = "task",
+                            Action = "completed",
+                            ProjectId = report.ProjectId,
+                            UserId = report.SubmittedBy,
+                            Data = new Dictionary<string, object>
+                            {
+                                { "taskId", report.TaskId },
+                                { "completedById", report.SubmittedBy },
+                            },
+                        };
+                        await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
                     }
                 }
 
@@ -2136,6 +2250,30 @@ namespace ICCMS_API.Controllers
                 // Note: ReviewNotes would be extracted from rejectionData in a real implementation
 
                 await _firebaseService.UpdateDocumentAsync("completionReports", id, report);
+
+                // Notify contractor about rejection
+                if (!string.IsNullOrEmpty(report.SubmittedBy))
+                {
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "project_update",
+                        EntityId = report.ProjectId,
+                        EntityType = "project",
+                        Action = "completion_request_rejected",
+                        ProjectId = report.ProjectId,
+                        UserId = report.SubmittedBy,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "projectId", report.ProjectId },
+                            {
+                                "updateType",
+                                "Your completion request for task has been rejected. Please review and resubmit."
+                            },
+                            { "userId", report.SubmittedBy },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
+                }
 
                 // Update the associated task status back to "In Progress"
                 var task = await _firebaseService.GetDocumentAsync<ProjectTask>(

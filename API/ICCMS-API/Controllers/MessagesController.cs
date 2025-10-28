@@ -882,7 +882,54 @@ namespace ICCMS_API.Controllers
                     return Unauthorized(new { message = "User not authenticated." });
                 }
 
-                // First, verify the thread exists in the threads collection
+                // Check if this is a workflow message thread (workflow messages use their WorkflowMessageId as threadId)
+                var workflowMessage = await _workflowService.GetWorkflowMessageAsync(threadId);
+                if (workflowMessage != null)
+                {
+                    Console.WriteLine(
+                        $"======== [MarkThreadAsRead] Thread {threadId} is a workflow message, using workflow message marking ========"
+                    );
+
+                    // Check if user is a recipient
+                    if (!workflowMessage.Recipients.Contains(userId))
+                    {
+                        Console.WriteLine(
+                            $"======== [MarkThreadAsRead] User {userId} is not a recipient of workflow message {threadId} ========"
+                        );
+                        return Forbid("User is not a recipient of this workflow message.");
+                    }
+
+                    // Mark workflow message as read
+                    var success = await _workflowService.MarkWorkflowMessageAsReadAsync(
+                        threadId,
+                        userId
+                    );
+                    if (success)
+                    {
+                        var workflowUnreadCount = await GetUnreadCountForUser(userId);
+                        return Ok(
+                            new
+                            {
+                                message = "Workflow message marked as read.",
+                                unreadCount = workflowUnreadCount,
+                                success = true,
+                            }
+                        );
+                    }
+                    else
+                    {
+                        return BadRequest(
+                            new
+                            {
+                                message = "Failed to mark workflow message as read.",
+                                unreadCount = -1,
+                                success = false,
+                            }
+                        );
+                    }
+                }
+
+                // Handle regular message threads
                 var thread = await _firebaseService.GetDocumentAsync<MessageThread>(
                     "threads",
                     threadId
@@ -1336,115 +1383,48 @@ namespace ICCMS_API.Controllers
             }
         }
 
-        [HttpPost("workflow/quote-approval")]
-        public async Task<ActionResult> SendQuoteApprovalNotification(
-            [FromBody] QuoteApprovalRequest request
-        )
+        [HttpPost("workflow/{workflowMessageId}/mark-as-read")]
+        public async Task<IActionResult> MarkWorkflowMessageAsRead(string workflowMessageId)
         {
             try
             {
-                var success = await _workflowService.SendQuoteApprovalNotificationAsync(
-                    request.QuoteId,
-                    request.Action,
-                    request.UserId
+                var userId = User.UserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated." });
+                }
+
+                var success = await _workflowService.MarkWorkflowMessageAsReadAsync(
+                    workflowMessageId,
+                    userId
                 );
 
                 if (success)
                 {
-                    return Ok(new { message = "Quote approval notification sent successfully" });
-                }
-                else
-                {
-                    return BadRequest(new { error = "Failed to send quote approval notification" });
-                }
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
-        }
-
-        [HttpPost("workflow/invoice-payment")]
-        public async Task<ActionResult> SendInvoicePaymentNotification(
-            [FromBody] InvoicePaymentRequest request
-        )
-        {
-            try
-            {
-                var success = await _workflowService.SendInvoicePaymentNotificationAsync(
-                    request.InvoiceId,
-                    request.Action,
-                    request.UserId
-                );
-
-                if (success)
-                {
-                    return Ok(new { message = "Invoice payment notification sent successfully" });
+                    return Ok(new { message = "Workflow message marked as read.", success = true });
                 }
                 else
                 {
                     return BadRequest(
-                        new { error = "Failed to send invoice payment notification" }
+                        new
+                        {
+                            message = "Failed to mark workflow message as read.",
+                            success = false,
+                        }
                     );
                 }
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
-            }
-        }
-
-        [HttpPost("workflow/project-update")]
-        public async Task<ActionResult> SendProjectUpdateNotification(
-            [FromBody] ProjectUpdateRequest request
-        )
-        {
-            try
-            {
-                var success = await _workflowService.SendProjectUpdateNotificationAsync(
-                    request.ProjectId,
-                    request.UpdateType,
-                    request.UserId
+                Console.WriteLine($"Error marking workflow message as read: {ex.Message}");
+                return StatusCode(
+                    500,
+                    new
+                    {
+                        message = "An error occurred while marking workflow message as read.",
+                        success = false,
+                    }
                 );
-
-                if (success)
-                {
-                    return Ok(new { message = "Project update notification sent successfully" });
-                }
-                else
-                {
-                    return BadRequest(new { error = "Failed to send project update notification" });
-                }
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
-        }
-
-        [HttpPost("workflow/system-alert")]
-        public async Task<ActionResult> SendSystemAlert([FromBody] SystemAlertRequest request)
-        {
-            try
-            {
-                var success = await _workflowService.SendSystemAlertAsync(
-                    request.AlertType,
-                    request.Message,
-                    request.Recipients
-                );
-
-                if (success)
-                {
-                    return Ok(new { message = "System alert sent successfully" });
-                }
-                else
-                {
-                    return BadRequest(new { error = "Failed to send system alert" });
-                }
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
             }
         }
 
@@ -1693,6 +1673,7 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                // Get unread count from regular messages
                 var messages = await _firebaseService.GetCollectionAsync<Message>("messages");
 
                 // Group messages by MessageId to handle duplicates
@@ -1721,13 +1702,23 @@ namespace ICCMS_API.Controllers
                     }
                 }
 
+                // Get unread count from workflow messages
+                var workflowMessages = await _firebaseService.GetCollectionAsync<WorkflowMessage>(
+                    "workflow-messages"
+                );
+                var unreadWorkflowMessages = workflowMessages
+                    .Where(wm => wm.Recipients.Contains(userId) && !wm.IsRead)
+                    .ToList();
+
+                var totalUnreadCount = unreadMessageIds.Count + unreadWorkflowMessages.Count;
+
                 Console.WriteLine(
-                    $"======== [GetUnreadCountForUser] Found {unreadMessageIds.Count} unique unread messages for user {userId} ========"
+                    $"======== [GetUnreadCountForUser] Found {unreadMessageIds.Count} unread regular messages and {unreadWorkflowMessages.Count} unread workflow messages for user {userId} (total: {totalUnreadCount}) ========"
                 );
 
                 if (unreadMessageIds.Any())
                 {
-                    // Get thread breakdown
+                    // Get thread breakdown for regular messages
                     var unreadMessages = messages
                         .Where(m => unreadMessageIds.Contains(m.MessageId))
                         .ToList();
@@ -1746,7 +1737,20 @@ namespace ICCMS_API.Controllers
                     }
                 }
 
-                return unreadMessageIds.Count;
+                if (unreadWorkflowMessages.Any())
+                {
+                    Console.WriteLine(
+                        $"======== [GetUnreadCountForUser] Unread workflow messages: ========"
+                    );
+                    foreach (var wm in unreadWorkflowMessages)
+                    {
+                        Console.WriteLine(
+                            $"======== [GetUnreadCountForUser]   - WorkflowMessage {wm.WorkflowMessageId}: {wm.Subject} ========"
+                        );
+                    }
+                }
+
+                return totalUnreadCount;
             }
             catch (Exception ex)
             {

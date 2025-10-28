@@ -697,10 +697,21 @@ namespace ICCMS_API.Controllers
                 var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (!string.IsNullOrEmpty(currentUserId))
                 {
-                    await _workflowMessageService.SendProgressReportNotificationAsync(
-                        report.ProgressReportId,
-                        currentUserId
-                    );
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "progress_report",
+                        EntityId = report.ProgressReportId,
+                        EntityType = "progress_report",
+                        Action = "submitted",
+                        ProjectId = task.ProjectId,
+                        UserId = currentUserId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "reportId", report.ProgressReportId },
+                            { "submittedById", currentUserId },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
                 }
 
                 return Ok(report);
@@ -768,10 +779,21 @@ namespace ICCMS_API.Controllers
                 var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (!string.IsNullOrEmpty(currentUserId))
                 {
-                    await _workflowMessageService.SendCompletionRequestNotificationAsync(
-                        taskId,
-                        currentUserId
-                    );
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "completion_request",
+                        EntityId = taskId,
+                        EntityType = "task",
+                        Action = "completion_requested",
+                        ProjectId = task.ProjectId,
+                        UserId = currentUserId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "taskId", taskId },
+                            { "requestedById", currentUserId },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
                 }
 
                 return Ok(

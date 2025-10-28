@@ -336,6 +336,9 @@ namespace ICCMS_API.Controllers
                 if (quotation == null)
                     return NotFound();
 
+                // Note: No notification needed - PM approval is automatic when sending quotes to clients
+                // Client notifications are handled by the client approval/rejection process
+
                 var userId = User.UserId();
                 _auditLogService.LogAsync(
                     "Quotation",
@@ -367,6 +370,35 @@ namespace ICCMS_API.Controllers
                 var quotation = await _quoteWorkflow.PmRejectAsync(id, request.Reason);
                 if (quotation == null)
                     return NotFound();
+
+                // Notify Client about rejection
+                if (!string.IsNullOrEmpty(quotation.ClientId))
+                {
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "quotation_workflow",
+                        EntityId = id,
+                        EntityType = "quotation",
+                        Action = "rejected",
+                        ProjectId = quotation.ProjectId,
+                        UserId = quotation.ClientId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "quotationId", id },
+                            {
+                                "projectName",
+                                await ProjectHelper.GetProjectNameAsync(
+                                    _firebaseService,
+                                    quotation.ProjectId
+                                )
+                            },
+                            { "rejectedByName", "Project Manager" },
+                            { "totalAmount", quotation.GrandTotal },
+                            { "projectManagerId", User.UserId() },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
+                }
 
                 var userId = User.UserId();
                 _auditLogService.LogAsync(
@@ -404,10 +436,31 @@ namespace ICCMS_API.Controllers
                 var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (!string.IsNullOrEmpty(currentUserId))
                 {
-                    await _workflowMessageService.SendQuotationSentNotificationAsync(
-                        quotation.QuotationId,
-                        currentUserId
-                    );
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "quotation_workflow",
+                        EntityId = quotation.QuotationId,
+                        EntityType = "quotation",
+                        Action = "sent",
+                        ProjectId = quotation.ProjectId,
+                        UserId = currentUserId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "quotationId", quotation.QuotationId },
+                            {
+                                "projectName",
+                                await ProjectHelper.GetProjectNameAsync(
+                                    _firebaseService,
+                                    quotation.ProjectId
+                                )
+                            },
+                            { "totalAmount", quotation.GrandTotal },
+                            { "clientId", quotation.ClientId },
+                            { "sentById", currentUserId },
+                            { "sentByName", User.Identity.Name ?? "Project Manager" },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
                 }
 
                 return Ok();
@@ -476,40 +529,8 @@ namespace ICCMS_API.Controllers
                 if (result == null)
                     return NotFound();
 
-                // Send workflow notification based on client decision
-                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (!string.IsNullOrEmpty(currentUserId))
-                {
-                    if (body.Accept)
-                    {
-                        await _workflowMessageService.SendQuotationApprovedNotificationAsync(
-                            id,
-                            currentUserId
-                        );
-                    }
-                    else
-                    {
-                        await _workflowMessageService.SendQuotationRejectedNotificationAsync(
-                            id,
-                            currentUserId
-                        );
-                    }
-                }
-
-                // Notify the Project Manager about the client's decision
-                var project = await _firebaseService.GetDocumentAsync<Project>(
-                    "projects",
-                    quotation.ProjectId
-                );
-                if (project != null && !string.IsNullOrEmpty(project.ProjectManagerId))
-                {
-                    var action = body.Accept ? "Accepted" : "Rejected";
-                    await _workflowMessageService.SendQuoteApprovalNotificationAsync(
-                        id,
-                        action,
-                        project.ProjectManagerId
-                    );
-                }
+                // Note: Client doesn't need to be notified about their own decision
+                // PM notification is handled by ClientsController.ApproveQuotation/RejectQuotation
 
                 var userId = User.UserId();
                 var decision = body.Accept ? "approved" : "rejected";
@@ -602,5 +623,25 @@ namespace ICCMS_API.Controllers
     public class PmRejectRequest
     {
         public string? Reason { get; set; }
+    }
+}
+
+// Helper method to get project name
+public static class ProjectHelper
+{
+    public static async Task<string> GetProjectNameAsync(
+        IFirebaseService firebaseService,
+        string projectId
+    )
+    {
+        try
+        {
+            var project = await firebaseService.GetDocumentAsync<Project>("projects", projectId);
+            return project?.Name ?? projectId; // Fallback to project ID if name not found
+        }
+        catch
+        {
+            return projectId; // Fallback to project ID on error
+        }
     }
 }
