@@ -1,4 +1,18 @@
 /* Documents Management Styles - Construction Theme */
+:root {
+    --primary-bg: #1a1b25; /* Dark navy - main background */
+    --secondary-bg: #2a2b35; /* Lighter dark - card backgrounds */
+    --accent-yellow: #f7ec59; /* Construction yellow - primary CTA */
+    --accent-red: #ff5964; /* Alert/overdue color */
+    --accent-green: #198754; /* Success/completed color */
+    --accent-cyan: #0dcaf0; /* Info/in-progress color */
+    --text-primary: #ffffff; /* Primary text - always white */
+    --text-secondary: #ffffff; /* Secondary text - white with different font weight */
+    --text-muted: #ffffff; /* Muted text - white with opacity */
+    --text-dark: #1a1b25; /* Text on light backgrounds */
+    --border-primary: rgba(247, 236, 89, 0.2); /* Default borders */
+    --border-active: #f7ec59; /* Active/focus borders */
+  }
 
 .documents-container {
     padding: 20px;
@@ -7,43 +21,14 @@
 }
 
 /* ===========================================
-   CONSTRUCTION THEME - DIAGONAL STRIPES
-   =========================================== */
-
-.construction-border {
-    border: 3px solid;
-    border-image: repeating-linear-gradient(
-        45deg,
-        #1A1B25,
-        #1A1B25 8px,
-        #F7EC59 8px,
-        #F7EC59 16px
-    ) 1;
-}
-
-.construction-border-thin {
-    border: 2px solid;
-    border-image: repeating-linear-gradient(
-        45deg,
-        #1A1B25,
-        #1A1B25 6px,
-        #F7EC59 6px,
-        #F7EC59 12px
-    ) 1;
-}
-
-/* ===========================================
    DASHBOARD HEADER
    =========================================== */
 
 .documents-dashboard-header {
-    background: linear-gradient(135deg, #0D1821 0%, #1A1B25 100%);
     color: #FFFFFF;
     padding: 30px 35px;
     border-radius: 20px;
     margin-bottom: 30px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-    border: 2px solid rgba(247, 236, 89, 0.2);
 }
 
 .documents-dashboard-title {
@@ -103,87 +88,88 @@
 /* ===========================================
    STAT CARDS
    =========================================== */
-
-.documents-stat-card {
-    background: linear-gradient(135deg, #0D1821 0%, #1A1B25 100%);
-    color: #FFFFFF;
-    border-radius: 20px;
-    padding: 25px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+   .stat-card {
+    background: var(--secondary-bg);
+    color: var(--text-primary);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     transition: all 0.3s ease;
-    border: 2px solid rgba(247, 236, 89, 0.1);
-    height: 100%;
+    border: 1px solid rgba(247, 236, 89, 0.2);
+}
+
+.stat-card:hover {
+    background: rgba(247, 236, 89, 0.15);
+    border-color: #F7EC59;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.stat-card .stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--accent-yellow);
+    color: var(--text-dark);
     display: flex;
     align-items: center;
-    gap: 20px;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 15px;
 }
-
-.documents-stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 35px rgba(0,0,0,0.25);
-    border-color: #F7EC59;
-}
-
-.documents-stat-card .stat-icon {
+.stat-card .stat-icon {
     color: #F7EC59;
-    font-size: 2.8rem;
-    opacity: 0.9;
-    flex-shrink: 0;
+    background: transparent;
 }
 
-.documents-stat-card .stat-content {
-    flex: 1;
-}
 
-.documents-stat-card .card-title {
-    color: #B0B0B0;
-    font-weight: 600;
-    margin-bottom: 8px;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.documents-stat-card .card-value {
-    font-size: 2.2rem;
+.stat-card .stat-number {
+    font-size: 2rem;
     font-weight: 700;
-    color: #FFFFFF;
+    margin-bottom: 5px;
+    color: #F7EC59;
+}
+
+.stat-card .stat-label {
+    font-size: 0.9rem;
+    opacity: 0.8;
     margin: 0;
-    line-height: 1;
+}
+.stat-card.compact {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+}
+.stat-card.compact .stat-icon {
+    margin-right: 15px;
+    margin-bottom: 0;
+}
+.stat-card.compact .stat-number {
+    font-size: 1.75rem;
+    margin-bottom: 2px;
 }
 
 /* ===========================================
-   MAIN CONTENT CARDS
+   Section Header
    =========================================== */
 
-.documents-content-card {
-    background: #0D1821;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    border: 2px solid #F7EC59;
-    overflow: hidden;
-    margin-bottom: 15px;
-    position: relative;
+.section-header {
+    color: var(--text-primary);
+    padding: 20px 0px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(247, 236, 89, 0.2);
 }
 
-.documents-card-header {
-    background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);
-    color: #FFFFFF;
-    padding: 20px 25px;
-    border-bottom: 1px solid rgba(247, 236, 89, 0.4);
-}
-
-.documents-card-title {
+.section-title {
     font-size: 1.5rem;
     font-weight: 600;
     margin: 0;
-    color: #FFFFFF;
+    color: var(--text-primary);
 }
 
-.documents-card-title i {
-    color: #F7EC59;
-    margin-right: 10px;
-}
 
 /* ===========================================
    SEARCH AND FILTERS
@@ -202,7 +188,7 @@
 .search-input {
     width: 100%;
     padding: 15px 50px 15px 20px;
-    background: #1A1B25;
+    background: #2a2b35;
     border: 2px solid rgba(255, 255, 255, 0.2);
     border-radius: 25px;
     color: #FFFFFF;
@@ -248,12 +234,80 @@
     transform: translateY(-50%) scale(1.1);
 }
 
-/* Advanced Filters */
+/* ===========================================
+   ENHANCED FILTERS STYLING
+   =========================================== */
+
+.filter-toggle-btn {
+    background: var(--accent-yellow);
+    border: none;
+    color: var(--text-dark);
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(247, 236, 89, 0.2);
+}
+
+.filter-toggle-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(247, 236, 89, 0.4);
+    color: var(--text-dark);
+}
+
+.filters-panel {
+    background: var(--secondary-bg) !important;
+    border-radius: 15px;
+    padding: 25px;
+    margin-top: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    animation: slideDown 0.3s ease-out;
+    border: 1px solid var(--border-primary);
+    margin-bottom: 20px;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.filters-container {
+    color: var(--text-primary);
+}
+
+.filter-group {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(247, 236, 89, 0.2);
+}
+
+.filter-group:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.filter-group-header {
+    margin-bottom: 15px;
+    color: var(--accent-yellow);
+}
+
+.filter-group-header h6 {
+    font-weight: 600;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
 .advanced-filters-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    margin-top: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
 }
 
 .filter-item {
@@ -262,7 +316,7 @@
 }
 
 .filter-label {
-    color: #F7EC59;
+    color: var(--accent-yellow);
     font-weight: 600;
     margin-bottom: 8px;
     font-size: 0.9rem;
@@ -270,10 +324,10 @@
 
 .filter-input,
 .filter-select {
-    background: #1A1B25;
+    background: rgba(255, 255, 255, 0.1);
     border: 2px solid rgba(255, 255, 255, 0.2);
-    color: #FFFFFF;
-    padding: 10px 15px;
+    color: var(--text-primary);
+    padding: 12px 16px;
     border-radius: 10px;
     font-size: 0.9rem;
     transition: all 0.3s ease;
@@ -282,7 +336,7 @@
 .filter-input:focus,
 .filter-select:focus {
     outline: none;
-    border-color: #F7EC59;
+    border-color: var(--accent-yellow);
     background: rgba(247, 236, 89, 0.1);
     box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.2);
 }
@@ -292,8 +346,8 @@
 }
 
 .filter-select option {
-    background: #1A1B25;
-    color: #FFFFFF;
+    background: var(--primary-bg);
+    color: var(--text-primary);
 }
 
 /* Filter Actions */
@@ -320,8 +374,8 @@
 }
 
 .filter-action-btn.primary {
-    background: #F7EC59;
-    color: #1A1B25;
+    background: var(--accent-yellow);
+    color: var(--text-dark);
     box-shadow: 0 2px 8px rgba(247, 236, 89, 0.2);
 }
 
@@ -332,25 +386,14 @@
 
 .filter-action-btn.secondary {
     background: rgba(255, 255, 255, 0.1);
-    color: #FFFFFF;
+    color: var(--text-primary);
     border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 .filter-action-btn.secondary:hover {
     background: rgba(255, 255, 255, 0.2);
-    border-color: #FFFFFF;
+    border-color: var(--text-primary);
     transform: translateY(-2px);
-}
-
-.filter-action-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none !important;
-}
-
-.filter-action-btn:disabled:hover {
-    transform: none !important;
-    box-shadow: none !important;
 }
 
 /* ===========================================
@@ -897,17 +940,14 @@
 
 /* Section Titles */
 .section-title {
-    color: #F7EC59;
-    font-weight: 700;
+    color: (var(--text-primary));
+    font-weight: 600;
     font-size: 1rem;
-    margin-bottom: 20px;
     text-transform: uppercase;
     letter-spacing: 0.8px;
     display: flex;
     align-items: center;
     gap: 10px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid rgba(247, 236, 89, 0.2);
 }
 
 .section-title i {
@@ -926,14 +966,15 @@
 }
 
 .stat-card {
-    background: rgba(247, 236, 89, 0.08);
-    border: 1px solid rgba(247, 236, 89, 0.2);
-    border-radius: 15px;
-    padding: 20px;
+    background: var(--secondary-bg);
+    color: var(--text-primary);
+    border-radius: 16px;
+    padding: 15px;
     display: flex;
     align-items: center;
     gap: 15px;
     transition: all 0.3s ease;
+    border: 1px solid var(--border-primary);
     position: relative;
     overflow: hidden;
 }
@@ -954,9 +995,9 @@
 }
 
 .stat-card:hover {
-    background: rgba(247, 236, 89, 0.12);
+    background: rgba(247, 236, 89, 0.15);
     border-color: #F7EC59;
-    transform: translateX(5px);
+    transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
@@ -1233,10 +1274,7 @@
    =========================================== */
 
 .pagination-container {
-    background: #0D1821;
     padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     margin-top: 20px;
 }
 

@@ -21,59 +21,52 @@
             <small class="text-muted">
                 <i class="fas fa-clock"></i> Last updated: @Model.LastUpdated.ToString("MMM dd, yyyy 'at' HH:mm:ss UTC")
             </small>
-            <button class="btn btn-outline-light btn-sm" onclick="refreshDashboard()">
-                <i class="fas fa-sync-alt"></i> Refresh Now
-            </button>
         </div>
     </div>
 
     <!-- System Health Overview -->
-    <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="system-stat-card">
+    <div class="row g-2 mb-3">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card compact">
                 <div class="stat-icon">
                     <i class="fas fa-heartbeat"></i>
                 </div>
-                <h6 class="card-title">System Status</h6>
-                <div class="card-value">@Model.SystemHealth.OverallStatus</div>
-                <div class="stat-trend positive">
-                    <i class="fas fa-arrow-up"></i> 99.9% Uptime
+                <div class="stat-content">
+                    <h4 class="stat-number">@Model.SystemHealth.OverallStatus</h4>
+                    <p class="stat-label">System Status</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="system-stat-card">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card compact">
                 <div class="stat-icon">
                     <i class="fas fa-users"></i>
                 </div>
-                <h6 class="card-title">Active Users</h6>
-                <div class="card-value">@Model.UserStatistics.ActiveUsers</div>
-                <div class="stat-trend positive">
-                    <i class="fas fa-arrow-up"></i> @Model.UserStatistics.NewUsersThisWeek this week
+                <div class="stat-content">
+                    <h4 class="stat-number">@Model.UserStatistics.ActiveUsers</h4>
+                    <p class="stat-label">Active Users</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="system-stat-card">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card compact">
                 <div class="stat-icon">
                     <i class="fas fa-project-diagram"></i>
                 </div>
-                <h6 class="card-title">Active Projects</h6>
-                <div class="card-value">@Model.ProjectStatistics.ActiveProjects</div>
-                <div class="stat-trend positive">
-                    <i class="fas fa-arrow-up"></i> @Model.ProjectStatistics.ProjectsThisMonth this month
+                <div class="stat-content">
+                    <h4 class="stat-number">@Model.ProjectStatistics.ActiveProjects</h4>
+                    <p class="stat-label">Active Projects</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="system-stat-card">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card compact">
                 <div class="stat-icon">
                     <i class="fas fa-dollar-sign"></i>
                 </div>
-                <h6 class="card-title">Monthly Revenue</h6>
-                <div class="card-value">R@(Model?.FinancialStatistics?.RevenueThisMonth.ToString("N0") ?? "0")</div>
-                <div class="stat-trend positive">
-                    <i class="fas fa-arrow-up"></i> 12% from last month
+                <div class="stat-content">
+                    <h4 class="stat-number">R@(Model?.FinancialStatistics?.RevenueThisMonth.ToString("N0") ?? "0")</h4>
+                    <p class="stat-label">Monthly Revenue</p>
                 </div>
             </div>
         </div>
@@ -82,111 +75,107 @@
     <!-- System Health & Performance -->
     <div class="row mb-4">
         <div class="col-md-6 mb-4">
-            <div class="system-content-card">
-                <div class="system-card-header">
-                    <h5 class="system-card-title">
-                        <i class="fas fa-server"></i>
-                        System Health
-                    </h5>
+            <div class="section-header">
+                <h5 class="section-title">
+                    <i class="fas fa-server"></i>
+                    System Health
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <div class="health-indicator @(Model.SystemHealth.OverallStatus == "Healthy" ? "healthy" : "critical")">
+                            <div class="health-dot @(Model.SystemHealth.OverallStatus == "Healthy" ? "healthy" : "critical")"></div>
+                            @Model.SystemHealth.OverallStatus
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="health-indicator healthy">
+                            <div class="health-dot healthy"></div>
+                            Uptime: @Model.SystemHealth.Uptime
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body p-4">
-                    <div class="row">
-                        <div class="col-6 mb-3">
-                            <div class="health-indicator @(Model.SystemHealth.OverallStatus == "Healthy" ? "healthy" : "critical")">
-                                <div class="health-dot @(Model.SystemHealth.OverallStatus == "Healthy" ? "healthy" : "critical")"></div>
-                                @Model.SystemHealth.OverallStatus
-                            </div>
-                        </div>
-                        <div class="col-6 mb-3">
-                            <div class="health-indicator healthy">
-                                <div class="health-dot healthy"></div>
-                                Uptime: @Model.SystemHealth.Uptime
-                            </div>
-                        </div>
+
+                <div class="progress-container">
+                    <div class="progress-label">
+                        <span>CPU Usage</span>
+                        <span>@Model.SystemHealth.CpuUsage</span>
                     </div>
-                    
-                    <div class="progress-container">
-                        <div class="progress-label">
-                            <span>CPU Usage</span>
-                            <span>@Model.SystemHealth.CpuUsage</span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-fill" style="width: @(Model.SystemHealth.CpuUsage?.Replace("%", "") ?? "0")%"></div>
-                        </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" style="width: @(Model.SystemHealth.CpuUsage?.Replace("%", "") ?? "0")%"></div>
                     </div>
-                    
-                    <div class="progress-container">
-                        <div class="progress-label">
-                            <span>Memory Usage</span>
-                            <span>@Model.SystemHealth.MemoryUsage</span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-fill" style="width: @(Model.SystemHealth.MemoryUsage?.Replace("%", "") ?? "0")%"></div>
-                        </div>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-label">
+                        <span>Memory Usage</span>
+                        <span>@Model.SystemHealth.MemoryUsage</span>
                     </div>
-                    
-                    <div class="progress-container">
-                        <div class="progress-label">
-                            <span>Disk Usage</span>
-                            <span>@Model.SystemHealth.DiskUsage</span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-fill" style="width: @(Model.SystemHealth.DiskUsage?.Replace("%", "") ?? "0")%"></div>
-                        </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" style="width: @(Model.SystemHealth.MemoryUsage?.Replace("%", "") ?? "0")%"></div>
+                    </div>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-label">
+                        <span>Disk Usage</span>
+                        <span>@Model.SystemHealth.DiskUsage</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" style="width: @(Model.SystemHealth.DiskUsage?.Replace("%", "") ?? "0")%"></div>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="col-md-6 mb-4">
-            <div class="system-content-card">
-                <div class="system-card-header">
-                    <h5 class="system-card-title">
-                        <i class="fas fa-tachometer-alt"></i>
-                        Performance Metrics
-                    </h5>
+            <div class="section-header">
+                <h5 class="section-title">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Performance Metrics
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <div class="text-center">
+                            <div class="h4 text-warning">@Model.PerformanceMetrics.AverageResponseTime</div>
+                            <small class="text-muted">Avg Response Time</small>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="text-center">
+                            <div class="h4 text-info">@Model.PerformanceMetrics.RequestsPerSecond</div>
+                            <small class="text-muted">Requests/sec</small>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body p-4">
-                    <div class="row">
-                        <div class="col-6 mb-3">
-                            <div class="text-center">
-                                <div class="h4 text-warning">@Model.PerformanceMetrics.AverageResponseTime</div>
-                                <small class="text-muted">Avg Response Time</small>
-                            </div>
-                        </div>
-                        <div class="col-6 mb-3">
-                            <div class="text-center">
-                                <div class="h4 text-info">@Model.PerformanceMetrics.RequestsPerSecond</div>
-                                <small class="text-muted">Requests/sec</small>
-                            </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <div class="text-center">
+                            <div class="h4 text-success">@Model.PerformanceMetrics.ErrorRate%</div>
+                            <small class="text-muted">Error Rate</small>
                         </div>
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-6 mb-3">
-                            <div class="text-center">
-                                <div class="h4 text-success">@Model.PerformanceMetrics.ErrorRate%</div>
-                                <small class="text-muted">Error Rate</small>
-                            </div>
-                        </div>
-                        <div class="col-6 mb-3">
-                            <div class="text-center">
-                                <div class="h4 text-primary">@Model.PerformanceMetrics.ApiUptime</div>
-                                <small class="text-muted">API Uptime</small>
-                            </div>
+                    <div class="col-6 mb-3">
+                        <div class="text-center">
+                            <div class="h4 text-primary">@Model.PerformanceMetrics.ApiUptime</div>
+                            <small class="text-muted">API Uptime</small>
                         </div>
                     </div>
-                    
-                    <hr class="my-3">
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">
-                            <i class="fas fa-clock"></i> Last check: @Model.PerformanceMetrics.LastPerformanceCheck.ToString("HH:mm:ss")
-                        </small>
-                        <small class="text-muted">
-                            <i class="fas fa-users"></i> Peak users: @Model.PerformanceMetrics.PeakConcurrentUsers
-                        </small>
-                    </div>
+                </div>
+
+                <hr class="my-3">
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="fas fa-clock"></i> Last check: @Model.PerformanceMetrics.LastPerformanceCheck.ToString("HH:mm:ss")
+                    </small>
+                    <small class="text-muted">
+                        <i class="fas fa-users"></i> Peak users: @Model.PerformanceMetrics.PeakConcurrentUsers
+                    </small>
                 </div>
             </div>
         </div>
@@ -195,98 +184,94 @@
     <!-- Database Health & API Status -->
     <div class="row mb-4">
         <div class="col-md-6 mb-4">
-            <div class="system-content-card">
-                <div class="system-card-header">
-                    <h5 class="system-card-title">
-                        <i class="fas fa-database"></i>
-                        Database Health
-                    </h5>
+            <div class="section-header">
+                <h5 class="section-title">
+                    <i class="fas fa-database"></i>
+                    Database Health
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <div class="health-indicator @(Model.DatabaseHealth.Status == "Connected" ? "healthy" : "critical")">
+                            <div class="health-dot @(Model.DatabaseHealth.Status == "Connected" ? "healthy" : "critical")"></div>
+                            @Model.DatabaseHealth.Status
+                        </div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <small class="text-muted">Response: @Model.DatabaseHealth.ResponseTime</small>
+                    </div>
                 </div>
-                <div class="card-body p-4">
-                    <div class="row mb-3">
-                        <div class="col-6">
-                            <div class="health-indicator @(Model.DatabaseHealth.Status == "Connected" ? "healthy" : "critical")">
-                                <div class="health-dot @(Model.DatabaseHealth.Status == "Connected" ? "healthy" : "critical")"></div>
-                                @Model.DatabaseHealth.Status
-                            </div>
-                        </div>
-                        <div class="col-6 text-end">
-                            <small class="text-muted">Response: @Model.DatabaseHealth.ResponseTime</small>
+
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="h6 text-info">@Model.DatabaseHealth.ConnectionPool</div>
+                            <small class="text-muted">Connection Pool</small>
                         </div>
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="text-center">
-                                <div class="h6 text-info">@Model.DatabaseHealth.ConnectionPool</div>
-                                <small class="text-muted">Connection Pool</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="text-center">
-                                <div class="h6 text-warning">@Model.DatabaseHealth.QueryPerformance</div>
-                                <small class="text-muted">Query Performance</small>
-                            </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="h6 text-warning">@Model.DatabaseHealth.QueryPerformance</div>
+                            <small class="text-muted">Query Performance</small>
                         </div>
                     </div>
-                    
-                    <hr class="my-3">
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">
-                            <i class="fas fa-hdd"></i> Storage: @Model.DatabaseHealth.StorageUsed
-                        </small>
-                        <small class="text-muted">
-                            <i class="fas fa-save"></i> Last backup: @Model.DatabaseHealth.LastBackup.ToString("MMM dd, HH:mm")
-                        </small>
-                    </div>
+                </div>
+
+                <hr class="my-3">
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="fas fa-hdd"></i> Storage: @Model.DatabaseHealth.StorageUsed
+                    </small>
+                    <small class="text-muted">
+                        <i class="fas fa-save"></i> Last backup: @Model.DatabaseHealth.LastBackup.ToString("MMM dd, HH:mm")
+                    </small>
                 </div>
             </div>
         </div>
 
         <div class="col-md-6 mb-4">
-            <div class="system-content-card">
-                <div class="system-card-header">
-                    <h5 class="system-card-title">
-                        <i class="fas fa-network-wired"></i>
-                        API Status
-                    </h5>
+            <div class="section-header">
+                <h5 class="section-title">
+                    <i class="fas fa-network-wired"></i>
+                    API Status
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <div class="health-indicator @(Model.ApiStatus.OverallStatus == "Healthy" ? "healthy" : "warning")">
+                            <div class="health-dot @(Model.ApiStatus.OverallStatus == "Healthy" ? "healthy" : "warning")"></div>
+                            @Model.ApiStatus.OverallStatus
+                        </div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <small class="text-muted">@Model.ApiStatus.HealthyEndpoints/@Model.ApiStatus.TotalEndpoints endpoints</small>
+                    </div>
                 </div>
-                <div class="card-body p-4">
-                    <div class="row mb-3">
-                        <div class="col-6">
-                            <div class="health-indicator @(Model.ApiStatus.OverallStatus == "Healthy" ? "healthy" : "warning")">
-                                <div class="health-dot @(Model.ApiStatus.OverallStatus == "Healthy" ? "healthy" : "warning")"></div>
-                                @Model.ApiStatus.OverallStatus
-                            </div>
-                        </div>
-                        <div class="col-6 text-end">
-                            <small class="text-muted">@Model.ApiStatus.HealthyEndpoints/@Model.ApiStatus.TotalEndpoints endpoints</small>
-                        </div>
-                    </div>
-                    
-                    <div class="api-status-grid">
-                        @foreach (var endpoint in Model.ApiStatus.EndpointStatuses.Take(4))
-                        {
-                            <div class="api-endpoint-card">
-                                <div class="api-endpoint-name">@endpoint.Endpoint</div>
-                                <div class="api-endpoint-status">
-                                    <span class="health-indicator @(endpoint.Status == "Healthy" ? "healthy" : "critical")" style="font-size: 0.7rem; padding: 4px 8px;">
-                                        @endpoint.Status
-                                    </span>
-                                </div>
-                                <div class="api-endpoint-time">@endpoint.ResponseTime</div>
-                            </div>
-                        }
-                    </div>
-                    
-                    @if (Model.ApiStatus.EndpointStatuses.Count > 4)
+
+                <div class="api-status-grid">
+                    @foreach (var endpoint in Model.ApiStatus.EndpointStatuses.Take(4))
                     {
-                        <div class="text-center mt-3">
-                            <small class="text-muted">+@(Model.ApiStatus.EndpointStatuses.Count - 4) more endpoints</small>
+                        <div class="api-endpoint-card">
+                            <div class="api-endpoint-name">@endpoint.Endpoint</div>
+                            <div class="api-endpoint-status">
+                                <span class="health-indicator @(endpoint.Status == "Healthy" ? "healthy" : "critical")" style="font-size: 0.7rem; padding: 4px 8px;">
+                                    @endpoint.Status
+                                </span>
+                            </div>
+                            <div class="api-endpoint-time">@endpoint.ResponseTime</div>
                         </div>
                     }
                 </div>
+
+                @if (Model.ApiStatus.EndpointStatuses.Count > 4)
+                {
+                    <div class="text-center mt-3">
+                        <small class="text-muted">+@(Model.ApiStatus.EndpointStatuses.Count - 4) more endpoints</small>
+                    </div>
+                }
             </div>
         </div>
     </div>
@@ -294,125 +279,121 @@
     <!-- User & Project Statistics -->
     <div class="row mb-4">
         <div class="col-md-6 mb-4">
-            <div class="system-content-card">
-                <div class="system-card-header">
-                    <h5 class="system-card-title">
-                        <i class="fas fa-users"></i>
-                        User Statistics
-                    </h5>
+            <div class="section-header">
+                <h5 class="section-title">
+                    <i class="fas fa-users"></i>
+                    User Statistics
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <div class="text-center">
+                            <div class="h4 text-primary">@Model.UserStatistics.TotalUsers</div>
+                            <small class="text-muted">Total Users</small>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="text-center">
+                            <div class="h4 text-success">@Model.UserStatistics.ActiveUsers</div>
+                            <small class="text-muted">Active Users</small>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body p-4">
-                    <div class="row">
-                        <div class="col-6 mb-3">
-                            <div class="text-center">
-                                <div class="h4 text-primary">@Model.UserStatistics.TotalUsers</div>
-                                <small class="text-muted">Total Users</small>
-                            </div>
-                        </div>
-                        <div class="col-6 mb-3">
-                            <div class="text-center">
-                                <div class="h4 text-success">@Model.UserStatistics.ActiveUsers</div>
-                                <small class="text-muted">Active Users</small>
-                            </div>
+
+                <div class="row">
+                    <div class="col-3 mb-2">
+                        <div class="text-center">
+                            <div class="h6 text-danger">@Model.UserStatistics.AdminUsers</div>
+                            <small class="text-muted">Admins</small>
                         </div>
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-3 mb-2">
-                            <div class="text-center">
-                                <div class="h6 text-danger">@Model.UserStatistics.AdminUsers</div>
-                                <small class="text-muted">Admins</small>
-                            </div>
-                        </div>
-                        <div class="col-3 mb-2">
-                            <div class="text-center">
-                                <div class="h6 text-info">@Model.UserStatistics.ManagerUsers</div>
-                                <small class="text-muted">Managers</small>
-                            </div>
-                        </div>
-                        <div class="col-3 mb-2">
-                            <div class="text-center">
-                                <div class="h6 text-warning">@Model.UserStatistics.ClientUsers</div>
-                                <small class="text-muted">Clients</small>
-                            </div>
-                        </div>
-                        <div class="col-3 mb-2">
-                            <div class="text-center">
-                                <div class="h6 text-success">@Model.UserStatistics.ContractorUsers</div>
-                                <small class="text-muted">Contractors</small>
-                            </div>
+                    <div class="col-3 mb-2">
+                        <div class="text-center">
+                            <div class="h6 text-info">@Model.UserStatistics.ManagerUsers</div>
+                            <small class="text-muted">Managers</small>
                         </div>
                     </div>
-                    
-                    <hr class="my-3">
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">
-                            <i class="fas fa-user-plus"></i> @Model.UserStatistics.NewUsersThisWeek new this week
-                        </small>
-                        <small class="text-muted">
-                            <i class="fas fa-clock"></i> Last activity: @Model.UserStatistics.LastLoginActivity.ToString("HH:mm")
-                        </small>
+                    <div class="col-3 mb-2">
+                        <div class="text-center">
+                            <div class="h6 text-warning">@Model.UserStatistics.ClientUsers</div>
+                            <small class="text-muted">Clients</small>
+                        </div>
                     </div>
+                    <div class="col-3 mb-2">
+                        <div class="text-center">
+                            <div class="h6 text-success">@Model.UserStatistics.ContractorUsers</div>
+                            <small class="text-muted">Contractors</small>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-3">
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="fas fa-user-plus"></i> @Model.UserStatistics.NewUsersThisWeek new this week
+                    </small>
+                    <small class="text-muted">
+                        <i class="fas fa-clock"></i> Last activity: @Model.UserStatistics.LastLoginActivity.ToString("HH:mm")
+                    </small>
                 </div>
             </div>
         </div>
 
         <div class="col-md-6 mb-4">
-            <div class="system-content-card">
-                <div class="system-card-header">
-                    <h5 class="system-card-title">
-                        <i class="fas fa-project-diagram"></i>
-                        Project Statistics
-                    </h5>
+            <div class="section-header">
+                <h5 class="section-title">
+                    <i class="fas fa-project-diagram"></i>
+                    Project Statistics
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <div class="text-center">
+                            <div class="h4 text-primary">@Model.ProjectStatistics.TotalProjects</div>
+                            <small class="text-muted">Total Projects</small>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="text-center">
+                            <div class="h4 text-success">@Model.ProjectStatistics.ActiveProjects</div>
+                            <small class="text-muted">Active Projects</small>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body p-4">
-                    <div class="row">
-                        <div class="col-6 mb-3">
-                            <div class="text-center">
-                                <div class="h4 text-primary">@Model.ProjectStatistics.TotalProjects</div>
-                                <small class="text-muted">Total Projects</small>
-                            </div>
-                        </div>
-                        <div class="col-6 mb-3">
-                            <div class="text-center">
-                                <div class="h4 text-success">@Model.ProjectStatistics.ActiveProjects</div>
-                                <small class="text-muted">Active Projects</small>
-                            </div>
+
+                <div class="row">
+                    <div class="col-4 mb-2">
+                        <div class="text-center">
+                            <div class="h6 text-success">@Model.ProjectStatistics.CompletedProjects</div>
+                            <small class="text-muted">Completed</small>
                         </div>
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-4 mb-2">
-                            <div class="text-center">
-                                <div class="h6 text-success">@Model.ProjectStatistics.CompletedProjects</div>
-                                <small class="text-muted">Completed</small>
-                            </div>
-                        </div>
-                        <div class="col-4 mb-2">
-                            <div class="text-center">
-                                <div class="h6 text-warning">@Model.ProjectStatistics.DraftProjects</div>
-                                <small class="text-muted">Draft</small>
-                            </div>
-                        </div>
-                        <div class="col-4 mb-2">
-                            <div class="text-center">
-                                <div class="h6 text-info">@Model.ProjectStatistics.ProjectsThisMonth</div>
-                                <small class="text-muted">This Month</small>
-                            </div>
+                    <div class="col-4 mb-2">
+                        <div class="text-center">
+                            <div class="h6 text-warning">@Model.ProjectStatistics.DraftProjects</div>
+                            <small class="text-muted">Draft</small>
                         </div>
                     </div>
-                    
-                    <hr class="my-3">
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">
-                            <i class="fas fa-clock"></i> Avg Duration: @Model.ProjectStatistics.AverageProjectDuration
-                        </small>
-                        <small class="text-muted">
-                            <i class="fas fa-star"></i> Most Active: @Model.ProjectStatistics.MostActiveProject
-                        </small>
+                    <div class="col-4 mb-2">
+                        <div class="text-center">
+                            <div class="h6 text-info">@Model.ProjectStatistics.ProjectsThisMonth</div>
+                            <small class="text-muted">This Month</small>
+                        </div>
                     </div>
+                </div>
+
+                <hr class="my-3">
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="fas fa-clock"></i> Avg Duration: @Model.ProjectStatistics.AverageProjectDuration
+                    </small>
+                    <small class="text-muted">
+                        <i class="fas fa-star"></i> Most Active: @Model.ProjectStatistics.MostActiveProject
+                    </small>
                 </div>
             </div>
         </div>
@@ -421,59 +402,57 @@
     <!-- Financial Overview -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="system-content-card">
-                <div class="system-card-header">
-                    <h5 class="system-card-title">
-                        <i class="fas fa-chart-line"></i>
-                        Financial Overview
-                    </h5>
-                </div>
-                <div class="card-body p-4">
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <div class="text-center">
-                                <div class="h4 text-primary">@(Model?.FinancialStatistics?.TotalQuotations ?? 0)</div>
-                                <small class="text-muted">Total Quotations</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="text-center">
-                                <div class="h4 text-success">@(Model?.FinancialStatistics?.TotalInvoices ?? 0)</div>
-                                <small class="text-muted">Total Invoices</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="text-center">
-                                <div class="h4 text-info">@(Model?.FinancialStatistics?.TotalEstimates ?? 0)</div>
-                                <small class="text-muted">Total Estimates</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="text-center">
-                                <div class="h4 text-warning">@(Model?.FinancialStatistics?.PendingQuotations ?? 0)</div>
-                                <small class="text-muted">Pending Quotations</small>
-                            </div>
+            <div class="section-header">
+                <h5 class="section-title">
+                    <i class="fas fa-chart-line"></i>
+                    Financial Overview
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <div class="text-center">
+                            <div class="h4 text-primary">@(Model?.FinancialStatistics?.TotalQuotations ?? 0)</div>
+                            <small class="text-muted">Total Quotations</small>
                         </div>
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <div class="text-center">
-                                <div class="h5 text-success">R@(Model?.FinancialStatistics?.RevenueThisMonth.ToString("N0") ?? "0")</div>
-                                <small class="text-muted">Revenue This Month</small>
-                            </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="text-center">
+                            <div class="h4 text-success">@(Model?.FinancialStatistics?.TotalInvoices ?? 0)</div>
+                            <small class="text-muted">Total Invoices</small>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="text-center">
-                                <div class="h5 text-warning">R@(Model?.FinancialStatistics?.OutstandingAmount.ToString("N0") ?? "0")</div>
-                                <small class="text-muted">Outstanding Amount</small>
-                            </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="text-center">
+                            <div class="h4 text-info">@(Model?.FinancialStatistics?.TotalEstimates ?? 0)</div>
+                            <small class="text-muted">Total Estimates</small>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="text-center">
-                                <div class="h5 text-info">R@(Model?.FinancialStatistics?.AverageInvoiceValue.ToString("N0") ?? "0")</div>
-                                <small class="text-muted">Avg Invoice Value</small>
-                            </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="text-center">
+                            <div class="h4 text-warning">@(Model?.FinancialStatistics?.PendingQuotations ?? 0)</div>
+                            <small class="text-muted">Pending Quotations</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="text-center">
+                            <div class="h5 text-success">R@(Model?.FinancialStatistics?.RevenueThisMonth.ToString("N0") ?? "0")</div>
+                            <small class="text-muted">Revenue This Month</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="text-center">
+                            <div class="h5 text-warning">R@(Model?.FinancialStatistics?.OutstandingAmount.ToString("N0") ?? "0")</div>
+                            <small class="text-muted">Outstanding Amount</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="text-center">
+                            <div class="h5 text-info">R@(Model?.FinancialStatistics?.AverageInvoiceValue.ToString("N0") ?? "0")</div>
+                            <small class="text-muted">Avg Invoice Value</small>
                         </div>
                     </div>
                 </div>
@@ -484,76 +463,72 @@
     <!-- Recent Activity & System Alerts -->
     <div class="row mb-4">
         <div class="col-md-6 mb-4">
-            <div class="system-content-card">
-                <div class="system-card-header">
-                    <h5 class="system-card-title">
-                        <i class="fas fa-history"></i>
-                        Recent Activity
-                    </h5>
-                </div>
-                <div class="card-body p-4">
-                    @if (Model.RecentActivity.Any())
+            <div class="section-header">
+                <h5 class="section-title">
+                    <i class="fas fa-history"></i>
+                    Recent Activity
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                @if (Model.RecentActivity.Any())
+                {
+                    @foreach (var activity in Model.RecentActivity.Take(5))
                     {
-                        @foreach (var activity in Model.RecentActivity.Take(5))
-                        {
-                            <div class="activity-item">
-                                <div class="activity-icon">
-                                    <i class="@activity.Icon"></i>
-                                </div>
-                                <div class="activity-content">
-                                    <div class="activity-description">@activity.Description</div>
-                                    <div class="activity-meta">
-                                        <span class="activity-time">@activity.Timestamp.ToString("HH:mm")</span>
-                                        <span>by @activity.User</span>
-                                    </div>
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="@activity.Icon"></i>
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-description">@activity.Description</div>
+                                <div class="activity-meta">
+                                    <span class="activity-time">@activity.Timestamp.ToString("HH:mm")</span>
+                                    <span>by @activity.User</span>
                                 </div>
                             </div>
-                        }
-                    }
-                    else
-                    {
-                        <div class="text-center text-muted py-3">
-                            <i class="fas fa-info-circle fa-2x mb-2"></i>
-                            <p>No recent activity to display</p>
                         </div>
                     }
-                </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-info-circle fa-2x mb-2"></i>
+                        <p>No recent activity to display</p>
+                    </div>
+                }
             </div>
         </div>
 
         <div class="col-md-6 mb-4">
-            <div class="system-content-card">
-                <div class="system-card-header">
-                    <h5 class="system-card-title">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        System Alerts
-                    </h5>
-                </div>
-                <div class="card-body p-4">
-                    @if (Model.SystemAlerts.Any())
+            <div class="section-header">
+                <h5 class="section-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    System Alerts
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                @if (Model.SystemAlerts.Any())
+                {
+                    @foreach (var alert in Model.SystemAlerts.Take(5))
                     {
-                        @foreach (var alert in Model.SystemAlerts.Take(5))
-                        {
-                            <div class="alert-item @alert.Severity.ToLower()">
-                                <div class="alert-header">
-                                    <div class="alert-title">
-                                        <i class="fas fa-@(alert.Severity.ToLower() == "critical" ? "exclamation-circle" : alert.Severity.ToLower() == "warning" ? "exclamation-triangle" : "info-circle")"></i>
-                                        @alert.Title
-                                    </div>
-                                    <div class="alert-timestamp">@alert.Timestamp.ToString("HH:mm")</div>
+                        <div class="alert-item @alert.Severity.ToLower()">
+                            <div class="alert-header">
+                                <div class="alert-title">
+                                    <i class="fas fa-@(alert.Severity.ToLower() == "critical" ? "exclamation-circle" : alert.Severity.ToLower() == "warning" ? "exclamation-triangle" : "info-circle")"></i>
+                                    @alert.Title
                                 </div>
-                                <div class="alert-message">@alert.Message</div>
+                                <div class="alert-timestamp">@alert.Timestamp.ToString("HH:mm")</div>
                             </div>
-                        }
-                    }
-                    else
-                    {
-                        <div class="text-center text-muted py-3">
-                            <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
-                            <p>No system alerts at this time</p>
+                            <div class="alert-message">@alert.Message</div>
                         </div>
                     }
-                </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+                        <p>No system alerts at this time</p>
+                    </div>
+                }
             </div>
         </div>
     </div>
@@ -625,7 +600,7 @@ document.addEventListener('DOMContentLoaded', function() {
     startAutoRefresh();
     
     // Add animation to cards
-    const cards = document.querySelectorAll('.system-stat-card, .system-content-card');
+    const cards = document.querySelectorAll('.stat-card, .section-header');
     cards.forEach((card, index) => {
         card.style.opacity = '0';
         card.style.transform = 'translateY(30px)';
@@ -650,7 +625,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Add click effects to stat cards
-    const statCards = document.querySelectorAll('.system-stat-card');
+    const statCards = document.querySelectorAll('.stat-card');
     statCards.forEach(card => {
         card.addEventListener('click', function() {
             this.style.transform = 'translateY(-8px) scale(1.02)';

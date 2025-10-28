@@ -7,13 +7,14 @@
 
 <div class="user-management-container">
     <!-- Header Section -->
-    <div class="user-dashboard-header construction-border">
+    <div class="user-dashboard-header">
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h1 class="user-dashboard-title">
                     <i class="fas fa-user-plus me-3"></i>Create New User
                 </h1>
-                <p class="user-dashboard-subtitle">Add a new user to the system with appropriate role and permissions</p>
+                <p class="user-dashboard-subtitle">Add a new user to the system with appropriate role and permissions
+                </p>
             </div>
             <div>
                 <a href="@Url.Action("Index", "Users")" class="user-btn user-btn-secondary">
@@ -26,7 +27,7 @@
     <!-- Create Form -->
     <div class="row">
         <div class="col-lg-8">
-            <div class="user-form-container construction-border">
+            <div class="user-form-container">
                 <div class="user-form-header">
                     <h3 class="user-form-title">
                         <i class="fas fa-user-plus me-2"></i>User Information
@@ -35,7 +36,7 @@
                 <div class="user-form-body">
                     <form asp-action="Create" method="post">
                         <div asp-validation-summary="ModelOnly" class="user-alert user-alert-danger" role="alert"></div>
-                        
+
                         <!-- Personal Information Section -->
                         <div class="form-section mb-4">
                             <h5 class="section-title mb-3">
@@ -47,7 +48,8 @@
                                         <label asp-for="FullName" class="user-form-label">
                                             <i class="fas fa-user me-1"></i>Full Name *
                                         </label>
-                                        <input asp-for="FullName" class="user-form-control" placeholder="Enter full name" required />
+                                        <input asp-for="FullName" class="user-form-control"
+                                            placeholder="Enter full name" required />
                                         <span asp-validation-for="FullName" class="text-danger"></span>
                                     </div>
                                 </div>
@@ -56,7 +58,8 @@
                                         <label asp-for="Email" class="user-form-label">
                                             <i class="fas fa-envelope me-1"></i>Email Address *
                                         </label>
-                                        <input asp-for="Email" type="email" class="user-form-control" placeholder="Enter email address" required />
+                                        <input asp-for="Email" type="email" class="user-form-control"
+                                            placeholder="Enter email address" required />
                                         <span asp-validation-for="Email" class="text-danger"></span>
                                     </div>
                                 </div>
@@ -67,7 +70,8 @@
                                         <label asp-for="Phone" class="user-form-label">
                                             <i class="fas fa-phone me-1"></i>Phone Number
                                         </label>
-                                        <input asp-for="Phone" type="tel" class="user-form-control" placeholder="Enter phone number" />
+                                        <input asp-for="Phone" type="tel" class="user-form-control"
+                                            placeholder="Enter phone number" />
                                         <span asp-validation-for="Phone" class="text-danger"></span>
                                     </div>
                                 </div>
@@ -100,8 +104,10 @@
                                         <label for="Password" class="user-form-label">
                                             <i class="fas fa-lock me-1"></i>Password *
                                         </label>
-                                        <input type="password" id="Password" name="Password" class="user-form-control" placeholder="Enter password" required />
-                                        <div class="form-text" style="color: rgba(255, 255, 255, 0.7);">Password must be at least 6 characters long.</div>
+                                        <input type="password" id="Password" name="Password" class="user-form-control"
+                                            placeholder="Enter password" required />
+                                        <div class="form-text" style="color: rgba(255, 255, 255, 0.7);">Password must be
+                                            at least 6 characters long.</div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -109,8 +115,10 @@
                                         <label for="ConfirmPassword" class="user-form-label">
                                             <i class="fas fa-lock me-1"></i>Confirm Password *
                                         </label>
-                                        <input type="password" id="ConfirmPassword" name="ConfirmPassword" class="user-form-control" placeholder="Confirm password" required />
-                                        <span id="passwordMatchError" class="text-danger" style="display: none;">Passwords do not match.</span>
+                                        <input type="password" id="ConfirmPassword" name="ConfirmPassword"
+                                            class="user-form-control" placeholder="Confirm password" required />
+                                        <span id="passwordMatchError" class="text-danger"
+                                            style="display: none;">Passwords do not match.</span>
                                     </div>
                                 </div>
                             </div>
@@ -142,7 +150,7 @@
 
         <!-- Sidebar Info -->
         <div class="col-lg-4">
-            <div class="user-form-container construction-border-thin">
+            <div class="user-form-container">
                 <div class="user-form-header">
                     <h5 class="user-form-title">
                         <i class="fas fa-info-circle me-2"></i>Role Information
@@ -152,32 +160,36 @@
                     <div class="info-item mb-3">
                         <label class="info-label">Admin</label>
                         <div class="info-value">
-                            <small style="color: rgba(255, 255, 255, 0.7);">Full system access and user management capabilities</small>
+                            <small style="color: rgba(255, 255, 255, 0.7);">Full system access and user management
+                                capabilities</small>
                         </div>
                     </div>
                     <div class="info-item mb-3">
                         <label class="info-label">Project Manager</label>
                         <div class="info-value">
-                            <small style="color: rgba(255, 255, 255, 0.7);">Project oversight and team coordination</small>
+                            <small style="color: rgba(255, 255, 255, 0.7);">Project oversight and team
+                                coordination</small>
                         </div>
                     </div>
                     <div class="info-item mb-3">
                         <label class="info-label">Contractor</label>
                         <div class="info-value">
-                            <small style="color: rgba(255, 255, 255, 0.7);">Project execution and task management</small>
+                            <small style="color: rgba(255, 255, 255, 0.7);">Project execution and task
+                                management</small>
                         </div>
                     </div>
                     <div class="info-item">
                         <label class="info-label">Client</label>
                         <div class="info-value">
-                            <small style="color: rgba(255, 255, 255, 0.7);">Project viewing and communication access</small>
+                            <small style="color: rgba(255, 255, 255, 0.7);">Project viewing and communication
+                                access</small>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Quick Tips -->
-            <div class="user-form-container construction-border-thin mt-3">
+            <div class="user-form-container mt-3">
                 <div class="user-form-header">
                     <h5 class="user-form-title">
                         <i class="fas fa-lightbulb me-2"></i>Quick Tips
@@ -214,11 +226,11 @@
 @section Scripts {
     <script>
         // Password confirmation validation
-        document.getElementById('ConfirmPassword').addEventListener('input', function() {
+        document.getElementById('ConfirmPassword').addEventListener('input', function () {
             const password = document.getElementById('Password').value;
             const confirmPassword = this.value;
             const errorSpan = document.getElementById('passwordMatchError');
-            
+
             if (confirmPassword && password !== confirmPassword) {
                 errorSpan.style.display = 'block';
             } else {
@@ -227,16 +239,16 @@
         });
 
         // Form validation
-        document.querySelector('form').addEventListener('submit', function(e) {
+        document.querySelector('form').addEventListener('submit', function (e) {
             const password = document.getElementById('Password').value;
             const confirmPassword = document.getElementById('ConfirmPassword').value;
-            
+
             if (password !== confirmPassword) {
                 e.preventDefault();
                 alert('Passwords do not match!');
                 return false;
             }
-            
+
             if (password.length < 6) {
                 e.preventDefault();
                 alert('Password must be at least 6 characters long!');

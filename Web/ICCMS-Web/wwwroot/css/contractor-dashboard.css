@@ -92,9 +92,10 @@
 }
 
 .stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    border-color: var(--border-active);
+    background: rgba(247, 236, 89, 0.15);
+    border-color: #F7EC59;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .stat-card .stat-icon {
@@ -441,15 +442,13 @@
    =========================================== */
 
 .section-header {
-    background: #1A1B25;
     color: var(--text-primary);
-    padding: 20px 25px;
-    border-radius: 15px;
+    padding: 20px 0px;
     margin-bottom: 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+     border-bottom: 1px solid rgba(247, 236, 89, 0.2);
 }
 
 .section-title {

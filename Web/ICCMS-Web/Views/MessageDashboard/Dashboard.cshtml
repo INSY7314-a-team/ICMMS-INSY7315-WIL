@@ -21,7 +21,7 @@
 
 <div class="messages-container">
     <!-- Header -->
-    <div class="messages-dashboard-header construction-border">
+    <div class="messages-dashboard-header">
         <div class="d-flex justify-content-between align-items-center">
         <div>
                 <h1 class="messages-dashboard-title">
@@ -32,170 +32,169 @@
         </div>
     </div>
 
-    <!-- Alerts -->
-    @if (TempData["Success"] != null)
-    {
-        <div class="messages-alert messages-alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i> @TempData["Success"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-    @if (TempData["Error"] != null)
-    {
-        <div class="messages-alert messages-alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i> @TempData["Error"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-
     <!-- Stats Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="messages-stat-card">
+    <div class="stats-container">
+    <div class="row g-2 mb-3">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card compact">
                 <div class="stat-icon">
                     <i class="fas fa-comments"></i>
                 </div>
-                <h2 class="card-value">@Model.TotalThreads</h2>
-                <p class="card-title">Total Threads</p>
+                 <div class="stat-content">
+                    <h4 class="stat-number">@Model.TotalThreads</h4>
+                    <p class="stat-label">Total Threads</p>
+                </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="messages-stat-card">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card compact">
                 <div class="stat-icon">
                     <i class="fas fa-envelope"></i>
                 </div>
-                <h2 class="card-value">@Model.Threads.Sum(t => t.MessageCount)</h2>
-                <p class="card-title">Total Messages</p>
+                <div class="stat-content">
+                    <h4 class="stat-number">@Model.Threads.Sum(t => t.MessageCount)</h4>
+                    <p class="stat-label">Total Messages</p>
+                </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="messages-stat-card">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card compact">
                 <div class="stat-icon">
                     <i class="fas fa-envelope-open"></i>
                 </div>
-                <h2 class="card-value">@Model.Threads.Sum(t => t.Messages.Count(m => !m.IsRead))</h2>
-                <p class="card-title">Unread Messages</p>
+                <div class="stat-content">
+                    <h4 class="stat-number">@Model.Threads.Sum(t => t.Messages.Count(m => !m.IsRead))</h4>
+                    <p class="stat-label">Unread Messages</p>
+                </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="messages-stat-card">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card compact">
                 <div class="stat-icon">
                     <i class="fas fa-clock"></i>
                 </div>
-                <h2 class="card-value">@Model.Threads.Count(t => t.LastMessageAt > DateTime.UtcNow.AddDays(-7))</h2>
-                <p class="card-title">Active This Week</p>
+                <div class="stat-content">
+                    <h4 class="stat-number">@Model.Threads.Count(t => t.LastMessageAt > DateTime.UtcNow.AddDays(-7))</h4>
+                    <p class="stat-label">Active This Week</p>
+                </div>
             </div>
         </div>
+    </div>
     </div>
 
     <!-- Search and Filter Section -->
-    <div class="messages-content-card">
-        <div class="messages-card-header">
-            <h5 class="messages-card-title">
-                <i class="fas fa-search"></i> Search & Filter Messages
-            </h5>
-        </div>
-        <div style="padding: 25px;">
-            <!-- Search Section -->
-            <div class="search-section" style="margin-bottom: 20px;">
-                <div class="search-input-group">
-                    <input type="text" class="search-input" id="searchTerm" name="searchTerm" value="@Model.CurrentSearchTerm" placeholder="Search messages by subject, content, sender, or receiver...">
-                    <button type="button" class="search-btn" onclick="applyFilters()" title="Search">
-                        <i class="fas fa-search"></i>
-                    </button>
-                    <button type="button" class="clear-search-btn" onclick="clearFilters()" title="Clear Search">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Advanced Filters -->
-            <div class="advanced-filters-grid">
-                <div class="filter-item">
-                    <label class="filter-label">Message Type</label>
-                    <select class="filter-select" id="filterType">
-                        <option value="all" selected="@(Model.CurrentFilter == "all")">All Types</option>
-                        <option value="direct" selected="@(Model.CurrentFilter == "direct")">Direct</option>
-                        <option value="thread" selected="@(Model.CurrentFilter == "thread")">Thread</option>
-                        <option value="broadcast" selected="@(Model.CurrentFilter == "broadcast")">Broadcast</option>
-                    </select>
-                </div>
-                
-                <div class="filter-item">
-                    <label class="filter-label">Project</label>
-                    <select class="filter-select" id="projectFilter">
-                        <option value="all" selected="@(Model.ProjectFilter == "all")">All Projects</option>
-                        @if (Model.AvailableProjects != null)
-                        {
-                            @foreach (var project in Model.AvailableProjects)
-                            {
-                                <option value="@project.ProjectId" selected="@(Model.ProjectFilter == project.ProjectId)">@project.ProjectName</option>
-                            }
-                        }
-                    </select>
-                </div>
-                
-                <div class="filter-item">
-                    <label class="filter-label">User</label>
-                    <select class="filter-select" id="userFilter">
-                        <option value="all" selected="@(Model.UserFilter == "all")">All Users</option>
-                        @if (Model.AvailableUsers != null)
-                        {
-                            @foreach (var user in Model.AvailableUsers)
-                            {
-                                <option value="@user.UserId" selected="@(Model.UserFilter == user.UserId)">@user.UserName</option>
-                            }
-                        }
-                    </select>
-                </div>
-                
-                <div class="filter-item">
-                    <label class="filter-label">Read Status</label>
-                    <select class="filter-select" id="readFilter">
-                        <option value="all" selected="@(Model.ReadFilter == "all")">All Messages</option>
-                        <option value="read" selected="@(Model.ReadFilter == "read")">Read Only</option>
-                        <option value="unread" selected="@(Model.ReadFilter == "unread")">Unread Only</option>
-                    </select>
-                </div>
-                
-                <div class="filter-item">
-                    <label class="filter-label">Start Date</label>
-                    <div class="date-picker-container">
-                        <input type="date" class="filter-input" id="startDate" value="@Model.StartDate?.ToString("yyyy-MM-dd")">
-                    </div>
-                </div>
-                
-                <div class="filter-item">
-                    <label class="filter-label">End Date</label>
-                    <div class="date-picker-container">
-                        <input type="date" class="filter-input" id="endDate" value="@Model.EndDate?.ToString("yyyy-MM-dd")">
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Filter Actions -->
-            <div class="filter-actions">
-                <button class="filter-action-btn primary" onclick="applyFilters()">
-                    <i class="fas fa-filter me-2"></i>Apply Filters
-                </button>
-                <button class="filter-action-btn secondary" onclick="clearFilters()">
-                    <i class="fas fa-eraser me-2"></i>Clear All
-                </button>
-            </div>
+    <div class="search-section">
+        <div class="search-input-group">
+            <input type="text" class="search-input" id="searchTerm" name="searchTerm" value="@Model.CurrentSearchTerm" placeholder="Search messages by subject, content, sender, or receiver...">
+            <button type="button" class="search-btn" onclick="applyFilters()" title="Search">
+                <i class="fas fa-search"></i>
+            </button>
+            <button type="button" class="clear-search-btn" onclick="clearFilters()" title="Clear Search">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
     </div>
 
-    <!-- Message Threads Display -->
-    <div class="messages-content-card">
-        <div class="messages-card-header">
-            <h5 class="messages-card-title">
-                <i class="fas fa-comments"></i> Message Threads
-            </h5>
+    <div class="filter-section">
+        <div class="d-flex justify-content-center mb-3">
+            <button type="button" class="filter-toggle-btn" onclick="toggleFilters()">
+                <i class="fa-solid fa-sliders-h me-2"></i>
+                <span id="filterToggleText">Show Filters</span>
+                <i class="fa-solid fa-chevron-down ms-2" id="filterToggleIcon"></i>
+            </button>
         </div>
-        <div class="messages-table-container">
-            @if (Model.Threads.Any())
-            {
-                <div class="table-responsive">
+    </div>
+
+    <div class="filters-panel" id="filtersPanel" style="display: none;">
+        <div class="filter-group">
+                <div class="filter-group-header">
+                        <h6 class="mb-0">Filters</h6>
+                    </div>
+                <div class="advanced-filters-grid">
+                    <div class="filter-item">
+                        <label class="filter-label">Message Type</label>
+                        <select class="filter-select" id="filterType">
+                            <option value="all" selected="@(Model.CurrentFilter == "all")">All Types</option>
+                            <option value="direct" selected="@(Model.CurrentFilter == "direct")">Direct</option>
+                            <option value="thread" selected="@(Model.CurrentFilter == "thread")">Thread</option>
+                            <option value="broadcast" selected="@(Model.CurrentFilter == "broadcast")">Broadcast</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label class="filter-label">Project</label>
+                        <select class="filter-select" id="projectFilter">
+                            <option value="all" selected="@(Model.ProjectFilter == "all")">All Projects</option>
+                            @if (Model.AvailableProjects != null)
+                            {
+                                @foreach (var project in Model.AvailableProjects)
+                                {
+                                    <option value="@project.ProjectId" selected="@(Model.ProjectFilter == project.ProjectId)">@project.ProjectName</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label class="filter-label">User</label>
+                        <select class="filter-select" id="userFilter">
+                            <option value="all" selected="@(Model.UserFilter == "all")">All Users</option>
+                            @if (Model.AvailableUsers != null)
+                            {
+                                @foreach (var user in Model.AvailableUsers)
+                                {
+                                    <option value="@user.UserId" selected="@(Model.UserFilter == user.UserId)">@user.UserName</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label class="filter-label">Read Status</label>
+                        <select class="filter-select" id="readFilter">
+                            <option value="all" selected="@(Model.ReadFilter == "all")">All Messages</option>
+                            <option value="read" selected="@(Model.ReadFilter == "read")">Read Only</option>
+                            <option value="unread" selected="@(Model.ReadFilter == "unread")">Unread Only</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label class="filter-label">Start Date</label>
+                        <div class="date-picker-container">
+                            <input type="date" class="filter-input" id="startDate" value="@Model.StartDate?.ToString("yyyy-MM-dd")">
+                        </div>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label class="filter-label">End Date</label>
+                        <div class="date-picker-container">
+                            <input type="date" class="filter-input" id="endDate" value="@Model.EndDate?.ToString("yyyy-MM-dd")">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Filter Actions -->
+                <div class="filter-actions">
+                    <button class="filter-action-btn primary" onclick="applyFilters()">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                    <button class="filter-action-btn secondary" onclick="clearFilters()">
+                        <i class="fas fa-eraser me-2"></i>Clear All
+                    </button>
+                </div>
+                </div>
+            </div>
+
+    <!-- Message Threads Display -->
+     <div class="section-header">
+        <h3 class="section-title">
+            <i class="fas fa-list me-2"></i>Message Threads
+        </h3>
+    </div>
+    <div class="messages-table-container">
+        @if (Model.Threads.Any())
+        {
+            <div class="table-responsive">
                     <table class="messages-table" id="threadsTable">
                         <thead>
                             <tr>
@@ -377,9 +376,6 @@
                 @if (Model.TotalPages > 1)
                 {
                     <div class="pagination-container">
-                        <div class="pagination-info">
-                            <span>Showing @Model.StartIndex to @Model.EndIndex of @Model.TotalThreads threads</span>
-                        </div>
                         <nav aria-label="Message threads pagination">
                             <ul class="pagination">
                                 @if (Model.HasPreviousPage)
@@ -439,6 +435,9 @@
                                 }
                             </ul>
                         </nav>
+                        <div class="pagination-info">
+                            <span>Showing @Model.StartIndex to @Model.EndIndex of @Model.TotalThreads threads</span>
+                        </div>
                     </div>
                 }
             }
@@ -532,6 +531,24 @@
                 input.addEventListener('change', applyFilters);
             });
         });
+
+        function toggleFilters() {
+            const filtersPanel = document.getElementById('filtersPanel');
+            const filterToggleText = document.getElementById('filterToggleText');
+            const filterToggleIcon = document.getElementById('filterToggleIcon');
+
+            if (filtersPanel.style.display === 'none' || filtersPanel.style.display === '') {
+                filtersPanel.style.display = 'block';
+                filterToggleText.textContent = 'Hide Filters';
+                filterToggleIcon.classList.remove('fa-chevron-down');
+                filterToggleIcon.classList.add('fa-chevron-up');
+            } else {
+                filtersPanel.style.display = 'none';
+                filterToggleText.textContent = 'Show Filters';
+                filterToggleIcon.classList.remove('fa-chevron-up');
+                filterToggleIcon.classList.add('fa-chevron-down');
+            }
+        }
 
         // Toggle thread expansion
         function toggleThread(threadId) {

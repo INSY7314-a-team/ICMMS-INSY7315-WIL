@@ -1,48 +1,34 @@
 /* User Management Styles - Construction Theme */
-
+:root {
+    --primary-bg: #1a1b25; /* Dark navy - main background */
+    --secondary-bg: #2a2b35; /* Lighter dark - card backgrounds */
+    --accent-yellow: #f7ec59; /* Construction yellow - primary CTA */
+    --accent-red: #ff5964; /* Alert/overdue color */
+    --accent-green: #198754; /* Success/completed color */
+    --accent-cyan: #0dcaf0; /* Info/in-progress color */
+    --text-primary: #ffffff; /* Primary text - always white */
+    --text-secondary: #ffffff; /* Secondary text - white with different font weight */
+    --text-muted: #ffffff; /* Muted text - white with opacity */
+    --text-dark: #1a1b25; /* Text on light backgrounds */
+    --border-primary: rgba(247, 236, 89, 0.2); /* Default borders */
+    --border-active: #f7ec59; /* Active/focus borders */
+}
 .user-management-container {
     padding: 20px;
     background-color: #1A1B25;
     min-height: 100vh;
 }
 
-/* ===========================================
-   CONSTRUCTION THEME - DIAGONAL STRIPES
-   =========================================== */
-
-.construction-border {
-    border: 3px solid;
-    border-image: repeating-linear-gradient(
-        45deg,
-        #1A1B25,
-        #1A1B25 8px,
-        #F7EC59 8px,
-        #F7EC59 16px
-    ) 1;
-}
-
-.construction-border-thin {
-    border: 2px solid;
-    border-image: repeating-linear-gradient(
-        45deg,
-        #1A1B25,
-        #1A1B25 6px,
-        #F7EC59 6px,
-        #F7EC59 12px
-    ) 1;
-}
 
 /* ===========================================
    DASHBOARD HEADER
    =========================================== */
 
 .user-dashboard-header {
-    background: #0D1821;
     color: #FFFFFF;
     padding: 25px 30px;
     border-radius: 15px;
     margin-bottom: 30px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
 .user-dashboard-title {
@@ -61,75 +47,88 @@
 /* ===========================================
    STAT CARDS
    =========================================== */
-
 .stat-card {
-    background: #0D1821;
-    color: #FFFFFF;
+    background: var(--secondary-bg);
+    color: var(--text-primary);
     border-radius: 15px;
-    padding: 25px;
+    padding: 20px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     transition: all 0.3s ease;
     border: 1px solid rgba(247, 236, 89, 0.2);
 }
 
 .stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    background: rgba(247, 236, 89, 0.15);
     border-color: #F7EC59;
-}
-
-.stat-card .card-title {
-    color: #F7EC59;
-    font-weight: 600;
-    margin-bottom: 10px;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.stat-card .card-value {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: #FFFFFF;
-    margin: 0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .stat-card .stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+}
+.stat-card .stat-icon {
     color: #F7EC59;
-    font-size: 2.5rem;
+    background: transparent;
+}
+
+
+.stat-card .stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: #F7EC59;
+}
+
+.stat-card .stat-label {
+    font-size: 0.9rem;
     opacity: 0.8;
+    margin: 0;
+}
+.stat-card.compact {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+}
+.stat-card.compact .stat-icon {
+    margin-right: 15px;
+    margin-bottom: 0;
+}
+.stat-card.compact .stat-number {
+    font-size: 1.75rem;
+    margin-bottom: 2px;
 }
 
 /* ===========================================
-   MAIN CONTENT CARDS
+   Section Header
    =========================================== */
 
-.user-content-card {
-    background: #0D1821;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    border: 2px solid #F7EC59;
-    overflow: hidden;
+.section-header {
+    color: var(--text-primary);
+    padding: 20px 0px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+     border-bottom: 1px solid rgba(247, 236, 89, 0.2);
 }
 
-.user-card-header {
-    background: linear-gradient(135deg, #1A1B25 0%, #2A2B35 100%);
-    color: #FFFFFF;
-    padding: 20px 25px;
-    border-bottom: 1px solid rgba(247, 236, 89, 0.4);
-}
-
-.user-card-title {
+.section-title {
     font-size: 1.5rem;
     font-weight: 600;
     margin: 0;
-    color: #FFFFFF;
+    color: var(--text-primary);
 }
 
-.user-card-title i {
-    color: #F7EC59;
-    margin-right: 10px;
-}
 
 /* ===========================================
    SEARCH AND FILTERS
@@ -148,7 +147,7 @@
 .search-input {
     width: 100%;
     padding: 15px 50px 15px 20px;
-    background: #1A1B25;
+    background: #2a2b35;
     border: 2px solid rgba(255, 255, 255, 0.2);
     border-radius: 25px;
     color: #FFFFFF;
@@ -194,27 +193,112 @@
     transform: translateY(-50%) scale(1.1);
 }
 
-/* Filter Dropdown */
-.filter-dropdown {
-    background: #1A1B25;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    color: #FFFFFF;
-    border-radius: 10px;
-    padding: 10px 15px;
+/* ===========================================
+   ENHANCED FILTERS STYLING
+   =========================================== */
+
+.filter-toggle-btn {
+    background: var(--accent-yellow);
+    border: none;
+    color: var(--text-dark);
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 1rem;
     transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(247, 236, 89, 0.2);
 }
 
-.filter-dropdown:focus {
-    outline: none;
-    border-color: #F7EC59;
-    background: rgba(247, 236, 89, 0.1);
-    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.2);
+.filter-toggle-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(247, 236, 89, 0.4);
+    color: var(--text-dark);
 }
 
-.filter-dropdown option {
-    background: #1A1B25;
-    color: #FFFFFF;
+.filters-panel {
+    background: var(--secondary-bg) !important;
+    border-radius: 15px;
+    padding: 25px;
+    margin-top: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    animation: slideDown 0.3s ease-out;
+    border: 1px solid var(--border-primary);
+    margin-bottom: 20px;
 }
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.filters-container {
+    color: var(--text-primary);
+}
+
+.filter-group {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(247, 236, 89, 0.2);
+}
+
+.filter-group:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.filter-group-header {
+    margin-bottom: 15px;
+    color: var(--accent-yellow);
+}
+
+.filter-group-header h6 {
+    font-weight: 600;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+/* Status Filter Buttons */
+.status-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.status-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    text-decoration: none;
+    border-radius: 20px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.status-filter-btn:hover {
+    background: rgba(247, 236, 89, 0.2);
+    border-color: var(--accent-yellow);
+    color: var(--accent-yellow);
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+
+.status-filter-btn.active {
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    border-color: var(--accent-yellow);
+    font-weight: 600;
+}
+
 
 /* ===========================================
    TABLE STYLING
@@ -767,7 +851,7 @@
 }
 
 .section-title {
-    color: #F7EC59;
+    color: (var(--text-primary));
     font-weight: 600;
     font-size: 1.1rem;
     margin-bottom: 15px;

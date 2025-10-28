@@ -7,7 +7,7 @@
 
 <div class="user-management-container">
     <!-- Dashboard Header -->
-    <div class="user-dashboard-header construction-border">
+    <div class="user-dashboard-header">
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h1 class="user-dashboard-title">
@@ -23,326 +23,302 @@
         </div>
     </div>
 
-    <!-- Alert Messages -->
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="user-alert user-alert-success alert-dismissible fade show" role="alert">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-check-circle me-3 fs-4"></i>
-                <div>
-                    <strong>Success!</strong> @TempData["SuccessMessage"]
-                </div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="user-alert user-alert-danger alert-dismissible fade show" role="alert">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-exclamation-triangle me-3 fs-4"></i>
-                <div>
-                    <strong>Error!</strong> @TempData["ErrorMessage"]
-                </div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-
     <!-- Dashboard Stats Cards -->
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title">Total Users</h6>
-                        <h2 class="card-value">@(Model?.Count ?? 0)</h2>
-                    </div>
+    <div class="stats-container">
+        <div class="row g-2 mb-3">
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
                     <div class="stat-icon">
                         <i class="fas fa-users"></i>
                     </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@(Model?.Count ?? 0)</h4>
+                        <p class="stat-label">Total Users</p>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title">Active Users</h6>
-                        <h2 class="card-value">@(Model?.Count(u => u.IsActive) ?? 0)</h2>
-                    </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
                     <div class="stat-icon">
                         <i class="fas fa-user-check"></i>
                     </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@(Model?.Count(u => u.IsActive) ?? 0)</h4>
+                        <p class="stat-label">Active Users</p>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title">Admins</h6>
-                        <h2 class="card-value">@(Model?.Count(u => u.Role?.ToLower() == "admin") ?? 0)</h2>
-                    </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
                     <div class="stat-icon">
                         <i class="fas fa-shield-alt"></i>
                     </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@(Model?.Count(u => u.Role?.ToLower() == "admin") ?? 0)</h4>
+                        <p class="stat-label">Admins</p>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title">Managers</h6>
-                        <h2 class="card-value">@(Model?.Count(u => u.Role?.ToLower() == "project manager") ?? 0)</h2>
-                    </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
                     <div class="stat-icon">
                         <i class="fas fa-user-tie"></i>
                     </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@(Model?.Count(u => u.Role?.ToLower() == "project manager") ?? 0)</h4>
+                        <p class="stat-label">Managers</p>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title">Contractors</h6>
-                        <h2 class="card-value">@(Model?.Count(u => u.Role?.ToLower() == "contractor") ?? 0)</h2>
-                    </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
                     <div class="stat-icon">
                         <i class="fas fa-hammer"></i>
                     </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@(Model?.Count(u => u.Role?.ToLower() == "contractor") ?? 0)</h4>
+                        <p class="stat-label">Contractors</p>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title">Clients</h6>
-                        <h2 class="card-value">@(Model?.Count(u => u.Role?.ToLower() == "client") ?? 0)</h2>
-                    </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
                     <div class="stat-icon">
-                        <i class="fas fa-user-tie"></i>
+                        <i class="fas fa-user-tag"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@(Model?.Count(u => u.Role?.ToLower() == "client") ?? 0)</h4>
+                        <p class="stat-label">Clients</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Content Card -->
-    <div class="user-content-card construction-border-thin">
-        <div class="user-card-header">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <h5 class="user-card-title">
-                        <i class="fas fa-list me-2"></i>User Directory
-                    </h5>
-                </div>
-                <div class="col-md-6">
-                    <div class="d-flex gap-2 justify-content-md-end">
-                        <div class="search-input-group" style="max-width: 300px;">
-                            <input type="text" class="search-input" id="userSearch" 
-                                   placeholder="Search users..." autocomplete="on">
-                            <button type="button" class="search-btn">
-                                <i class="fas fa-search"></i>
-                            </button>
-                            <button type="button" class="clear-search-btn" title="Clear search">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                        <div class="dropdown">
-                            <button class="user-btn user-btn-secondary dropdown-toggle" type="button" 
-                                    data-bs-toggle="dropdown">
-                                <i class="fas fa-filter me-1"></i>Filter
-                            </button>
-                            <ul class="user-dropdown-menu dropdown-menu">
-                                <li><a class="user-dropdown-item dropdown-item" href="#" data-filter="all">All Users</a></li>
-                                <li><a class="user-dropdown-item dropdown-item" href="#" data-filter="active">Active Only</a></li>
-                                <li><a class="user-dropdown-item dropdown-item" href="#" data-filter="inactive">Inactive Only</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="user-dropdown-item dropdown-item" href="#" data-filter="admin">Admins</a></li>
-                                <li><a class="user-dropdown-item dropdown-item" href="#" data-filter="project manager">Project Managers</a></li>
-                                <li><a class="user-dropdown-item dropdown-item" href="#" data-filter="contractor">Contractors</a></li>
-                                <li><a class="user-dropdown-item dropdown-item" href="#" data-filter="client">Clients</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
+
+    <!-- Search and Filter Controls -->
+    <div class="search-section">
+        <div class="search-input-group">
+            <input type="text" id="userSearch" class="search-input" placeholder="Search users by name, email, or phone...">
+            <button type="button" class="search-btn">
+                <i class="fa-solid fa-search"></i>
+            </button>
+            <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+     <!-- Enhanced Filters Section -->
+    <div class="filter-section">
+        <div class="d-flex justify-content-center mb-3">
+            <button type="button" class="filter-toggle-btn" onclick="toggleFilters()">
+                <i class="fa-solid fa-sliders-h me-2"></i>
+                <span id="filterToggleText">Show Filters</span>
+                <i class="fa-solid fa-chevron-down ms-2" id="filterToggleIcon"></i>
+            </button>
+        </div>
+    </div>
+    <div class="filters-panel" id="filtersPanel" style="display: none;">
+        <div class="filter-group">
+            <div class="filter-group-header">
+                <h6 class="mb-0">Filter by Role</h6>
+            </div>
+            <div class="status-filters">
+                <a href="#" class="status-filter-btn" data-filter="all">All Users</a>
+                <a href="#" class="status-filter-btn" data-filter="admin">Admins</a>
+                <a href="#" class="status-filter-btn" data-filter="project manager">Project Managers</a>
+                <a href="#" class="status-filter-btn" data-filter="contractor">Contractors</a>
+                <a href="#" class="status-filter-btn" data-filter="client">Clients</a>
             </div>
         </div>
+        <div class="filter-group">
+            <div class="filter-group-header">
+                <h6 class="mb-0">Filter by Status</h6>
+            </div>
+             <div class="status-filters">
+                <a href="#" class="status-filter-btn" data-filter="active">Active Only</a>
+                <a href="#" class="status-filter-btn" data-filter="inactive">Inactive Only</a>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Main Content -->
+    <div class="section-header">
+        <h3 class="section-title">
+            <i class="fas fa-list me-2"></i>User Directory
+        </h3>
+    </div>
         
-        <div class="user-table-container">
-            @if (Model != null && Model.Any())
-            {
-                <div class="table-responsive">
-                    <table class="user-table" id="usersTable">
-                        <thead>
-                            <tr>
-                                <th>
+    <div class="user-table-container">
+        @if (Model != null && Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="user-table" id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-user me-2"></i>User
+                                </div>
+                            </th>
+                            <th>
+                                <i class="fas fa-envelope me-2"></i>Contact
+                            </th>
+                            <th>
+                                <i class="fas fa-shield-alt me-2"></i>Role
+                            </th>
+                            <th>
+                                <i class="fas fa-calendar me-2"></i>Created
+                            </th>
+                            <th>
+                                <i class="fas fa-toggle-on me-2"></i>Status
+                            </th>
+                            <th class="text-end">
+                                <i class="fas fa-cogs me-2"></i>Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in Model)
+                        {
+                            <tr class="user-row" data-user-id="@user.UserId" 
+                                data-status="@(user.IsActive ? "active" : "inactive")"
+                                data-role="@user.Role?.ToLower()">
+                                <td>
                                     <div class="d-flex align-items-center">
-                                        <i class="fas fa-user me-2"></i>User
+                                        <div class="user-avatar">
+                                            <span>@user.FullName.Substring(0, Math.Min(2, user.FullName.Length)).ToUpper()</span>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-semibold">@user.FullName</h6>
+                                            <small class="text-muted">ID: @user.UserId.Substring(0, Math.Min(8, user.UserId.Length))...</small>
+                                        </div>
                                     </div>
-                                </th>
-                                <th>
-                                    <i class="fas fa-envelope me-2"></i>Contact
-                                </th>
-                                <th>
-                                    <i class="fas fa-shield-alt me-2"></i>Role
-                                </th>
-                                <th>
-                                    <i class="fas fa-calendar me-2"></i>Created
-                                </th>
-                                <th>
-                                    <i class="fas fa-toggle-on me-2"></i>Status
-                                </th>
-                                <th class="text-end">
-                                    <i class="fas fa-cogs me-2"></i>Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var user in Model)
-                            {
-                                <tr class="user-row" data-user-id="@user.UserId" 
-                                    data-status="@(user.IsActive ? "active" : "inactive")"
-                                    data-role="@user.Role?.ToLower()">
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="user-avatar">
-                                                <span>@user.FullName.Substring(0, Math.Min(2, user.FullName.Length)).ToUpper()</span>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">@user.FullName</h6>
-                                                <small class="text-muted">ID: @user.UserId.Substring(0, Math.Min(8, user.UserId.Length))...</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex flex-column">
-                                            <a href="mailto:@user.Email" class="text-decoration-none" style="color: #FFFFFF;">
-                                                <i class="fas fa-envelope me-1"></i>@user.Email
-                                            </a>
-                                            @if (!string.IsNullOrEmpty(user.Phone))
-                                            {
-                                                <a href="tel:@user.Phone" class="text-decoration-none small" style="color: rgba(255, 255, 255, 0.7);">
-                                                    <i class="fas fa-phone me-1"></i>@user.Phone
-                                                </a>
-                                            }
-                                            else
-                                            {
-                                                <span class="small" style="color: rgba(255, 255, 255, 0.7);">
-                                                    <i class="fas fa-phone me-1"></i>No phone
-                                                </span>
-                                            }
-                                        </div>
-                                    </td>
-                                    <td>
-                                        @{
-                                            var roleBadgeClass = user.Role?.ToLower() switch
-                                            {
-                                                "admin" => "admin",
-                                                "project manager" => "manager",
-                                                "contractor" => "contractor",
-                                                "client" => "client",
-                                                _ => "admin"
-                                            };
-                                        }
-                                        <span class="user-badge @roleBadgeClass">
-                                            @user.Role
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex flex-column">
-                                            <span class="fw-medium">@user.CreatedAt.ToString("MMM dd, yyyy")</span>
-                                            <small style="color: rgba(255, 255, 255, 0.7);">@user.CreatedAt.ToString("HH:mm")</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        @if (user.IsActive)
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <a href="mailto:@user.Email" class="text-decoration-none" style="color: #FFFFFF;">
+                                            <i class="fas fa-envelope me-1"></i>@user.Email
+                                        </a>
+                                        @if (!string.IsNullOrEmpty(user.Phone))
                                         {
-                                            <span class="user-badge active">
-                                                <i class="fas fa-check-circle me-1"></i>Active
-                                            </span>
+                                            <a href="tel:@user.Phone" class="text-decoration-none small" style="color: rgba(255, 255, 255, 0.7);">
+                                                <i class="fas fa-phone me-1"></i>@user.Phone
+                                            </a>
                                         }
                                         else
                                         {
-                                            <span class="user-badge inactive">
-                                                <i class="fas fa-times-circle me-1"></i>Inactive
+                                            <span class="small" style="color: rgba(255, 255, 255, 0.7);">
+                                                <i class="fas fa-phone me-1"></i>No phone
                                             </span>
                                         }
-                                    </td>
-                                    <td class="text-end">
-                                        <div class="btn-group" role="group">
-                                            <button type="button" class="user-btn user-btn-secondary dropdown-toggle" 
-                                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="fas fa-ellipsis-v"></i>
-                                            </button>
-                                            <ul class="user-dropdown-menu dropdown-menu dropdown-menu-end">
+                                    </div>
+                                </td>
+                                <td>
+                                    @{
+                                        var roleBadgeClass = user.Role?.ToLower() switch
+                                        {
+                                            "admin" => "admin",
+                                            "project manager" => "manager",
+                                            "contractor" => "contractor",
+                                            "client" => "client",
+                                            _ => "admin"
+                                        };
+                                    }
+                                    <span class="user-badge @roleBadgeClass">
+                                        @user.Role
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <span class="fw-medium">@user.CreatedAt.ToString("MMM dd, yyyy")</span>
+                                        <small style="color: rgba(255, 255, 255, 0.7);">@user.CreatedAt.ToString("HH:mm")</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (user.IsActive)
+                                    {
+                                        <span class="user-badge active">
+                                            <i class="fas fa-check-circle me-1"></i>Active
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="user-badge inactive">
+                                            <i class="fas fa-times-circle me-1"></i>Inactive
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="user-btn user-btn-secondary dropdown-toggle" 
+                                                data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="user-dropdown-menu dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a class="user-dropdown-item dropdown-item" href="@Url.Action("Edit", "Users", new { id = user.UserId })">
+                                                    <i class="fas fa-edit"></i>Edit User
+                                                </a>
+                                            </li>
+                                            @if (user.IsActive)
+                                            {
                                                 <li>
-                                                    <a class="user-dropdown-item dropdown-item" href="@Url.Action("Edit", "Users", new { id = user.UserId })">
-                                                        <i class="fas fa-edit"></i>Edit User
-                                                    </a>
-                                                </li>
-                                                @if (user.IsActive)
-                                                {
-                                                    <li>
-                                                        <form asp-action="Deactivate" method="post" class="d-inline">
-                                                            @Html.AntiForgeryToken()
-                                                            <input type="hidden" name="userId" value="@user.UserId" />
-                                                            <button type="submit" class="user-dropdown-item dropdown-item" 
-                                                                    onclick="return confirm('Are you sure you want to deactivate @user.FullName?')">
-                                                                <i class="fas fa-user-slash"></i>Deactivate
-                                                            </button>
-                                                        </form>
-                                                    </li>
-                                                }
-                                                else
-                                                {
-                                                    <li>
-                                                        <form asp-action="Activate" method="post" class="d-inline">
-                                                            @Html.AntiForgeryToken()
-                                                            <input type="hidden" name="userId" value="@user.UserId" />
-                                                            <button type="submit" class="user-dropdown-item dropdown-item">
-                                                                <i class="fas fa-user-check"></i>Activate
-                                                            </button>
-                                                        </form>
-                                                    </li>
-                                                }
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <form asp-action="Delete" method="post" class="d-inline">
+                                                    <form asp-action="Deactivate" method="post" class="d-inline">
                                                         @Html.AntiForgeryToken()
                                                         <input type="hidden" name="userId" value="@user.UserId" />
                                                         <button type="submit" class="user-dropdown-item dropdown-item" 
-                                                                onclick="return confirm('Are you sure you want to permanently delete @user.FullName? This action cannot be undone.')">
-                                                            <i class="fas fa-trash"></i>Delete Permanently
+                                                                onclick="return confirm('Are you sure you want to deactivate @user.FullName?')">
+                                                            <i class="fas fa-user-slash"></i>Deactivate
                                                         </button>
                                                     </form>
                                                 </li>
-                                            </ul>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-            else
-            {
-                <div class="user-empty-state">
-                    <i class="fas fa-users"></i>
-                    <h4>No Users Found</h4>
-                    <p>There are no users in the system yet. Start by adding your first user.</p>
-                    <a href="@Url.Action("Create", "Users")" class="user-btn user-btn-primary">
-                        <i class="fas fa-user-plus me-2"></i>Add First User
-                    </a>
-                </div>
-            }
-        </div>
+                                            }
+                                            else
+                                            {
+                                                <li>
+                                                    <form asp-action="Activate" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="userId" value="@user.UserId" />
+                                                        <button type="submit" class="user-dropdown-item dropdown-item">
+                                                            <i class="fas fa-user-check"></i>Activate
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                            }
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form asp-action="Delete" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="userId" value="@user.UserId" />
+                                                    <button type="submit" class="user-dropdown-item dropdown-item" 
+                                                            onclick="return confirm('Are you sure you want to permanently delete @user.FullName? This action cannot be undone.')">
+                                                        <i class="fas fa-trash"></i>Delete Permanently
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="user-empty-state">
+                <i class="fas fa-users"></i>
+                <h4>No Users Found</h4>
+                <p>There are no users in the system yet. Start by adding your first user.</p>
+                <a href="@Url.Action("Create", "Users")" class="user-btn user-btn-primary">
+                    <i class="fas fa-user-plus me-2"></i>Add First User
+                </a>
+            </div>
+        }
     </div>
 </div>
 

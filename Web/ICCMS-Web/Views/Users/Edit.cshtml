@@ -7,7 +7,7 @@
 
 <div class="user-management-container">
     <!-- Header Section -->
-    <div class="user-dashboard-header construction-border">
+    <div class="user-dashboard-header">
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h1 class="user-dashboard-title">
@@ -64,7 +64,7 @@
     <!-- Edit Form -->
     <div class="row">
         <div class="col-lg-8">
-            <div class="user-form-container construction-border">
+            <div class="user-form-container">
                 <div class="user-form-header">
                     <h3 class="user-form-title">
                         <i class="fas fa-edit me-2"></i>User Information
@@ -75,9 +75,9 @@
                         <input type="hidden" asp-for="UserId" />
                         <input type="hidden" asp-for="CreatedAt" />
                         <input type="hidden" asp-for="IsActive" />
-                        
+
                         <div asp-validation-summary="ModelOnly" class="user-alert user-alert-danger" role="alert"></div>
-                        
+
                         <!-- Personal Information Section -->
                         <div class="form-section mb-4">
                             <h5 class="section-title mb-3">
@@ -89,7 +89,8 @@
                                         <label asp-for="FullName" class="user-form-label">
                                             <i class="fas fa-user me-1"></i>Full Name *
                                         </label>
-                                        <input asp-for="FullName" class="user-form-control" placeholder="Enter full name" required />
+                                        <input asp-for="FullName" class="user-form-control"
+                                            placeholder="Enter full name" required />
                                         <span asp-validation-for="FullName" class="text-danger"></span>
                                     </div>
                                 </div>
@@ -98,7 +99,8 @@
                                         <label asp-for="Email" class="user-form-label">
                                             <i class="fas fa-envelope me-1"></i>Email Address *
                                         </label>
-                                        <input asp-for="Email" type="email" class="user-form-control" placeholder="Enter email address" required />
+                                        <input asp-for="Email" type="email" class="user-form-control"
+                                            placeholder="Enter email address" required />
                                         <span asp-validation-for="Email" class="text-danger"></span>
                                     </div>
                                 </div>
@@ -109,7 +111,8 @@
                                         <label asp-for="Phone" class="user-form-label">
                                             <i class="fas fa-phone me-1"></i>Phone Number
                                         </label>
-                                        <input asp-for="Phone" type="tel" class="user-form-control" placeholder="Enter phone number" />
+                                        <input asp-for="Phone" type="tel" class="user-form-control"
+                                            placeholder="Enter phone number" />
                                         <span asp-validation-for="Phone" class="text-danger"></span>
                                     </div>
                                 </div>
@@ -142,8 +145,10 @@
                                         <label for="NewPassword" class="user-form-label">
                                             <i class="fas fa-lock me-1"></i>New Password
                                         </label>
-                                        <input type="password" id="NewPassword" name="NewPassword" class="user-form-control" placeholder="Enter new password" />
-                                        <div class="form-text" style="color: rgba(255, 255, 255, 0.7);">Leave blank to keep the current password.</div>
+                                        <input type="password" id="NewPassword" name="NewPassword"
+                                            class="user-form-control" placeholder="Enter new password" />
+                                        <div class="form-text" style="color: rgba(255, 255, 255, 0.7);">Leave blank to
+                                            keep the current password.</div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -151,8 +156,10 @@
                                         <label for="ConfirmNewPassword" class="user-form-label">
                                             <i class="fas fa-lock me-1"></i>Confirm New Password
                                         </label>
-                                        <input type="password" id="ConfirmNewPassword" name="ConfirmNewPassword" class="user-form-control" placeholder="Confirm new password" />
-                                        <span id="passwordMatchError" class="text-danger" style="display: none;">Passwords do not match.</span>
+                                        <input type="password" id="ConfirmNewPassword" name="ConfirmNewPassword"
+                                            class="user-form-control" placeholder="Confirm new password" />
+                                        <span id="passwordMatchError" class="text-danger"
+                                            style="display: none;">Passwords do not match.</span>
                                     </div>
                                 </div>
                             </div>
@@ -184,7 +191,7 @@
 
         <!-- Sidebar Info -->
         <div class="col-lg-4">
-            <div class="user-form-container construction-border-thin">
+            <div class="user-form-container">
                 <div class="user-form-header">
                     <h5 class="user-form-title">
                         <i class="fas fa-info-circle me-2"></i>User Details
@@ -240,11 +247,11 @@
 @section Scripts {
     <script>
         // Password confirmation validation
-        document.getElementById('ConfirmNewPassword').addEventListener('input', function() {
+        document.getElementById('ConfirmNewPassword').addEventListener('input', function () {
             const newPassword = document.getElementById('NewPassword').value;
             const confirmPassword = this.value;
             const errorSpan = document.getElementById('passwordMatchError');
-            
+
             if (confirmPassword && newPassword !== confirmPassword) {
                 errorSpan.style.display = 'block';
             } else {
@@ -253,16 +260,16 @@
         });
 
         // Form validation
-        document.querySelector('form').addEventListener('submit', function(e) {
+        document.querySelector('form').addEventListener('submit', function (e) {
             const newPassword = document.getElementById('NewPassword').value;
             const confirmPassword = document.getElementById('ConfirmNewPassword').value;
-            
+
             if (newPassword && confirmPassword && newPassword !== confirmPassword) {
                 e.preventDefault();
                 alert('New passwords do not match!');
                 return false;
             }
-            
+
             if (newPassword && newPassword.length < 6) {
                 e.preventDefault();
                 alert('New password must be at least 6 characters long!');

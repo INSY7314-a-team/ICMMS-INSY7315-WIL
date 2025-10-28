@@ -64,9 +64,10 @@
 }
 
 .stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    border-color: var(--border-active);
+    background: rgba(247, 236, 89, 0.15);
+    border-color: #F7EC59;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .stat-card .stat-icon {

@@ -18,165 +18,131 @@
                     Comprehensive document management system for all project files and assets
                 </p>
             </div>
-            <div class="header-stats">
-                <div class="header-stat">
-                    <span class="stat-number">@Model.TotalDocuments</span>
-                    <span class="stat-label">Total Documents</span>
-                </div>
-            </div>
         </div>
     </div>
 
     <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3 mb-4">
-            <div class="documents-stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <div class="stat-content">
-                    <h6 class="card-title">Approved Documents</h6>
-                    <div class="card-value">@Model.Documents.Count(d => d.IsApproved)</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-4">
-            <div class="documents-stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-clock"></i>
-                </div>
-                <div class="stat-content">
-                    <h6 class="card-title">Pending Review</h6>
-                    <div class="card-value">@Model.Documents.Count(d => !d.IsApproved)</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-4">
-            <div class="documents-stat-card">
+    <div class="row mb-3" style="align-items: center; justify-content: center;">
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="stat-card compact">
                 <div class="stat-icon">
                     <i class="fas fa-project-diagram"></i>
                 </div>
                 <div class="stat-content">
-                    <h6 class="card-title">Active Projects</h6>
-                    <div class="card-value">@Model.Documents.Select(d => d.ProjectId).Distinct().Count()</div>
+                    <div class="stat-number">@Model.TotalDocuments</div>
+                    <div class="stat-label">Total Documents</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-4">
-            <div class="documents-stat-card">
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="stat-card compact">
+                <div class="stat-icon">
+                    <i class="fas fa-project-diagram"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-number">@Model.Documents.Select(d => d.ProjectId).Distinct().Count()</div>
+                    <div class="stat-label">Active Projects</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="stat-card compact">
                 <div class="stat-icon">
                     <i class="fas fa-hdd"></i>
                 </div>
                 <div class="stat-content">
-                    <h6 class="card-title">Total Storage</h6>
-                    <div class="card-value">@(Model.Documents.Sum(d => d.FileSize) / (1024 * 1024)) MB</div>
+                    <div class="stat-number">@(Model.Documents.Sum(d => d.FileSize) / (1024 * 1024)) MB</div>
+                    <div class="stat-label">Total Storage</div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Main Content Card -->
-    <div class="documents-content-card">
-        <div class="documents-card-header">
-            <h5 class="documents-card-title">
-                <i class="fas fa-list"></i>
-                Document Library
-            </h5>
+    <div class="search-section">
+        <div class="search-input-group">
+            <input type="text" id="searchTerm" class="search-input" placeholder="Search documents by name, description, or project..." value="@Model.CurrentSearchTerm">
+            <button type="button" class="search-btn" onclick="applyFilters()">
+                <i class="fas fa-search"></i>
+            </button>
+            <button type="button" class="clear-search-btn" onclick="clearFilters()">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
+    </div>
 
+    <div class="filter-section">
+        <div class="d-flex justify-content-center mb-3">
+            <button type="button" class="filter-toggle-btn" onclick="toggleFilters()">
+                <i class="fa-solid fa-sliders-h me-2"></i>
+                <span id="filterToggleText">Show Filters</span>
+                <i class="fa-solid fa-chevron-down ms-2" id="filterToggleIcon"></i>
+            </button>
+        </div>
+    </div>
         <!-- Search and Filters -->
-        <div style="padding: 25px;">
-            <div class="search-section">
-                <div class="search-input-group">
-                    <input type="text" id="searchTerm" class="search-input" placeholder="Search documents by name, description, or project..." value="@Model.CurrentSearchTerm">
-                    <button type="button" class="search-btn" onclick="applyFilters()">
-                        <i class="fas fa-search"></i>
-                    </button>
-                    <button type="button" class="clear-search-btn" onclick="clearFilters()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
+         <div class="filters-panel" id="filtersPanel" style="display: none;">
+            <div class="filters-panel-content">
+                <div class="filters-container">
+                    <div class="advanced-filters-grid">
+                        <div class="filter-item">
+                            <label class="filter-label">Category</label>
+                            <select id="categoryFilter" class="filter-select">
+                                <option value="all">All Categories</option>
+                                @if (Model.CurrentCategoryFilter == "pdf")
+                                {
+                                    <option value="pdf" selected>PDF Documents</option>
+                                }
+                                else
+                                {
+                                    <option value="pdf">PDF Documents</option>
+                                }
 
-            <div class="advanced-filters-grid">
-                <div class="filter-item">
-                    <label class="filter-label">Project</label>
-                    <select id="projectFilter" class="filter-select">
-                        <option value="all">All Projects</option>
-                        @foreach (var project in Model.AvailableProjects)
-                        {
-                            if (Model.CurrentProjectFilter == project.Id)
-                            {
-                                <option value="@project.Id" selected>@project.Name</option>
-                            }
-                            else
-                            {
-                                <option value="@project.Id">@project.Name</option>
-                            }
-                        }
-                    </select>
-                </div>
-                <div class="filter-item">
-                    <label class="filter-label">Category</label>
-                    <select id="categoryFilter" class="filter-select">
-                        <option value="all">All Categories</option>
-                        @if (Model.CurrentCategoryFilter == "pdf")
-                        {
-                            <option value="pdf" selected>PDF Documents</option>
-                        }
-                        else
-                        {
-                            <option value="pdf">PDF Documents</option>
-                        }
-                        
-                        @if (Model.CurrentCategoryFilter == "image")
-                        {
-                            <option value="image" selected>Images</option>
-                        }
-                        else
-                        {
-                            <option value="image">Images</option>
-                        }
-                        
-                        @if (Model.CurrentCategoryFilter == "document")
-                        {
-                            <option value="document" selected>Documents</option>
-                        }
-                        else
-                        {
-                            <option value="document">Documents</option>
-                        }
-                        
-                        @if (Model.CurrentCategoryFilter == "other")
-                        {
-                            <option value="other" selected>Other Files</option>
-                        }
-                        else
-                        {
-                            <option value="other">Other Files</option>
-                        }
-                    </select>
-                </div>
-                <div class="filter-item">
-                    <label class="filter-label">Status</label>
-                    <select id="statusFilter" class="filter-select">
-                        <option value="all">All Status</option>
-                        <option value="approved">Approved</option>
-                        <option value="pending">Pending</option>
-                    </select>
-                </div>
-            </div>
+                                @if (Model.CurrentCategoryFilter == "image")
+                                {
+                                    <option value="image" selected>Images</option>
+                                }
+                                else
+                                {
+                                    <option value="image">Images</option>
+                                }
 
-            <div class="filter-actions">
-                <button type="button" class="filter-action-btn primary" onclick="applyFilters()">
-                    <i class="fas fa-filter"></i> Apply Filters
-                </button>
-                <button type="button" class="filter-action-btn secondary" onclick="clearFilters()">
-                    <i class="fas fa-times"></i> Clear All
-                </button>
+                                @if (Model.CurrentCategoryFilter == "document")
+                                {
+                                    <option value="document" selected>Documents</option>
+                                }
+                                else
+                                {
+                                    <option value="document">Documents</option>
+                                }
+
+                                @if (Model.CurrentCategoryFilter == "other")
+                                {
+                                    <option value="other" selected>Other Files</option>
+                                }
+                                else
+                                {
+                                    <option value="other">Other Files</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="filter-actions">
+                        <button type="button" class="filter-action-btn primary" onclick="applyFilters()">
+                            <i class="fas fa-filter"></i> Apply Filters
+                        </button>
+                        <button type="button" class="filter-action-btn secondary" onclick="clearFilters()">
+                            <i class="fas fa-times"></i> Clear All
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
+    <div class="section-header">
+        <h3 class="section-title">
+            <i class="fas fa-list me-2"></i>Documents
+        </h3>
+    </div>
         <!-- Documents Table -->
         <div class="documents-table-container">
             @if (Model.Documents.Any())
@@ -189,9 +155,8 @@
                             <th style="width: 20%;">Project</th>
                             <th style="width: 15%;">Uploaded By</th>
                             <th style="width: 10%;">Size</th>
-                            <th style="width: 10%;">Status</th>
                             <th style="width: 10%;">Date</th>
-                            <th style="width: 5%;">Actions</th>
+                            <th style="width: 10%;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -235,16 +200,6 @@
                                 </td>
                                 <td>
                                     <div style="color: #B0B0B0;">@FormatFileSize(document.FileSize)</div>
-                                </td>
-                                <td>
-                                    @if (document.IsApproved)
-                                    {
-                                        <span class="documents-badge approved">Approved</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="documents-badge pending">Pending</span>
-                                    }
                                 </td>
                                 <td>
                                     <div style="color: #B0B0B0; font-size: 0.85rem;">@document.UploadedAt.ToString("MMM dd, yyyy")</div>
@@ -327,7 +282,6 @@
                 </div>
             </div>
         }
-    </div>
 </div>
 
 
@@ -434,6 +388,24 @@
             console.error('Document not found:', fileName);
             console.error('Available file names:', documents.map(d => d.FileName));
             alert('Document details not found for: ' + fileName);
+        }
+    }
+
+    function toggleFilters() {
+        const filtersPanel = document.getElementById('filtersPanel');
+        const filterToggleText = document.getElementById('filterToggleText');
+        const filterToggleIcon = document.getElementById('filterToggleIcon');
+
+        if (filtersPanel.style.display === 'none' || filtersPanel.style.display === '') {
+            filtersPanel.style.display = 'block';
+            filterToggleText.textContent = 'Hide Filters';
+            filterToggleIcon.classList.remove('fa-chevron-down');
+            filterToggleIcon.classList.add('fa-chevron-up');
+        } else {
+            filtersPanel.style.display = 'none';
+            filterToggleText.textContent = 'Show Filters';
+            filterToggleIcon.classList.remove('fa-chevron-up');
+            filterToggleIcon.classList.add('fa-chevron-down');
         }
     }
 
