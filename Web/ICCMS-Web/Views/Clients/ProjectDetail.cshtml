@@ -411,7 +411,7 @@
 
             <div class="card">
                 <div class="card-body p-0">
-                    <div class="estimates-container" id="estimatesContainer">
+                    <div class="quotes-container" id="estimatesContainer">
                         @if (Model.Quotations != null && Model.Quotations.Any())
                         {
                             @foreach (var quotation in Model.Quotations.OrderByDescending(q => q.CreatedAt))
@@ -422,7 +422,7 @@
                                         <span class="estimate-amount">R @quotation.GrandTotal.ToString("N0")</span>
                                     </div>
                                     <div class="estimate-status @quotation.Status.ToLower()">
-                                        @quotation.Status
+                                        @(quotation.Status == "SentToClient" ? "Pending Client Decision" : quotation.Status == "ClientAccepted" ? "Accepted" : quotation.Status)
                                     </div>
                                     <div class="estimate-date">
                                         @quotation.CreatedAt.ToString("MMM dd, yyyy")
@@ -460,10 +460,10 @@
 
                 <div class="card">
                     <div class="card-body p-0">
-                        <div class="invoices-container" id="invoicesContainer">
+                        <div class="quotes-container" id="invoicesContainer">
                             @foreach (var invoice in Model.Invoices.OrderByDescending(i => i.CreatedAt))
                             {
-                                <div class="invoice-item">
+                                <div class="invoice-item clickable-invoice" data-invoice-id="@invoice.InvoiceId" style="cursor: pointer;">
                                     <div class="invoice-header">
                                         <span class="invoice-number">Invoice #@invoice.InvoiceNumber</span>
                                         <span class="invoice-amount">R @invoice.TotalAmount.ToString("N0")</span>
@@ -476,6 +476,11 @@
                                     </div>
                                     <div class="invoice-due-date">
                                         <small class="text-muted">Due: @invoice.DueDate.ToString("MMM dd, yyyy")</small>
+                                    </div>
+                                    <div class="invoice-actions mt-2">
+                                        <small class="text-muted">
+                                            <i class="fa-solid fa-eye me-1"></i>Click to view details
+                                        </small>
                                     </div>
                                 </div>
                             }
@@ -497,8 +502,9 @@
                 <h5 class="modal-title" id="taskDetailsModalLabel">
                     <i class="fa-solid fa-eye me-2" style="color: #f7ec59;"></i>Task Details
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+                  <button type="button" class="user-btn user-btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times" style="padding-right: 10px;"></i>Close
+                </button>
             </div>
             <div class="modal-body">
                 <div id="taskDetailsContent">
@@ -509,11 +515,6 @@
                         <p class="mt-2 text-muted">Loading task details...</p>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="user-btn user-btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times" style="padding-right: 10px;"></i>Close
-                </button>
             </div>
         </div>
     </div>
@@ -528,8 +529,9 @@
                 <h5 class="modal-title" id="phaseDetailsModalLabel">
                     <i class="fa-solid fa-eye me-2" style="color: #f7ec59;"></i>Phase Details
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+                <button type="button" class="user-btn user-btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times" style="padding-right: 10px;"></i>Close
+                </button>
             </div>
             <div class="modal-body">
                 <div id="phaseDetailsContent">
@@ -540,11 +542,6 @@
                         <p class="mt-2 text-muted">Loading phase details...</p>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="user-btn user-btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times" style="padding-right: 10px;"></i>Close
-                </button>
             </div>
         </div>
     </div>
@@ -565,10 +562,10 @@
                         <button type="button" class="user-btn user-btn-danger" id="rejectQuoteBtn">
                             <i class="fas fa-times" style="padding-right: 10px;"></i>Reject
                         </button>
-                        <button type="button" class="user-btn user-btn-secondary" data-bs-dismiss="modal" style="margin-left: 10px;">
+                    </div> 
+                     <button type="button" class="user-btn user-btn-secondary" data-bs-dismiss="modal" style="margin-left: 10px;">
                         <i class="fas fa-times" style="padding-right: 10px;"></i>Close
                     </button>
-                    </div>
             </div>
             <div class="modal-body">
                 <div id="quoteDetailsContent">
@@ -577,6 +574,37 @@
                             <span class="visually-hidden">Loading...</span>
                         </div>
                         <p class="mt-2 text-muted">Loading quotation details...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+ </div>
+
+<!-- Invoice Details Modal -->
+<div class="modal fade" id="invoiceDetailsModal" tabindex="-1" aria-labelledby="invoiceDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="invoiceDetailsModalLabel">
+                    <i class="fa-solid fa-file-invoice-dollar me-2" style="color: #f7ec59;"></i>Invoice Details
+                </h5>
+                <div id="invoiceActionButtons">
+                    <button type="button" class="user-btn user-btn-success me-2" id="payInvoiceBtn">
+                        <i class="fas fa-credit-card" style="padding-right: 10px;"></i>Pay Now
+                    </button>
+                    <button type="button" class="user-btn user-btn-secondary" data-bs-dismiss="modal" style="margin-left: 10px;">
+                        <i class="fas fa-times" style="padding-right: 10px;"></i>Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div id="invoiceDetailsContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading invoice details...</p>
                     </div>
                 </div>
             </div>

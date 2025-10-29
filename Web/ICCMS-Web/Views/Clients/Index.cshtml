@@ -118,10 +118,8 @@
         <div class="projects-grid" id="projectsGrid">
             @foreach (var project in Model.Projects)
             {
-                // TODO: Calculate real progress
-                ViewBag.Progress = 0;
-                ViewBag.StatusBadgeClass = "badge-primary"; // Simplified
-                                                            @await Html.PartialAsync("~/Views/Shared/_ClientProjectCard.cshtml", project)
+                ViewBag.StatusBadgeClass = Model.GetStatusBadgeClass(project.Status);
+                @await Html.PartialAsync("~/Views/Shared/_ClientProjectCard.cshtml", project)
             }
         </div>
     }

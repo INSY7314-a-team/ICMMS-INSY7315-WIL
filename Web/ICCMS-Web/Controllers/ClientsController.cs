@@ -111,6 +111,19 @@ namespace ICCMS_Web.Controllers
                     ActiveProjects = projects.Count(p => p.Status == "Active"),
                     CompletedProjects = projects.Count(p => p.Status == "Completed"),
                 };
+
+                // Calculate progress and status badge classes for each project
+                foreach (var project in projects)
+                {
+                    // For now, use status-based progress. In the future, this could be enhanced
+                    // to fetch actual task progress for more accurate calculations
+                    var progress = viewModel.GetProjectProgress(project);
+                    var statusBadgeClass = viewModel.GetStatusBadgeClass(project.Status);
+
+                    viewModel.ProjectProgress[project.ProjectId] = progress;
+                    viewModel.ProjectStatusBadgeClasses[project.ProjectId] = statusBadgeClass;
+                }
+
                 return View(viewModel);
             }
             catch (Exception ex)
@@ -994,11 +1007,101 @@ namespace ICCMS_Web.Controllers
                 .GeneratePdf();
 
             _logger.LogInformation("✅ [Client-DownloadInvoice] PDF generated for invoice {Id}", id);
+
+            // Create audit log entry for invoice download
+            try
+            {
+                var userId = User.FindFirst(
+                    System.Security.Claims.ClaimTypes.NameIdentifier
+                )?.Value;
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    var auditLogEntry = new
+                    {
+                        LogType = "Document Download",
+                        Title = "Invoice Downloaded",
+                        Description = $"Client downloaded invoice {invoice.InvoiceNumber} for project {project.Name}",
+                        UserId = userId,
+                        EntityId = id,
+                    };
+
+                    await _apiClient.PostAsync<object>("/api/auditlogs", auditLogEntry, User);
+                    _logger.LogInformation(
+                        "📝 [Client-DownloadInvoice] Audit log created for invoice download {Id}",
+                        id
+                    );
+                }
+            }
+            catch (Exception auditEx)
+            {
+                _logger.LogWarning(
+                    auditEx,
+                    "⚠️ [Client-DownloadInvoice] Failed to create audit log for invoice {Id}",
+                    id
+                );
+                // Don't fail the download if audit logging fails
+            }
+
             return File(
                 fileBytes,
                 "application/pdf",
                 $"Invoice_{project.Name.Replace(" ", "_")}.pdf"
             );
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> PayInvoice([FromBody] PayInvoiceRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(request.InvoiceId))
+                {
+                    return Json(new { success = false, error = "Invoice ID is required." });
+                }
+
+                // Create payment object for the API
+                var payment = new
+                {
+                    Method = request.PaymentMethod ?? "Online",
+                    TransactionId = request.TransactionId ?? Guid.NewGuid().ToString(),
+                    Notes = request.Notes ?? "Payment made via client portal",
+                };
+
+                // Call the API to process payment
+                var result = await _apiClient.PostAsync<object>(
+                    $"/api/clients/pay/invoice/{request.InvoiceId}",
+                    payment,
+                    User
+                );
+
+                if (result != null)
+                {
+                    _logger.LogInformation(
+                        "✅ [PayInvoice] Payment processed successfully for invoice {InvoiceId}",
+                        request.InvoiceId
+                    );
+                    return Json(
+                        new { success = true, message = "Payment processed successfully." }
+                    );
+                }
+                else
+                {
+                    _logger.LogError(
+                        "❌ [PayInvoice] API returned null for invoice {InvoiceId}",
+                        request.InvoiceId
+                    );
+                    return Json(new { success = false, error = "Failed to process payment." });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "🔥 [PayInvoice] Unexpected error while processing payment for invoice {InvoiceId}",
+                    request.InvoiceId
+                );
+                return Json(new { success = false, error = ex.Message });
+            }
         }
 
         [HttpPost]
@@ -1305,5 +1408,51 @@ namespace ICCMS_Web.Controllers
         public int TotalProjects { get; set; }
         public int ActiveProjects { get; set; }
         public int CompletedProjects { get; set; }
+
+        public Dictionary<string, int> ProjectProgress { get; set; } =
+            new Dictionary<string, int>();
+        public Dictionary<string, string> ProjectStatusBadgeClasses { get; set; } =
+            new Dictionary<string, string>();
+
+        public int GetProjectProgress(ProjectDto project)
+        {
+            if (ProjectProgress.ContainsKey(project.ProjectId))
+            {
+                return ProjectProgress[project.ProjectId];
+            }
+
+            // Default progress based on status
+            return project.Status?.ToLowerInvariant() switch
+            {
+                "completed" => 100,
+                "active" => 50,
+                "planning" => 25,
+                "maintenance" => 90,
+                "cancelled" => 0,
+                _ => 0,
+            };
+        }
+
+        public string GetStatusBadgeClass(string status)
+        {
+            return status?.ToLowerInvariant() switch
+            {
+                "draft" => "badge-secondary",
+                "planning" => "badge-info",
+                "active" => "badge-primary",
+                "completed" => "badge-success",
+                "maintenance" => "badge-warning",
+                "cancelled" => "badge-danger",
+                _ => "badge-light",
+            };
+        }
+    }
+
+    public class PayInvoiceRequest
+    {
+        public string InvoiceId { get; set; } = string.Empty;
+        public string? PaymentMethod { get; set; }
+        public string? TransactionId { get; set; }
+        public string? Notes { get; set; }
     }
 }

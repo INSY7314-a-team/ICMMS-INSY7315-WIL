@@ -15,16 +15,6 @@
 <!-- 🧾 INVOICE DETAILS - DARK THEME -->
 <div class="card border-0 shadow-lg rounded-4"
      style="background: var(--secondary-bg); color: var(--text-light);">
-
-    <!-- 🔹 HEADER -->
-    <div class="card-header border-0 py-3"
-         style="background: var(--primary-bg); border-bottom: 2px solid var(--accent-yellow); border-radius: 12px 12px 0 0;">
-        <h4 class="mb-1 text-gradient">
-            <i class="fa-solid fa-file-invoice-dollar me-2 text-warning"></i>Invoice Details
-        </h4>
-        <p class="text-muted small mb-0">@Model.Description</p>
-    </div>
-
     <div class="card-body p-4">
 
         <!-- 🌟 SUMMARY BAR -->
@@ -45,6 +35,63 @@
             <div>
                 <small class="text-muted d-block">Due Date</small>
                 <span class="fw-bold text-warning">@Model.DueDate.ToString("MMM dd, yyyy")</span>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4 border-0"
+             style="background: var(--secondary-bg); color: var(--text-light);">
+            <div class="card-header bg-transparent border-0 py-2">
+                <h6 class="fw-bold mb-0 text-gradient">
+                  Financial Overview
+                </h6>
+            </div>
+            <div class="card-body" style="background: rgba(255,255,255,0.05); border-left: 4px solid var(--accent-yellow);">
+                <div class="d-flex flex-wrap gap-4 justify-content-around">
+                    <div class="text-center">
+                        <h5 class="fw-bold text-success mb-1">R @Model.Subtotal.ToString("N2")</h5>
+                        <p class="small text-muted mb-0">Subtotal</p>
+                    </div>
+                    <div class="text-center">
+                        <h5 class="fw-bold text-warning mb-1">R @Model.TaxTotal.ToString("N2")</h5>
+                        <p class="small text-muted mb-0">Tax Total</p>
+                    </div>
+                    <div class="text-center">
+                        <h5 class="fw-bold text-light mb-1">R @Model.TotalAmount.ToString("N2")</h5>
+                        <p class="small text-muted mb-0">Total Amount</p>
+                    </div>
+                    @if (isOverdue)
+                    {
+                        <div class="alert alert-danger mt-3 w-100 text-center">
+                            <i class="fa-solid fa-clock me-2"></i>This invoice is overdue.
+                        </div>
+                    }
+                    else if (daysUntilDue <= 5)
+                    {
+                        <div class="alert alert-warning mt-3 w-100 text-center">
+                            <i class="fa-solid fa-hourglass-half me-2"></i>Due soon: @daysUntilDue days left
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- 🧭 TIMELINE -->
+        <div class="card shadow-sm mb-4 border-0"
+             style="background: var(--secondary-bg); color: var(--text-light);">
+            <div class="card-header bg-transparent border-0 py-2">
+                <h6 class="fw-bold mb-0 text-gradient">
+                    <i class="fa-solid fa-clock-rotate-left me-2 text-info"></i>Timeline
+                </h6>
+            </div>
+            <div class="card-body" style="background: rgba(255,255,255,0.05); border-left: 4px solid var(--accent-yellow);">
+                <ul class="list-unstyled mb-0">
+                    <li><i class="fa-solid fa-circle text-primary me-2"></i>Issued — @Model.IssuedDate.ToString("MMM dd, yyyy")</li>
+                    <li><i class="fa-solid fa-circle text-warning me-2"></i>Due — @Model.DueDate.ToString("MMM dd, yyyy")</li>
+                    @if (Model.PaidDate.HasValue)
+                    {
+                        <li><i class="fa-solid fa-circle text-success me-2"></i>Paid — @Model.PaidDate.Value.ToString("MMM dd, yyyy")</li>
+                    }
+                </ul>
             </div>
         </div>
 
@@ -96,62 +143,7 @@
         </div>
 
         <!-- 💰 FINANCIAL OVERVIEW -->
-        <div class="card shadow-sm mb-4 border-0"
-             style="background: var(--secondary-bg); color: var(--text-light);">
-            <div class="card-header bg-transparent border-0 py-2">
-                <h6 class="fw-bold mb-0 text-gradient">
-                    <i class="fa-solid fa-coins me-2 text-success"></i>Financial Overview
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="d-flex flex-wrap gap-4 justify-content-around">
-                    <div class="text-center">
-                        <h5 class="fw-bold text-success mb-1">R @Model.Subtotal.ToString("N2")</h5>
-                        <p class="small text-muted mb-0">Subtotal</p>
-                    </div>
-                    <div class="text-center">
-                        <h5 class="fw-bold text-warning mb-1">R @Model.TaxTotal.ToString("N2")</h5>
-                        <p class="small text-muted mb-0">Tax Total</p>
-                    </div>
-                    <div class="text-center">
-                        <h5 class="fw-bold text-light mb-1">R @Model.TotalAmount.ToString("N2")</h5>
-                        <p class="small text-muted mb-0">Total Amount</p>
-                    </div>
-                    @if (isOverdue)
-                    {
-                        <div class="alert alert-danger mt-3 w-100 text-center">
-                            <i class="fa-solid fa-clock me-2"></i>This invoice is overdue.
-                        </div>
-                    }
-                    else if (daysUntilDue <= 5)
-                    {
-                        <div class="alert alert-warning mt-3 w-100 text-center">
-                            <i class="fa-solid fa-hourglass-half me-2"></i>Due soon: @daysUntilDue days left
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-
-        <!-- 🧭 TIMELINE -->
-        <div class="card shadow-sm mb-4 border-0"
-             style="background: var(--secondary-bg); color: var(--text-light);">
-            <div class="card-header bg-transparent border-0 py-2">
-                <h6 class="fw-bold mb-0 text-gradient">
-                    <i class="fa-solid fa-clock-rotate-left me-2 text-info"></i>Timeline
-                </h6>
-            </div>
-            <div class="card-body">
-                <ul class="list-unstyled mb-0">
-                    <li><i class="fa-solid fa-circle text-primary me-2"></i>Issued — @Model.IssuedDate.ToString("MMM dd, yyyy")</li>
-                    <li><i class="fa-solid fa-circle text-warning me-2"></i>Due — @Model.DueDate.ToString("MMM dd, yyyy")</li>
-                    @if (Model.PaidDate.HasValue)
-                    {
-                        <li><i class="fa-solid fa-circle text-success me-2"></i>Paid — @Model.PaidDate.Value.ToString("MMM dd, yyyy")</li>
-                    }
-                </ul>
-            </div>
-        </div>
+        
 
         <!-- ⚙️ ACTIONS -->
         <div class="d-flex justify-content-between mt-3">
@@ -168,42 +160,6 @@
 
 
 <script>
-
     console.log("🧾 [Init] InvoiceDetailsPartial loaded");
-    async function downloadInvoice(invoiceId) {
-        if (!invoiceId) {
-            console.error("❌ No invoice ID provided");
-            alert("Invoice ID missing — cannot download.");
-            return;
-        }
-
-        console.log("📥 Starting invoice download for:", invoiceId);
-
-        try {
-            const res = await fetch(`/Clients/DownloadInvoice/${encodeURIComponent(invoiceId)}`);
-
-            if (!res.ok) {
-                console.error(`⚠️ Download failed (${res.status}):`, res.statusText);
-                alert("Failed to download invoice. Please try again later.");
-                return;
-            }
-
-            const blob = await res.blob();
-            const url = window.URL.createObjectURL(blob);
-
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `Invoice_${invoiceId}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-
-            window.URL.revokeObjectURL(url);
-            console.log("✅ Invoice downloaded successfully!");
-        } catch (err) {
-            console.error("🔥 Error downloading invoice:", err);
-            alert("An unexpected error occurred while downloading the invoice.");
-        }
-    }
 </script>
 

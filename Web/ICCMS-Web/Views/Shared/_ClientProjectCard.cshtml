@@ -1,7 +1,6 @@
 @model ICCMS_Web.Models.ProjectDto
 
 @{
-    var progress = ViewBag.Progress as int? ?? 0;
     var statusBadgeClass = ViewBag.StatusBadgeClass as string ?? "badge-light";
 }
 
@@ -42,12 +41,6 @@
                 </div>
             </div>
 
-            <div class="mb-3">
-                <div class="pill-progress" aria-label="Project Progress @progress%">
-                    <div class="pill-progress__fill" style="width: @progress%" aria-hidden="true"></div>
-                    <div class="pill-progress__label">Project Progress @progress%</div>
-                </div>
-            </div>
         </div>
     </div>
 </a>
