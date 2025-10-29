@@ -55,8 +55,37 @@ namespace ICCMS_Web.Services
                 endpoint
             );
 
-            // Don't redirect automatically - let the controllers handle this gracefully
-            // This prevents redirect loops when the API is down but user is still authenticated
+            // Trigger session expired modal via JavaScript
+            // This will show the modal with countdown timer
+            try
+            {
+                var httpContext = _httpContextAccessor.HttpContext;
+                if (httpContext != null)
+                {
+                    // Add JavaScript to show the session expired modal
+                    var script =
+                        @"
+                        <script>
+                            if (typeof window.showSessionExpired === 'function') {
+                                window.showSessionExpired();
+                            } else {
+                                console.warn('Session expired handler not available');
+                            }
+                        </script>";
+
+                    // Store the script in TempData to be rendered
+                    var tempData = _tempDataFactory.GetTempData(httpContext);
+                    tempData["SessionExpiredScript"] = script;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to trigger session expired modal for {Endpoint}",
+                    endpoint
+                );
+            }
         }
 
         // ===========================================================

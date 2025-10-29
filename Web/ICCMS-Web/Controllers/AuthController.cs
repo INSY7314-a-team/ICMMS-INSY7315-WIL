@@ -48,7 +48,10 @@ namespace ICCMS_Web.Controllers
 
             try
             {
-                _logger.LogInformation("LoginProxy: Forwarding login request for {Email} to API", request.Email);
+                _logger.LogInformation(
+                    "LoginProxy: Forwarding login request for {Email} to API",
+                    request.Email
+                );
 
                 // Call API /api/auth/login
                 var response = await _httpClient.PostAsJsonAsync(
@@ -57,21 +60,32 @@ namespace ICCMS_Web.Controllers
                 );
 
                 var content = await response.Content.ReadAsStringAsync();
-                
+
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogError("LoginProxy: API returned {Status}. Body: {Body}", response.StatusCode, content);
+                    _logger.LogError(
+                        "LoginProxy: API returned {Status}. Body: {Body}",
+                        response.StatusCode,
+                        content
+                    );
                     return StatusCode((int)response.StatusCode, content);
                 }
 
-                _logger.LogInformation("LoginProxy: API login successful for {Email}", request.Email);
-                
+                _logger.LogInformation(
+                    "LoginProxy: API login successful for {Email}",
+                    request.Email
+                );
+
                 // Return the API response as-is
                 return Content(content, "application/json");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "LoginProxy: Exception forwarding login for {Email}", request.Email);
+                _logger.LogError(
+                    ex,
+                    "LoginProxy: Exception forwarding login for {Email}",
+                    request.Email
+                );
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
         }
@@ -205,6 +219,18 @@ namespace ICCMS_Web.Controllers
 
             ViewBag.ReturnUrl = Request.Query["ReturnUrl"];
             return View();
+        }
+
+        [HttpGet]
+        public IActionResult SessionExpired()
+        {
+            _logger.LogWarning("Session expired for user {User}", User.Identity?.Name);
+
+            // Set a message for the login page
+            TempData["AuthErrorMessage"] = "Your session has expired. Please log in again.";
+
+            // Redirect to login
+            return RedirectToAction("Login");
         }
     }
 

@@ -13,6 +13,7 @@
     <!-- Core Styles -->
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/session-expired.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
     <style>
@@ -343,6 +344,7 @@
         <script src="~/lib/jquery/dist/jquery.min.js"></script>
         <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
         <script src="~/js/site.js" asp-append-version="true"></script>
+        <script src="~/js/session-expired.js" asp-append-version="true"></script>
 
         <script>
             const sidebar = document.getElementById('sidebar');
@@ -385,7 +387,19 @@
             });
         </script>
 
+        @* Session Expired Script from TempData *@
+        @if (TempData["SessionExpiredScript"] != null)
+        {
+            @Html.Raw(TempData["SessionExpiredScript"])
+        }
+
     @await RenderSectionAsync("Scripts", required: false)
+
+    <!-- Session Expired Modal -->
+    @if (User.Identity.IsAuthenticated)
+    {
+        @await Html.PartialAsync("~/Views/Auth/SessionExpired.cshtml")
+    }
     </body>
 
     </html>

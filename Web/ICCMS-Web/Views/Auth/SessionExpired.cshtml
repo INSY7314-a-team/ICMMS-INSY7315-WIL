@@ -1,0 +1,49 @@
+@{
+    ViewData["Title"] = "Session Expired";
+    Layout = null; // No layout needed for modal
+}
+
+<!-- Session Expired Modal -->
+<div id="sessionExpiredModal" class="session-expired-modal" style="display: none;">
+    <div class="session-expired-backdrop"></div>
+    <div class="session-expired-container">
+        <div class="session-expired-card">
+            <div class="session-expired-header">
+                <div class="session-expired-icon">
+                    <i class="fa-solid fa-clock"></i>
+                </div>
+                <h2 class="session-expired-title">Session Expired</h2>
+            </div>
+
+            <div class="session-expired-body">
+                <p class="session-expired-message">
+                    Your session has expired for security reasons. Please log in again to continue.
+                </p>
+
+                <div class="session-expired-timer">
+                    <div class="timer-circle">
+                        <svg class="timer-svg" viewBox="0 0 100 100">
+                            <circle class="timer-bg" cx="50" cy="50" r="45"></circle>
+                            <circle class="timer-progress" cx="50" cy="50" r="45" id="timerCircle"></circle>
+                        </svg>
+                        <div class="timer-text">
+                            <span id="countdownTimer">10</span>
+                        </div>
+                    </div>
+                    <p class="timer-label">seconds until automatic logout</p>
+                </div>
+            </div>
+
+            <div class="session-expired-actions">
+                <button id="logoutNowBtn" class="btn btn-primary">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    Logout Now
+                </button>
+                <button id="stayOnPageBtn" class="btn btn-secondary" disabled>
+                    <i class="fa-solid fa-ban"></i>
+                    Stay on Page (Limited)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

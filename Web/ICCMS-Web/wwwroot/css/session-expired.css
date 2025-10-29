@@ -1,0 +1,331 @@
+/* ================================================
+   Session Expired Modal Styles
+   ICCMS Design System Compliant
+   ================================================ */
+
+/* Modal Overlay */
+.session-expired-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.session-expired-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+}
+
+/* Modal Container */
+.session-expired-container {
+    position: relative;
+    z-index: 10000;
+    max-width: 500px;
+    width: 90%;
+    margin: 0 auto;
+}
+
+/* Modal Card */
+.session-expired-card {
+    background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+    border: 3px solid;
+    border-image: repeating-linear-gradient(
+        45deg,
+        #1A1B25,
+        #1A1B25 8px,
+        #F7EC59 8px,
+        #F7EC59 16px
+    ) 1;
+    border-radius: 15px;
+    padding: 2.5rem;
+    color: var(--text-primary);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    animation: slideInUp 0.4s ease-out;
+}
+
+/* Header Section */
+.session-expired-header {
+    margin-bottom: 2rem;
+}
+
+.session-expired-icon {
+    font-size: 4rem;
+    color: var(--accent-red);
+    margin-bottom: 1rem;
+    animation: pulse 2s infinite;
+}
+
+.session-expired-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--accent-red);
+    margin: 0;
+}
+
+/* Body Section */
+.session-expired-body {
+    margin-bottom: 2rem;
+}
+
+.session-expired-message {
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+    font-weight: 400;
+}
+
+/* Timer Section */
+.session-expired-timer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.timer-circle {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin-bottom: 1rem;
+}
+
+.timer-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.timer-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 8;
+}
+
+.timer-progress {
+    fill: none;
+    stroke: var(--accent-yellow);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 283;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1s linear;
+}
+
+.timer-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--accent-yellow);
+}
+
+.timer-label {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    opacity: 0.8;
+    margin: 0;
+    font-weight: 400;
+}
+
+/* Actions Section */
+.session-expired-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Button Styles */
+.session-expired-actions .btn {
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+.session-expired-actions .btn-primary {
+    background: linear-gradient(135deg, var(--accent-yellow) 0%, #E6D547 100%);
+    color: var(--text-dark);
+    border: 2px solid var(--accent-yellow);
+}
+
+.session-expired-actions .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(247, 236, 89, 0.4);
+    color: var(--text-dark);
+}
+
+.session-expired-actions .btn-secondary {
+    background: var(--secondary-bg);
+    color: var(--text-primary);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    opacity: 0.6;
+}
+
+.session-expired-actions .btn-secondary:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-yellow);
+    transform: translateY(-2px);
+}
+
+.session-expired-actions .btn-secondary:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+    }
+    to { 
+        opacity: 1; 
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { 
+        transform: scale(1); 
+    }
+    50% { 
+        transform: scale(1.05); 
+    }
+}
+
+/* Timer Animation */
+@keyframes timerTick {
+    0% { 
+        stroke-dashoffset: 0; 
+    }
+    100% { 
+        stroke-dashoffset: 283; 
+    }
+}
+
+.timer-progress.animating {
+    animation: timerTick 10s linear forwards;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .session-expired-container {
+        width: 95%;
+        padding: 0 1rem;
+    }
+
+    .session-expired-card {
+        padding: 2rem 1.5rem;
+    }
+
+    .session-expired-title {
+        font-size: 1.8rem;
+    }
+
+    .session-expired-message {
+        font-size: 1rem;
+    }
+
+    .timer-circle {
+        width: 100px;
+        height: 100px;
+    }
+
+    .timer-text {
+        font-size: 2rem;
+    }
+
+    .session-expired-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .session-expired-actions .btn {
+        width: 100%;
+        max-width: 250px;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .session-expired-card {
+        padding: 1.5rem 1rem;
+    }
+
+    .session-expired-title {
+        font-size: 1.6rem;
+    }
+
+    .session-expired-icon {
+        font-size: 3rem;
+    }
+
+    .timer-circle {
+        width: 80px;
+        height: 80px;
+    }
+
+    .timer-text {
+        font-size: 1.8rem;
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .session-expired-card {
+        border: 3px solid var(--accent-yellow);
+    }
+
+    .session-expired-title {
+        color: #ffffff;
+    }
+
+    .session-expired-message {
+        color: #ffffff;
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    .session-expired-modal,
+    .session-expired-card,
+    .session-expired-icon {
+        animation: none;
+    }
+
+    .timer-progress {
+        transition: none;
+    }
+}

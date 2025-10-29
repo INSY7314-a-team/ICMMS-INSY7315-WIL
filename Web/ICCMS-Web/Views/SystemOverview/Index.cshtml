@@ -18,6 +18,10 @@
             Real-time system health, performance metrics, and operational insights
         </p>
         <div class="d-flex justify-content-between align-items-center mt-3">
+            <!-- Test Session Expired Modal Button (Remove in production) -->
+            <button type="button" class="btn btn-warning btn-sm" onclick="testSessionExpired()">
+                <i class="fa-solid fa-clock"></i> Test Session Expired
+            </button>
             <small class="text-muted">
                 <i class="fas fa-clock"></i> Last updated: @Model.LastUpdated.ToString("MMM dd, yyyy 'at' HH:mm:ss UTC")
             </small>
@@ -649,4 +653,13 @@ document.addEventListener('visibilitychange', function() {
         startAutoRefresh();
     }
 });
+
+// Test function for session expired modal (Remove in production)
+function testSessionExpired() {
+    if (typeof window.showSessionExpired === 'function') {
+        window.showSessionExpired();
+    } else {
+        alert('Session expired handler not available. Make sure session-expired.js is loaded.');
+    }
+}
 </script>

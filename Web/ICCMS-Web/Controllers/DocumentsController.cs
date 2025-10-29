@@ -344,6 +344,10 @@ namespace ICCMS_Web.Controllers
                         content.Length,
                         contentType
                     );
+
+                    // Create audit log for document download
+                    await CreateDownloadAuditLog(fileName, content.Length, contentType);
+
                     return File(content, contentType, fileName);
                 }
                 else
@@ -600,6 +604,81 @@ namespace ICCMS_Web.Controllers
                 _logger.LogError(ex, "Error fetching users");
                 return new List<Models.UserSummary>();
             }
+        }
+
+        private async Task CreateDownloadAuditLog(
+            string fileName,
+            long fileSize,
+            string contentType
+        )
+        {
+            try
+            {
+                var apiBaseUrl = _configuration["ApiSettings:BaseUrl"];
+                var firebaseToken = User.FindFirst("FirebaseToken")?.Value;
+                var userId = User.FindFirst("UserId")?.Value ?? User.Identity?.Name ?? "Unknown";
+
+                if (string.IsNullOrEmpty(firebaseToken))
+                {
+                    _logger.LogWarning("Cannot create audit log: Firebase token not found");
+                    return;
+                }
+
+                var auditLogData = new
+                {
+                    LogType = "DocumentDownload",
+                    Title = "Document Downloaded",
+                    Description = $"User downloaded document: {fileName} (Size: {FormatFileSize(fileSize)}, Type: {contentType})",
+                    UserId = userId,
+                    EntityId = fileName,
+                };
+
+                _httpClient.DefaultRequestHeaders.Clear();
+                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {firebaseToken}");
+
+                var jsonContent = JsonSerializer.Serialize(auditLogData);
+                var content = new StringContent(
+                    jsonContent,
+                    System.Text.Encoding.UTF8,
+                    "application/json"
+                );
+
+                var response = await _httpClient.PostAsync($"{apiBaseUrl}/api/auditlogs", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation(
+                        "Audit log created for document download: {FileName}",
+                        fileName
+                    );
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning(
+                        "Failed to create audit log for document download: {StatusCode}, Error: {Error}",
+                        response.StatusCode,
+                        errorContent
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error creating audit log for document download: {FileName}",
+                    fileName
+                );
+            }
+        }
+
+        private string FormatFileSize(long bytes)
+        {
+            if (bytes == 0)
+                return "0 Bytes";
+            string[] sizes = { "Bytes", "KB", "MB", "GB" };
+            int i = (int)Math.Floor(Math.Log(bytes) / Math.Log(1024));
+            return Math.Round(bytes / Math.Pow(1024, i), 2) + " " + sizes[i];
         }
     }
 
