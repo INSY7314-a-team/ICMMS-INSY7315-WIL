@@ -360,6 +360,213 @@ namespace ICCMS_Web.Controllers
         }
 
         /// <summary>
+        /// Get detailed view of a specific phase
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> PhaseDetail(string projectId, string phaseId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(phaseId))
+                {
+                    TempData["ErrorMessage"] = "Project ID and Phase ID are required.";
+                    return RedirectToAction("Dashboard");
+                }
+
+                // Get project
+                var project = await _apiClient.GetAsync<ProjectDto>(
+                    $"/api/projectmanager/project/{projectId}",
+                    User
+                );
+
+                if (project == null)
+                {
+                    TempData["ErrorMessage"] = "Project not found.";
+                    return RedirectToAction("Dashboard");
+                }
+
+                // Get phase
+                var phases = await _apiClient.GetAsync<List<PhaseDto>>(
+                    $"/api/projectmanager/project/{projectId}/phases",
+                    User
+                ) ?? new List<PhaseDto>();
+
+                var phase = phases.FirstOrDefault(p => p.PhaseId == phaseId);
+                if (phase == null)
+                {
+                    TempData["ErrorMessage"] = "Phase not found.";
+                    return RedirectToAction("ProjectDetail", new { projectId = projectId });
+                }
+
+                // Get tasks for this phase
+                var allTasks = await _apiClient.GetAsync<List<ProjectTaskDto>>(
+                    $"/api/projectmanager/project/{projectId}/tasks",
+                    User
+                ) ?? new List<ProjectTaskDto>();
+
+                var phaseTasks = allTasks.Where(t => t.PhaseId == phaseId).ToList();
+
+                // Get contractors for display names
+                var contractors = await _apiClient.GetAsync<List<UserDto>>(
+                    "/api/users/contractors",
+                    User
+                ) ?? new List<UserDto>();
+
+                var contractorMap = contractors.ToDictionary(c => c.UserId, c => c);
+
+                // Calculate phase progress
+                var progress = phaseTasks.Any()
+                    ? (int)phaseTasks.Average(t => t.Progress)
+                    : 0;
+
+                if (phaseTasks.All(t => t.Status == "Completed"))
+                {
+                    progress = 100;
+                }
+
+                var viewModel = new PhaseDetailViewModel
+                {
+                    Phase = phase,
+                    Project = project,
+                    Tasks = phaseTasks,
+                    ContractorMap = contractorMap,
+                    Progress = progress,
+                    TotalTasks = phaseTasks.Count,
+                    CompletedTasks = phaseTasks.Count(t => t.Status == "Completed")
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading phase detail for Phase {PhaseId}", phaseId);
+                TempData["ErrorMessage"] = "Failed to load phase details. Please try again later.";
+                return RedirectToAction("ProjectDetail", new { id = projectId });
+            }
+        }
+
+        /// <summary>
+        /// Get detailed view of a specific task
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> TaskDetail(string projectId, string taskId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(taskId))
+                {
+                    TempData["ErrorMessage"] = "Project ID and Task ID are required.";
+                    return RedirectToAction("Dashboard");
+                }
+
+                // Get project
+                var project = await _apiClient.GetAsync<ProjectDto>(
+                    $"/api/projectmanager/project/{projectId}",
+                    User
+                );
+
+                if (project == null)
+                {
+                    TempData["ErrorMessage"] = "Project not found.";
+                    return RedirectToAction("Dashboard");
+                }
+
+                // Get task
+                var tasks = await _apiClient.GetAsync<List<ProjectTaskDto>>(
+                    $"/api/projectmanager/project/{projectId}/tasks",
+                    User
+                ) ?? new List<ProjectTaskDto>();
+
+                var task = tasks.FirstOrDefault(t => t.TaskId == taskId);
+                if (task == null)
+                {
+                    TempData["ErrorMessage"] = "Task not found.";
+                    return RedirectToAction("ProjectDetail", new { projectId = projectId });
+                }
+
+                // Get phase if task has one
+                PhaseDto? phase = null;
+                if (!string.IsNullOrEmpty(task.PhaseId))
+                {
+                    var phases = await _apiClient.GetAsync<List<PhaseDto>>(
+                        $"/api/projectmanager/project/{projectId}/phases",
+                        User
+                    ) ?? new List<PhaseDto>();
+
+                    phase = phases.FirstOrDefault(p => p.PhaseId == task.PhaseId);
+                }
+
+                // Get contractor
+                UserDto? contractor = null;
+                if (!string.IsNullOrEmpty(task.AssignedTo))
+                {
+                    contractor = await _apiClient.GetAsync<UserDto>(
+                        $"/api/users/{task.AssignedTo}",
+                        User
+                    );
+                }
+
+                // Get progress reports for this task
+                // Since contractors endpoint requires assignment verification, we'll try to get
+                // progress reports via the project manager's access. For now, we'll use the
+                // GetProgressReport endpoint in a loop (not ideal, but works) or fetch all
+                // and filter. Actually, let's just get all progress reports for the project.
+                // We'll use an empty list for now and fetch individual reports if needed,
+                // or fetch all and filter. Let's get all from pending first and expand if needed.
+                var allPendingReports = await _apiClient.GetAsync<List<ProgressReportDto>>(
+                    $"/api/projectmanager/progress-reports/pending",
+                    User
+                ) ?? new List<ProgressReportDto>();
+
+                // Get all progress reports (not just approved) - we'll filter by taskId
+                // Since the API only exposes pending, we'll work with what's available
+                // In a production system, you'd want: /api/projectmanager/project/{projectId}/progress-reports
+                var taskProgressReports = allPendingReports
+                    .Where(pr => pr.TaskId == taskId && pr.ProjectId == projectId)
+                    .OrderByDescending(pr => pr.SubmittedAt)
+                    .ToList();
+
+                // Get completion reports for this task
+                var allCompletionReports = await _apiClient.GetAsync<List<CompletionReportDto>>(
+                    "/api/projectmanager/completion-reports",
+                    User
+                ) ?? new List<CompletionReportDto>();
+
+                var taskCompletionReports = allCompletionReports
+                    .Where(cr => cr.TaskId == taskId && cr.ProjectId == projectId)
+                    .OrderByDescending(cr => cr.SubmittedAt)
+                    .ToList();
+
+                // Get contractors map for display names
+                var contractors = await _apiClient.GetAsync<List<UserDto>>(
+                    "/api/users/contractors",
+                    User
+                ) ?? new List<UserDto>();
+
+                var contractorMap = contractors.ToDictionary(c => c.UserId, c => c);
+
+                var viewModel = new TaskDetailViewModel
+                {
+                    Task = task,
+                    Project = project,
+                    Phase = phase,
+                    Contractor = contractor,
+                    ProgressReports = taskProgressReports,
+                    CompletionReports = taskCompletionReports,
+                    ContractorMap = contractorMap
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading task detail for Task {TaskId}", taskId);
+                TempData["ErrorMessage"] = "Failed to load task details. Please try again later.";
+                return RedirectToAction("ProjectDetail", new { id = projectId });
+            }
+        }
+
+        /// <summary>
         /// JSON endpoint for fast in-memory search and filtering of projects (AJAX-friendly).
         /// Builds the index lazily if it doesn't exist for the current user.
         /// </summary>
@@ -2352,6 +2559,117 @@ namespace ICCMS_Web.Controllers
             {
                 _logger.LogError(ex, "Error loading completion report {Id}", id);
                 return Json(new { success = false, message = "Error loading completion report" });
+            }
+        }
+
+        /// <summary>
+        /// Delete a phase
+        /// </summary>
+        [HttpDelete]
+        public async Task<IActionResult> DeletePhase(string id)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(id))
+                {
+                    return Json(new { success = false, message = "Phase ID is required" });
+                }
+
+                _logger.LogInformation("Attempting to delete phase {PhaseId}", id);
+
+                var result = await _apiClient.DeleteAsync<object>(
+                    $"/api/projectmanager/delete/phase/{id}",
+                    User
+                );
+
+                if (result != null)
+                {
+                    _logger.LogInformation("Successfully deleted phase {PhaseId}", id);
+                    return Json(new { success = true, message = "Phase deleted successfully" });
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to delete phase {PhaseId} - API returned null", id);
+                    return Json(new { success = false, message = "Failed to delete phase" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting phase {PhaseId}", id);
+                return Json(new { success = false, message = $"Error deleting phase: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Delete a task
+        /// </summary>
+        [HttpDelete]
+        public async Task<IActionResult> DeleteTask(string id)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(id))
+                {
+                    return Json(new { success = false, message = "Task ID is required" });
+                }
+
+                _logger.LogInformation("Attempting to delete task {TaskId}", id);
+
+                var result = await _apiClient.DeleteAsync<object>(
+                    $"/api/projectmanager/delete/task/{id}",
+                    User
+                );
+
+                if (result != null)
+                {
+                    _logger.LogInformation("Successfully deleted task {TaskId}", id);
+                    return Json(new { success = true, message = "Task deleted successfully" });
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to delete task {TaskId} - API returned null", id);
+                    return Json(new { success = false, message = "Failed to delete task" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting task {TaskId}", id);
+                return Json(new { success = false, message = $"Error deleting task: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Get invoice details by ID
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetInvoice(string invoiceId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(invoiceId))
+                {
+                    return Json(new { success = false, message = "Invoice ID is required" });
+                }
+
+                var invoice = await _apiClient.GetAsync<InvoiceDto>(
+                    $"/api/invoices/{invoiceId}",
+                    User
+                );
+
+                if (invoice != null)
+                {
+                    return Json(invoice);
+                }
+                else
+                {
+                    _logger.LogWarning("Invoice not found: {InvoiceId}", invoiceId);
+                    return Json(new { success = false, message = "Invoice not found" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading invoice {InvoiceId}", invoiceId);
+                return Json(new { success = false, message = "Error loading invoice" });
             }
         }
 

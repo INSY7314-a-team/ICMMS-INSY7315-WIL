@@ -1559,17 +1559,30 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                var pmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(pmId))
+                {
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
                 var existingPhase = await _firebaseService.GetDocumentAsync<Phase>("phases", id);
                 if (existingPhase == null)
                 {
                     return NotFound(new { error = "Phase not found" });
                 }
-                if (existingPhase.ProjectId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+
+                // Verify the phase belongs to a project managed by this PM
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    existingPhase.ProjectId
+                );
+                if (project == null || project.ProjectManagerId != pmId)
                 {
                     return Unauthorized(
                         new { error = "You are not authorized to delete this phase" }
                     );
                 }
+
                 await _firebaseService.DeleteDocumentAsync("phases", id);
                 return Ok(new { message = "Phase deleted successfully" });
             }
@@ -1584,6 +1597,12 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                var pmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(pmId))
+                {
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
                 var existingTask = await _firebaseService.GetDocumentAsync<ProjectTask>(
                     "tasks",
                     id
@@ -1592,12 +1611,19 @@ namespace ICCMS_API.Controllers
                 {
                     return NotFound(new { error = "Task not found" });
                 }
-                if (existingTask.ProjectId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+
+                // Verify the task belongs to a project managed by this PM
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    existingTask.ProjectId
+                );
+                if (project == null || project.ProjectManagerId != pmId)
                 {
                     return Unauthorized(
                         new { error = "You are not authorized to delete this task" }
                     );
                 }
+
                 await _firebaseService.DeleteDocumentAsync("tasks", id);
                 return Ok(new { message = "Task deleted successfully" });
             }
@@ -1883,6 +1909,15 @@ namespace ICCMS_API.Controllers
                 // Update task status to completed
                 task.Status = "Completed";
                 task.CompletedDate = DateTime.UtcNow;
+                
+                // Update task actual hours from completion report final hours
+                if (completionReport != null)
+                {
+                    task.ActualHours = completionReport.FinalHours;
+                    Console.WriteLine(
+                        $"[ApproveTaskCompletion] Updated task {taskId} actual hours to {completionReport.FinalHours} from completion report"
+                    );
+                }
 
                 await _firebaseService.UpdateDocumentAsync("tasks", taskId, task);
                 Console.WriteLine(

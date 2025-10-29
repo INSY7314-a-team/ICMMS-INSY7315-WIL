@@ -79,23 +79,49 @@ function deletePhase(phaseId) {
   }
 
   // Show loading state
-  showInfoMessage("Deleting phase...");
+  const phaseCard = document.querySelector(`[data-phase-id="${phaseId}"]`);
+  const deleteBtn = phaseCard?.querySelector('.delete-phase-btn');
+  if (deleteBtn) {
+    deleteBtn.disabled = true;
+    deleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+  }
 
-  // Simulate API call
-  setTimeout(() => {
-    // Remove the phase card from the UI
-    const phaseCard = document.querySelector(`[data-phase-id="${phaseId}"]`);
-    if (phaseCard) {
-      phaseCard.remove();
+  // Call API to delete phase
+  fetch(`/ProjectManager/DeletePhase?id=${encodeURIComponent(phaseId)}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'RequestVerificationToken': (document.querySelector('input[name="__RequestVerificationToken"]') || {}).value || ''
     }
-
-    showSuccessMessage("Phase deleted successfully");
-
-    // Refresh phases list
-    if (typeof window.refreshPhasesList === "function") {
-      window.refreshPhasesList();
-    }
-  }, 1000);
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Remove the phase card from the UI
+        if (phaseCard) {
+          phaseCard.remove();
+        }
+        showSuccessMessage("Phase deleted successfully");
+        // Refresh the page to update the UI
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      } else {
+        showErrorMessage(data.message || "Failed to delete phase");
+        if (deleteBtn) {
+          deleteBtn.disabled = false;
+          deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+        }
+      }
+    })
+    .catch(error => {
+      console.error("Error deleting phase:", error);
+      showErrorMessage("An error occurred while deleting the phase");
+      if (deleteBtn) {
+        deleteBtn.disabled = false;
+        deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+      }
+    });
 }
 
 function populatePhaseForm(phaseData) {
