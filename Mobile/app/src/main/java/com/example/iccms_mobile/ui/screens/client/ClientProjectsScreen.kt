@@ -390,6 +390,8 @@ fun StatusChip(status: String) {
         "active" -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimary
         "completed" -> MaterialTheme.colorScheme.tertiary to MaterialTheme.colorScheme.onTertiary
         "pending" -> MaterialTheme.colorScheme.secondary to MaterialTheme.colorScheme.onSecondary
+        "overdue" -> MaterialTheme.colorScheme.error to MaterialTheme.colorScheme.onError
+        "paid" -> Color(0xFF006400) /*Color(0xFF2ECC71) */to Color(0xFFFFFFFF)
         else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
     
