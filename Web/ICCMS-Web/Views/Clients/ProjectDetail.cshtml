@@ -1,0 +1,602 @@
+@model ICCMS_Web.Models.ClientProjectDetailViewModel
+@{
+    ViewData["Title"] = $"Project: {Model.Project.Name}";
+    Layout = "_Layout";
+}
+
+<div class="pm-project-detail-container">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="@Url.Action("Index", "Clients")" class="text-decoration-none">
+                    <i class="fa-solid fa-home"></i> Dashboard
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                <i class="fa-solid fa-project-diagram"></i> @Model.Project.Name
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Project Information Header -->
+    <div class="row mb-4 pm-project-header">
+        <div class="col-md-8">
+            <h4 class="mb-2">@Model.Project.Name</h4>
+            <p class="mb-1">Project ID: <span>@Model.Project.ProjectId</span></p>
+            <p class="mb-0">Description: <span>@Model.Project.Description</span></p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="mb-2">
+                <span class="badge @Model.GetStatusBadgeClass(Model.Project.Status) me-2">@Model.Project.Status</span>
+                <span class="badge pm-badge-secondary">@Model.OverallProgress% Complete</span>
+            </div>
+            <small>
+                <i class="fa-solid fa-calendar me-1"></i>
+                <span>@Model.Project.StartDate.ToString("dd MMM yyyy")</span> -
+                <span>@Model.Project.EndDatePlanned.ToString("dd MMM yyyy")</span>
+            </small>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs project-tabs" id="projectDetailTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="tab-button active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details-tab-pane"
+                type="button" role="tab" aria-controls="details-tab-pane" aria-selected="true">
+                <i class="fa-solid fa-circle-info"></i> Project Details
+            </button>
+        </li>
+        @if (Model.Project.Status == "Completed")
+        {
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="maintenance-tab" data-bs-toggle="tab" data-bs-target="#maintenance-tab-pane"
+                    type="button" role="tab" aria-controls="maintenance-tab-pane" aria-selected="false">
+                    <i class="fa-solid fa-wrench"></i> Maintenance
+                </button>
+            </li>
+        }
+        <li class="nav-item" role="presentation">
+            <button class="tab-button" id="quotes-tab" data-bs-toggle="tab" data-bs-target="#quotes-tab-pane"
+                type="button" role="tab" aria-controls="quotes-tab-pane" aria-selected="false">
+                <i class="fa-solid fa-file-invoice"></i> Quotations
+            </button>
+        </li>
+        @if (Model.Invoices.Any())
+        {
+            <li class="nav-item" role="presentation">
+                <button class="tab-button" id="invoices-tab" data-bs-toggle="tab" data-bs-target="#invoices-tab-pane"
+                    type="button" role="tab" aria-controls="invoices-tab-pane" aria-selected="false">
+                    <i class="fa-solid fa-file-invoice-dollar"></i> Invoices
+                </button>
+            </li>
+        }
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="projectDetailTabsContent">
+        <!-- Project Details Tab -->
+        <div class="tab-pane fade show active" id="details-tab-pane" role="tabpanel" aria-labelledby="details-tab" tabindex="0">
+            <!-- Progress Section -->
+            <div class="row mb-4 pm-progress-section">
+                <div class="col-md-6">
+                    <h6 class="mb-2">Project Progress</h6>
+                    <div class="progress mb-2 pm-progress">
+                        <div class="progress-bar pm-progress-bar" role="progressbar"
+                            style="width: @($"{Model.OverallProgress}%")" aria-valuenow="@Model.OverallProgress"
+                            aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <small>@($"{Model.OverallProgress}%") Complete</small>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="mb-2">Task Completion</h6>
+                    <div class="progress mb-2 pm-progress">
+                        <div class="progress-bar bg-info pm-progress-bar" role="progressbar"
+                            style="width: @(Model.Tasks.Count > 0 ? (Model.Tasks.Count(t => t.Status == "Completed") * 100 / Model.Tasks.Count) : 0)%"></div>
+                    </div>
+                    <small>@Model.Tasks.Count(t => t.Status == "Completed") / @Model.Tasks.Count tasks completed</small>
+                </div>
+            </div>
+            <!-- Two-Column Middle Section -->
+            <div class="row mb-4 pm-middle-section">
+                <!-- Left Column: Budget Info & Project Statistics -->
+                <div class="col-md-6 mb-4">
+                    <!-- Budget Information -->
+                    <div class="pm-budget-section mb-4" style="margin-top:1rem;">
+                        <h6 class="mb-2" style="margin-top:1rem;">Budget Information</h6>
+                        <div class="card pm-budget-card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <small>Planned Budget</small>
+                                        <div class="fw-bold">@Model.Project.BudgetPlanned.ToString("C")</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small>Actual Budget</small>
+                                        <div class="fw-bold">@Model.Project.BudgetActual.ToString("C")</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small>Variance</small>
+                                        <div
+                                            class="fw-bold @(Model.Project.BudgetActual > Model.Project.BudgetPlanned ? "pm-budget-variance-over" : "pm-budget-variance-under")">
+                                            @((Model.Project.BudgetActual - Model.Project.BudgetPlanned).ToString("C"))
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Project Statistics -->
+                    <div class="pm-stats-section">
+                        <h6 class="mb-2">Project Statistics</h6>
+                        <div class="card pm-stats-card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-2">
+                                        <small>Total Tasks</small>
+                                        <div class="fw-bold">@Model.Tasks.Count</div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <small>Pending</small>
+                                        <div class="fw-bold pm-stats-pending">@Model.Tasks.Count(t => t.Status == "Pending")</div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <small>In Progress</small>
+                                        <div class="fw-bold pm-stats-in-progress">@Model.Tasks.Count(t => t.Status == "In Progress")</div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <small>Completed</small>
+                                        <div class="fw-bold pm-stats-completed">@Model.Tasks.Count(t => t.Status == "Completed")</div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <small>Overdue</small>
+                                        <div class="fw-bold pm-stats-overdue">@Model.Tasks.Count(t => t.DueDate < DateTime.Now && t.Status != "Completed")</div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <small>Phases</small>
+                                        <div class="fw-bold">@Model.Phases.Count</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Progress Reports -->
+                <div class="col-md-6 mb-4">
+                    <!-- Progress Reports Section -->
+                    <div class="pm-progress-reports-section" style="margin-top:1rem;">
+                        <h6 class="mb-2" style=" font-weight: 600; font-size: 1.1rem;">Recent Progress Reports</h6>
+                        <div class="card pm-progress-reports-card">
+                            <div class="card-body p-0">
+                                <div class="progress-reports-container" id="progressReportsContainer">
+                                    @if (Model.ProgressReports != null && Model.ProgressReports.Any())
+                                    {
+                                        @foreach (var report in Model.ProgressReports.OrderByDescending(r => r.SubmittedAt).Take(5))
+                                        {
+                                            var taskName = Model.Tasks.FirstOrDefault(t => t.TaskId == report.TaskId)?.Name ?? report.TaskId;
+                                            <div class="progress-report-item">
+                                                <div class="report-header">
+                                                    <span class="report-task">Task: @taskName</span>
+                                                    <span class="report-date">@report.SubmittedAt.ToString("MMM dd, yyyy")</span>
+                                                </div>
+                                                <div class="report-description">@report.Description</div>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="no-progress-reports-message">
+                                            <i class="fas fa-chart-line"></i>
+                                            <p>No progress reports found</p>
+                                            <small>Progress reports will appear here when submitted</small>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phases Section -->
+            <div class="mb-4 pm-phases-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">
+                        <i class="fa-solid fa-layer-group me-2"></i>Project Phases
+                        <span class="badge pm-badge-secondary">@Model.Phases.Count</span>
+                    </h6>
+                </div>
+
+                <div id="phasesContainer">
+                    @foreach (var phase in Model.Phases)
+                    {
+                        <div class="card mb-3 pm-phase-card" data-phase-id="@phase.PhaseId">
+                            <div class="card-body">
+                                <div class="row align-items-start">
+                                    <div class="col-md-8">
+                                        <!-- Phase Title and Description -->
+                                        <div class="mb-3">
+                                            <h6 class="mb-1 fw-bold">@phase.Name</h6>
+                                            @if (!string.IsNullOrEmpty(phase.Description))
+                                            {
+                                                <p class="mb-2 text-muted small">@phase.Description</p>
+                                            }
+                                        </div>
+
+                                        <!-- Status and Task Count Row -->
+                                        <div class="mb-3">
+                                            <span class="badge @Model.GetStatusBadgeClass(phase.Status) me-2">@phase.Status</span>
+                                            <span class="badge pm-badge-secondary">
+                                                <i class="fa-solid fa-tasks me-1"></i>@Model.Tasks.Count(t => t.PhaseId == phase.PhaseId) tasks
+                                            </span>
+                                        </div>
+
+                                        <!-- Date Row -->
+                                        <div class="d-flex align-items-center">
+                                            <small class="text-muted">
+                                                <i class="fa-solid fa-calendar me-1"></i>
+                                                @phase.StartDate.ToString("dd MMM yyyy") - @phase.EndDate.ToString("dd MMM yyyy")
+                                            </small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <!-- Progress Section -->
+                                            @{
+                                                var phaseTasks = Model.Tasks.Where(t => t.PhaseId == phase.PhaseId).ToList();
+                                                var phaseProgress = phaseTasks.Any() ? (phaseTasks.Count(t => t.Status == "Completed") * 100 / phaseTasks.Count) : 0;
+                                            }
+                                            <div class="progress-section flex-grow-1 me-3">
+                                                <div class="progress mb-2 pm-progress" style="height: 8px;">
+                                                    <div class="progress-bar pm-progress-bar" style="width: @phaseProgress%"></div>
+                                                </div>
+                                                <small class="text-muted">@phaseProgress% Complete</small>
+                                            </div>
+                                            
+                                            <!-- View Button -->
+                                            <button class="view-phases-button"
+                                                data-phase-id="@phase.PhaseId" data-bs-toggle="modal"
+                                                data-bs-target="#phaseDetailsModal"
+                                                title="View Phase Details">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Tasks Section -->
+            <div class="mb-4 pm-tasks-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">
+                        <i class="fa-solid fa-tasks me-2"></i>Project Tasks
+                        <span class="badge pm-badge-secondary">@Model.Tasks.Count</span>
+                    </h6>
+                </div>
+
+                <div id="tasksContainer">
+                    @foreach (var task in Model.Tasks)
+                    {
+                        <div class="card mb-3 pm-task-card @(task.DueDate < DateTime.Now && task.Status != "Completed" ? "overdue" : "")" 
+                            data-task-id="@task.TaskId" data-phase-id="@task.PhaseId">
+                            <div class="card-body">
+                                <div class="row align-items-start">
+                                    <div class="col-md-8">
+                                        <!-- Task Title and Description -->
+                                        <div class="mb-3">
+                                            <h6 class="mb-1 fw-bold">@task.Name</h6>
+                                            @if (!string.IsNullOrEmpty(task.Description))
+                                            {
+                                                <p class="mb-2 text-muted small">@task.Description</p>
+                                            }
+                                        </div>
+
+                                        <!-- Assignment Info -->
+                                        <div class="mb-3">
+                                            <span class="text-muted small">Assigned to:</span>
+                                            <span class="badge pm-badge-secondary ms-1">@Model.GetContractorName(task.AssignedTo)</span>
+                                        </div>
+
+                                        <!-- Status and Priority Row -->
+                                        <div class="mb-3">
+                                            <span class="badge @Model.GetTaskStatusBadgeClass(task.Status) me-2">@task.Status</span>
+                                            <span class="badge @Model.GetPriorityBadgeClass(task.Priority) me-2">@task.Priority</span>
+                                        </div>
+
+                                        <!-- Phase and Date Row -->
+                                        <div class="d-flex flex-wrap align-items-center gap-2">
+                                            <span class="badge pm-badge-secondary">
+                                                <i class="fa-solid fa-layer-group me-1"></i>@(Model.Phases.FirstOrDefault(p =>
+                                                p.PhaseId == task.PhaseId)?.Name ?? "Unknown Phase")
+                                            </span>
+                                            <small class="text-muted">
+                                                <i class="fa-solid fa-calendar me-1"></i>
+                                                @task.StartDate.ToString("dd MMM yyyy") - @task.DueDate.ToString("dd MMM yyyy")
+                                            </small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <!-- Progress Section -->
+                                            <div class="progress-section flex-grow-1 me-3">
+                                                <div class="progress mb-2 pm-progress" style="height: 8px;">
+                                                    <div class="progress-bar pm-progress-bar" style="width: @(task.Progress)%"></div>
+                                                </div>
+                                                <small class="text-muted">@(task.Progress)% Complete</small>
+                                            </div>
+                                            
+                                            <!-- View Button -->
+                                            <button class="view-phases-button"
+                                                data-task-id="@task.TaskId" data-bs-toggle="modal"
+                                                data-bs-target="#taskDetailsModal"
+                                                title="View Task Details">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Maintenance Tab -->
+        @if (Model.Project.Status == "Completed")
+        {
+            <div class="tab-pane fade" id="maintenance-tab-pane" role="tabpanel" aria-labelledby="maintenance-tab" tabindex="0">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">
+                        <i class="fa-solid fa-wrench me-2"></i>Maintenance Requests
+                    </h6>
+                    <button class="btn btn-sm pm-btn-primary" data-bs-toggle="modal" data-bs-target="#createMaintenanceModal">
+                        <i class="fa-solid fa-plus me-1"></i>New Maintenance Request
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        @if (Model.MaintenanceRequests != null && Model.MaintenanceRequests.Any())
+                        {
+                            @foreach (var request in Model.MaintenanceRequests.OrderByDescending(r => r.CreatedAt))
+                            {
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <h6 class="mb-1">@request.Description</h6>
+                                                <p class="mb-1 text-muted">Requested by: @request.RequestedBy</p>
+                                                <div class="mb-2">
+                                                    <span class="badge @Model.GetStatusBadgeClass(request.Status) me-2">@request.Status</span>
+                                                    <span class="badge @Model.GetPriorityBadgeClass(request.Priority) me-2">@request.Priority</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 text-end">
+                                                <small class="text-muted">Created: @request.CreatedAt.ToString("MMM dd, yyyy")</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <i class="fa-solid fa-wrench fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No maintenance requests</h5>
+                                <p class="text-muted">Create a new maintenance request to get started.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Quotations Tab -->
+        <div class="tab-pane fade" id="quotes-tab-pane" role="tabpanel" aria-labelledby="quotes-tab" tabindex="0">
+            <div class="d-flex justify-content-between align-items-center mb-3" style="margin-top:1rem;">
+                <h6 class="mb-0" style="font-weight: 600; font-size: 1.1rem;">
+                    <i class="fa-solid fa-file-invoice me-2"></i>Project Quotations
+                </h6>
+            </div>
+
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="estimates-container" id="estimatesContainer">
+                        @if (Model.Quotations != null && Model.Quotations.Any())
+                        {
+                            @foreach (var quotation in Model.Quotations.OrderByDescending(q => q.CreatedAt))
+                            {
+                                <div class="estimate-item clickable-quote" data-quotation-id="@quotation.QuotationId" style="cursor: pointer;">
+                                    <div class="estimate-header">
+                                        <span class="estimate-number">Quotation #@quotation.QuotationId</span>
+                                        <span class="estimate-amount">R @quotation.GrandTotal.ToString("N0")</span>
+                                    </div>
+                                    <div class="estimate-status @quotation.Status.ToLower()">
+                                        @quotation.Status
+                                    </div>
+                                    <div class="estimate-date">
+                                        @quotation.CreatedAt.ToString("MMM dd, yyyy")
+                                    </div>
+                                    <div class="estimate-actions mt-2">
+                                        <small class="text-muted">
+                                            <i class="fa-solid fa-eye me-1"></i>Click to view details
+                                        </small>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="no-estimates-message">
+                                <i class="fas fa-file-invoice-dollar"></i>
+                                <p>No quotations found</p>
+                                <small>Quotations will appear here when created</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invoices Tab -->
+        @if (Model.Invoices.Any())
+        {
+            <div class="tab-pane fade" id="invoices-tab-pane" role="tabpanel" aria-labelledby="invoices-tab" tabindex="0">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">
+                        <i class="fa-solid fa-file-invoice-dollar me-2"></i>Project Invoices
+                    </h6>
+                </div>
+
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="invoices-container" id="invoicesContainer">
+                            @foreach (var invoice in Model.Invoices.OrderByDescending(i => i.CreatedAt))
+                            {
+                                <div class="invoice-item">
+                                    <div class="invoice-header">
+                                        <span class="invoice-number">Invoice #@invoice.InvoiceNumber</span>
+                                        <span class="invoice-amount">R @invoice.TotalAmount.ToString("N0")</span>
+                                    </div>
+                                    <div class="invoice-status @invoice.Status.ToLower()">
+                                        @invoice.Status
+                                    </div>
+                                    <div class="invoice-date">
+                                        @invoice.CreatedAt.ToString("MMM dd, yyyy")
+                                    </div>
+                                    <div class="invoice-due-date">
+                                        <small class="text-muted">Due: @invoice.DueDate.ToString("MMM dd, yyyy")</small>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@await Html.PartialAsync("_QuotationRejectionModal")
+
+<!-- Task Details Modal -->
+<div class="modal fade" id="taskDetailsModal" tabindex="-1" aria-labelledby="taskDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="taskDetailsModalLabel">
+                    <i class="fa-solid fa-eye me-2" style="color: #f7ec59;"></i>Task Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="taskDetailsContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading task details...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="user-btn user-btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times" style="padding-right: 10px;"></i>Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Phase Details Modal -->
+<div class="modal fade" id="phaseDetailsModal" tabindex="-1" aria-labelledby="phaseDetailsModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="phaseDetailsModalLabel">
+                    <i class="fa-solid fa-eye me-2" style="color: #f7ec59;"></i>Phase Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="phaseDetailsContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-info" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading phase details...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="user-btn user-btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times" style="padding-right: 10px;"></i>Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quote Details Modal -->
+<div class="modal fade" id="quoteDetailsModal" tabindex="-1" aria-labelledby="quoteDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="quoteDetailsModalLabel">
+                    <i class="fa-solid fa-file-invoice me-2" style="color: #f7ec59;"></i>Quotation Details
+                </h5>
+                    <div id="quoteActionButtons" style="display: none;">
+                        <button type="button" class="user-btn user-btn-success me-2" id="approveQuoteBtn">
+                            <i class="fas fa-check" style="padding-right: 10px;"></i>Approve
+                        </button>
+                        <button type="button" class="user-btn user-btn-danger" id="rejectQuoteBtn">
+                            <i class="fas fa-times" style="padding-right: 10px;"></i>Reject
+                        </button>
+                        <button type="button" class="user-btn user-btn-secondary" data-bs-dismiss="modal" style="margin-left: 10px;">
+                        <i class="fas fa-times" style="padding-right: 10px;"></i>Close
+                    </button>
+                    </div>
+            </div>
+            <div class="modal-body">
+                <div id="quoteDetailsContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading quotation details...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include CSS -->
+<link rel="stylesheet" href="~/css/pm-project-detail.css" />
+<link rel="stylesheet" href="~/css/modal-design-system.css" />
+
+<!-- Include JavaScript -->
+<script src="~/js/client-project-detail.js"></script>
+
+<script>
+    // Pass data to JavaScript
+    window.projectData = {
+        tasks: @Html.Raw(Json.Serialize(Model.Tasks)),
+        phases: @Html.Raw(Json.Serialize(Model.Phases)),
+        contractors: @Html.Raw(Json.Serialize(Model.Contractors))
+    };
+    
+</script>

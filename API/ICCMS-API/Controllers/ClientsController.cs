@@ -209,6 +209,140 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpGet("project/{id}/phases")]
+        public async Task<ActionResult<List<Phase>>> GetProjectPhases(string id)
+        {
+            try
+            {
+                var phases = await _firebaseService.GetCollectionAsync<Phase>("phases");
+                var projectPhases = phases.Where(p => p.ProjectId == id).ToList();
+                return Ok(projectPhases);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("project/{id}/tasks")]
+        public async Task<ActionResult<List<ProjectTask>>> GetProjectTasks(string id)
+        {
+            try
+            {
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var projectTasks = tasks.Where(t => t.ProjectId == id).ToList();
+                return Ok(projectTasks);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("project/{id}/quotations")]
+        public async Task<ActionResult<List<Quotation>>> GetProjectQuotations(string id)
+        {
+            try
+            {
+                Console.WriteLine($"Getting quotations for project {id}");
+                var quotations = await _firebaseService.GetCollectionAsync<Quotation>("quotations");
+                var projectQuotations = quotations.Where(q => q.ProjectId == id).ToList();
+                Console.WriteLine($"Found {projectQuotations.Count} quotations for project {id}");
+                foreach (var q in projectQuotations)
+                {
+                    Console.WriteLine($"  - Quotation {q.QuotationId} (Client: {q.ClientId})");
+                }
+                return Ok(projectQuotations);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting quotations for project {id}: {ex.Message}");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("project/{id}/invoices")]
+        public async Task<ActionResult<List<Invoice>>> GetProjectInvoices(string id)
+        {
+            try
+            {
+                var invoices = await _firebaseService.GetCollectionAsync<Invoice>("invoices");
+                var projectInvoices = invoices.Where(i => i.ProjectId == id).ToList();
+                return Ok(projectInvoices);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("project/{id}/maintenance-requests")]
+        public async Task<ActionResult<List<MaintenanceRequest>>> GetProjectMaintenanceRequests(
+            string id
+        )
+        {
+            try
+            {
+                var requests = await _firebaseService.GetCollectionAsync<MaintenanceRequest>(
+                    "maintenanceRequests"
+                );
+                var projectRequests = requests.Where(r => r.ProjectId == id).ToList();
+                return Ok(projectRequests);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("project/{id}/progress-reports")]
+        public async Task<ActionResult<List<ProgressReport>>> GetProjectProgressReports(string id)
+        {
+            try
+            {
+                Console.WriteLine($"Getting progress reports for project {id}");
+                // Verify the client has access to this project
+                var project = await _firebaseService.GetDocumentAsync<Project>("projects", id);
+                if (project == null)
+                {
+                    Console.WriteLine($"Project {id} not found");
+                    return NotFound(new { error = "Project not found" });
+                }
+
+                var clientId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (project.ClientId != clientId)
+                {
+                    Console.WriteLine(
+                        $"Client {clientId} is not authorized to view progress reports for project {id}"
+                    );
+                    return BadRequest(
+                        new
+                        {
+                            error = "You are not authorized to view progress reports for this project",
+                        }
+                    );
+                }
+
+                // Get progress reports for this project
+                var reports = await _firebaseService.GetCollectionAsync<ProgressReport>(
+                    "progressReports"
+                );
+                Console.WriteLine($"Found {reports.Count} total progress reports");
+                var projectReports = reports
+                    .Where(r => r.ProjectId == id)
+                    .OrderByDescending(r => r.SubmittedAt)
+                    .ToList();
+                Console.WriteLine(
+                    $"Found {projectReports.Count} progress reports for project {id}"
+                );
+                return Ok(projectReports);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
         [HttpGet("quotations")]
         public async Task<ActionResult<List<Quotation>>> GetQuotations()
         {
@@ -231,11 +365,15 @@ namespace ICCMS_API.Controllers
         {
             try
             {
+                Console.WriteLine($"Getting quotation {id}");
                 var clientId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(clientId))
                 {
+                    Console.WriteLine("Client ID is null or empty");
                     return BadRequest(new { error = "Client ID is required" });
                 }
+                Console.WriteLine($"Client ID: {clientId}");
+
                 var quotation = await _firebaseService.GetDocumentAsync<Quotation>(
                     "quotations",
                     id
@@ -243,20 +381,63 @@ namespace ICCMS_API.Controllers
 
                 if (quotation == null)
                 {
+                    Console.WriteLine($"Quotation {id} not found in Firebase");
                     return NotFound(new { error = "Quotation not found" });
                 }
 
+                Console.WriteLine(
+                    $"Quotation found. ClientId: {quotation.ClientId}, Requesting client: {clientId}"
+                );
                 if (quotation.ClientId != clientId)
                 {
+                    Console.WriteLine("Client not authorized to view this quotation");
                     return BadRequest(
                         new { error = "You are not authorized to view this quotation" }
                     );
                 }
 
-                return Ok(quotation);
+                // Get line items from the associated estimate
+                var estimate = await _firebaseService.GetDocumentAsync<Estimate>(
+                    "estimates",
+                    quotation.EstimateId
+                );
+
+                if (estimate == null)
+                {
+                    Console.WriteLine(
+                        $"Estimate {quotation.EstimateId} not found for quotation {id}"
+                    );
+                    return Ok(new { quotation = quotation, items = new List<object>() });
+                }
+
+                Console.WriteLine(
+                    $"Found estimate {quotation.EstimateId} with {estimate.LineItems?.Count ?? 0} line items"
+                );
+
+                // Convert EstimateLineItem to a format the frontend expects
+                var lineItems = new List<object>();
+                if (estimate.LineItems != null)
+                {
+                    lineItems = estimate
+                        .LineItems.Select(item => new
+                        {
+                            name = item.Name,
+                            description = item.Description,
+                            quantity = item.Quantity,
+                            unit = item.Unit,
+                            unitPrice = item.UnitPrice,
+                            lineTotal = item.LineTotal,
+                            category = item.Category,
+                        })
+                        .Cast<object>()
+                        .ToList();
+                }
+
+                return Ok(new { quotation = quotation, items = lineItems });
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"Error getting quotation {id}: {ex.Message}");
                 return StatusCode(500, new { error = ex.Message });
             }
         }
@@ -665,8 +846,16 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        public class RejectQuotationRequest
+        {
+            public string? Reason { get; set; }
+        }
+
         [HttpPut("reject/quotation/{id}")]
-        public async Task<ActionResult> RejectQuotation(string id)
+        public async Task<ActionResult> RejectQuotation(
+            string id,
+            [FromBody] RejectQuotationRequest request
+        )
         {
             try
             {
@@ -684,14 +873,23 @@ namespace ICCMS_API.Controllers
                         new { error = "You are not authorized to reject this quotation" }
                     );
                 }
-                quotation.Status = "Rejected";
-                await _firebaseService.UpdateDocumentAsync("quotations", id, quotation);
+
+                var rejected = await _quoteWorkflow.ClientDecisionAsync(id, false, request.Reason);
+                if (rejected == null)
+                {
+                    return StatusCode(500, new { error = "Failed to apply client decision" });
+                }
 
                 // Notify Project Manager
                 var project = await _firebaseService.GetDocumentAsync<Project>(
                     "projects",
                     quotation.ProjectId
                 );
+                var client = await _firebaseService.GetDocumentAsync<User>(
+                    "users",
+                    quotation.ClientId
+                );
+
                 if (project != null && !string.IsNullOrEmpty(project.ProjectManagerId))
                 {
                     var systemEvent = new SystemEvent
@@ -699,22 +897,21 @@ namespace ICCMS_API.Controllers
                         EventType = "quotation_workflow",
                         EntityId = id,
                         EntityType = "quotation",
-                        Action = "rejected",
+                        Action = "client_rejected",
                         ProjectId = quotation.ProjectId,
-                        UserId = project.ProjectManagerId,
+                        UserId = project.ProjectManagerId, // Notify the PM
                         Data = new Dictionary<string, object>
                         {
                             { "quotationId", id },
+                            { "rejectedByName", client?.FullName ?? "Client" },
+                            { "rejectionReason", request.Reason ?? "No reason provided." },
                             { "projectName", project.Name },
-                            { "rejectedByName", User.Identity.Name ?? "Client" },
-                            { "totalAmount", quotation.GrandTotal },
-                            { "projectManagerId", project.ProjectManagerId },
                         },
                     };
                     await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
                 }
 
-                return Ok(quotation);
+                return Ok(rejected);
             }
             catch (Exception ex)
             {

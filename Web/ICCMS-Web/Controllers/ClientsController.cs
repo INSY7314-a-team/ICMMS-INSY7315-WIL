@@ -70,37 +70,6 @@ namespace ICCMS_Web.Controllers
                 }
 
                 var projects = new List<ProjectDto>();
-                var quotations = new List<QuotationDto>();
-                var maintenanceRequests = new List<MaintenanceRequestDto>();
-
-                // === 🔧 Get Client Maintenance Requests ===
-                try
-                {
-                    _logger.LogInformation("🚀 [Index] Fetching Maintenance Requests via API...");
-                    maintenanceRequests =
-                        await _apiClient.GetAsync<List<MaintenanceRequestDto>>(
-                            "/api/clients/maintenanceRequests",
-                            User
-                        ) ?? new List<MaintenanceRequestDto>();
-
-                    if (maintenanceRequests.Any())
-                        _logger.LogInformation(
-                            "✅ [Index] Loaded {Count} maintenance requests",
-                            maintenanceRequests.Count
-                        );
-                    else
-                        _logger.LogWarning(
-                            "⚠️ [Index] No maintenance requests found for this client."
-                        );
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(
-                        ex,
-                        "🔥 [Index] Failed to retrieve maintenance requests via API."
-                    );
-                    maintenanceRequests = new List<MaintenanceRequestDto>();
-                }
 
                 // === 🏗 Get Client Projects ===
                 try
@@ -111,7 +80,13 @@ namespace ICCMS_Web.Controllers
                         ?? new List<ProjectDto>();
 
                     if (projects.Any())
-                        _logger.LogInformation("✅ [Index] Loaded {Count} projects", projects.Count);
+                    {
+                        projects = projects.Where(p => !p.IsDraft).ToList();
+                        _logger.LogInformation(
+                            "✅ [Index] Loaded {Count} non-draft projects",
+                            projects.Count
+                        );
+                    }
                     else
                         _logger.LogWarning("⚠️ [Index] No projects found for this client.");
                 }
@@ -128,63 +103,13 @@ namespace ICCMS_Web.Controllers
                     };
                 }
 
-                // === 💼 Get Client Quotations ===
-                try
-                {
-                    _logger.LogInformation("🚀 [Index] Fetching Quotations via API...");
-                    quotations =
-                        await _apiClient.GetAsync<List<QuotationDto>>(
-                            "/api/clients/quotations",
-                            User
-                        ) ?? new List<QuotationDto>();
-
-                    if (quotations.Any())
-                        _logger.LogInformation(
-                            "✅ [Index] Loaded {Count} quotations",
-                            quotations.Count
-                        );
-                    else
-                        _logger.LogWarning("⚠️ [Index] No quotations found for this client.");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(
-                        ex,
-                        "🔥 [Index] Failed to retrieve client quotations via API."
-                    );
-                    quotations = new List<QuotationDto>
-                    {
-                        new QuotationDto { QuotationId = "demo-1", Status = "API Unavailable" },
-                    };
-                }
-
-                // === 🧾 Get Client Invoices ===
-                List<InvoiceDto> invoices;
-                try
-                {
-                    _logger.LogInformation("🚀 [Index] Fetching Invoices via API...");
-                    invoices =
-                        await _apiClient.GetAsync<List<InvoiceDto>>("/api/clients/invoices", User)
-                        ?? new List<InvoiceDto>();
-
-                    if (invoices.Any())
-                        _logger.LogInformation("✅ [Index] Loaded {Count} invoices", invoices.Count);
-                    else
-                        _logger.LogWarning("⚠️ [Index] No invoices found for this client.");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "🔥 [Index] Failed to retrieve client invoices via API.");
-                    invoices = new List<InvoiceDto>();
-                }
-
                 // ✅ Build the ViewModel
                 var viewModel = new ClientDashboardViewModel
                 {
                     Projects = projects,
-                    Quotations = quotations,
-                    MaintenanceRequests = maintenanceRequests,
-                    Invoices = invoices, // 👈 Add this
+                    TotalProjects = projects.Count,
+                    ActiveProjects = projects.Count(p => p.Status == "Active"),
+                    CompletedProjects = projects.Count(p => p.Status == "Completed"),
                 };
                 return View(viewModel);
             }
@@ -202,10 +127,6 @@ namespace ICCMS_Web.Controllers
                             Description = "API connection failed",
                         },
                     },
-                    Quotations = new List<QuotationDto>
-                    {
-                        new QuotationDto { QuotationId = "demo-1", Status = "Service Unavailable" },
-                    },
                 };
 
                 TempData["ErrorMessage"] =
@@ -214,7 +135,8 @@ namespace ICCMS_Web.Controllers
             }
         }
 
-        public async Task<IActionResult> ProjectDetails(string id)
+        [HttpGet("Clients/ProjectDetail/{id}")]
+        public async Task<IActionResult> ProjectDetail(string id)
         {
             try
             {
@@ -228,14 +150,96 @@ namespace ICCMS_Web.Controllers
                     $"/api/clients/project/{id}",
                     User
                 );
-
-                if (project != null)
+                if (project == null)
                 {
-                    return View(project);
+                    TempData["ErrorMessage"] = "Project not found.";
+                    return RedirectToAction("Index");
                 }
 
-                TempData["ErrorMessage"] = "Failed to fetch project details.";
-                return RedirectToAction("Index");
+                var phases =
+                    await _apiClient.GetAsync<List<PhaseDto>>(
+                        $"/api/clients/project/{id}/phases",
+                        User
+                    ) ?? new List<PhaseDto>();
+                var tasks =
+                    await _apiClient.GetAsync<List<ProjectTaskDto>>(
+                        $"/api/clients/project/{id}/tasks",
+                        User
+                    ) ?? new List<ProjectTaskDto>();
+                var progressReports =
+                    await _apiClient.GetAsync<List<ProgressReportDto>>(
+                        $"/api/clients/project/{id}/progress-reports",
+                        User
+                    ) ?? new List<ProgressReportDto>();
+                var maintenanceRequests =
+                    await _apiClient.GetAsync<List<MaintenanceRequestDto>>(
+                        $"/api/clients/project/{id}/maintenance-requests",
+                        User
+                    ) ?? new List<MaintenanceRequestDto>();
+                var quotations =
+                    await _apiClient.GetAsync<List<QuotationDto>>(
+                        $"/api/clients/project/{id}/quotations",
+                        User
+                    ) ?? new List<QuotationDto>();
+                var invoices =
+                    await _apiClient.GetAsync<List<InvoiceDto>>(
+                        $"/api/clients/project/{id}/invoices",
+                        User
+                    ) ?? new List<InvoiceDto>();
+
+                // Load contractor information for task assignments
+                var contractors = new List<UserDto>();
+                var uniqueContractorIds = tasks
+                    .Where(t => !string.IsNullOrEmpty(t.AssignedTo))
+                    .Select(t => t.AssignedTo)
+                    .Distinct()
+                    .ToList();
+
+                foreach (var contractorId in uniqueContractorIds)
+                {
+                    try
+                    {
+                        var contractor = await _apiClient.GetAsync<UserDto>(
+                            $"/api/users/{contractorId}",
+                            User
+                        );
+                        if (contractor != null)
+                        {
+                            contractors.Add(contractor);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(
+                            ex,
+                            "Failed to load contractor {ContractorId}",
+                            contractorId
+                        );
+                        // Continue loading other contractors even if one fails
+                    }
+                }
+
+                // Calculate overall progress
+                int overallProgress = 0;
+                if (tasks.Any())
+                {
+                    overallProgress = (int)tasks.Average(t => t.Progress);
+                }
+
+                var viewModel = new ClientProjectDetailViewModel
+                {
+                    Project = project,
+                    Phases = phases,
+                    Tasks = tasks,
+                    ProgressReports = progressReports,
+                    MaintenanceRequests = maintenanceRequests,
+                    Quotations = quotations,
+                    Invoices = invoices,
+                    Contractors = contractors,
+                    OverallProgress = overallProgress,
+                };
+
+                return View(viewModel);
             }
             catch (Exception ex)
             {
@@ -307,101 +311,58 @@ namespace ICCMS_Web.Controllers
             }
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ApproveQuotation(string quotationId)
+        public class RejectQuotationRequest
         {
-            _logger.LogInformation(
-                "🟢 [ApproveQuotation] Triggered with quotationId={QuotationId}",
-                quotationId
-            );
+            public string QuotationId { get; set; }
+            public string Reason { get; set; }
+        }
 
-            try
-            {
-                if (string.IsNullOrEmpty(quotationId))
-                {
-                    TempData["ErrorMessage"] = "Invalid quotation ID.";
-                    return RedirectToAction("Index");
-                }
-
-                var endpoint = $"/api/clients/approve/quotation/{quotationId}";
-                _logger.LogInformation(
-                    "🌐 [ApproveQuotation] Sending PUT request to {Endpoint}",
-                    endpoint
-                );
-
-                var result = await _apiClient.PutAsync<object>(endpoint, null, User);
-
-                if (result != null)
-                {
-                    _logger.LogInformation(
-                        "✅ [ApproveQuotation] Quotation approved successfully for {QuotationId}",
-                        quotationId
-                    );
-                    TempData["SuccessMessage"] = "Quotation approved successfully.";
-                }
-                else
-                {
-                    _logger.LogError(
-                        "❌ [ApproveQuotation] API returned null for quotation {QuotationId}",
-                        quotationId
-                    );
-                    TempData["ErrorMessage"] = "Failed to approve quotation.";
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "🔥 [ApproveQuotation] Unexpected error while approving quotation {QuotationId}",
-                    quotationId
-                );
-                TempData["ErrorMessage"] = $"Error: {ex.Message}";
-            }
-
-            return RedirectToAction("Index");
+        public class ApproveQuotationRequest
+        {
+            public string QuotationId { get; set; }
         }
 
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RejectQuotation(string quotationId)
+        public async Task<IActionResult> RejectQuotation([FromBody] RejectQuotationRequest request)
         {
             _logger.LogInformation(
                 "🟠 [RejectQuotation] Triggered with quotationId={QuotationId}",
-                quotationId
+                request.QuotationId
             );
 
             try
             {
-                if (string.IsNullOrEmpty(quotationId))
+                if (string.IsNullOrEmpty(request.QuotationId))
                 {
-                    TempData["ErrorMessage"] = "Invalid quotation ID.";
-                    return RedirectToAction("Index");
+                    return Json(new { success = false, error = "Invalid quotation ID." });
                 }
 
-                var endpoint = $"/api/clients/reject/quotation/{quotationId}";
+                var endpoint = $"/api/clients/reject/quotation/{request.QuotationId}";
                 _logger.LogInformation(
                     "🌐 [RejectQuotation] Sending PUT request to {Endpoint}",
                     endpoint
                 );
 
-                var result = await _apiClient.PutAsync<object>(endpoint, null, User);
+                var payload = new { reason = request.Reason };
+                var result = await _apiClient.PutAsync<object>(endpoint, payload, User);
 
                 if (result != null)
                 {
                     _logger.LogInformation(
                         "✅ [RejectQuotation] Quotation rejected successfully for {QuotationId}",
-                        quotationId
+                        request.QuotationId
                     );
-                    TempData["SuccessMessage"] = "Quotation rejected successfully.";
+                    return Json(
+                        new { success = true, message = "Quotation rejected successfully." }
+                    );
                 }
                 else
                 {
                     _logger.LogError(
                         "❌ [RejectQuotation] API returned null for quotation {QuotationId}",
-                        quotationId
+                        request.QuotationId
                     );
-                    TempData["ErrorMessage"] = "Failed to reject quotation.";
+                    return Json(new { success = false, error = "Failed to reject quotation." });
                 }
             }
             catch (Exception ex)
@@ -409,12 +370,93 @@ namespace ICCMS_Web.Controllers
                 _logger.LogError(
                     ex,
                     "🔥 [RejectQuotation] Unexpected error while rejecting quotation {QuotationId}",
-                    quotationId
+                    request.QuotationId
                 );
-                TempData["ErrorMessage"] = $"Error: {ex.Message}";
+                return Json(new { success = false, error = ex.Message });
             }
+        }
 
-            return RedirectToAction("Index");
+        [HttpGet]
+        public async Task<IActionResult> GetQuotationDetails(string id)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(id))
+                {
+                    return Json(new { success = false, error = "Quotation ID is required." });
+                }
+
+                // Call the API to get quotation details with line items
+                var response = await _apiClient.GetAsync<object>(
+                    $"/api/clients/quotation/{id}",
+                    User
+                );
+
+                if (response != null)
+                {
+                    return Json(new { success = true, data = response });
+                }
+                else
+                {
+                    return Json(new { success = false, error = "Quotation not found." });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting quotation details {QuotationId}", id);
+                return Json(
+                    new
+                    {
+                        success = false,
+                        error = "An error occurred while loading quotation details.",
+                    }
+                );
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ApproveQuotation(
+            [FromBody] ApproveQuotationRequest request
+        )
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(request.QuotationId))
+                {
+                    return Json(new { success = false, error = "Quotation ID is required." });
+                }
+
+                // Call the API to approve the quotation using PUT method
+                var response = await _apiClient.PutAsync<object>(
+                    $"/api/clients/approve/quotation/{request.QuotationId}",
+                    null,
+                    User
+                );
+
+                if (response != null)
+                {
+                    return Json(new { success = true });
+                }
+                else
+                {
+                    return Json(new { success = false, error = "Failed to approve quotation." });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error approving quotation {QuotationId}",
+                    request.QuotationId
+                );
+                return Json(
+                    new
+                    {
+                        success = false,
+                        error = "An error occurred while approving the quotation.",
+                    }
+                );
+            }
         }
 
         // ============================================
@@ -1259,9 +1301,9 @@ namespace ICCMS_Web.Controllers
 
     public class ClientDashboardViewModel
     {
-        public List<MaintenanceRequestDto>? MaintenanceRequests { get; set; }
         public List<ProjectDto> Projects { get; set; } = new List<ProjectDto>();
-        public List<QuotationDto> Quotations { get; set; } = new List<QuotationDto>();
-        public List<InvoiceDto>? Invoices { get; set; }
+        public int TotalProjects { get; set; }
+        public int ActiveProjects { get; set; }
+        public int CompletedProjects { get; set; }
     }
 }

@@ -1,0 +1,53 @@
+@model ICCMS_Web.Models.ProjectDto
+
+@{
+    var progress = ViewBag.Progress as int? ?? 0;
+    var statusBadgeClass = ViewBag.StatusBadgeClass as string ?? "badge-light";
+}
+
+<a href="@Url.Action("ProjectDetail", "Clients", new { id = Model.ProjectId })"
+    class="project-card-link text-decoration-none text-dark">
+    <div id="project-@Model.ProjectId" class="project-card card h-100 construction-border-thin"
+        data-project-id="@Model.ProjectId" data-project-name="@Model.Name" data-project-status="@Model.Status">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h6 class="card-title mb-1 fw-bold">
+                        @Model.Name
+                    </h6>
+                </div>
+                <div class="text-end d-flex align-items-center gap-2">
+                    <span class="status-badge @Model.Status.ToLower()">@Model.Status</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body">
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <p class="card-text small mb-3">
+                    @(Model.Description.Length > 100 ? Model.Description.Substring(0, 100) + "..." : Model.Description)
+                </p>
+            }
+            <div class="row g-2 mb-3">
+                <div class="col-12">
+                    <div class="stat-item mb-2">
+                        <small>Start Date: <span>@Model.StartDate.ToString("MMM dd, yyyy")</span></small>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="stat-item mb-2">
+                        <small>Planned End: <span>@Model.EndDatePlanned.ToString("MMM dd, yyyy")</span></small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="pill-progress" aria-label="Project Progress @progress%">
+                    <div class="pill-progress__fill" style="width: @progress%" aria-hidden="true"></div>
+                    <div class="pill-progress__label">Project Progress @progress%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</a>

@@ -43,6 +43,9 @@ namespace ICCMS_Web.Models
         [JsonPropertyName("status")]
         public string Status { get; set; } = "Draft";
 
+        [JsonPropertyName("isDraft")]
+        public bool IsDraft { get; set; } = false;
+
         // Planned start date (required, user input).
         [JsonPropertyName("startDate")]
         public DateTime StartDate { get; set; }

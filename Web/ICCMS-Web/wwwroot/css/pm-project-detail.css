@@ -11,7 +11,7 @@
   --text-secondary: #ffffff; /* Secondary text - white with different font weight */
   --text-muted: #ffffff; /* Muted text - white with opacity */
   --text-dark: #1a1b25; /* Text on light backgrounds */
-  --border-primary: rgba(247, 236, 89, 0.2); /* Default borders */
+  --border-primary: rgba(255, 255, 255, 0.1); /* Default borders - subtle white */
   --border-active: #f7ec59; /* Active/focus borders */
 }
 
@@ -135,7 +135,6 @@
 
 .pm-stats-card {
     background: var(--secondary-bg);
-    border: 1px solid var(--border-primary);
     border-radius: 8px;
     transition: all 0.3s ease;
 }
@@ -288,7 +287,6 @@
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, #F7EC59 0%, #6BF178 100%);
 }
 
 .pm-phases-section:hover {
@@ -330,7 +328,6 @@
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, #F7EC59 0%, #6BF178 100%);
 }
 
 .pm-tasks-section:hover {
@@ -607,6 +604,27 @@
     background: var(--text-primary);
     color: var(--accent-green);
     transform: translateY(-2px);
+}
+
+.tab-button {
+    background: var(--secondary-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-primary);
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+    color: #fff;
+    font-weight: 600;
+    font-size: 1.1rem;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+    margin-left: 0.25rem;
+    margin-right: 0.25rem;
+}
+.tab-button:hover {
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(247, 236, 89, 0.5);
 }
 
 .pm-btn-danger {
@@ -1931,7 +1949,6 @@
 .pm-estimates-card,
 .pm-invoices-card {
     background: var(--secondary-bg);
-    border: 1px solid var(--border-primary);
     border-radius: 8px;
     transition: all 0.3s ease;
     position: relative;
@@ -1948,7 +1965,6 @@
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, #F7EC59 0%, #6BF178 100%);
 }
 
 .pm-budget-card:hover,
@@ -1992,7 +2008,7 @@
 }
 
 .pm-progress-section:hover {
-    border-color: var(--border-active);
+    border-color: var(--accent-yellow);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     transform: translateY(-2px);
 }
@@ -2017,7 +2033,6 @@
 }
 
 .pm-progress-bar {
-    background: linear-gradient(90deg, #F7EC59 0%, #6BF178 100%);
     border-radius: 10px;
     transition: width 0.6s ease;
     height: 100%;
@@ -2108,5 +2123,442 @@
         text-align: center;
         gap: 15px;
     }
+}
+
+/* Progress Reports Section Styling */
+.pm-progress-reports-section h6 {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.pm-progress-reports-card {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.pm-progress-reports-card:hover {
+    border-color: var(--border-active);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.progress-reports-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.progress-report-item {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-primary);
+    transition: background-color 0.2s ease;
+}
+
+.progress-report-item:last-child {
+    border-bottom: none;
+}
+
+.progress-report-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.report-task {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.report-date {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+.report-description {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
+}
+
+.report-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.no-progress-reports-message {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.no-progress-reports-message i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.no-progress-reports-message p {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.no-progress-reports-message small {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+/* Clickable Quote Styling */
+.clickable-quote {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.clickable-quote:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.estimate-item {
+    transition: all 0.3s ease;
+}
+
+.estimate-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Quote Details Modal Styling */
+.quotation-details-container {
+    padding: 1rem;
+    background: var(--primary-bg);
+    color: var(--text-primary);
+}
+
+.quotation-details-container .card {
+    border: 1px solid var(--border-primary);
+    background: var(--secondary-bg);
+}
+
+.quotation-details-container .card-body {
+    padding: 1.5rem;
+}
+
+.quotation-details-container .fw-bold.fs-4 {
+    color: var(--accent-yellow);
+}
+
+/* Modal Header Styling */
+#quoteDetailsModal .modal-header {
+    background: var(--primary-bg) !important;
+    border-bottom: 2px solid var(--accent-yellow);
+}
+
+#quoteDetailsModal .modal-title {
+    color: var(--text-primary) !important;
+}
+
+#quoteDetailsModal .modal-content {
+    background: var(--primary-bg);
+    border: 1px solid var(--border-primary);
+}
+
+#quoteDetailsModal .modal-footer {
+    background: var(--secondary-bg);
+    border-top: 1px solid var(--border-primary);
+}
+
+/* Table Styling for Line Items */
+#quoteDetailsModal .table-dark {
+    --bs-table-bg: var(--secondary-bg);
+    --bs-table-striped-bg: rgba(255, 255, 255, 0.05);
+    --bs-table-hover-bg: rgba(255, 255, 255, 0.1);
+    --bs-table-border-color: var(--border-primary);
+}
+
+#quoteDetailsModal .table-dark th {
+    background: var(--primary-bg) !important;
+    border-color: var(--border-primary);
+    color: var(--text-primary) !important;
+}
+
+#quoteDetailsModal .table-dark td {
+    border-color: var(--border-primary);
+    color: var(--text-primary) !important;
+}
+
+#quoteDetailsModal .table-dark tbody tr:hover {
+    background-color: rgba(247, 236, 89, 0.1) !important;
+}
+
+/* Task Details Modal Styling */
+#taskDetailsModal .modal-header {
+    background: var(--primary-bg) !important;
+    border-bottom: 2px solid var(--accent-yellow);
+}
+
+#taskDetailsModal .modal-title {
+    color: var(--text-primary) !important;
+}
+
+#taskDetailsModal .modal-content {
+    background: var(--primary-bg);
+    border: 1px solid var(--border-primary);
+}
+
+#taskDetailsModal .modal-body {
+    background: var(--primary-bg);
+    color: var(--text-primary);
+}
+
+#taskDetailsModal .modal-footer {
+    background: var(--secondary-bg);
+    border-top: 1px solid var(--border-primary);
+}
+
+.task-details-container {
+    padding: 1rem;
+    background: var(--primary-bg);
+    color: var(--text-primary);
+}
+
+.task-details-container .card {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #2a2b35;
+}
+
+/* Phase Details Modal Styling */
+#phaseDetailsModal .modal-header {
+    background: var(--primary-bg) !important;
+    border-bottom: 2px solid var(--accent-yellow);
+}
+
+#phaseDetailsModal .modal-title {
+    color: var(--text-primary) !important;
+}
+
+#phaseDetailsModal .modal-content {
+    background: var(--primary-bg);
+    border: 1px solid var(--border-primary);
+}
+
+#phaseDetailsModal .modal-body {
+    background: var(--primary-bg);
+    color: var(--text-primary);
+}
+
+#phaseDetailsModal .modal-footer {
+    background: var(--secondary-bg);
+    border-top: 1px solid var(--border-primary);
+}
+
+.phase-details-container {
+    padding: 1rem;
+    background: var(--primary-bg);
+    color: var(--text-primary);
+}
+
+.phase-details-container .card {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #2a2b35;
+}
+
+/* Task Card Improvements */
+.pm-task-card {
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-primary);
+}
+
+.pm-task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    border-color: var(--accent-yellow);
+}
+
+.pm-task-card.overdue {
+    border-left: 4px solid #dc3545;
+}
+
+.pm-task-card .card-body {
+    padding: 1.5rem;
+}
+
+.pm-task-card h6 {
+    color: var(--text-primary);
+    font-size: 1.1rem;
+}
+
+.pm-task-card .text-muted {
+    color: var(--text-muted) !important;
+}
+
+.pm-task-card .badge {
+    font-size: 0.75rem;
+    padding: 0.4em 0.8em;
+}
+
+.pm-task-card .progress-section {
+    min-width: 120px;
+}
+
+.pm-task-card .progress {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.pm-task-card .pm-progress-bar {
+    background: linear-gradient(90deg, var(--accent-yellow), #ffc107);
+    border-radius: 4px;
+}
+
+.pm-task-card .d-flex.gap-2 {
+    gap: 0.5rem !important;
+}
+
+/* Phase Card Improvements */
+.pm-phase-card {
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-primary);
+}
+
+.pm-phase-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    border-color: var(--accent-yellow);
+}
+
+.pm-phase-card .card-body {
+    padding: 1.5rem;
+}
+
+.pm-phase-card h6 {
+    color: var(--text-primary);
+    font-size: 1.1rem;
+}
+
+.pm-phase-card .text-muted {
+    color: var(--text-muted) !important;
+}
+
+.pm-phase-card .badge {
+    font-size: 0.75rem;
+    padding: 0.4em 0.8em;
+}
+
+.pm-phase-card .progress-section {
+    min-width: 120px;
+}
+
+.pm-phase-card .progress {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.pm-phase-card .pm-progress-bar {
+    background: linear-gradient(90deg, var(--accent-yellow), #ffc107);
+    border-radius: 4px;
+}
+
+.view-phases-button {
+    background: var(--secondary-bg);
+    border: 2px solid var(--accent-yellow);
+    border-radius: 50%;
+    color: var(--accent-yellow);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 0.9rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0;
+
+}
+
+.view-phases-button:hover {
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(247, 236, 89, 0.5);
+}
+
+/* User Button Styles for Quote Modal */
+.user-btn {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.user-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.user-btn:hover::before {
+    left: 100%;
+}
+
+.user-btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #FFFFFF;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.user-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #FFFFFF;
+    transform: translateY(-2px);
+    color: #FFFFFF;
+}
+
+.user-btn-success {
+    background: #6BF178;
+    color: #1A1B25;
+    box-shadow: 0 2px 8px rgba(107, 241, 120, 0.2);
+}
+
+.user-btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(107, 241, 120, 0.4);
+    color: #1A1B25;
+}
+
+.user-btn-danger {
+    background: linear-gradient(135deg, #FF5964 0%, #E53E3E 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(255, 89, 100, 0.3);
+}
+
+.user-btn-danger:hover {
+    background: linear-gradient(135deg, #E53E3E 0%, #C82333 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 89, 100, 0.5);
+    color: #ffffff;
 }
 

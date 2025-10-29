@@ -2,7 +2,7 @@
 .project-card {
     background-color: #2A2B35 !important;
     border-radius: 32px;
-    box-shadow: 0 0 5px 0 rgba(247, 236, 89, 0.5);
+    box-shadow: 0 0 5px 0 rgba(255, 255, 255, 0.1);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     height: 100%;
     cursor: pointer;
