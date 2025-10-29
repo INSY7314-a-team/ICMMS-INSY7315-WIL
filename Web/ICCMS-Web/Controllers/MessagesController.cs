@@ -581,7 +581,7 @@ namespace ICCMS_Web.Controllers
                     var workflowThreads = workflowMessages
                         .Select(wm => new ThreadDto
                         {
-                            ThreadId = wm.WorkflowMessageId,
+                            ThreadId = string.Empty, // Workflow messages are not threads
                             Subject = wm.Subject,
                             ProjectId = wm.ProjectId,
                             ProjectName = "", // Will be populated from project data if needed
@@ -626,7 +626,7 @@ namespace ICCMS_Web.Controllers
             {
                 new ThreadDto
                 {
-                    ThreadId = "sample-workflow-1",
+                    ThreadId = string.Empty, // Sample workflow message is not a thread
                     Subject = "Sample Workflow Message",
                     ProjectId = "sample-project",
                     ProjectName = "Sample Project",

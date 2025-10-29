@@ -182,7 +182,7 @@ namespace ICCMS_Web.Services
                         var workflowAsMessage = new MessageWithSenderDto
                         {
                             MessageId = workflowMessage.WorkflowMessageId,
-                            ThreadId = workflowMessage.WorkflowMessageId,
+                            ThreadId = string.Empty, // Workflow messages are not threads
                             SenderId = "system",
                             SenderName = "System",
                             ReceiverId = userId,
@@ -391,7 +391,7 @@ namespace ICCMS_Web.Services
                 {
                     var thread = new ThreadDto
                     {
-                        ThreadId = workflowMessage.WorkflowMessageId,
+                        ThreadId = string.Empty, // Workflow messages are not threads
                         Subject = workflowMessage.Subject,
                         ProjectId = workflowMessage.ProjectId,
                         Participants = workflowMessage.Recipients,

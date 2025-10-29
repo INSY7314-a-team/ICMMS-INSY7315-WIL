@@ -1,8 +1,8 @@
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Google.Cloud.Firestore;
-using Microsoft.Extensions.Configuration;
 using ICCMS_API.Models;
+using Microsoft.Extensions.Configuration;
 
 namespace ICCMS_API.Services
 {
@@ -38,6 +38,7 @@ namespace ICCMS_API.Services
         )
             where T : class;
         Task DeleteDocumentAsync(string collection, string documentId);
+        Task<bool> DeleteDocumentWithFileAsync(string fileName);
     }
 
     public class FirebaseService : IFirebaseService
@@ -120,29 +121,47 @@ namespace ICCMS_API.Services
             try
             {
                 var snapshot = await _firestoreDb.Collection(collection).GetSnapshotAsync();
-                
+
                 var result = new List<T>();
                 foreach (var doc in snapshot.Documents)
                 {
                     try
                     {
                         T converted;
-                        
+
                         if (typeof(T) == typeof(Document) || typeof(T).Name == "Document")
                         {
                             // Always use manual conversion for Document objects since ConvertTo<T> returns default values
-                            
+
                             // Debug: Log the actual field values being extracted
-                            var projectId = doc.GetValue<string>("projectId") ?? "";
-                            var fileName = doc.GetValue<string>("fileName") ?? "";
-                            var status = doc.GetValue<string>("status") ?? "";
-                            var fileType = doc.GetValue<string>("fileType") ?? "";
-                            var fileSize = doc.GetValue<long>("fileSize");
-                            var fileUrl = doc.GetValue<string>("fileUrl") ?? "";
-                            var uploadedBy = doc.GetValue<string>("uploadedBy") ?? "";
-                            var uploadedAt = doc.GetValue<DateTime>("uploadedAt");
-                            var description = doc.GetValue<string>("description") ?? "";
-                            
+                            var projectId = doc.ContainsField("projectId")
+                                ? doc.GetValue<string>("projectId") ?? ""
+                                : "";
+                            var fileName = doc.ContainsField("fileName")
+                                ? doc.GetValue<string>("fileName") ?? ""
+                                : "";
+                            var status = doc.ContainsField("status")
+                                ? doc.GetValue<string>("status") ?? "active"
+                                : "active";
+                            var fileType = doc.ContainsField("fileType")
+                                ? doc.GetValue<string>("fileType") ?? ""
+                                : "";
+                            var fileSize = doc.ContainsField("fileSize")
+                                ? doc.GetValue<long>("fileSize")
+                                : 0;
+                            var fileUrl = doc.ContainsField("fileUrl")
+                                ? doc.GetValue<string>("fileUrl") ?? ""
+                                : "";
+                            var uploadedBy = doc.ContainsField("uploadedBy")
+                                ? doc.GetValue<string>("uploadedBy") ?? ""
+                                : "";
+                            var uploadedAt = doc.ContainsField("uploadedAt")
+                                ? doc.GetValue<DateTime>("uploadedAt")
+                                : DateTime.UtcNow;
+                            var description = doc.ContainsField("description")
+                                ? doc.GetValue<string>("description") ?? ""
+                                : "";
+
                             var manualDoc = new Document
                             {
                                 DocumentId = doc.Id,
@@ -154,7 +173,7 @@ namespace ICCMS_API.Services
                                 FileUrl = fileUrl,
                                 UploadedBy = uploadedBy,
                                 UploadedAt = uploadedAt,
-                                Description = description
+                                Description = description,
                             };
                             converted = (T)(object)manualDoc;
                         }
@@ -176,11 +195,13 @@ namespace ICCMS_API.Services
                             }
                             catch (Exception convertEx)
                             {
-                                Console.WriteLine($"ConvertTo<T> failed for document {doc.Id}: {convertEx.Message}");
+                                Console.WriteLine(
+                                    $"ConvertTo<T> failed for document {doc.Id}: {convertEx.Message}"
+                                );
                                 throw convertEx; // Re-throw for non-Document types
                             }
                         }
-                        
+
                         result.Add(converted);
                     }
                     catch (Exception ex)
@@ -190,7 +211,7 @@ namespace ICCMS_API.Services
                         // Continue with other documents
                     }
                 }
-                
+
                 return result;
             }
             catch (Exception ex)
@@ -321,6 +342,125 @@ namespace ICCMS_API.Services
             {
                 Console.WriteLine($"Error deleting document {documentId}: {ex.Message}");
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Specialized method to delete a document from both Firestore and Supabase storage
+        /// </summary>
+        public async Task<bool> DeleteDocumentWithFileAsync(string fileName)
+        {
+            try
+            {
+                Console.WriteLine(
+                    $"[DeleteDocumentWithFileAsync] Starting deletion for file: {fileName}"
+                );
+
+                // First, find the document in Firestore by searching through all documents
+                var documents = await GetCollectionAsync<Document>("documents");
+                var documentToDelete = documents.FirstOrDefault(d => d.FileName == fileName);
+
+                if (documentToDelete == null)
+                {
+                    Console.WriteLine(
+                        $"[DeleteDocumentWithFileAsync] Document not found in Firestore for fileName: {fileName}"
+                    );
+                    return false;
+                }
+
+                Console.WriteLine(
+                    $"[DeleteDocumentWithFileAsync] Found document with DocumentId: {documentToDelete.DocumentId}"
+                );
+                Console.WriteLine(
+                    $"[DeleteDocumentWithFileAsync] FileName: {documentToDelete.FileName}"
+                );
+                Console.WriteLine(
+                    $"[DeleteDocumentWithFileAsync] FileUrl: {documentToDelete.FileUrl}"
+                );
+
+                // Extract the actual document ID from the filename (the UUID prefix)
+                var actualDocumentId = ExtractDocumentIdFromFileName(fileName);
+                Console.WriteLine(
+                    $"[DeleteDocumentWithFileAsync] Extracted actual document ID: {actualDocumentId}"
+                );
+
+                // Try to delete from Firestore using the actual document ID first
+                bool firestoreDeleted = false;
+                try
+                {
+                    await _firestoreDb
+                        .Collection("documents")
+                        .Document(actualDocumentId)
+                        .DeleteAsync();
+                    firestoreDeleted = true;
+                    Console.WriteLine(
+                        $"[DeleteDocumentWithFileAsync] Successfully deleted from Firestore using actual document ID: {actualDocumentId}"
+                    );
+                }
+                catch (Exception firestoreEx)
+                {
+                    Console.WriteLine(
+                        $"[DeleteDocumentWithFileAsync] Failed to delete from Firestore using actual document ID: {firestoreEx.Message}"
+                    );
+
+                    // Fallback: try using the DocumentId field value
+                    try
+                    {
+                        await _firestoreDb
+                            .Collection("documents")
+                            .Document(documentToDelete.DocumentId)
+                            .DeleteAsync();
+                        firestoreDeleted = true;
+                        Console.WriteLine(
+                            $"[DeleteDocumentWithFileAsync] Successfully deleted from Firestore using DocumentId field: {documentToDelete.DocumentId}"
+                        );
+                    }
+                    catch (Exception fallbackEx)
+                    {
+                        Console.WriteLine(
+                            $"[DeleteDocumentWithFileAsync] Failed to delete from Firestore using DocumentId field: {fallbackEx.Message}"
+                        );
+                    }
+                }
+
+                return firestoreDeleted;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"[DeleteDocumentWithFileAsync] Error deleting document {fileName}: {ex.Message}"
+                );
+                Console.WriteLine($"[DeleteDocumentWithFileAsync] Stack trace: {ex.StackTrace}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Extract the actual document ID from the filename (UUID prefix)
+        /// </summary>
+        private string ExtractDocumentIdFromFileName(string fileName)
+        {
+            try
+            {
+                // Extract UUID from filename like "07ae836f-3e5c-41c7-bf99-347b76378842_detailedBlueprint.pdf"
+                var parts = fileName.Split('_');
+                if (parts.Length > 0)
+                {
+                    var uuidPart = parts[0];
+                    // Validate that it looks like a UUID
+                    if (Guid.TryParse(uuidPart, out _))
+                    {
+                        return uuidPart;
+                    }
+                }
+                return fileName; // Fallback to full filename
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"[ExtractDocumentIdFromFileName] Error extracting ID from {fileName}: {ex.Message}"
+                );
+                return fileName; // Fallback to full filename
             }
         }
 

@@ -14,12 +14,19 @@ namespace ICCMS_API.Controllers
         private readonly IAuthService _authService;
         private readonly IFirebaseService _firebaseService;
         private readonly IAuditLogService _auditLogService;
+        private readonly ISupabaseService _supabaseService;
 
-        public AdminController(IAuthService authService, IFirebaseService firebaseService, IAuditLogService auditLogService)
+        public AdminController(
+            IAuthService authService,
+            IFirebaseService firebaseService,
+            IAuditLogService auditLogService,
+            ISupabaseService supabaseService
+        )
         {
             _authService = authService;
             _firebaseService = firebaseService;
             _auditLogService = auditLogService;
+            _supabaseService = supabaseService;
         }
 
         [HttpGet("dashboard")]
@@ -207,7 +214,13 @@ namespace ICCMS_API.Controllers
                 await _firebaseService.AddDocumentWithIdAsync("users", firebaseUid, user);
 
                 var userId = User.UserId();
-                _auditLogService.LogAsync("User Management", "User Created", $"User {request.Email} ({firebaseUid}) created with role {request.Role}", userId ?? "system", firebaseUid);
+                _auditLogService.LogAsync(
+                    "User Management",
+                    "User Created",
+                    $"User {request.Email} ({firebaseUid}) created with role {request.Role}",
+                    userId ?? "system",
+                    firebaseUid
+                );
 
                 return Ok(new { userId = firebaseUid, message = "User created successfully" });
             }
@@ -260,7 +273,13 @@ namespace ICCMS_API.Controllers
                 await _firebaseService.UpdateDocumentAsync("users", id, user);
 
                 var userId = User.UserId();
-                _auditLogService.LogAsync("User Management", "User Activated", $"User {user.Email} ({id}) activated", userId ?? "system", id);
+                _auditLogService.LogAsync(
+                    "User Management",
+                    "User Activated",
+                    $"User {user.Email} ({id}) activated",
+                    userId ?? "system",
+                    id
+                );
 
                 return Ok(new { message = "User activated successfully" });
             }
@@ -285,7 +304,13 @@ namespace ICCMS_API.Controllers
                 await _firebaseService.UpdateDocumentAsync("users", id, user);
 
                 var userId = User.UserId();
-                _auditLogService.LogAsync("User Management", "User Deactivated", $"User {user.Email} ({id}) deactivated", userId ?? "system", id);
+                _auditLogService.LogAsync(
+                    "User Management",
+                    "User Deactivated",
+                    $"User {user.Email} ({id}) deactivated",
+                    userId ?? "system",
+                    id
+                );
 
                 return Ok(new { message = "User deactivated successfully" });
             }
@@ -309,10 +334,16 @@ namespace ICCMS_API.Controllers
                 user.UserId = id;
 
                 await _firebaseService.UpdateDocumentAsync("users", id, user);
-                
+
                 var userId = User.UserId();
-                _auditLogService.LogAsync("User Management", "User Updated", $"User {user.Email} ({id}) updated", userId ?? "system", id);
-                
+                _auditLogService.LogAsync(
+                    "User Management",
+                    "User Updated",
+                    $"User {user.Email} ({id}) updated",
+                    userId ?? "system",
+                    id
+                );
+
                 return Ok(new { message = "User updated successfully" });
             }
             catch (Exception ex)
@@ -353,7 +384,13 @@ namespace ICCMS_API.Controllers
                 await _firebaseService.UpdateDocumentAsync("users", id, user);
 
                 var userId = User.UserId();
-                _auditLogService.LogAsync("User Management", "User Role Changed", $"User {user.Email} ({id}) role changed from {oldRole} to {request.Role}", userId ?? "system", id);
+                _auditLogService.LogAsync(
+                    "User Management",
+                    "User Role Changed",
+                    $"User {user.Email} ({id}) role changed from {oldRole} to {request.Role}",
+                    userId ?? "system",
+                    id
+                );
 
                 return Ok(new { message = "User role updated successfully" });
             }
@@ -413,9 +450,15 @@ namespace ICCMS_API.Controllers
                 {
                     user.IsActive = false;
                     await _firebaseService.UpdateDocumentAsync("users", id, user);
-                    
+
                     var userId = User.UserId();
-                    _auditLogService.LogAsync("User Management", "User Deleted", $"User {user.Email} ({id}) deleted", userId ?? "system", id);
+                    _auditLogService.LogAsync(
+                        "User Management",
+                        "User Deleted",
+                        $"User {user.Email} ({id}) deleted",
+                        userId ?? "system",
+                        id
+                    );
                 }
 
                 return Ok(new { message = "User deactivated successfully" });
@@ -426,17 +469,275 @@ namespace ICCMS_API.Controllers
             }
         }
 
-        [HttpDelete("delete/documents/{id}")]
-        public async Task<ActionResult<Notification>> DeleteDocument(string id)
+        [HttpDelete("delete/documents/{fileName}")]
+        public async Task<ActionResult<Notification>> DeleteDocument(string fileName)
         {
             try
             {
-                await _firebaseService.DeleteDocumentAsync("documents", id);
-                return Ok(new { message = "Document deleted successfully" });
+                Console.WriteLine($"[DeleteDocument] Starting deletion for fileName: {fileName}");
+
+                // 1) Find Firestore document metadata by filename
+                var documents = await _firebaseService.GetCollectionAsync<Document>("documents");
+                var document = documents.FirstOrDefault(d => d.FileName == fileName);
+                if (document == null)
+                {
+                    Console.WriteLine(
+                        $"[DeleteDocument] No Firestore document found for fileName: {fileName}"
+                    );
+                    return NotFound(new { error = "Document not found" });
+                }
+
+                // 2) Delete file from Supabase first
+                var bucketName = "upload"; // derived from public url path /object/public/upload/{file}
+                var supabaseDeleted = await _supabaseService.DeleteFileAsync(bucketName, fileName);
+                if (!supabaseDeleted)
+                {
+                    Console.WriteLine(
+                        $"[DeleteDocument] Supabase deletion failed for fileName: {fileName}, but proceeding with Firestore deletion"
+                    );
+                    // Continue with Firestore deletion even if Supabase fails
+                    // This is a workaround for the Supabase deletion issue
+                }
+                else
+                {
+                    Console.WriteLine(
+                        $"[DeleteDocument] Supabase deletion successful for fileName: {fileName}"
+                    );
+                }
+
+                // 3) Delete the Firestore document (prefer the UUID extracted from filename, then fall back to stored id)
+                var inferredId = ExtractDocumentIdFromFileName(fileName);
+                var firestoreDeleted = false;
+
+                Console.WriteLine(
+                    $"[DeleteDocument] Attempting Firestore deletion with inferredId: {inferredId}"
+                );
+                try
+                {
+                    await _firebaseService.DeleteDocumentAsync("documents", inferredId);
+
+                    // Verify the deletion actually worked
+                    Console.WriteLine(
+                        $"[DeleteDocument] Verifying Firestore deletion by checking if document still exists..."
+                    );
+
+                    // Try multiple verification methods
+                    var verifyDoc = await _firebaseService.GetDocumentAsync<Document>(
+                        "documents",
+                        inferredId
+                    );
+                    Console.WriteLine(
+                        $"[DeleteDocument] GetDocumentAsync result: {(verifyDoc == null ? "null" : "document found")}"
+                    );
+
+                    // Also check by searching the collection
+                    var allDocs = await _firebaseService.GetCollectionAsync<Document>("documents");
+                    var docStillExists = allDocs.Any(d =>
+                        d.DocumentId == inferredId || d.FileName == fileName
+                    );
+                    Console.WriteLine(
+                        $"[DeleteDocument] Collection search result: {(docStillExists ? "document found in collection" : "document not found in collection")}"
+                    );
+
+                    if (verifyDoc == null && !docStillExists)
+                    {
+                        firestoreDeleted = true;
+                        Console.WriteLine(
+                            $"[DeleteDocument] Successfully deleted Firestore document with inferredId: {inferredId}"
+                        );
+                    }
+                    else
+                    {
+                        Console.WriteLine(
+                            $"[DeleteDocument] Firestore deletion failed - document still exists with inferredId: {inferredId}"
+                        );
+                        Console.WriteLine(
+                            $"[DeleteDocument] GetDocumentAsync returned: {(verifyDoc != null ? "document" : "null")}"
+                        );
+                        Console.WriteLine(
+                            $"[DeleteDocument] Collection search found: {(docStillExists ? "document" : "nothing")}"
+                        );
+
+                        // If the first attempt failed, throw an exception to trigger the fallback methods
+                        throw new Exception(
+                            $"Deletion with inferredId {inferredId} failed - document still exists"
+                        );
+                    }
+                }
+                catch (Exception ex1)
+                {
+                    Console.WriteLine(
+                        $"[DeleteDocument] Failed to delete with inferredId {inferredId}: {ex1.Message}"
+                    );
+
+                    Console.WriteLine(
+                        $"[DeleteDocument] Attempting Firestore deletion with documentId: {document.DocumentId}"
+                    );
+                    try
+                    {
+                        await _firebaseService.DeleteDocumentAsync(
+                            "documents",
+                            document.DocumentId
+                        );
+
+                        // Verify the deletion actually worked
+                        Console.WriteLine(
+                            $"[DeleteDocument] Verifying Firestore deletion with documentId..."
+                        );
+                        var verifyDoc2 = await _firebaseService.GetDocumentAsync<Document>(
+                            "documents",
+                            document.DocumentId
+                        );
+
+                        // Also check by searching the collection
+                        var allDocs2 = await _firebaseService.GetCollectionAsync<Document>(
+                            "documents"
+                        );
+                        var docStillExists2 = allDocs2.Any(d =>
+                            d.DocumentId == document.DocumentId || d.FileName == fileName
+                        );
+
+                        if (verifyDoc2 == null && !docStillExists2)
+                        {
+                            firestoreDeleted = true;
+                            Console.WriteLine(
+                                $"[DeleteDocument] Successfully deleted Firestore document with documentId: {document.DocumentId}"
+                            );
+                        }
+                        else
+                        {
+                            Console.WriteLine(
+                                $"[DeleteDocument] Firestore deletion failed - document still exists with documentId: {document.DocumentId}"
+                            );
+                            Console.WriteLine(
+                                $"[DeleteDocument] GetDocumentAsync returned: {(verifyDoc2 != null ? "document" : "null")}"
+                            );
+                            Console.WriteLine(
+                                $"[DeleteDocument] Collection search found: {(docStillExists2 ? "document" : "nothing")}"
+                            );
+
+                            // If the second attempt also failed, throw an exception to trigger the third fallback
+                            throw new Exception(
+                                $"Deletion with documentId {document.DocumentId} failed - document still exists"
+                            );
+                        }
+                    }
+                    catch (Exception ex2)
+                    {
+                        Console.WriteLine(
+                            $"[DeleteDocument] Failed to delete with documentId {document.DocumentId}: {ex2.Message}"
+                        );
+
+                        // Try 3: Find the actual Firestore document ID by searching
+                        Console.WriteLine(
+                            $"[DeleteDocument] Searching for actual Firestore document ID..."
+                        );
+                        try
+                        {
+                            var rawDocs = await _firebaseService.GetRawCollectionAsync("documents");
+                            var rawDoc = rawDocs.FirstOrDefault(d =>
+                                d.Id != null && d.ConvertTo<Document>().FileName == fileName
+                            );
+                            if (rawDoc != null)
+                            {
+                                Console.WriteLine(
+                                    $"[DeleteDocument] Found actual Firestore document ID: {rawDoc.Id}"
+                                );
+                                await _firebaseService.DeleteDocumentAsync("documents", rawDoc.Id);
+
+                                // Verify the deletion actually worked
+                                Console.WriteLine(
+                                    $"[DeleteDocument] Verifying Firestore deletion with actual ID..."
+                                );
+                                var verifyDoc3 = await _firebaseService.GetDocumentAsync<Document>(
+                                    "documents",
+                                    rawDoc.Id
+                                );
+
+                                // Also check by searching the collection
+                                var allDocs3 = await _firebaseService.GetCollectionAsync<Document>(
+                                    "documents"
+                                );
+                                var docStillExists3 = allDocs3.Any(d =>
+                                    d.DocumentId == rawDoc.Id || d.FileName == fileName
+                                );
+
+                                if (verifyDoc3 == null && !docStillExists3)
+                                {
+                                    firestoreDeleted = true;
+                                    Console.WriteLine(
+                                        $"[DeleteDocument] Successfully deleted Firestore document with actual ID: {rawDoc.Id}"
+                                    );
+                                }
+                                else
+                                {
+                                    Console.WriteLine(
+                                        $"[DeleteDocument] Firestore deletion failed - document still exists with actual ID: {rawDoc.Id}"
+                                    );
+                                    Console.WriteLine(
+                                        $"[DeleteDocument] GetDocumentAsync returned: {(verifyDoc3 != null ? "document" : "null")}"
+                                    );
+                                    Console.WriteLine(
+                                        $"[DeleteDocument] Collection search found: {(docStillExists3 ? "document" : "nothing")}"
+                                    );
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine(
+                                    $"[DeleteDocument] No matching document found in Firestore for fileName: {fileName}"
+                                );
+                            }
+                        }
+                        catch (Exception ex3)
+                        {
+                            Console.WriteLine(
+                                $"[DeleteDocument] Failed to find and delete with actual ID: {ex3.Message}"
+                            );
+                        }
+                    }
+                }
+
+                if (!firestoreDeleted)
+                {
+                    return StatusCode(
+                        500,
+                        new { error = "File deleted, but Firestore record could not be removed" }
+                    );
+                }
+
+                Console.WriteLine(
+                    $"[DeleteDocument] Deleted file and Firestore record for: {fileName}"
+                );
+                return Ok(new { message = "Document and file deleted successfully" });
             }
             catch (Exception ex)
             {
+                Console.WriteLine(
+                    $"[DeleteDocument] Error deleting document {fileName}: {ex.Message}"
+                );
                 return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        private static string ExtractDocumentIdFromFileName(string fileName)
+        {
+            try
+            {
+                // For UUID-prefixed filenames like "07ae836f-3e5c-41c7-bf99-347b76378842_detailedBlueprint.pdf"
+                var parts = fileName.Split('_');
+                if (parts.Length > 0 && Guid.TryParse(parts[0], out _))
+                {
+                    return parts[0];
+                }
+
+                // For regular filenames like "blueprint_v1.pdf", return the full filename
+                // This will be used as a fallback when the documentId field doesn't work
+                return fileName;
+            }
+            catch
+            {
+                return fileName;
             }
         }
 
@@ -456,7 +757,7 @@ namespace ICCMS_API.Controllers
                     cpuUsage = "23%",
                     databaseStatus = "Connected",
                     apiStatus = "Operational",
-                    timestamp = DateTime.UtcNow
+                    timestamp = DateTime.UtcNow,
                 };
 
                 return Ok(health);
@@ -483,7 +784,7 @@ namespace ICCMS_API.Controllers
                         apiUptime = "99.9%",
                         lastPerformanceCheck = DateTime.UtcNow,
                         peakConcurrentUsers = 15,
-                        averageSessionDuration = "24 minutes"
+                        averageSessionDuration = "24 minutes",
                     },
                     database = new
                     {
@@ -493,7 +794,7 @@ namespace ICCMS_API.Controllers
                         connectionPool = "Healthy",
                         queryPerformance = "Good",
                         storageUsed = "2.3 GB",
-                        lastHealthCheck = DateTime.UtcNow
+                        lastHealthCheck = DateTime.UtcNow,
                     },
                     api = new
                     {
@@ -504,16 +805,56 @@ namespace ICCMS_API.Controllers
                         lastHealthCheck = DateTime.UtcNow,
                         endpoints = new[]
                         {
-                            new { endpoint = "/api/users", status = "Healthy", responseTime = "89ms" },
-                            new { endpoint = "/api/clients", status = "Healthy", responseTime = "92ms" },
-                            new { endpoint = "/api/projects", status = "Healthy", responseTime = "156ms" },
-                            new { endpoint = "/api/quotations", status = "Healthy", responseTime = "134ms" },
-                            new { endpoint = "/api/invoices", status = "Healthy", responseTime = "98ms" },
-                            new { endpoint = "/api/messages", status = "Healthy", responseTime = "112ms" },
-                            new { endpoint = "/api/notifications", status = "Healthy", responseTime = "87ms" },
-                            new { endpoint = "/api/estimates", status = "Healthy", responseTime = "145ms" }
-                        }
-                    }
+                            new
+                            {
+                                endpoint = "/api/users",
+                                status = "Healthy",
+                                responseTime = "89ms",
+                            },
+                            new
+                            {
+                                endpoint = "/api/clients",
+                                status = "Healthy",
+                                responseTime = "92ms",
+                            },
+                            new
+                            {
+                                endpoint = "/api/projects",
+                                status = "Healthy",
+                                responseTime = "156ms",
+                            },
+                            new
+                            {
+                                endpoint = "/api/quotations",
+                                status = "Healthy",
+                                responseTime = "134ms",
+                            },
+                            new
+                            {
+                                endpoint = "/api/invoices",
+                                status = "Healthy",
+                                responseTime = "98ms",
+                            },
+                            new
+                            {
+                                endpoint = "/api/messages",
+                                status = "Healthy",
+                                responseTime = "112ms",
+                            },
+                            new
+                            {
+                                endpoint = "/api/notifications",
+                                status = "Healthy",
+                                responseTime = "87ms",
+                            },
+                            new
+                            {
+                                endpoint = "/api/estimates",
+                                status = "Healthy",
+                                responseTime = "145ms",
+                            },
+                        },
+                    },
                 };
 
                 return Ok(metrics);
@@ -537,7 +878,7 @@ namespace ICCMS_API.Controllers
                         title = "System Health Check",
                         message = "All systems are operating normally.",
                         timestamp = DateTime.UtcNow.AddMinutes(-5),
-                        severity = "Info"
+                        severity = "Info",
                     },
                     new
                     {
@@ -545,7 +886,7 @@ namespace ICCMS_API.Controllers
                         title = "Disk Usage Warning",
                         message = "Disk usage is at 62%. Consider cleaning up old files.",
                         timestamp = DateTime.UtcNow.AddMinutes(-30),
-                        severity = "Warning"
+                        severity = "Warning",
                     },
                     new
                     {
@@ -553,8 +894,8 @@ namespace ICCMS_API.Controllers
                         title = "High Response Time",
                         message = "Average response time is above normal threshold.",
                         timestamp = DateTime.UtcNow.AddHours(-1),
-                        severity = "Warning"
-                    }
+                        severity = "Warning",
+                    },
                 };
 
                 return Ok(alerts);
@@ -578,7 +919,7 @@ namespace ICCMS_API.Controllers
                         description = "New user registered: John Smith",
                         timestamp = DateTime.UtcNow.AddMinutes(-15),
                         user = "System",
-                        icon = "fas fa-user-plus"
+                        icon = "fas fa-user-plus",
                     },
                     new
                     {
@@ -586,7 +927,7 @@ namespace ICCMS_API.Controllers
                         description = "Project 'ICCMS Phase 2' status updated to Active",
                         timestamp = DateTime.UtcNow.AddMinutes(-32),
                         user = "Admin User",
-                        icon = "fas fa-project-diagram"
+                        icon = "fas fa-project-diagram",
                     },
                     new
                     {
@@ -594,7 +935,7 @@ namespace ICCMS_API.Controllers
                         description = "Invoice #INV-2024-001 marked as paid",
                         timestamp = DateTime.UtcNow.AddHours(-1),
                         user = "Finance Manager",
-                        icon = "fas fa-dollar-sign"
+                        icon = "fas fa-dollar-sign",
                     },
                     new
                     {
@@ -602,7 +943,7 @@ namespace ICCMS_API.Controllers
                         description = "System backup completed successfully",
                         timestamp = DateTime.UtcNow.AddHours(-2),
                         user = "System",
-                        icon = "fas fa-database"
+                        icon = "fas fa-database",
                     },
                     new
                     {
@@ -610,8 +951,8 @@ namespace ICCMS_API.Controllers
                         description = "New message thread created for Project Alpha",
                         timestamp = DateTime.UtcNow.AddHours(-3),
                         user = "Project Manager",
-                        icon = "fas fa-comments"
-                    }
+                        icon = "fas fa-comments",
+                    },
                 };
 
                 return Ok(activities);

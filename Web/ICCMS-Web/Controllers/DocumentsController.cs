@@ -281,7 +281,7 @@ namespace ICCMS_Web.Controllers
                 _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {firebaseToken}");
 
                 var response = await _httpClient.DeleteAsync(
-                    $"{apiBaseUrl}/api/documents/{request.FileName}"
+                    $"{apiBaseUrl}/api/admin/delete/documents/{request.FileName}"
                 );
 
                 if (response.IsSuccessStatusCode)

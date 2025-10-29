@@ -15,7 +15,7 @@ namespace ICCMS_API.Models
         public string FileName { get; set; } = string.Empty;
 
         [FirestoreProperty("status")]
-        public string Status { get; set; } = string.Empty;
+        public string Status { get; set; } = "active"; // Default status for documents
 
         [FirestoreProperty("fileType")]
         public string FileType { get; set; } = string.Empty;

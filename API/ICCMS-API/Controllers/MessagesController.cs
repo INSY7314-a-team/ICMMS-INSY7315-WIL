@@ -599,7 +599,11 @@ namespace ICCMS_API.Controllers
                 thread.LastMessageAt = message.SentAt;
                 if (isNewThread)
                 {
-                    await _firebaseService.AddDocumentAsync("threads", thread);
+                    await _firebaseService.AddDocumentWithIdAsync(
+                        "threads",
+                        thread.ThreadId,
+                        thread
+                    );
                 }
                 else
                 {
@@ -1574,7 +1578,7 @@ namespace ICCMS_API.Controllers
                     ThreadType = message.ThreadParticipants.Count > 2 ? "group" : "direct", // Assuming 2 participants is direct
                 };
 
-                await _firebaseService.AddDocumentAsync("threads", thread);
+                await _firebaseService.AddDocumentWithIdAsync("threads", thread.ThreadId, thread);
             }
             catch (Exception ex)
             {
