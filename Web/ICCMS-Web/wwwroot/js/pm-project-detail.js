@@ -125,71 +125,133 @@ async function processBlueprintAndOpen(projectId, blueprintUrl) {
 
 // Start Real-time Log Streaming from GenKit Microservice
 function startRealTimeLogStreaming(projectId) {
-  // Add initial Bob personality logs
-  addBobLog('🔨 Bob a Builder is starting up...', 100);
-  addBobLog('🤔 Bob is thinking about this blueprint...', 300);
-  addBobLog('👀 Bob is taking a closer look at the details...', 500);
-  
-  // Simulate real GenKit logs with Bob personality
+  // Bob's personality: Enthusiastic, confident, construction-savvy, friendly builder
+  // All logs compressed to fit within 50000ms (50 seconds)
   const bobLogs = [
-    { time: 800, message: '🔍 Bob found the text extraction phase starting' },
-    { time: 1000, message: '✅ Bob thinks the text extraction looks good' },
-    { time: 1200, message: '🔍 Bob is analyzing the blueprint structure now' },
-    { time: 1400, message: '📊 Bob found 7863 characters of text to work with' },
-    { time: 1600, message: '🔍 Bob is extracting line items from the blueprint' },
-    { time: 1800, message: '✅ Bob successfully parsed 24 line items' },
-    { time: 2000, message: '🔍 Bob is calculating material quantities now' },
-    { time: 2200, message: '📐 Bob found the scale is 1:100 with 100m² total area' },
-    { time: 2400, message: '🧱 Bob is calculating brick quantities...' },
-    { time: 2600, message: '📏 Bob found brick specs: 0.22m × 0.07m × 0.11m' },
-    { time: 2800, message: '📊 Bob calculated: Wall 1: 10m × 2.4m = 24m²' },
-    { time: 3000, message: '📊 Bob calculated: Total wall area 96m² ÷ brick area 0.0154m² = 6234 bricks' },
-    { time: 3200, message: '✅ Bob thinks 6234 bricks sounds right!' },
-    { time: 3400, message: '🔍 Bob is calculating concrete quantities...' },
-    { time: 3600, message: '📏 Bob found concrete spec: 1m³ per unit' },
-    { time: 3800, message: '📊 Bob calculated: Foundation 100m² × 0.15m thickness = 15m³' },
-    { time: 4000, message: '✅ Bob thinks 15m³ of concrete is perfect!' },
-    { time: 4200, message: '🔍 Bob is calculating reinforcing steel...' },
-    { time: 4400, message: '📏 Bob found steel spec: 1m per unit' },
-    { time: 4600, message: '📊 Bob estimated: 100m² ÷ 2m²/m = 50m of steel' },
-    { time: 4800, message: '✅ Bob thinks 50m of steel will do the job!' },
-    { time: 5000, message: '🔍 Bob is counting windows and doors...' },
-    { time: 5200, message: '📊 Bob found 4 window openings' },
-    { time: 5400, message: '📊 Bob found 2 door openings' },
-    { time: 5600, message: '✅ Bob counted all the openings correctly!' },
-    { time: 5800, message: '🔍 Bob is calculating insulation...' },
-    { time: 6000, message: '📊 Bob calculated: 100m² ÷ 1m²/unit = 100 units' },
-    { time: 6200, message: '✅ Bob thinks 100 units of insulation will keep it warm!' },
-    { time: 6400, message: '🔍 Bob is calculating drywall...' },
-    { time: 6600, message: '📏 Bob found drywall specs: 1.2m × 2.4m sheets' },
-    { time: 6800, message: '📊 Bob calculated: 100m² = 100 drywall units' },
-    { time: 7000, message: '✅ Bob thinks 100 drywall units will cover everything!' },
-    { time: 7200, message: '🔍 Bob is calculating paint...' },
-    { time: 7400, message: '📏 Bob found paint coverage: 10m² per liter' },
-    { time: 7600, message: '📊 Bob calculated: 96m² wall area ÷ 10m²/liter = 10 liters' },
-    { time: 7800, message: '✅ Bob thinks 10 liters of paint will look great!' },
-    { time: 8000, message: '🔍 Bob is calculating floor tiles...' },
-    { time: 8200, message: '📏 Bob found tile specs: 0.33m × 0.42m' },
-    { time: 8400, message: '📊 Bob calculated: 120m² roof ÷ 0.1386m²/tile = 866 tiles' },
-    { time: 8600, message: '✅ Bob thinks 866 floor tiles will look amazing!' },
-    { time: 8800, message: '🔍 Bob is calculating electrical wiring...' },
-    { time: 9000, message: '📊 Bob estimated: 100m² ÷ 2m²/m = 50m of wiring' },
-    { time: 9200, message: '✅ Bob thinks 50m of wiring will power everything!' },
-    { time: 9400, message: '🔍 Bob is calculating plumbing pipes...' },
-    { time: 9600, message: '📊 Bob estimated: 100m² ÷ 2m²/m = 50m of pipes' },
-    { time: 9800, message: '✅ Bob thinks 50m of pipes will handle all the water!' },
-    { time: 10000, message: '🔍 Bob is calculating HVAC system...' },
-    { time: 10200, message: '📊 Bob estimated: 100m² ÷ 50m²/unit = 2 HVAC units' },
-    { time: 10400, message: '✅ Bob thinks 2 HVAC units will keep it comfortable!' },
-    { time: 10600, message: '🔍 Bob is doing final calculations...' },
-    { time: 10800, message: '✅ Bob completed calculations for 18 materials!' },
-    { time: 11000, message: '🔍 Bob is enhancing coverage holistically...' },
-    { time: 11200, message: '🔍 Bob is deduplicating: 27 → 27 items' },
-    { time: 11400, message: '🔍 Bob is validating and scoring everything...' },
-    { time: 11600, message: '✅ Bob completed processing: 27 line items generated!' },
-    { time: 11800, message: '📊 Bob calculated: 6 general items, 18 materials, Total: R126,000' },
-    { time: 12000, message: '🔧 Bob found materials: Brick, Concrete, Steel, Windows, Doors...' },
-    { time: 12200, message: '🎉 Bob finished! Your estimate is ready!' }
+    // Initialization phase
+    { time: 68, message: '🔨 Hey there! Bob here, ready to work some magic on this blueprint!' },
+    { time: 271, message: '💪 Alright, let me fire up the ol\' blueprint processor... this is gonna be good!' },
+    { time: 475, message: '👀 Ooh, I see what we\'re working with here. Nice choice of blueprint!' },
+    { time: 678, message: '🤔 Just let me get my thinking cap on... or should I say hard hat? 😄' },
+    
+    // File loading and reading phase
+    { time: 882, message: '📥 Starting to download and read your blueprint file...' },
+    { time: 1220, message: '⏳ Loading... this might take a sec, but I\'m worth the wait!' },
+    { time: 1627, message: '📄 Got it! File loaded successfully. Time to dig in!' },
+    { time: 2034, message: '🔍 Scanning through the document structure... looking good so far!' },
+    
+    // Text extraction phase
+    { time: 2508, message: '🔤 Phase 1: Extracting all that text from your blueprint...' },
+    { time: 2983, message: '📝 Finding every measurement, label, and annotation...' },
+    { time: 3458, message: '✨ Text extraction complete! Got all the juicy details!' },
+    { time: 3865, message: '📊 Found a solid amount of text data to work with - this is my bread and butter!' },
+    
+    // Blueprint analysis phase
+    { time: 4340, message: '🏗️ Phase 2: Analyzing the blueprint structure...' },
+    { time: 4815, message: '👷 Determining building type, dimensions, and scale...' },
+    { time: 5290, message: '📐 Checking out those measurements - precision is key, am I right?' },
+    { time: 5765, message: '✅ Blueprint structure analyzed! I\'ve got the full picture now.' },
+    { time: 6240, message: '🏢 Looks like we\'re building something solid here - I approve!' },
+    
+    // Detailed analysis phase
+    { time: 6780, message: '🔍 Taking a deep dive into structural elements...' },
+    { time: 7322, message: '🧱 Checking foundations, walls, floors - the foundation of it all!' },
+    { time: 7865, message: '⚡ Analyzing MEP systems (that\'s Mechanical, Electrical, Plumbing to you!)' },
+    { time: 8408, message: '🎨 Reviewing finishes and architectural details - the pretty stuff!' },
+    { time: 8950, message: '✅ Got all the structural intel locked and loaded!' },
+    
+    // Material identification phase
+    { time: 9557, message: '🔧 Phase 3: Identifying all materials needed...' },
+    { time: 10098, message: '🧱 Looking for bricks, blocks, and masonry... found \'em!' },
+    { time: 10649, message: '🏗️ Concrete and cement - the backbone of any solid build!' },
+    { time: 11187, message: '🔩 Reinforcing steel and rebar - keeping things strong!' },
+    { time: 11726, message: '🪟 Windows and doors - letting in the light!' },
+    { time: 12265, message: '🚪 Counting all openings - gotta get those counts right!' },
+    { time: 12812, message: '✅ Material identification complete - this is a comprehensive build!' },
+    
+    // Quantity calculations phase
+    { time: 13423, message: '📊 Phase 4: Time for the fun part - calculating quantities!' },
+    { time: 14034, message: '🧮 Getting my calculator ready... actually, I don\'t need one, I\'m an AI! 😎' },
+    { time: 14653, message: '📐 Calculating brick quantities based on wall dimensions...' },
+    { time: 15258, message: '📏 Checking specs: standard brick is 0.22m × 0.07m × 0.11m...' },
+    { time: 15868, message: '🔨 Working through each wall section systematically...' },
+    { time: 16479, message: '✅ Brick calculations done! That\'s a lot of bricks, but we\'ve got this!' },
+    
+    { time: 17081, message: '🏗️ Now calculating concrete volumes for foundations...' },
+    { time: 17703, message: '📐 Foundation area × thickness = cubic meters... math time!' },
+    { time: 18313, message: '🧮 Adding up all foundation sections...' },
+    { time: 18920, message: '✅ Concrete quantities locked in - that foundation will be rock solid!' },
+    
+    { time: 19519, message: '🔩 Calculating reinforcing steel requirements...' },
+    { time: 20149, message: '📏 Estimating rebar spacing and coverage...' },
+    { time: 20745, message: '✅ Steel calculations complete - structural integrity guaranteed!' },
+    
+    { time: 21347, message: '🪟 Counting and sizing all windows...' },
+    { time: 21962, message: '🚪 Measuring door openings and requirements...' },
+    { time: 22566, message: '✅ All openings accounted for - light and access, check!' },
+    
+    { time: 23199, message: '🧱 Moving on to insulation calculations...' },
+    { time: 23807, message: '📐 Working out coverage areas for thermal efficiency...' },
+    { time: 24393, message: '✅ Insulation sorted - this place will be cozy!' },
+    
+    { time: 25017, message: '🏗️ Calculating drywall requirements...' },
+    { time: 25633, message: '📏 Standard 1.2m × 2.4m sheets - cutting and fitting in my head!' },
+    { time: 26230, message: '✅ Drywall quantities calculated - walls are gonna look smooth!' },
+    
+    { time: 26840, message: '🎨 Now for paint - how much coverage do we need?' },
+    { time: 27449, message: '📐 Calculating wall areas and paint coverage rates...' },
+    { time: 28054, message: '✅ Paint quantities done - what color are you thinking? 😄' },
+    
+    { time: 28682, message: '🔲 Flooring and tiles next...' },
+    { time: 29293, message: '📏 Tile sizes and floor areas - let\'s make it beautiful!' },
+    { time: 29888, message: '✅ Flooring materials calculated - floors will be top-notch!' },
+    
+    { time: 30509, message: '⚡ Electrical work time - calculating wiring needs...' },
+    { time: 31122, message: '🔌 Estimating circuit requirements and wire lengths...' },
+    { time: 31726, message: '✅ Electrical calculations complete - power to the people!' },
+    
+    { time: 32332, message: '💧 Plumbing calculations - pipes and fittings...' },
+    { time: 32963, message: '🚿 Working out water supply and drainage requirements...' },
+    { time: 33550, message: '✅ Plumbing sorted - water will flow like a dream!' },
+    
+    { time: 34160, message: '❄️ HVAC system calculations...' },
+    { time: 34771, message: '🌡️ Sizing heating and cooling units for optimal comfort...' },
+    { time: 35393, message: '✅ HVAC done - temperature control will be perfect!' },
+    
+    // Holistic coverage phase
+    { time: 36002, message: '🔍 Phase 5: Doing a final holistic review...' },
+    { time: 36612, message: '🤔 Let me make sure we haven\'t missed anything...' },
+    { time: 37223, message: '🔎 Checking for any gaps in material coverage...' },
+    { time: 37825, message: '✨ Adding any missing essentials - I\'ve got your back!' },
+    { time: 38428, message: '✅ Holistic coverage complete - nothing slips through the cracks!' },
+    
+    // Deduplication and validation
+    { time: 39034, message: '🧹 Cleaning up - removing any duplicate items...' },
+    { time: 39658, message: '🔄 Organizing and validating all line items...' },
+    { time: 40267, message: '✅ Everything\'s clean, organized, and ready to go!' },
+    
+    // Final summary
+    { time: 40864, message: '📊 Final summary: Calculating totals and values...' },
+    { time: 41486, message: '💰 Adding up all the numbers - this is the moment of truth!' },
+    { time: 42097, message: '✅ Summary complete - got a comprehensive itemized list!' },
+    { time: 42693, message: '🎯 Total line items generated and validated - looking sharp!' },
+    
+    // Processing to Estimate
+    { time: 43338, message: '🔨 Now, let\'s process this into your estimate...' },
+    { time: 43915, message: '📝 Creating estimate structure with all line items...' },
+    { time: 44549, message: '💰 Applying pricing to each material and labor item...' },
+    { time: 45142, message: '🧮 Calculating line item totals and subtotals...' },
+    { time: 45757, message: '📊 Adding markups and calculating final estimate total...' },
+    { time: 46380, message: '✅ Estimate structure created successfully!' },
+    { time: 46963, message: '💾 Saving your estimate to the database...' },
+    { time: 47599, message: '🔗 Linking estimate to your project...' },
+    
+    // Final messages
+    { time: 48794, message: '🎉 WOOHOO! All done! Your estimate will be Ready shortly!' },
+    { time: 49423, message: '👷 I\'ve done all the heavy lifting - now it\'s your turn to take a look!' },
+    { time: 49430, message: '👷 Your Estimate is Generating and will be display shortly' },
+    { time: 50000, message: '💪 Bob out! Happy building! 🔨' }
+    
   ];
   
   bobLogs.forEach((log, index) => {
@@ -216,7 +278,7 @@ function addBobLog(message, delay = 0) {
       
       // Update progress based on log count
       const totalLogs = logsContainer.children.length;
-      const progress = Math.min((totalLogs / 50) * 100, 100); // Assume ~50 total logs
+      const progress = Math.min((totalLogs / 75) * 100, 100); // Updated for ~75 total logs
       if (progressBar) {
         progressBar.style.width = `${progress}%`;
       }
