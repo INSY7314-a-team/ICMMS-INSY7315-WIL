@@ -2,7 +2,7 @@
 .project-card {
     background-color: #2A2B35 !important;
     border-radius: 32px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 5px 0 rgba(247, 236, 89, 0.5);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     height: 100%;
     cursor: pointer;
@@ -32,7 +32,7 @@
 
 /* Card Header */
 .project-card .card-header {
-    background: #1A1B25 !important;
+    background: linear-gradient(135deg, #2A2B35 0%, #1A1B25 100%);
     border-radius: 8px 8px 0 0 !important;
     padding: 1.25rem;
 }
@@ -93,7 +93,7 @@
 
 /* Card Body */
 .project-card .card-body {
-    background-color: #2A2B35 !important;
+    background-color: #0D1821 !important;
     color: #FFFFFF !important;
     padding: 1.5rem;
 }
@@ -111,16 +111,23 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    min-height: 2rem;
 }
 
 .project-card .stat-item small {
+    padding: 0.25rem 0.5rem;
     color: #CCCCCC !important;
     font-size: 0.8rem;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
 }
 
 .project-card .stat-item span {
     color: #FFFFFF !important;
     font-weight: 500;
+
 }
 
 /* Progress Bar */
@@ -132,6 +139,7 @@
 }
 
 .project-card .progress-bar {
+    box-shadow: 0 0 10px 0 rgba(247, 236, 89, 0.5);
     background-color: #F7EC59 !important;
     border-radius: 4px;
     transition: width 0.3s ease;
@@ -161,6 +169,51 @@
 
 .project-card .task-progress .progress-bar {
     background-color: #6BF178 !important;
+}
+
+/* Unified Pill Progress Component */
+.project-card .pill-progress {
+    position: relative;
+    width: 100%;
+    height: 40px;
+    background: #1A1B25 !important;
+    border: 1px solid rgba(247, 236, 89, 0.35);
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.project-card .pill-progress__fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, #F7EC59 0%, #E5D84E 100%) !important;
+    box-shadow: inset 0 0 0 1px rgba(26, 27, 37, 0.2), 0 0 16px rgba(247, 236, 89, 0.25);
+    transition: width 0.4s ease;
+}
+
+.project-card .pill-progress__label {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 0 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #FFFFFF;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    white-space: nowrap;
+}
+
+.project-card .pill-progress--task .pill-progress__fill {
+    background: linear-gradient(90deg, #6BF178 0%, #51D862 100%) !important;
+}
+
+.project-card .pill-progress + .pill-progress {
+    margin-top: 10px;
 }
 
 /* Phases Summary */
@@ -339,6 +392,14 @@
 }
 
 /* Estimate Footer Styling */
+.estimates-container {
+    background: linear-gradient(135deg, #2A2B35 0%, #1A1B25 100%);
+    padding: 1.5rem;
+    border-radius: 32px;
+    border: 1px solid #F7EC59;
+    margin-bottom: 1rem;
+}
+
 .estimate-footer {
     padding: 0.75rem 1.25rem;
     background: transparent;

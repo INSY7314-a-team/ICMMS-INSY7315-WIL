@@ -19,10 +19,10 @@
     <div class="dashboard-header">
         <div class="d-flex justify-content-between align-items-center">
             <div>
-        <h1 class="dashboard-title">
+                <h1 class="dashboard-title">
                     <i class="fa-solid fa-user-tie me-3" style="color: #F7EC59;"></i>@User.Identity.Name Dashboard
-        </h1>
-        <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Manage your projects and quotations</p>
+                </h1>
+                <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Manage your projects and quotations</p>
             </div>
         </div>
     </div>
@@ -308,17 +308,17 @@
     <script>
         // Make clients data available to JavaScript with proper mapping
         @{
-            var clientsData = new List<object>();
-            if (Model.Clients != null)
-            {
-                foreach (var client in Model.Clients)
+                var clientsData = new List<object>();
+                if (Model.Clients != null)
                 {
-                    clientsData.Add(new { userId = client.UserId, fullName = client.FullName });
+                                                                foreach (var client in Model.Clients)
+                    {
+                                                                                    clientsData.Add(new { userId = client.UserId, fullName = client.FullName });
+                    }
                 }
             }
-        }
-        window.dashboardClients = @Html.Raw(Json.Serialize(clientsData));
-        
+            window.dashboardClients = @Html.Raw(Json.Serialize(clientsData));
+
         // Create a client ID to name mapping for easy lookup
         window.clientIdToNameMap = {};
         if (window.dashboardClients) {
@@ -334,7 +334,7 @@
         document.addEventListener('DOMContentLoaded', function () {
             initializeDashboard();
             initializeDraftProjectsToggle();
-            
+
             // Resolve client names for initial load
             resolveClientNames();
         });
@@ -424,11 +424,11 @@
         }
 
         // Handle filter clicks (both status and client)
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             console.log('=== FILTER CLICK START ===');
             console.log('Click target:', e.target);
             console.log('Click target closest:', e.target.closest('.status-filter-btn'));
-            
+
             if (e.target.closest('.status-filter-btn')) {
                 e.preventDefault();
                 const btn = e.target.closest('.status-filter-btn');
@@ -436,24 +436,24 @@
                 console.log('Button classes:', btn.className);
                 console.log('Button has data-status:', btn.hasAttribute('data-status'));
                 console.log('Button has data-client:', btn.hasAttribute('data-client'));
-                
+
                 // Check if it's a status filter
                 if (btn.hasAttribute('data-status')) {
                     const status = btn.getAttribute('data-status');
-                    
+
                     // Remove active class from all status buttons
                     document.querySelectorAll('.status-filter-btn[data-status]').forEach(b => b.classList.remove('active'));
                     // Add active class to clicked button
                     btn.classList.add('active');
-                    
+
                     console.log('Status filter clicked:', status);
                     console.log('Button after adding active class:', btn.className);
                 }
-                
+
                 // Check if it's a client filter
                 if (btn.hasAttribute('data-client')) {
                     const clientId = btn.getAttribute('data-client');
-                    
+
                     console.log('CLIENT FILTER DEBUG:');
                     console.log('- Button element:', btn);
                     console.log('- Button text:', btn.textContent);
@@ -461,17 +461,17 @@
                     console.log('- Client ID type:', typeof clientId);
                     console.log('- Client ID length:', clientId?.length);
                     console.log('- Is empty string:', clientId === '');
-                    
+
                     // Remove active class from all client buttons
                     document.querySelectorAll('.status-filter-btn[data-client]').forEach(b => b.classList.remove('active'));
                     // Add active class to clicked button
                     btn.classList.add('active');
-                    
+
                     console.log('Client filter clicked:', clientId);
                     console.log('Button after adding active class:', btn.className);
                     console.log('Button element:', btn);
                 }
-                
+
                 console.log('About to call applyFilters()');
                 // Apply the filter
                 applyFilters();
@@ -485,32 +485,32 @@
             console.log('Client ID to Name Map:', window.clientIdToNameMap);
             console.log('Client ID to Name Map keys:', Object.keys(window.clientIdToNameMap));
             console.log('Client ID to Name Map values:', Object.values(window.clientIdToNameMap));
-            
+
             // Get all project cards
             const projectCards = document.querySelectorAll('.project-card');
             console.log('Found project cards:', projectCards.length);
-            
+
             projectCards.forEach((card, index) => {
                 console.log(`--- Processing card ${index + 1} ---`);
                 const clientElement = card.querySelector('.client-name');
                 console.log('Client element:', clientElement);
-                
+
                 if (clientElement) {
                     const clientId = clientElement.textContent.trim();
                     console.log('Client ID from element:', clientId);
                     console.log('Client ID length:', clientId.length);
                     console.log('Client ID includes dash:', clientId.includes('-'));
-                    
+
                     // Check if it's a client ID (Firebase IDs are long alphanumeric strings without dashes)
                     if (clientId && clientId.length > 20 && /^[a-zA-Z0-9]+$/.test(clientId)) {
                         console.log('Looking up client ID:', clientId);
                         console.log('Available client IDs in map:', Object.keys(window.clientIdToNameMap));
                         console.log('Exact match found:', window.clientIdToNameMap.hasOwnProperty(clientId));
-                        
+
                         // Use the mapping to get client name
                         const clientName = window.clientIdToNameMap[clientId];
                         console.log('Found client name:', clientName);
-                        
+
                         if (clientName) {
                             console.log('Updating client name from', clientId, 'to', clientName);
                             clientElement.textContent = clientName;
@@ -567,7 +567,7 @@
                 const res = await fetch(`/ProjectManager/SearchProjects?${params.toString()}`);
                 console.log('Fetch response status:', res.status);
                 console.log('Fetch response ok:', res.ok);
-                
+
                 if (!res.ok) throw new Error('Filter failed');
                 const data = await res.json();
 
@@ -587,16 +587,16 @@
                     const draftsGrid = document.getElementById('draftProjectsGrid');
                     if (draftsGrid) draftsGrid.innerHTML = data.draftsHtml;
                 }
-                
+
                 console.log('About to call resolveClientNames()');
                 // Resolve client names in the updated HTML
                 resolveClientNames();
-                
+
                 // Add a small delay to ensure DOM updates are visible
                 setTimeout(() => {
                     console.log('DOM update completed - client names should now be visible');
                 }, 100);
-                
+
                 console.log('=== APPLY FILTERS END ===');
             } catch (e) {
                 console.error('Filter error:', e);
@@ -631,11 +631,11 @@
                 } else {
                     modal.removeAttribute('data-draft-project-id');
                 }
-                
+
                 // Show the modal
                 const bsModal = new bootstrap.Modal(modal);
                 bsModal.show();
-                
+
                 // Manually trigger our initialization since Bootstrap events might not fire
                 setTimeout(() => {
                     if (window.__pcwInstance) {
@@ -645,19 +645,19 @@
             }
         }
 
-            function editDraftProject(projectId) {
-                openEditProjectWizard(projectId);
-            }
+        function editDraftProject(projectId) {
+            openEditProjectWizard(projectId);
+        }
 
-            function openEditProjectWizard(projectId) {
-                const modal = document.getElementById('projectEditWizardModal');
-                if (modal) {
-                    // Set the project ID for editing
-                    modal.setAttribute('data-project-id', projectId);
-                    
-                    // Show the modal
-                    const bsModal = new bootstrap.Modal(modal);
-                    bsModal.show();
+        function openEditProjectWizard(projectId) {
+            const modal = document.getElementById('projectEditWizardModal');
+            if (modal) {
+                // Set the project ID for editing
+                modal.setAttribute('data-project-id', projectId);
+
+                // Show the modal
+                const bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
             }
         }
     </script>

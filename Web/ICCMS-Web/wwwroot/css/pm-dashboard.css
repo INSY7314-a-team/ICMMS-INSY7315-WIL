@@ -591,8 +591,7 @@
 }
 
 .badge {
-    background: var(--accent-green) !important;
-    color: var(--text-dark);
+    color: #F7EC59 !important;
     padding: 5px 10px;
     border-radius: 15px;
     font-size: 0.8rem;
@@ -646,7 +645,7 @@
 }
 
 .project-card .card-body {
-    padding: 20px;
+    background: #0D1821;
     color: var(--text-primary);
 }
 

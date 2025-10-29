@@ -73,29 +73,42 @@
             </div>
         </div>
 
+        <div class="estimates-container">
+            <!-- Estimate Info -->
+            @if (estimate != null)
+            {
+                <div class="estimate-info">
+                    <small class="estimate-label">Latest Estimate</small>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="estimate-amount">R @estimate.TotalAmount.ToString("N0")</span>
+                        <small class="estimate-date">@estimate.CreatedAt.ToString("MMM dd")</small>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="no-estimate-display">
+                    <small class="no-estimate-text">No estimate yet</small>
+                </div>
+            }
+        </div>
+
         <!-- Progress Bar -->
         <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-                <small class="progress-label">Project Progress:</small>
-                <small class="progress-percentage">@progress%</small>
-            </div>
-            <div class="progress">
-                <div class="progress-bar" role="progressbar" style="width: @progress%;" aria-valuenow="@progress"
-                    aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="pill-progress" aria-label="Project Progress @progress%">
+                <div class="pill-progress__fill" style="width: @progress%" aria-hidden="true"></div>
+                <div class="pill-progress__label">Project Progress @progress%</div>
             </div>
         </div>
 
         <!-- Task Progress -->
         @if (totalTasks > 0)
         {
+
             <div class="task-progress">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <small class="progress-label">Task Progress</small>
-                    <small class="progress-percentage">@taskProgress%</small>
-                </div>
-                <div class="progress">
-                    <div class="progress-bar" role="progressbar" style="width: @taskProgress%" aria-valuenow="@taskProgress"
-                        aria-valuemin="0" aria-valuemax="100"></div>
+                <div class="pill-progress pill-progress--task" aria-label="Task Progress @taskProgress%">
+                    <div class="pill-progress__fill" style="width: @taskProgress%" aria-hidden="true"></div>
+                    <div class="pill-progress__label">Task Progress @taskProgress%</div>
                 </div>
             </div>
         }
@@ -166,37 +179,6 @@
                 </div>
             </div>
         }
-
-        <!-- Estimate Info -->
-        @if (estimate != null)
-        {
-            <div class="estimate-info">
-                <small class="estimate-label">Latest Estimate</small>
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="estimate-amount">R @estimate.TotalAmount.ToString("N0")</span>
-                    <small class="estimate-date">@estimate.CreatedAt.ToString("MMM dd")</small>
-                </div>
-            </div>
-        }
-    </div>
-
-    <div class="card-footer">
-        <div class="estimate-footer">
-            @if (estimate != null)
-            {
-                <div class="estimate-price-display">
-                    <small class="estimate-label">Latest Estimate</small>
-                    <div class="estimate-amount">R @estimate.TotalAmount.ToString("N0")</div>
-                    <small class="estimate-date">@estimate.CreatedAt.ToString("MMM dd, yyyy")</small>
-                </div>
-            }
-            else
-            {
-                <div class="no-estimate-display">
-                    <small class="no-estimate-text">No estimate yet</small>
-                </div>
-            }
-        </div>
     </div>
 </div>
 
@@ -412,13 +394,13 @@
     }
 
     // Handle project card clicks
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const projectCard = document.getElementById('project-@Model.ProjectId');
         if (projectCard) {
             // Add click handler to card header and body
             const clickableElements = projectCard.querySelectorAll('.card-header, .card-body');
             clickableElements.forEach(element => {
-                element.addEventListener('click', function(e) {
+                element.addEventListener('click', function (e) {
                     // Don't trigger if clicking on buttons or interactive elements
                     if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.dropdown')) {
                         return;

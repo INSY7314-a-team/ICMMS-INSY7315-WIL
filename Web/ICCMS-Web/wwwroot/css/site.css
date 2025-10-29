@@ -408,8 +408,8 @@
 .stat-item {
   text-align: center;
   padding: 0.3rem 0.2rem;
-  background: rgba(209, 214, 238, 0.1);
-  border-radius: 16px;
+  background: linear-gradient(135deg, #2A2B35 0%, #1A1B25 100%);
+  border-radius: 12px;
   border: 1px solid rgb(219, 209, 77);
   transition: all 0.3s ease;
 }

@@ -177,6 +177,98 @@
     color: var(--accent-red) !important;
 }
 
+/* Updates & Approvals Section */
+.pm-updates-approvals-section h6 {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.pm-updates-approvals-card {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.pm-updates-approvals-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #6BF178 0%, #F7EC59 100%);
+}
+
+.pm-updates-approvals-card .card-body {
+    padding: 1.25rem;
+}
+
+.updates-list, .approvals-list {
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.update-item, .completion-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    padding: 0.75rem 0.9rem;
+    margin-bottom: 0.75rem;
+}
+
+.update-item:last-child, .completion-item:last-child {
+    margin-bottom: 0;
+}
+
+.update-title, .completion-title {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.update-content, .meta-row {
+    color: var(--text-muted);
+    opacity: 0.85;
+    margin-top: 4px;
+    font-size: 0.85rem;
+}
+
+.completion-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.completion-item .item-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.completion-item .item-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-muted);
+    opacity: 0.8;
+}
+
+.empty-state i {
+    font-size: 1.6rem;
+    display: block;
+    margin-bottom: 0.5rem;
+    opacity: 0.6;
+}
+
 /* Phases Section */
 .pm-phases-section {
     background: var(--secondary-bg);
@@ -1745,8 +1837,6 @@
 
 /* Enhanced Progress Section */
 .pm-progress-section {
-    background: var(--secondary-bg);
-    border: 1px solid var(--border-primary);
     border-radius: 8px;
     padding: 2rem;
     margin-bottom: 2rem;
@@ -1762,7 +1852,7 @@
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, #F7EC59 0%, #6BF178 100%);
+    background: #F7EC59;
 }
 
 .pm-progress-section:hover {
