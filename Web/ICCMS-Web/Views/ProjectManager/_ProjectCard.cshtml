@@ -179,6 +179,16 @@
                 </div>
             </div>
         }
+
+        <!-- Continue Button for Draft Projects -->
+        @if (string.Equals(Model.Status, "Draft", StringComparison.OrdinalIgnoreCase))
+        {
+            <div class="draft-continue-section mt-3">
+                <button type="button" class="btn btn-warning btn-sm w-100 continue-btn" onclick="continueProjectSetup('@Model.ProjectId')">
+                    <i class="fa-solid fa-arrow-right me-2"></i>Continue
+                </button>
+            </div>
+        }
     </div>
 </div>
 
