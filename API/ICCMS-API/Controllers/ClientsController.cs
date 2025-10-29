@@ -793,31 +793,58 @@ namespace ICCMS_API.Controllers
                     return StatusCode(500, new { error = "Failed to apply client decision" });
                 }
 
-                // Notify Project Manager
+                // Get the project and update its status to Active
                 var project = await _firebaseService.GetDocumentAsync<Project>(
                     "projects",
                     quotation.ProjectId
                 );
-                if (project != null && !string.IsNullOrEmpty(project.ProjectManagerId))
+
+                if (project != null)
                 {
-                    var systemEvent = new SystemEvent
+                    // Update project status to Active when quotation is approved
+                    var oldStatus = project.Status;
+                    project.Status = "Active";
+                    await _firebaseService.UpdateDocumentAsync(
+                        "projects",
+                        quotation.ProjectId,
+                        project
+                    );
+                    Console.WriteLine(
+                        $"✅ Updated project {quotation.ProjectId} status from '{oldStatus}' to 'Active' after quotation approval"
+                    );
+
+                    // Log the project status change
+                    var userId = User.UserId();
+                    _auditLogService.LogAsync(
+                        "Project Update",
+                        "Project Status Changed",
+                        $"Project {quotation.ProjectId} status changed from '{oldStatus}' to 'Active' after quotation {id} approval",
+                        userId ?? "system",
+                        quotation.ProjectId
+                    );
+
+                    // Notify Project Manager
+                    if (!string.IsNullOrEmpty(project.ProjectManagerId))
                     {
-                        EventType = "quotation_workflow",
-                        EntityId = id,
-                        EntityType = "quotation",
-                        Action = "approved",
-                        ProjectId = quotation.ProjectId,
-                        UserId = project.ProjectManagerId,
-                        Data = new Dictionary<string, object>
+                        var systemEvent = new SystemEvent
                         {
-                            { "quotationId", id },
-                            { "projectName", project.Name },
-                            { "approvedByName", User.Identity.Name ?? "Client" },
-                            { "totalAmount", quotation.GrandTotal },
-                            { "projectManagerId", project.ProjectManagerId },
-                        },
-                    };
-                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
+                            EventType = "quotation_workflow",
+                            EntityId = id,
+                            EntityType = "quotation",
+                            Action = "approved",
+                            ProjectId = quotation.ProjectId,
+                            UserId = project.ProjectManagerId,
+                            Data = new Dictionary<string, object>
+                            {
+                                { "quotationId", id },
+                                { "projectName", project.Name },
+                                { "approvedByName", User.Identity.Name ?? "Client" },
+                                { "totalAmount", quotation.GrandTotal },
+                                { "projectManagerId", project.ProjectManagerId },
+                            },
+                        };
+                        await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
+                    }
                 }
 
                 // Attempt to convert to invoice. This is idempotent in the workflow service.
