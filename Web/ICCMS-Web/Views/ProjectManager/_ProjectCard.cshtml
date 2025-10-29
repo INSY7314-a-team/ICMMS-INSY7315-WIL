@@ -93,26 +93,6 @@
             }
         </div>
 
-        <!-- Progress Bar -->
-        <div class="mb-3">
-            <div class="pill-progress" aria-label="Project Progress @progress%">
-                <div class="pill-progress__fill" style="width: @progress%" aria-hidden="true"></div>
-                <div class="pill-progress__label">Project Progress @progress%</div>
-            </div>
-        </div>
-
-        <!-- Task Progress -->
-        @if (totalTasks > 0)
-        {
-
-            <div class="task-progress">
-                <div class="pill-progress pill-progress--task" aria-label="Task Progress @taskProgress%">
-                    <div class="pill-progress__fill" style="width: @taskProgress%" aria-hidden="true"></div>
-                    <div class="pill-progress__label">Task Progress @taskProgress%</div>
-                </div>
-            </div>
-        }
-
         <!-- Phases Summary -->
         @if (phases.Any())
         {
