@@ -1,0 +1,163 @@
+/* =================================================================
+   Forms Styling (`forms.css`)
+   ================================================================= */
+
+/* --- General Form Container --- */
+.form-container-card {
+    background-color: var(--secondary-bg, #2a2b35);
+    border: 1px solid var(--border-primary, rgba(247, 236, 89, 0.2));
+    border-radius: 8px;
+    padding: 2rem 2.5rem;
+    color: var(--text-primary, #ffffff);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* --- Construction Border & Glow --- */
+.construction-border {
+    border: 3px solid transparent;
+    border-image: repeating-linear-gradient(
+        45deg,
+        #1a1b25,
+        #1a1b25 8px,
+        #f7ec59 8px,
+        #f7ec59 16px
+    ) 1;
+}
+
+.yellow-glow {
+    box-shadow: 0 0 20px rgba(247, 236, 89, 0.3);
+}
+
+/* --- Form Elements --- */
+.form-label {
+    font-weight: 600;
+    color: var(--text-primary, #ffffff);
+    opacity: 0.9;
+}
+
+.form-control {
+    background-color: var(--primary-bg, #1a1b25);
+    border: 1px solid var(--border-primary, rgba(247, 236, 89, 0.2));
+    color: var(--text-primary, #ffffff);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: var(--border-active, #f7ec59);
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.25);
+    background-color: #1a1b25;
+    color: #ffffff;
+}
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.form-control-lg {
+    padding: 1rem 1.25rem;
+    font-size: 1.1rem;
+}
+
+.form-header {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #FFF;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.browse-files-label {
+    font-weight: 600;
+    color: var(--text-primary, #ffffff);
+    opacity: 0.9;
+    border-bottom: 1px solid var(--border-primary, rgba(247, 236, 89, 0.2));
+    border-radius: 16px
+}
+
+/* --- Action Buttons --- */
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding-top: 1.5rem;
+    margin-top: 1rem;
+    border-top: 1px solid var(--border-primary, rgba(247, 236, 89, 0.2));
+}
+
+.btn-primary-custom {
+    background-color: var(--accent-yellow, #f7ec59);
+    color: var(--text-dark, #1a1b25);
+    border: 2px solid var(--accent-yellow, #f7ec59);
+    border-radius: 25px;
+    font-weight: 700;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+}
+
+.btn-primary-custom:hover {
+    background-color: #ffffff;
+    color: #1a1b25;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(247, 236, 89, 0.4);
+}
+
+.btn-secondary-custom {
+    background-color: transparent;
+    color: var(--text-primary, #ffffff);
+    border: 2px solid var(--border-primary, rgba(247, 236, 89, 0.5));
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary-custom:hover {
+    background-color: var(--accent-yellow, #f7ec59);
+    color: var(--text-dark, #1a1b25);
+    border-color: var(--accent-yellow, #f7ec59);
+    transform: translateY(-2px);
+}
+
+/* --- User Buttons (from modal design system) --- */
+.user-btn {
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.user-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.user-btn-primary {
+    background-color: var(--accent-yellow, #f7ec59);
+    color: var(--text-dark, #1a1b25);
+    border: 2px solid var(--accent-yellow, #f7ec59);
+}
+
+.user-btn-primary:hover {
+    background-color: #ffffff;
+    color: #1a1b25;
+}
+
+.user-btn-secondary {
+    background-color: transparent;
+    color: var(--text-primary, #ffffff);
+    border: 2px solid var(--border-primary, rgba(247, 236, 89, 0.5));
+}
+
+.user-btn-secondary:hover {
+    background-color: var(--accent-yellow, #f7ec59);
+    color: var(--text-dark, #1a1b25);
+    border-color: var(--accent-yellow, #f7ec59);
+}

@@ -25,6 +25,9 @@ namespace ICCMS_Web.Models
         [JsonPropertyName("hoursWorked")]
         public double HoursWorked { get; set; }
 
+        [JsonPropertyName("progressPercentage")]
+        public int? ProgressPercentage { get; set; }
+
         [JsonPropertyName("status")]
         public string Status { get; set; } = "Submitted";
 

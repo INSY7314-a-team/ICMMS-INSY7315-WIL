@@ -697,6 +697,13 @@ namespace ICCMS_API.Controllers
                 var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (!string.IsNullOrEmpty(currentUserId))
                 {
+                    // Get the project to find the project manager
+                    var project = await _firebaseService.GetDocumentAsync<Project>(
+                        "projects",
+                        task.ProjectId
+                    );
+                    var projectManagerId = project?.ProjectManagerId ?? string.Empty;
+
                     var systemEvent = new SystemEvent
                     {
                         EventType = "progress_report",
@@ -709,6 +716,13 @@ namespace ICCMS_API.Controllers
                         {
                             { "reportId", report.ProgressReportId },
                             { "submittedById", currentUserId },
+                            { "projectManagerId", projectManagerId },
+                            { "taskName", task.Name },
+                            { "projectName", project?.Name ?? "Unknown Project" },
+                            { "progressPercentage", report.ProgressPercentage?.ToString() ?? "0" },
+                            { "notes", report.Description ?? "" },
+                            { "reportDate", report.SubmittedAt.ToString("MMM dd, yyyy") },
+                            { "submittedByName", currentUserId }, // This should be the user's name, but we'll use ID for now
                         },
                     };
                     await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
@@ -779,6 +793,13 @@ namespace ICCMS_API.Controllers
                 var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (!string.IsNullOrEmpty(currentUserId))
                 {
+                    // Get the project to find the project manager
+                    var project = await _firebaseService.GetDocumentAsync<Project>(
+                        "projects",
+                        task.ProjectId
+                    );
+                    var projectManagerId = project?.ProjectManagerId ?? string.Empty;
+
                     var systemEvent = new SystemEvent
                     {
                         EventType = "completion_request",
@@ -791,6 +812,10 @@ namespace ICCMS_API.Controllers
                         {
                             { "taskId", taskId },
                             { "requestedById", currentUserId },
+                            { "projectManagerId", projectManagerId },
+                            { "taskName", task.Name },
+                            { "projectName", project?.Name ?? "Unknown Project" },
+                            { "requestedByName", currentUserId }, // This should be the user's name, but we'll use ID for now
                         },
                     };
                     await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);

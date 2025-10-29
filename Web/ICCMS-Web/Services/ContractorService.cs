@@ -374,35 +374,6 @@ namespace ICCMS_Web.Services
             }
         }
 
-        public async Task<ContractorCompletionResultDto> RequestCompletionAsync(
-            string taskId,
-            string notes,
-            string? documentId
-        )
-        {
-            try
-            {
-                var requestData = new { notes, documentId };
-                var currentUser = _currentUserService.GetCurrentUser();
-                var result = await _apiClient.PutAsync<ContractorCompletionResultDto>(
-                    $"/api/contractors/task/{taskId}/request-completion",
-                    requestData,
-                    currentUser
-                );
-                return result
-                    ?? new ContractorCompletionResultDto
-                    {
-                        Message = "Completion request submitted",
-                        TaskId = taskId,
-                    };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error requesting completion for task {TaskId}", taskId);
-                throw;
-            }
-        }
-
         public async Task<CompletionReportDto> SubmitCompletionReportAsync(
             CompletionReportDto report
         )

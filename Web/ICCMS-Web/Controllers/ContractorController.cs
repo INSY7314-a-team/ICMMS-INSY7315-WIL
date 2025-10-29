@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Json;
 using ICCMS_Web.Models;
@@ -204,17 +205,91 @@ namespace ICCMS_Web.Controllers
                     );
                 }
 
-                // Get tasks for this project first
-                var tasksResponse = await _apiClient.GetAsync<PaginatedResponse<ContractorTaskDto>>(
-                    "/api/contractors/tasks/assigned",
+                // Get tasks for this project first - use the same data source as dashboard
+                _logger.LogInformation(
+                    "🔍 Making API call to get dashboard data for project {ProjectId}",
+                    projectId
+                );
+
+                // Use the same endpoint as dashboard to ensure consistency
+                var dashboardData = await _apiClient.GetAsync<object>(
+                    "/api/contractors/dashboard",
                     currentUser
                 );
 
-                var tasks = tasksResponse?.Data ?? new List<ContractorTaskDto>();
+                if (dashboardData == null)
+                {
+                    _logger.LogError(
+                        "❌ Dashboard API call failed for project {ProjectId}",
+                        projectId
+                    );
+                    ViewBag.ErrorMessage = "Failed to load project data. Please try again later.";
+                    return View(
+                        "Error",
+                        new ErrorViewModel { RequestId = HttpContext.TraceIdentifier }
+                    );
+                }
+
+                // Parse the dashboard response to extract tasks
+                var json = JsonSerializer.Serialize(dashboardData);
+                var data = JsonSerializer.Deserialize<JsonElement>(json);
+
+                var tasks = new List<ContractorTaskDto>();
+                if (data.TryGetProperty("tasks", out var tasksElement))
+                {
+                    var taskList =
+                        JsonSerializer.Deserialize<List<ProjectTaskDto>>(tasksElement.GetRawText())
+                        ?? new();
+                    foreach (var task in taskList)
+                    {
+                        var contractorTask = new ContractorTaskDto
+                        {
+                            TaskId = task.TaskId,
+                            ProjectId = task.ProjectId,
+                            Name = task.Name,
+                            Description = task.Description,
+                            AssignedTo = task.AssignedTo,
+                            Priority = task.Priority,
+                            Status = task.Status,
+                            StartDate = task.StartDate,
+                            DueDate = task.DueDate,
+                            CompletedDate = task.CompletedDate,
+                            Progress = task.Progress,
+                            EstimatedHours = task.EstimatedHours,
+                            ActualHours = task.ActualHours,
+                        };
+
+                        // Calculate IsOverdue before adding to the list
+                        contractorTask.IsOverdue =
+                            task.DueDate < DateTime.UtcNow && task.Status != "Completed";
+
+                        tasks.Add(contractorTask);
+                    }
+                }
+
+                var projects = new Dictionary<string, ProjectDto>();
+                if (data.TryGetProperty("projects", out var projectsElement))
+                {
+                    var projectList =
+                        JsonSerializer.Deserialize<List<ProjectDto>>(projectsElement.GetRawText())
+                        ?? new();
+                    foreach (var project in projectList)
+                    {
+                        if (project != null && !string.IsNullOrEmpty(project.ProjectId))
+                        {
+                            projects[project.ProjectId] = project;
+                        }
+                    }
+                }
+
+                _logger.LogInformation(
+                    "📋 Extracted {Count} tasks from dashboard data",
+                    tasks.Count
+                );
 
                 if (tasks == null || !tasks.Any())
                 {
-                    _logger.LogWarning("No tasks found for user {UserId}", userId);
+                    _logger.LogWarning("❌ No tasks found for user {UserId}", userId);
                     ViewBag.ErrorMessage = "No tasks found.";
                     return View(
                         "Error",
@@ -222,15 +297,30 @@ namespace ICCMS_Web.Controllers
                     );
                 }
 
+                // Log all project IDs for debugging
+                var allProjectIds = tasks.Select(t => t.ProjectId).Distinct().ToList();
+                _logger.LogInformation(
+                    "🏗️ Available project IDs: {ProjectIds}",
+                    string.Join(", ", allProjectIds)
+                );
+
                 var projectTasks = tasks.Where(t => t.ProjectId == projectId).ToList();
+                _logger.LogInformation(
+                    "🎯 Found {ProjectTaskCount} tasks for project {ProjectId}",
+                    projectTasks.Count,
+                    projectId
+                );
+
                 if (!projectTasks.Any())
                 {
                     _logger.LogWarning(
-                        "No tasks found for project {ProjectId} and user {UserId}",
+                        "❌ No tasks found for project {ProjectId} and user {UserId}. Available projects: {AvailableProjects}",
                         projectId,
-                        userId
+                        userId,
+                        string.Join(", ", allProjectIds)
                     );
-                    ViewBag.ErrorMessage = "No tasks found for this project.";
+                    ViewBag.ErrorMessage =
+                        $"No tasks found for this project. Available projects: {string.Join(", ", allProjectIds)}";
                     return View(
                         "Error",
                         new ErrorViewModel { RequestId = HttpContext.TraceIdentifier }
@@ -241,7 +331,10 @@ namespace ICCMS_Web.Controllers
                 var firstTask = projectTasks.FirstOrDefault();
                 if (firstTask == null)
                 {
-                    _logger.LogWarning("No valid task found in project tasks");
+                    _logger.LogError(
+                        "❌ No valid task found in project tasks for project {ProjectId}",
+                        projectId
+                    );
                     ViewBag.ErrorMessage = "No valid task data found.";
                     return View(
                         "Error",
@@ -249,77 +342,142 @@ namespace ICCMS_Web.Controllers
                     );
                 }
 
-                // Safely extract project information with null checks
-                var extractedProjectId = !string.IsNullOrEmpty(firstTask.ProjectId)
-                    ? firstTask.ProjectId
-                    : projectId;
-
-                // Log project ID for debugging
                 _logger.LogInformation(
-                    "🔍 Project ID Debug - Original: {OriginalId}, Task ProjectId: {TaskProjectId}, Extracted: {ExtractedId}",
-                    projectId,
-                    firstTask.ProjectId,
-                    extractedProjectId
+                    "✅ First task found: {TaskName} (ID: {TaskId})",
+                    firstTask.Name,
+                    firstTask.TaskId
                 );
 
-                var projectName = !string.IsNullOrEmpty(firstTask.ProjectId)
-                    ? $"Project {firstTask.ProjectId.Substring(0, Math.Min(8, firstTask.ProjectId.Length))}"
-                    : "Unknown Project";
+                // Safely extract project information with null checks
+                var projectInfo = projects.TryGetValue(projectId, out var proj) ? proj : null;
+
+                var extractedProjectId = projectInfo?.ProjectId ?? firstTask.ProjectId ?? projectId;
+                var projectName =
+                    projectInfo?.Name
+                    ?? $"Project {extractedProjectId.Substring(0, Math.Min(8, extractedProjectId.Length))}";
+                var projectStatus = projectInfo?.Status ?? "Active"; // Fallback to Active
+                var projectDescription =
+                    projectInfo?.Description ?? $"Project tasks for {extractedProjectId}";
+                var clientName = "Client"; // Placeholder - Name not available in ProjectDto
+                var projectManagerName = "Project Manager"; // Placeholder - Name not available in ProjectDto
+                var budgetPlanned = projectInfo?.BudgetPlanned ?? 0;
+                var budgetActual = projectInfo?.BudgetActual ?? 0;
+
+                _logger.LogInformation(
+                    "🔍 Project Info - Name: {Name}, Status: {Status}",
+                    projectName,
+                    projectStatus
+                );
 
                 // Safely calculate dates with null checks
-                var startDates = projectTasks
-                    .Where(t => t.StartDate != default(DateTime))
-                    .Select(t => t.StartDate)
-                    .ToList();
-                var dueDates = projectTasks
-                    .Where(t => t.DueDate != default(DateTime))
-                    .Select(t => t.DueDate)
-                    .ToList();
+                DateTime minStartDate;
+                DateTime maxDueDate;
 
-                var minStartDate = startDates.Any() ? startDates.Min() : DateTime.UtcNow;
-                var maxDueDate = dueDates.Any() ? dueDates.Max() : DateTime.UtcNow.AddDays(30);
+                try
+                {
+                    var startDates = projectTasks
+                        .Where(t => t.StartDate != default(DateTime))
+                        .Select(t => t.StartDate)
+                        .ToList();
+                    var dueDates = projectTasks
+                        .Where(t => t.DueDate != default(DateTime))
+                        .Select(t => t.DueDate)
+                        .ToList();
+
+                    _logger.LogInformation(
+                        "📅 Found {StartDateCount} start dates and {DueDateCount} due dates",
+                        startDates.Count,
+                        dueDates.Count
+                    );
+
+                    minStartDate = startDates.Any() ? startDates.Min() : DateTime.UtcNow;
+                    maxDueDate = dueDates.Any() ? dueDates.Max() : DateTime.UtcNow.AddDays(30);
+
+                    _logger.LogInformation(
+                        "📅 Date range: {StartDate} to {EndDate}",
+                        minStartDate,
+                        maxDueDate
+                    );
+                }
+                catch (Exception dateEx)
+                {
+                    _logger.LogError(
+                        dateEx,
+                        "❌ Error calculating dates for project {ProjectId}",
+                        projectId
+                    );
+                    // Use default dates if calculation fails
+                    minStartDate = DateTime.UtcNow;
+                    maxDueDate = DateTime.UtcNow.AddDays(30);
+                }
 
                 // Create ProjectDetailDto from the task data
-                var projectDetails = new ProjectDetailDto
+                try
                 {
-                    ProjectId = extractedProjectId,
-                    Name = projectName,
-                    Description = $"Project tasks for {extractedProjectId}",
-                    BudgetPlanned = 0, // Default values since we don't have project budget info
-                    BudgetActual = 0,
-                    Status = "Active", // Default status
-                    StartDate = minStartDate,
-                    EndDatePlanned = maxDueDate,
-                    EndDateActual = null,
-                    CompletionPhase = null,
-                    ClientId = "",
-                    ClientName = "Client", // Default client name
-                    ProjectManagerId = "",
-                    ProjectManagerName = "Project Manager", // Default PM name
-                    Tasks = projectTasks,
-                    TotalTasks = projectTasks.Count,
-                    CompletedTasks = projectTasks.Count(t =>
-                        !string.IsNullOrEmpty(t.Status) && t.Status == "Completed"
-                    ),
-                    InProgressTasks = projectTasks.Count(t =>
-                        !string.IsNullOrEmpty(t.Status) && t.Status == "In Progress"
-                    ),
-                    PendingTasks = projectTasks.Count(t =>
-                        !string.IsNullOrEmpty(t.Status) && t.Status == "Pending"
-                    ),
-                    OverdueTasks = projectTasks.Count(t => t.IsOverdue),
-                    OverallProgress = projectTasks.Any()
-                        ? (int)projectTasks.Where(t => t.Progress >= 0).Average(t => t.Progress)
-                        : 0,
-                };
+                    _logger.LogInformation(
+                        "🏗️ Creating ProjectDetailDto for project {ProjectId}",
+                        extractedProjectId
+                    );
 
-                _logger.LogInformation(
-                    "Project detail loaded for project {ProjectId} with {TaskCount} tasks",
-                    extractedProjectId,
-                    projectDetails.Tasks?.Count ?? 0
-                );
+                    var projectDetails = new ProjectDetailDto
+                    {
+                        ProjectId = extractedProjectId,
+                        Name = projectName,
+                        Description = projectDescription,
+                        BudgetPlanned = (decimal)budgetPlanned,
+                        BudgetActual = (decimal)budgetActual,
+                        Status = projectStatus,
+                        StartDate = minStartDate,
+                        EndDatePlanned = maxDueDate,
+                        EndDateActual = projectInfo?.EndDateActual,
+                        CompletionPhase = projectInfo?.CompletionPhase,
+                        ClientId = projectInfo?.ClientId,
+                        ClientName = clientName,
+                        ProjectManagerId = projectInfo?.ProjectManagerId,
+                        ProjectManagerName = projectManagerName,
+                        Tasks = projectTasks,
+                        TotalTasks = projectTasks.Count,
+                        CompletedTasks = projectTasks.Count(t =>
+                            !string.IsNullOrEmpty(t.Status) && t.Status == "Completed"
+                        ),
+                        InProgressTasks = projectTasks.Count(t =>
+                            !string.IsNullOrEmpty(t.Status) && t.Status == "In Progress"
+                        ),
+                        PendingTasks = projectTasks.Count(t =>
+                            !string.IsNullOrEmpty(t.Status) && t.Status == "Pending"
+                        ),
+                        OverdueTasks = projectTasks.Count(t => t.IsOverdue),
+                        OverallProgress = projectTasks.Any()
+                            ? (int)projectTasks.Where(t => t.Progress >= 0).Average(t => t.Progress)
+                            : 0,
+                    };
 
-                return View(projectDetails);
+                    _logger.LogInformation(
+                        "✅ ProjectDetailDto created successfully - Tasks: {TotalTasks}, Completed: {CompletedTasks}, InProgress: {InProgressTasks}, Pending: {PendingTasks}, Overdue: {OverdueTasks}, Progress: {OverallProgress}%",
+                        projectDetails.TotalTasks,
+                        projectDetails.CompletedTasks,
+                        projectDetails.InProgressTasks,
+                        projectDetails.PendingTasks,
+                        projectDetails.OverdueTasks,
+                        projectDetails.OverallProgress
+                    );
+
+                    return View(projectDetails);
+                }
+                catch (Exception dtoEx)
+                {
+                    _logger.LogError(
+                        dtoEx,
+                        "❌ Error creating ProjectDetailDto for project {ProjectId}",
+                        projectId
+                    );
+                    ViewBag.ErrorMessage =
+                        "Failed to create project details. Please try again later.";
+                    return View(
+                        "Error",
+                        new ErrorViewModel { RequestId = HttpContext.TraceIdentifier }
+                    );
+                }
             }
             catch (Exception ex)
             {
@@ -396,6 +554,40 @@ namespace ICCMS_Web.Controllers
             }
         }
 
+        public async Task<IActionResult> TaskDetails(string taskId)
+        {
+            try
+            {
+                _logger.LogInformation("🔍 TaskDetails page called for taskId: {TaskId}", taskId);
+
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    _logger.LogWarning("❌ User ID not found");
+                    return Unauthorized(new { error = "User ID not found" });
+                }
+
+                var task = await _contractorService.GetTaskWithProjectAsync(taskId);
+                if (task == null)
+                {
+                    _logger.LogWarning("❌ Task not found for taskId: {TaskId}", taskId);
+                    return NotFound(new { error = "Task not found" });
+                }
+
+                _logger.LogInformation("✅ Task found: {TaskName}", task.Name);
+                return View(task);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "❌ Error loading task details page for taskId: {TaskId}",
+                    taskId
+                );
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
         /// <summary>
         /// Update task status (for starting tasks)
         /// </summary>
@@ -429,65 +621,45 @@ namespace ICCMS_Web.Controllers
                     return Unauthorized(new { error = "User not authenticated" });
                 }
 
-                _logger.LogInformation("🔍 Getting assigned tasks for UpdateTaskStatus");
-
-                // Get the existing task first to ensure we have all required fields
-                var existingTasksResponse = await _apiClient.GetAsync<
-                    PaginatedResponse<ContractorTaskDto>
-                >($"/api/contractors/tasks/assigned", currentUser);
-
                 _logger.LogInformation(
-                    "📡 API response received: {Response}",
-                    existingTasksResponse != null ? "Success" : "Null"
+                    "🔍 Updating task status for task {TaskId} to {Status}",
+                    request.TaskId,
+                    request.Status
                 );
 
-                if (existingTasksResponse == null || existingTasksResponse.Data == null)
+                // First, get the existing task to update it properly
+                var existingTask = await _apiClient.GetAsync<ProjectTaskDto>(
+                    $"/api/contractors/task/{request.TaskId}",
+                    currentUser
+                );
+
+                if (existingTask == null)
                 {
-                    _logger.LogWarning("❌ No tasks returned from API");
-                    return StatusCode(500, new { error = "Failed to get task data" });
-                }
-
-                _logger.LogInformation(
-                    "✅ Found {Count} assigned tasks",
-                    existingTasksResponse.Data.Count
-                );
-
-                // Find the specific task
-                var taskToUpdate = existingTasksResponse.Data.FirstOrDefault(t =>
-                    t.TaskId == request.TaskId
-                );
-                if (taskToUpdate == null)
-                {
-                    _logger.LogWarning(
-                        "❌ Task {TaskId} not found in assigned tasks",
-                        request.TaskId
-                    );
-                    _logger.LogWarning(
-                        "📋 Available task IDs: {TaskIds}",
-                        string.Join(", ", existingTasksResponse.Data.Select(t => t.TaskId))
-                    );
+                    _logger.LogWarning("❌ Task {TaskId} not found", request.TaskId);
                     return NotFound(new { error = "Task not found" });
                 }
 
-                _logger.LogInformation("✅ Found task to update: {TaskName}", taskToUpdate.Name);
-
                 // Update only the status field
-                taskToUpdate.Status = request.Status;
+                existingTask.Status = request.Status;
 
                 // Update the task using the API client
-                var updatedTask = await _apiClient.PutAsync<ProjectTaskDto>(
+                var updatedTask = await _apiClient.PutAsync<object>(
                     $"/api/contractors/update/project/task/{request.TaskId}",
-                    taskToUpdate,
+                    existingTask,
                     currentUser
                 );
 
                 if (updatedTask == null)
                 {
+                    _logger.LogWarning(
+                        "❌ Failed to update task {TaskId} - API returned null",
+                        request.TaskId
+                    );
                     return StatusCode(500, new { error = "Failed to update task" });
                 }
 
                 _logger.LogInformation(
-                    "Task {TaskId} status updated to {Status} by contractor {UserId}",
+                    "✅ Task {TaskId} status updated to {Status} by contractor {UserId}",
                     request.TaskId,
                     request.Status,
                     userId
@@ -497,7 +669,11 @@ namespace ICCMS_Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating task status");
+                _logger.LogError(
+                    ex,
+                    "Error updating task status for task {TaskId}",
+                    request.TaskId
+                );
                 return StatusCode(500, new { error = ex.Message });
             }
         }
@@ -506,59 +682,9 @@ namespace ICCMS_Web.Controllers
         /// Submit a progress report for a task
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> SubmitProgressReport([FromBody] ProgressReportDto report)
-        {
-            try
-            {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(new { error = "User ID not found" });
-                }
-
-                if (string.IsNullOrEmpty(report.TaskId))
-                {
-                    return BadRequest(new { error = "Task ID is required" });
-                }
-
-                if (string.IsNullOrEmpty(report.Description))
-                {
-                    return BadRequest(new { error = "Description is required" });
-                }
-
-                if (report.HoursWorked <= 0)
-                {
-                    return BadRequest(new { error = "Hours worked must be greater than 0" });
-                }
-
-                // Set submission details
-                report.SubmittedBy = userId;
-                report.SubmittedAt = DateTime.UtcNow;
-                report.Status = "Submitted";
-
-                var result = await _contractorService.SubmitProgressReportAsync(report);
-
-                _logger.LogInformation(
-                    "Progress report submitted for task {TaskId} by contractor {UserId}",
-                    report.TaskId,
-                    userId
-                );
-
-                return Json(new { success = true, report = result });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error submitting progress report");
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// Request completion of a task
-        /// </summary>
-        [HttpPost]
-        public async Task<IActionResult> RequestCompletion(
-            [FromBody] RequestCompletionRequest request
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SubmitProgressReport(
+            [FromForm] SubmitProgressReportViewModel viewModel
         )
         {
             try
@@ -571,33 +697,158 @@ namespace ICCMS_Web.Controllers
 
                 if (!ModelState.IsValid)
                 {
-                    var errors = ModelState
-                        .Where(x => x.Value.Errors.Count > 0)
-                        .ToDictionary(
-                            kvp => kvp.Key,
-                            kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
-                        );
-                    return BadRequest(new { error = "Validation failed", errors });
+                    return View(viewModel);
                 }
 
-                var result = await _contractorService.RequestCompletionAsync(
-                    request.TaskId,
-                    request.Notes ?? "",
-                    request.DocumentId
-                );
+                var report = new ProgressReportDto
+                {
+                    TaskId = viewModel.TaskId,
+                    ProjectId = viewModel.ProjectId,
+                    Description = viewModel.Description,
+                    HoursWorked = viewModel.HoursWorked,
+                    ProgressPercentage = viewModel.ProgressPercentage,
+                    SubmittedBy = userId,
+                    SubmittedAt = DateTime.UtcNow,
+                    Status = "Submitted",
+                };
 
-                _logger.LogInformation(
-                    "Completion requested for task {TaskId} by contractor {UserId}",
-                    request.TaskId,
-                    userId
-                );
+                if (viewModel.AttachmentFile != null)
+                {
+                    _logger.LogInformation(
+                        "Attempting to upload file: {FileName}, Size: {FileSize}",
+                        viewModel.AttachmentFile.FileName,
+                        viewModel.AttachmentFile.Length
+                    );
 
-                return Json(new { success = true, result });
+                    var document = await UploadFileAsync(
+                        viewModel.AttachmentFile,
+                        viewModel.ProjectId,
+                        $"Progress report for {viewModel.TaskName}"
+                    );
+
+                    if (document != null)
+                    {
+                        _logger.LogInformation(
+                            "File upload successful. Document ID: {DocumentId}, File URL: {FileUrl}",
+                            document.DocumentId,
+                            document.FileUrl
+                        );
+                        report.AttachedDocumentIds.Add(document.FileUrl);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "File upload failed for file: {FileName}",
+                            viewModel.AttachmentFile.FileName
+                        );
+                        ModelState.AddModelError(
+                            "AttachmentFile",
+                            "Failed to upload the attached file. Please try again."
+                        );
+                        return View(viewModel);
+                    }
+                }
+
+                await _contractorService.SubmitProgressReportAsync(report);
+
+                return RedirectToAction("ProjectDetail", new { projectId = viewModel.ProjectId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error submitting progress report");
+                ModelState.AddModelError(
+                    "",
+                    "An unexpected error occurred while submitting the report."
+                );
+                return View(viewModel);
+            }
+        }
+
+        /// <summary>
+        /// Request completion of a task
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RequestCompletion(
+            [FromForm] RequestCompletionViewModel viewModel
+        )
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { error = "User ID not found" });
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    return View(viewModel);
+                }
+
+                var report = new CompletionReportDto
+                {
+                    TaskId = viewModel.TaskId,
+                    ProjectId = viewModel.ProjectId,
+                    CompletionSummary = viewModel.CompletionSummary,
+                    FinalHours = viewModel.FinalHours,
+                    AmountSpent = viewModel.AmountSpent,
+                    QualityCheck = viewModel.QualityCheck,
+                    SubmittedBy = userId,
+                    SubmittedAt = DateTime.UtcNow,
+                    CompletionDate = DateTime.UtcNow,
+                    Status = "Submitted",
+                };
+
+                if (viewModel.AttachmentFile != null)
+                {
+                    _logger.LogInformation(
+                        "Attempting to upload file: {FileName}, Size: {FileSize}",
+                        viewModel.AttachmentFile.FileName,
+                        viewModel.AttachmentFile.Length
+                    );
+
+                    var document = await UploadFileAsync(
+                        viewModel.AttachmentFile,
+                        viewModel.ProjectId,
+                        $"Completion evidence for {viewModel.TaskName}"
+                    );
+
+                    if (document != null)
+                    {
+                        _logger.LogInformation(
+                            "File upload successful. Document ID: {DocumentId}, File URL: {FileUrl}",
+                            document.DocumentId,
+                            document.FileUrl
+                        );
+                        report.AttachedDocumentIds.Add(document.FileUrl);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "File upload failed for file: {FileName}",
+                            viewModel.AttachmentFile.FileName
+                        );
+                        ModelState.AddModelError(
+                            "AttachmentFile",
+                            "Failed to upload the attached file. Please try again."
+                        );
+                        return View(viewModel);
+                    }
+                }
+
+                await _contractorService.SubmitCompletionReportAsync(report);
+
+                return RedirectToAction("ProjectDetail", new { projectId = viewModel.ProjectId });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error requesting task completion");
-                return StatusCode(500, new { error = ex.Message });
+                ModelState.AddModelError(
+                    "",
+                    "An unexpected error occurred while requesting completion."
+                );
+                return View(viewModel);
             }
         }
 
@@ -750,6 +1001,154 @@ namespace ICCMS_Web.Controllers
             {
                 _logger.LogError(ex, "Error getting project budget for task {TaskId}", taskId);
                 return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Displays the form to submit a progress report for a task.
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> SubmitProgressReport(string taskId)
+        {
+            if (string.IsNullOrEmpty(taskId))
+            {
+                _logger.LogWarning("SubmitProgressReport GET called with no taskId.");
+                return BadRequest("Task ID is required.");
+            }
+
+            var task = await _contractorService.GetTaskWithProjectAsync(taskId);
+            if (task == null)
+            {
+                _logger.LogWarning("Task with ID {TaskId} not found for progress report.", taskId);
+                return NotFound();
+            }
+
+            var viewModel = new SubmitProgressReportViewModel
+            {
+                TaskId = task.TaskId,
+                TaskName = task.Name,
+                ProjectId = task.ProjectId,
+                ProjectName = task.ProjectName,
+            };
+
+            return View(viewModel);
+        }
+
+        /// <summary>
+        /// Displays the form to request completion for a task.
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> RequestCompletion(string taskId)
+        {
+            if (string.IsNullOrEmpty(taskId))
+            {
+                _logger.LogWarning("RequestCompletion GET called with no taskId.");
+                return BadRequest("Task ID is required.");
+            }
+
+            var task = await _contractorService.GetTaskWithProjectAsync(taskId);
+            if (task == null)
+            {
+                _logger.LogWarning(
+                    "Task with ID {TaskId} not found for completion request.",
+                    taskId
+                );
+                return NotFound();
+            }
+
+            var viewModel = new RequestCompletionViewModel
+            {
+                TaskId = task.TaskId,
+                TaskName = task.Name,
+                ProjectId = task.ProjectId,
+                ProjectName = task.ProjectName,
+            };
+
+            return View(viewModel);
+        }
+
+        private async Task<DocumentDto?> UploadFileAsync(
+            IFormFile file,
+            string projectId,
+            string description
+        )
+        {
+            try
+            {
+                // Get the current user for authentication
+                var currentUser = _httpContextAccessor.HttpContext?.User;
+                if (currentUser == null)
+                {
+                    _logger.LogError("No authenticated user found for file upload");
+                    return null;
+                }
+
+                // Get the authentication token
+                var token = currentUser.FindFirst("FirebaseToken")?.Value;
+                if (string.IsNullOrEmpty(token))
+                {
+                    _logger.LogError(
+                        "No Firebase token found for file upload. Available claims: {Claims}",
+                        string.Join(", ", currentUser.Claims.Select(c => c.Type))
+                    );
+                    return null;
+                }
+
+                _logger.LogInformation(
+                    "Found Firebase token for file upload. Token length: {TokenLength}",
+                    token.Length
+                );
+
+                using var content = new MultipartFormDataContent();
+                using var fileStream = file.OpenReadStream();
+                content.Add(new StreamContent(fileStream), "file", file.FileName);
+                content.Add(new StringContent(projectId), "projectId");
+                content.Add(new StringContent(description), "description");
+
+                // Create authenticated request
+                var request = new HttpRequestMessage(
+                    HttpMethod.Post,
+                    $"{_apiBaseUrl}/api/documents/upload"
+                )
+                {
+                    Headers = { Authorization = new AuthenticationHeaderValue("Bearer", token) },
+                    Content = content,
+                };
+
+                _logger.LogInformation(
+                    "Sending file upload request to: {Url}",
+                    $"{_apiBaseUrl}/api/documents/upload"
+                );
+                var response = await _httpClient.SendAsync(request);
+                _logger.LogInformation(
+                    "File upload response status: {StatusCode}",
+                    response.StatusCode
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseString = await response.Content.ReadAsStringAsync();
+                    return JsonSerializer.Deserialize<DocumentDto>(
+                        responseString,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError(
+                        "File upload failed with status code {StatusCode}: {Reason}. Response: {ErrorContent}",
+                        response.StatusCode,
+                        response.ReasonPhrase,
+                        errorContent
+                    );
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception during file upload");
+                return null;
             }
         }
     }
