@@ -1553,6 +1553,142 @@
     }
 }
 
+/* AI Processing Modal Styling */
+.ai-processing-modal {
+    background: var(--primary-bg) !important;
+    border: 2px solid var(--border-primary) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+    color: var(--text-primary) !important;
+}
+
+.ai-processing-modal .modal-header {
+    background: linear-gradient(135deg, var(--secondary-bg), var(--primary-bg));
+    border-bottom: 2px solid var(--border-primary);
+    padding: 1.5rem;
+}
+
+.ai-processing-modal .ai-icon {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #ff6b35, #f7931e, #ffd700);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: white;
+    animation: bobPulse 2s infinite;
+}
+
+.ai-processing-modal .modal-title {
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.ai-processing-modal .modal-subtitle {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.ai-processing-modal .modal-body {
+    background: var(--primary-bg);
+    padding: 2rem;
+}
+
+.processing-info {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.processing-status {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.ai-logs-container {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    overflow: hidden;
+    max-height: 500px;
+}
+
+.ai-logs-header {
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    padding: 0.75rem 1rem;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.ai-logs {
+    padding: 1rem;
+    max-height: 450px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.log-entry {
+    margin-bottom: 0.5rem;
+    padding: 0.25rem 0;
+    border-left: 3px solid transparent;
+    padding-left: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.log-entry:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-left-color: var(--accent-yellow);
+}
+
+.log-entry.success {
+    border-left-color: var(--accent-green);
+    background: rgba(25, 135, 84, 0.1);
+}
+
+.log-entry.error {
+    border-left-color: var(--accent-red);
+    background: rgba(255, 89, 100, 0.1);
+}
+
+.log-time {
+    color: #7d8590;
+    font-weight: 600;
+    margin-right: 0.5rem;
+}
+
+.log-message {
+    color: var(--text-primary);
+}
+
+/* Terminal-like scrollbar */
+.ai-logs::-webkit-scrollbar {
+    width: 8px;
+}
+
+.ai-logs::-webkit-scrollbar-track {
+    background: #0d1117;
+}
+
+.ai-logs::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 4px;
+}
+
+.ai-logs::-webkit-scrollbar-thumb:hover {
+    background: #484f58;
+}
+
 @keyframes pulse {
     0% {
         transform: scale(1);
