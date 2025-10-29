@@ -1487,12 +1487,12 @@
     width: 85px;
     height: 85px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #ff6b35, #f7931e, #ffd700);
-    color: #fff;
-    border: 3px solid #fff;
+    background: linear-gradient(135deg, var(--accent-yellow), #E6D547, var(--accent-yellow));
+    color: var(--text-dark);
+    border: 3px solid var(--accent-yellow);
     font-size: 28px;
     cursor: pointer;
-    box-shadow: 0 6px 25px rgba(255, 107, 53, 0.4), 0 0 0 0 rgba(255, 107, 53, 0.7);
+    box-shadow: 0 6px 25px rgba(247, 236, 89, 0.4), 0 0 0 0 rgba(247, 236, 89, 0.7);
     transition: all 0.3s ease;
     z-index: 1000;
     display: flex;
@@ -1506,8 +1506,9 @@
 
 .blueprint-fab-btn:hover {
     transform: scale(1.15) rotate(5deg);
-    box-shadow: 0 8px 30px rgba(255, 107, 53, 0.6), 0 0 0 0 rgba(255, 107, 53, 0.9);
-    background: linear-gradient(135deg, #ff8c42, #ffa726, #ffeb3b);
+    box-shadow: 0 8px 30px rgba(247, 236, 89, 0.6), 0 0 0 0 rgba(247, 236, 89, 0.9);
+    background: linear-gradient(135deg, #ffffff, var(--accent-yellow), #ffffff);
+    color: var(--text-dark);
 }
 
 .blueprint-fab-btn:active {
@@ -1524,13 +1525,15 @@
     margin-top: 3px;
     text-align: center;
     line-height: 1;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    color: var(--text-dark);
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.3);
     letter-spacing: 0.5px;
 }
 
 .blueprint-fab-btn i {
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
     animation: hammerSwing 3s ease-in-out infinite;
+    color: var(--text-dark);
 }
 
 /* Pulse animation for Bob a Builder */
@@ -1542,20 +1545,20 @@
     right: -5px;
     bottom: -5px;
     border-radius: 50%;
-    background: rgba(255, 107, 53, 0.3);
+    background: rgba(247, 236, 89, 0.3);
     animation: bobPulse 2s infinite;
     z-index: -1;
 }
 
 @keyframes bobPulse {
     0% {
-        box-shadow: 0 6px 25px rgba(255, 107, 53, 0.4), 0 0 0 0 rgba(255, 107, 53, 0.7);
+        box-shadow: 0 6px 25px rgba(247, 236, 89, 0.4), 0 0 0 0 rgba(247, 236, 89, 0.7);
     }
     50% {
-        box-shadow: 0 6px 25px rgba(255, 107, 53, 0.4), 0 0 0 15px rgba(255, 107, 53, 0.1);
+        box-shadow: 0 6px 25px rgba(247, 236, 89, 0.4), 0 0 0 15px rgba(247, 236, 89, 0.1);
     }
     100% {
-        box-shadow: 0 6px 25px rgba(255, 107, 53, 0.4), 0 0 0 0 rgba(255, 107, 53, 0.7);
+        box-shadow: 0 6px 25px rgba(247, 236, 89, 0.4), 0 0 0 0 rgba(247, 236, 89, 0.7);
     }
 }
 

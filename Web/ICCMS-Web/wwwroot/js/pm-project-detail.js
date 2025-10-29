@@ -51,7 +51,8 @@ function getProjectIdFromUrl() {
 }
 
 // Process blueprint and open estimate editor - CALLS GENKIT MICROSERVICE WITH REAL LOGS
-async function processBlueprintAndOpen(projectId, blueprintUrl) {
+// Make it globally available for use in estimate editor
+window.processBlueprintAndOpen = async function(projectId, blueprintUrl) {
   console.log('🔨 Bob a Builder processing blueprint:', blueprintUrl, 'for project:', projectId);
   
   // Show the AI processing modal
@@ -85,9 +86,18 @@ async function processBlueprintAndOpen(projectId, blueprintUrl) {
       // Update modal with success
       updateAIProcessingModal('success', '🎉 Bob finished processing! Opening your new estimate...');
       
-      // Open the estimate editor with the new estimate
+      // Hide modal first, wait for it to fully close, then open estimate editor
+      hideAIProcessingModal();
+      
+      // Wait for modal to fully close (backdrop removal + animation)
       setTimeout(() => {
-        hideAIProcessingModal();
+        // Double-check backdrop is removed
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        
         if (typeof openEstimateEditor === 'function') {
           console.log('📝 Opening estimate editor for project:', projectId);
           openEstimateEditor(projectId, result.estimateId);
@@ -95,7 +105,7 @@ async function processBlueprintAndOpen(projectId, blueprintUrl) {
           console.error('openEstimateEditor function not found');
           alert('Estimate editor is not available. Please ensure all required scripts are loaded.');
         }
-      }, 2000);
+      }, 500); // Increased delay to ensure backdrop is fully removed
       
     } else {
       const errorText = await response.text();
@@ -119,12 +129,18 @@ async function processBlueprintAndOpen(projectId, blueprintUrl) {
     // Hide modal after 3 seconds
     setTimeout(() => {
       hideAIProcessingModal();
-    }, 3000);
+      }, 3000);
   }
-}
+};
+
+// Global variable to track timeout IDs for cleanup
+let bobLogTimeouts = [];
 
 // Start Real-time Log Streaming from GenKit Microservice
 function startRealTimeLogStreaming(projectId) {
+  // Clear any existing timeouts first
+  clearBobLogTimeouts();
+  
   // Bob's personality: Enthusiastic, confident, construction-savvy, friendly builder
   // All logs compressed to fit within 50000ms (50 seconds)
   const bobLogs = [
@@ -255,15 +271,31 @@ function startRealTimeLogStreaming(projectId) {
   ];
   
   bobLogs.forEach((log, index) => {
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       addBobLog(log.message, 0);
     }, log.time);
+    bobLogTimeouts.push(timeoutId);
   });
+}
+
+// Clear all Bob log timeouts
+function clearBobLogTimeouts() {
+  bobLogTimeouts.forEach(timeoutId => {
+    clearTimeout(timeoutId);
+  });
+  bobLogTimeouts = [];
 }
 
 // Add Bob Log Entry
 function addBobLog(message, delay = 0) {
   setTimeout(() => {
+    // Check if modal still exists before trying to add logs
+    const modal = document.getElementById('aiProcessingModal');
+    if (!modal) {
+      // Modal was closed, don't try to add logs
+      return;
+    }
+    
     const logsContainer = document.getElementById('aiLogs');
     const progressBar = document.getElementById('processingProgress');
     
@@ -397,15 +429,46 @@ function updateAIProcessingModal(status, message) {
 
 // Hide AI Processing Modal
 function hideAIProcessingModal() {
+  // Clear all running log timeouts
+  clearBobLogTimeouts();
+  
   const modal = document.getElementById('aiProcessingModal');
   if (modal) {
     const bootstrapModal = bootstrap.Modal.getInstance(modal);
     if (bootstrapModal) {
+      // Force hide the modal and remove backdrop
       bootstrapModal.hide();
-    }
-    setTimeout(() => {
+      
+      // Wait for modal hide animation, then remove backdrop and modal element
+      setTimeout(() => {
+        // Remove any lingering Bootstrap backdrop
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        
+        // Remove modal from DOM
+        modal.remove();
+        
+        // Remove modal-open class from body if it exists
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+      }, 350); // Wait for Bootstrap's fade animation (300ms) + buffer
+    } else {
+      // If no Bootstrap instance, just remove the element and backdrop manually
+      const backdrops = document.querySelectorAll('.modal-backdrop');
+      backdrops.forEach(backdrop => backdrop.remove());
       modal.remove();
-    }, 300);
+      document.body.classList.remove('modal-open');
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    }
+  } else {
+    // Modal element doesn't exist, but still clean up any lingering backdrops
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => backdrop.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
   }
 }
 

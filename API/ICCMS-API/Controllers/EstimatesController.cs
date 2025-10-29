@@ -138,6 +138,8 @@ namespace ICCMS_API.Controllers
                     request.ContractorId
                 );
 
+                // Ensure BlueprintUrl is explicitly set from request
+                estimate.BlueprintUrl = request.BlueprintUrl;
                 estimate.CreatedAt = DateTime.UtcNow;
                 var estimateId = await _firebaseService.AddDocumentAsync("estimates", estimate);
                 estimate.EstimateId = estimateId;

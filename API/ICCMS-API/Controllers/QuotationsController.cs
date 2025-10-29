@@ -231,7 +231,7 @@ namespace ICCMS_API.Controllers
                     ContractorId = estimate.ContractorId,
                     Description = estimate.Description,
                     Items = quotationItems,
-                    Status = "PendingPMApproval",
+                    Status = "SentToClient",
                     ValidUntil = estimate.ValidUntil,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
