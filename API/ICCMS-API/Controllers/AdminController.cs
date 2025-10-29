@@ -709,6 +709,15 @@ namespace ICCMS_API.Controllers
                 Console.WriteLine(
                     $"[DeleteDocument] Deleted file and Firestore record for: {fileName}"
                 );
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Document Deletion",
+                    "Document Deleted",
+                    $"Document {fileName} deleted from storage and database",
+                    userId ?? "system",
+                    fileName
+                );
                 return Ok(new { message = "Document and file deleted successfully" });
             }
             catch (Exception ex)

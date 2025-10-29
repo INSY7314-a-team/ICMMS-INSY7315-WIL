@@ -324,7 +324,9 @@ namespace ICCMS_Web.Controllers
                 _httpClient.DefaultRequestHeaders.Clear();
                 _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {firebaseToken}");
 
-                var response = await _httpClient.GetAsync($"{apiBaseUrl}/api/documents/{fileName}");
+                var response = await _httpClient.GetAsync(
+                    $"{apiBaseUrl}/api/documents/{fileName}?download=true"
+                );
 
                 _logger.LogInformation(
                     "Download API response status: {StatusCode}",
