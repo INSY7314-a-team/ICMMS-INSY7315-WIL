@@ -65,5 +65,9 @@ namespace ICCMS_Web.Models
         // 🧾 Actual work hours logged
         [JsonPropertyName("actualHours")]
         public double ActualHours { get; set; } = 0.0;
+
+        // 💰 Task budget
+        [JsonPropertyName("budget")]
+        public double Budget { get; set; } = 0.0;
     }
 }

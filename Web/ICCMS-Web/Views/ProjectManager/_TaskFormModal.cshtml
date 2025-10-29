@@ -84,43 +84,16 @@
                         </div>
                     </div>
 
+                    <input type="hidden" id="taskStatus" name="Status" value="Pending">
+                    <input type="hidden" id="taskActualHours" name="ActualHours" value="0">
+
                     <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="taskStatus" class="form-label">Status</label>
-                                <select class="form-select" id="taskStatus" name="Status">
-                                    <option value="Pending" selected>Pending</option>
-                                    <option value="In Progress">In Progress</option>
-                                    <option value="Awaiting Approval">Awaiting Approval</option>
-                                    <option value="Completed">Completed</option>
-                                    <option value="Cancelled">Cancelled</option>
-                                </select>
-                            </div>
-                        </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="taskBudget" class="form-label">Budget</label>
                                 <div class="input-group">
                                     <span class="input-group-text">R</span>
-                                    <input type="number" class="form-control" id="taskBudget" name="Budget" step="0.01" min="0">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="taskProgress" class="form-label">Progress (%)</label>
-                                <input type="range" class="form-range" id="taskProgress" name="Progress" min="0"
-                                    max="100" value="0">
-                                <div class="d-flex justify-content-between">
-                                    <small class="text-muted">0%</small>
-                                    <small class="text-muted">50%</small>
-                                    <small class="text-muted">100%</small>
-                                </div>
-                                <div class="text-center">
-                                    <span id="progressValue">0%</span>
+                                    <input type="number" class="form-control" id="taskBudget" name="Budget" step="0.01" min="0" value="0">
                                 </div>
                             </div>
                         </div>
@@ -133,18 +106,12 @@
                         </div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="taskActualHours" class="form-label">Actual Hours</label>
-                                <input type="number" class="form-control" id="taskActualHours" name="ActualHours"
-                                    step="0.5" min="0">
-                            </div>
-                        </div>
-                    </div>
+                    <input type="hidden" id="taskProgress" name="Progress" value="0">
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fa-solid fa-times me-1"></i>Cancel
+                    </button>
                     <button type="submit" class="btn btn-primary" id="saveTaskBtn">
                         <i class="fa-solid fa-save me-1"></i><span id="saveTaskBtnText">Save Task</span>
                     </button>
@@ -162,13 +129,6 @@
         const taskModalTitle = document.getElementById('taskModalTitle');
         const saveTaskBtnText = document.getElementById('saveTaskBtnText');
         const saveTaskBtn = document.getElementById('saveTaskBtn');
-        const progressSlider = document.getElementById('taskProgress');
-        const progressValue = document.getElementById('progressValue');
-
-        // Update progress display
-        progressSlider.addEventListener('input', function () {
-            progressValue.textContent = this.value + '%';
-        });
 
         // Reset form when modal is shown
         taskModalElement.addEventListener('show.bs.modal', function () {
@@ -191,10 +151,13 @@
             taskData.DueDate = new Date(taskData.DueDate).toISOString();
 
             // Convert numeric fields
-            taskData.Progress = parseInt(taskData.Progress);
+            taskData.Progress = 0; // Always set to 0 on create
             taskData.EstimatedHours = parseFloat(taskData.EstimatedHours) || 0;
-            taskData.ActualHours = parseFloat(taskData.ActualHours) || 0;
+            taskData.ActualHours = 0; // Always set to 0 on create
             taskData.Budget = parseFloat(taskData.Budget) || 0;
+            
+            // Debug log budget value
+            console.log('Task Budget being sent:', taskData.Budget);
 
             // Show loading state
             saveTaskBtn.disabled = true;
@@ -222,19 +185,19 @@
                     if (data.success) {
                         showSuccessMessage(isEdit ? 'Task updated successfully!' : 'Task created successfully!');
                         taskModal.hide();
-                        // Refresh tasks list
-                        if (typeof refreshTasksList === 'function') {
-                            refreshTasksList();
-                        }
+                        // Refresh the page after a short delay to show the success message
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 500);
                     } else {
                         showErrorMessage(data.error || 'Failed to save task');
+                        saveTaskBtn.disabled = false;
+                        saveTaskBtn.innerHTML = `<i class="fa-solid fa-save me-1"></i>${isEdit ? 'Update Task' : 'Save Task'}`;
                     }
                 })
                 .catch(error => {
                     console.error('Error saving task:', error);
                     showErrorMessage('An error occurred while saving the task');
-                })
-                .finally(() => {
                     saveTaskBtn.disabled = false;
                     saveTaskBtn.innerHTML = `<i class="fa-solid fa-save me-1"></i>${isEdit ? 'Update Task' : 'Save Task'}`;
                 });
@@ -243,6 +206,8 @@
         function resetTaskForm() {
             taskForm.reset();
             document.getElementById('taskId').value = '';
+            document.getElementById('taskStatus').value = 'Pending'; // Reset hidden status
+            document.getElementById('taskActualHours').value = '0'; // Reset hidden actual hours
             taskModalTitle.textContent = 'Add Task';
             saveTaskBtnText.textContent = 'Save Task';
 
@@ -252,9 +217,11 @@
             document.getElementById('taskStartDate').value = today;
             document.getElementById('taskDueDate').value = nextWeek;
 
-            // Reset progress slider
-            progressSlider.value = 0;
-            progressValue.textContent = '0%';
+            // Reset progress (hidden field)
+            document.getElementById('taskProgress').value = '0';
+            
+            // Reset budget
+            document.getElementById('taskBudget').value = '0';
         }
 
         function validateTaskForm() {

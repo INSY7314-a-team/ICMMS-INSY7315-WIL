@@ -80,7 +80,7 @@
                                 <div class="fw-bold">@Model.Project.BudgetPlanned.ToString("C")</div>
                             </div>
                             <div class="col-md-4">
-                                <small>Actual Budget</small>
+                                <small>Budget Spent</small>
                                 <div class="fw-bold">@Model.Project.BudgetActual.ToString("C")</div>
                             </div>
                             <div class="col-md-4">
@@ -146,12 +146,24 @@
                                         {
                                             foreach (var update in Model.PendingProgressReports.OrderByDescending(u => u.SubmittedAt))
                                             {
+                                                var task = Model.Tasks.FirstOrDefault(t => t.TaskId == update.TaskId);
                                                 <div class="update-item" data-update-id="@update.ProgressReportId">
-                                                    <div class="d-flex justify-content-between">
-                                                        <div class="update-title">Progress update for Task @update.TaskId</div>
-                                                        <small class="text-muted">@update.SubmittedAt.ToString("dd MMM yyyy")</small>
+                                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                                        <div class="flex-grow-1">
+                                                            <div class="update-title">Progress update for Task @(task?.Name ?? update.TaskId)</div>
+                                                            <div class="update-content text-muted mt-1">@update.Description</div>
+                                                        </div>
+                                                        <small class="text-muted ms-2">@update.SubmittedAt.ToString("dd MMM yyyy")</small>
                                                     </div>
-                                                    <div class="update-content text-muted">@update.Description</div>
+                                                    @if (task != null)
+                                                    {
+                                                        <div class="mt-2">
+                                                            <a href="@Url.Action("TaskDetail", "ProjectManager", new { projectId = Model.Project.ProjectId, taskId = task.TaskId })" 
+                                                               class="btn btn-sm pm-btn-outline-info">
+                                                                <i class="fa-solid fa-eye me-1"></i>View Task Details
+                                                            </a>
+                                                        </div>
+                                                    }
                                                 </div>
                                             }
                                         }
@@ -177,6 +189,7 @@
                                         {
                                             foreach (var comp in Model.TasksAwaitingCompletion)
                                             {
+                                                var task = Model.Tasks.FirstOrDefault(t => t.TaskId == comp.TaskId);
                                                 <div class="completion-item" data-task-id="@comp.TaskId">
                                                     <div class="item-main">
                                                         <div class="title-row d-flex justify-content-between align-items-center">
@@ -188,7 +201,14 @@
                                                         </div>
                                                     </div>
                                                     <div class="item-actions">
-                                                        <button type="button" class="btn btn-sm pm-btn-outline-danger reject-completion-btn" data-task-id="@comp.TaskId">
+                                                        @if (task != null)
+                                                        {
+                                                            <a href="@Url.Action("TaskDetail", "ProjectManager", new { projectId = Model.Project.ProjectId, taskId = task.TaskId })" 
+                                                               class="btn btn-sm pm-btn-outline-info me-1">
+                                                                <i class="fa-solid fa-eye me-1"></i>View Task Details
+                                                            </a>
+                                                        }
+                                                        <button type="button" class="btn btn-sm pm-btn-outline-danger reject-completion-btn me-1" data-task-id="@comp.TaskId">
                                                             <i class="fa-solid fa-xmark me-1"></i>Reject
                                                         </button>
                                                         <button type="button" class="btn btn-sm pm-btn-primary approve-completion-btn" data-task-id="@comp.TaskId">
@@ -332,11 +352,10 @@
                             </div>
                             <div class="col-md-4 text-end">
                                 <div class="mb-2">
-                                    <button class="btn btn-sm pm-btn-outline-info view-phase-details-btn me-1"
-                                        data-phase-id="@phase.PhaseId" data-bs-toggle="modal"
-                                        data-bs-target="#phaseDetailsModal">
+                                    <a href="@Url.Action("PhaseDetail", "ProjectManager", new { projectId = Model.Project.ProjectId, phaseId = phase.PhaseId })" 
+                                       class="btn btn-sm pm-btn-outline-info me-1">
                                         <i class="fa-solid fa-eye"></i>
-                                    </button>
+                                    </a>
                                     <button class="btn btn-sm pm-btn-outline-danger delete-phase-btn"
                                         data-phase-id="@phase.PhaseId">
                                         <i class="fa-solid fa-trash"></i>
@@ -404,11 +423,10 @@
                         </div>
                         <div class="col-md-4 text-end">
                             <div class="mb-2">
-                                <button class="btn btn-sm pm-btn-outline-info view-task-details-btn me-1"
-                                    data-task-id="@task.TaskId" data-bs-toggle="modal"
-                                    data-bs-target="#taskDetailsModal">
+                                <a href="@Url.Action("TaskDetail", "ProjectManager", new { projectId = Model.Project.ProjectId, taskId = task.TaskId })" 
+                                   class="btn btn-sm pm-btn-outline-info me-1">
                                     <i class="fa-solid fa-eye"></i>
-                                </button>
+                                </a>
                                 <button class="btn btn-sm pm-btn-outline-danger delete-task-btn"
                                     data-task-id="@task.TaskId">
                                     <i class="fa-solid fa-trash"></i>
@@ -439,67 +457,6 @@
 @await Html.PartialAsync("_TaskFormModal")
 @await Html.PartialAsync("_ProgressReportReviewModal")
 @await Html.PartialAsync("_TaskCompletionReviewModal")
-
-<!-- Task Details Modal -->
-<div class="modal fade" id="taskDetailsModal" tabindex="-1" aria-labelledby="taskDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="taskDetailsModalLabel">
-                    <i class="fa-solid fa-eye me-2"></i>Task Details
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="taskDetailsContent">
-                    <div class="text-center py-4">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mt-2 text-muted">Loading task details...</p>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fa-solid fa-times me-1"></i>Close
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Phase Details Modal -->
-<div class="modal fade" id="phaseDetailsModal" tabindex="-1" aria-labelledby="phaseDetailsModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="phaseDetailsModalLabel">
-                    <i class="fa-solid fa-eye me-2"></i>Phase Details
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="phaseDetailsContent">
-                    <div class="text-center py-4">
-                        <div class="spinner-border text-info" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mt-2 text-muted">Loading phase details...</p>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fa-solid fa-times me-1"></i>Close
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Document Viewer Modal -->
 <div class="modal fade" id="documentViewerModal" tabindex="-1" aria-labelledby="documentViewerModalLabel"
@@ -544,292 +501,6 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        let currentTaskId = null;
-        let currentPhaseId = null;
-
-        // Handle view task details button clicks
-        document.addEventListener('click', function (e) {
-            if (e.target.closest('.view-task-details-btn')) {
-                const button = e.target.closest('.view-task-details-btn');
-                const taskId = button.getAttribute('data-task-id');
-                currentTaskId = taskId;
-                loadTaskDetails(taskId);
-            }
-
-            if (e.target.closest('.view-phase-details-btn')) {
-                const button = e.target.closest('.view-phase-details-btn');
-                const phaseId = button.getAttribute('data-phase-id');
-                currentPhaseId = phaseId;
-                loadPhaseDetails(phaseId);
-            }
-        });
-
-        function loadTaskDetails(taskId) {
-            const content = document.getElementById('taskDetailsContent');
-
-            // Show loading state
-            content.innerHTML = `
-            <div class="text-center py-4">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="mt-2 text-muted">Loading task details...</p>
-            </div>
-        `;
-
-            // Find the task data from the current page
-            const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
-            if (!taskCard) {
-                content.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fa-solid fa-exclamation-triangle me-2"></i>
-                    Task not found
-                </div>
-            `;
-                return;
-            }
-
-            // Extract task information from the card
-            const taskName = taskCard.querySelector('h6').textContent.trim();
-            const taskDescription = taskCard.querySelector('p').textContent.trim();
-            const statusBadge = taskCard.querySelector('.badge');
-            const status = statusBadge ? statusBadge.textContent.trim() : 'Unknown';
-            const priorityBadge = taskCard.querySelectorAll('.badge')[1];
-            const priority = priorityBadge ? priorityBadge.textContent.trim() : 'Unknown';
-            const phaseBadge = taskCard.querySelectorAll('.badge')[2];
-            const phase = phaseBadge ? phaseBadge.textContent.trim().replace('tasks', '').trim() : 'Unknown';
-            const assignedTo = taskCard.querySelector('.fw-bold').textContent.trim();
-            const estimatedHours = taskCard.querySelectorAll('.fw-bold')[1].textContent.trim();
-            const progress = taskCard.querySelector('.progress-bar').style.width;
-            const dueDate = taskCard.querySelector('small').textContent.trim();
-
-            // Create the task details HTML
-            content.innerHTML = `
-            <div class="task-details-container">
-                <!-- Task Header -->
-                <div class="row mb-4">
-                    <div class="col-md-8">
-                        <h4 class="mb-2 text-primary">${taskName}</h4>
-                        <p class="text-muted mb-0">${taskDescription}</p>
-                    </div>
-                    <div class="col-md-4 text-end">
-                        <div class="mb-2">
-                            <span class="badge ${getStatusBadgeClass(status)} me-2">${status}</span>
-                            <span class="badge ${getPriorityBadgeClass(priority)}">${priority}</span>
-                        </div>
-                        <small class="text-muted">Task ID: ${taskId}</small>
-                    </div>
-                </div>
-                
-                <!-- Progress Section -->
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <h6 class="mb-3">
-                            <i class="fa-solid fa-chart-line me-2 text-primary"></i>Progress
-                        </h6>
-                        <div class="progress mb-2" style="height: 25px;">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: ${progress}" aria-valuenow="${progress.replace('%', '')}" aria-valuemin="0" aria-valuemax="100">
-                                ${progress}
-                            </div>
-                        </div>
-                        <small class="text-muted">Current progress</small>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="mb-3">
-                            <i class="fa-solid fa-layer-group me-2 text-info"></i>Phase
-                        </h6>
-                        <div class="card bg-light">
-                            <div class="card-body py-2">
-                                <span class="badge bg-info">${phase}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Task Information -->
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <h6 class="mb-3">
-                            <i class="fa-solid fa-user me-2 text-success"></i>Assignment
-                        </h6>
-                        <div class="card bg-light">
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-6">
-                                        <small class="text-muted">Assigned To</small>
-                                        <div class="fw-bold">${assignedTo}</div>
-                                    </div>
-                                    <div class="col-6">
-                                        <small class="text-muted">Estimated Hours</small>
-                                        <div class="fw-bold">${estimatedHours}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="mb-3">
-                            <i class="fa-solid fa-calendar me-2 text-warning"></i>Timeline
-                        </h6>
-                        <div class="card bg-light">
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-12">
-                                        <small class="text-muted">Due Date</small>
-                                        <div class="fw-bold">${dueDate}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Additional Information -->
-                <div class="row">
-                    <div class="col-12">
-                        <h6 class="mb-3">
-                            <i class="fa-solid fa-info-circle me-2 text-secondary"></i>Additional Information
-                        </h6>
-                        <div class="card bg-light">
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <small class="text-muted">Task ID</small>
-                                        <div class="fw-bold font-monospace">${taskId}</div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <small class="text-muted">Status</small>
-                                        <div class="fw-bold">${status}</div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <small class="text-muted">Priority</small>
-                                        <div class="fw-bold">${priority}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        }
-
-        function loadPhaseDetails(phaseId) {
-            const content = document.getElementById('phaseDetailsContent');
-
-            // Show loading state
-            content.innerHTML = `
-            <div class="text-center py-4">
-                <div class="spinner-border text-info" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="mt-2 text-muted">Loading phase details...</p>
-            </div>
-        `;
-
-            // Find the phase data from the current page
-            const phaseCard = document.querySelector(`[data-phase-id="${phaseId}"]`);
-            if (!phaseCard) {
-                content.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fa-solid fa-exclamation-triangle me-2"></i>
-                    Phase not found
-                </div>
-            `;
-                return;
-            }
-
-            // Extract phase information from the card
-            const phaseName = phaseCard.querySelector('h6').textContent.trim();
-            const phaseDescription = phaseCard.querySelector('p').textContent.trim();
-            const phaseDates = phaseCard.querySelector('small').textContent.trim();
-            const progress = phaseCard.querySelector('.progress-bar').style.width;
-
-            // Create the phase details HTML
-            content.innerHTML = `
-            <div class="phase-details-container">
-                <!-- Phase Header -->
-                <div class="row mb-4">
-                    <div class="col-md-8">
-                        <h4 class="mb-2 text-info">${phaseName}</h4>
-                        <p class="text-muted mb-0">${phaseDescription}</p>
-                    </div>
-                    <div class="col-md-4 text-end">
-                        <small class="text-muted">Phase ID: ${phaseId}</small>
-                    </div>
-                </div>
-                
-                <!-- Progress Section -->
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <h6 class="mb-3">
-                            <i class="fa-solid fa-chart-line me-2 text-info"></i>Progress
-                        </h6>
-                        <div class="progress mb-2" style="height: 25px;">
-                            <div class="progress-bar bg-info" role="progressbar" style="width: ${progress}" aria-valuenow="${progress.replace('%', '')}" aria-valuemin="0" aria-valuemax="100">
-                                ${progress}
-                            </div>
-                        </div>
-                        <small class="text-muted">Current progress</small>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="mb-3">
-                            <i class="fa-solid fa-calendar me-2 text-warning"></i>Timeline
-                        </h6>
-                        <div class="card bg-light">
-                            <div class="card-body py-2">
-                                <div class="fw-bold">${phaseDates}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Additional Information -->
-                <div class="row">
-                    <div class="col-12">
-                        <h6 class="mb-3">
-                            <i class="fa-solid fa-info-circle me-2 text-secondary"></i>Additional Information
-                        </h6>
-                        <div class="card bg-light">
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <small class="text-muted">Phase ID</small>
-                                        <div class="fw-bold font-monospace">${phaseId}</div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <small class="text-muted">Progress</small>
-                                        <div class="fw-bold">${progress}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        }
-
-        function getStatusBadgeClass(status) {
-            switch (status.toLowerCase()) {
-                case 'pending': return 'bg-warning';
-                case 'in progress': return 'bg-primary';
-                case 'awaiting approval': return 'bg-info';
-                case 'completed': return 'bg-success';
-                case 'cancelled': return 'bg-danger';
-                default: return 'bg-secondary';
-            }
-        }
-
-        function getPriorityBadgeClass(priority) {
-            switch (priority.toLowerCase()) {
-                case 'high': return 'bg-danger';
-                case 'medium': return 'bg-warning';
-                case 'low': return 'bg-success';
-                default: return 'bg-secondary';
-            }
-        }
-
         // Approvals: Accept/Reject Task Completion Reports
         document.addEventListener('click', async function (e) {
             const approveBtn = e.target.closest('.approve-completion-btn');

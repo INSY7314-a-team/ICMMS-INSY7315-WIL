@@ -303,6 +303,71 @@
   margin-bottom: 0.5rem !important;
 }
 
+.form-select {
+  background: var(--primary-bg) !important;
+  border: 2px solid var(--border-primary) !important;
+  color: var(--text-primary) !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 2.5rem 0.75rem 1rem !important;
+  transition: all 0.3s ease !important;
+  appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23f7ec59' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.75rem center !important;
+  background-size: 12px !important;
+}
+
+.form-select:focus {
+  border-color: var(--border-active) !important;
+  box-shadow: 0 0 0 0.2rem rgba(247, 236, 89, 0.25) !important;
+  background-color: var(--secondary-bg) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23f7ec59' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.75rem center !important;
+  background-size: 12px !important;
+  outline: none !important;
+}
+
+.form-select:hover {
+  border-color: var(--border-active) !important;
+}
+
+.form-select option {
+  background: var(--primary-bg) !important;
+  color: var(--text-primary) !important;
+  padding: 0.5rem !important;
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.input-group-text {
+  background: var(--secondary-bg) !important;
+  border: 2px solid var(--border-primary) !important;
+  border-right: none !important;
+  color: var(--text-primary) !important;
+  border-radius: 8px 0 0 8px !important;
+}
+
+.input-group .form-control {
+  border-left: none !important;
+  border-radius: 0 8px 8px 0 !important;
+}
+
+.input-group .form-control:focus {
+  border-left: 2px solid var(--border-active) !important;
+}
+
+.input-group:focus-within .input-group-text {
+  border-color: var(--border-active) !important;
+}
+
+.form-range {
+  accent-color: var(--accent-yellow);
+}
+
 /* ===========================================
    CARD STYLING SYSTEM
    =========================================== */

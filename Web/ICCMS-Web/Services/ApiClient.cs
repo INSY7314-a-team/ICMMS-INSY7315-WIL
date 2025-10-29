@@ -326,6 +326,87 @@ namespace ICCMS_Web.Services
         }
 
         // ===========================================================
+        // 🔹 DELETE ASYNC
+        // ===========================================================
+        public async Task<T?> DeleteAsync<T>(string endpoint, ClaimsPrincipal user)
+        {
+            _logger.LogInformation("DELETE {Endpoint} ===", endpoint);
+
+            try
+            {
+                var token = user.FindFirst("FirebaseToken")?.Value;
+                if (string.IsNullOrEmpty(token))
+                {
+                    HandleUnauthorized(endpoint);
+                    return default;
+                }
+
+                var request = new HttpRequestMessage(HttpMethod.Delete, $"{_baseUrl}{endpoint}")
+                {
+                    Headers = { Authorization = new AuthenticationHeaderValue("Bearer", token) },
+                };
+
+                var response = await _httpClient.SendAsync(request);
+                _logger.LogInformation("DELETE response: {Response}", response);
+
+                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    HandleUnauthorized(endpoint);
+                    return default;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var body = await response.Content.ReadAsStringAsync();
+                    _logger.LogError(
+                        "DELETE {Endpoint} failed ({Code}) {Reason}\n{Body}",
+                        endpoint,
+                        response.StatusCode,
+                        response.ReasonPhrase,
+                        body
+                    );
+                    return default;
+                }
+
+                // Handle 204 No Content responses
+                if (response.StatusCode == HttpStatusCode.NoContent)
+                {
+                    _logger.LogInformation(
+                        "DELETE {Endpoint}: No Content (204) - operation successful",
+                        endpoint
+                    );
+                    return default;
+                }
+
+                // Check if response has content before trying to deserialize
+                var contentLength = response.Content.Headers.ContentLength;
+                if (contentLength == 0 || contentLength == null)
+                {
+                    _logger.LogWarning("DELETE {Endpoint}: Empty response body", endpoint);
+                    return default;
+                }
+
+                var bodyText = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(bodyText))
+                {
+                    _logger.LogWarning("DELETE {Endpoint}: Empty response body", endpoint);
+                    return default;
+                }
+
+                return JsonSerializer.Deserialize<T>(
+                    bodyText,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception during DELETE {Endpoint}", endpoint);
+                RecordFailure(endpoint);
+                return default;
+            }
+        }
+
+        // ===========================================================
         // 🔧 CIRCUIT BREAKER HELPERS
         // ===========================================================
         private bool IsCircuitOpen(string endpoint)
