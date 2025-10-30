@@ -7,6 +7,7 @@ namespace ICCMS_Web.Services
         Task<ContractorDashboardViewModel> GetDashboardDataAsync();
         Task<List<ContractorTaskDto>> GetAssignedTasksAsync();
         Task<ContractorTaskDto?> GetTaskWithProjectAsync(string taskId);
+        Task<ContractorTaskDto?> GetTaskWithFullProjectInfoAsync(string taskId);
         Task<ProgressReportDto> SubmitProgressReportAsync(ProgressReportDto report);
         Task<List<ProgressReportDto>> GetProgressReportsAsync(string taskId);
         Task<ProjectBudgetDto> GetTaskProjectBudgetAsync(string taskId);

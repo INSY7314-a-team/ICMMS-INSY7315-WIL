@@ -1,7 +1,7 @@
-@model ICCMS_Web.Models.ContractorTaskDto
+@model ICCMS_Web.Models.ContractorTaskDetailViewModel
 
 @{
-    ViewData["Title"] = $"Task: {Model.Name}";
+    ViewData["Title"] = $"Task: {Model.Task.Name}";
     Layout = "_Layout";
 }
 
@@ -15,13 +15,13 @@
                 </a>
             </li>
             <li class="breadcrumb-item">
-                <a href="@Url.Action("ProjectDetail", "Contractor", new { projectId = Model.ProjectId })"
+                <a href="@Url.Action("ProjectDetail", "Contractor", new { projectId = Model.Task.ProjectId })"
                     class="text-decoration-none">
-                    <i class="fa-solid fa-folder-open"></i> @Model.ProjectName
+                    <i class="fa-solid fa-folder-open"></i> @Model.Task.ProjectName
                 </a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
-                <i class="fa-solid fa-tasks"></i> @Model.Name
+                <i class="fa-solid fa-tasks"></i> @Model.Task.Name
             </li>
         </ol>
     </nav>
@@ -31,25 +31,21 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap">
             <div>
                 <h1 class="dashboard-title mb-1">
-                    <i class="fa-solid fa-tasks me-2" style="color: #F7EC59;"></i>@Model.Name
+                    <i class="fa-solid fa-tasks me-2" style="color: #F7EC59;"></i>@Model.Task.Name
                 </h1>
-                <p class="dashboard-subtitle">@Model.Description</p>
+                <p class="dashboard-subtitle">@Model.Task.Description</p>
             </div>
             <div class="task-status-section">
-                <div class="status-badge status-@Model.Status.Replace(" ", "-").ToLower()">
-                    @Model.Status
+                <div class="status-badge status-@Model.Task.Status.Replace(" ", "-").ToLower()">
+                    @Model.Task.Status
                 </div>
-                @if (Model.Status == "Awaiting Approval")
-                {
-                    <span class="awaiting-approval-chip ms-2"><i class="fa-solid fa-clock me-1"></i>AWAITING APPROVAL</span>
-                }
             </div>
         </div>
-        @if (Model.IsOverdue)
+        @if (Model.Task.IsOverdue)
         {
             <div class="alert alert-warning mt-3 mb-0" role="alert">
                 <i class="fa-solid fa-triangle-exclamation me-2"></i>
-                <strong>Overdue Task:</strong> This task is past its due date of @Model.DueDate.ToString("dd MMM yyyy").
+                <strong>Overdue Task:</strong> This task is past its due date of @Model.Task.DueDate.ToString("dd MMM yyyy").
             </div>
         }
     </div>
@@ -68,28 +64,28 @@
                 <div class="task-details-grid">
                     <div class="detail-row">
                         <span class="detail-label">Task ID</span>
-                        <span class="detail-value">@Model.TaskId</span>
+                        <span class="detail-value">@Model.Task.TaskId</span>
                     </div>
                     <div class="detail-row">
                         <span class="detail-label">Priority</span>
-                        <span class="priority-badge priority-@Model.Priority.ToLower()">@Model.Priority</span>
+                        <span class="priority-badge priority-@Model.Task.Priority.ToLower()">@Model.Task.Priority</span>
                     </div>
                     <div class="detail-row">
                         <span class="detail-label">Assigned To</span>
-                        <span class="detail-value">@(string.IsNullOrEmpty(Model.AssignedTo) ? "Not Assigned" :
-                            Model.AssignedTo)</ span >
+                        <span class="detail-value">@(string.IsNullOrEmpty(Model.Task.AssignedTo) ? "Not Assigned" :
+                            Model.Task.AssignedTo)</span>
                     </div>
                     <div class="detail-row">
                         <span class="detail-label">Start Date</span>
-                        <span class="detail-value">@Model.StartDate.ToString("dd MMM yyyy")</span>
+                        <span class="detail-value">@Model.Task.StartDate.ToString("dd MMM yyyy")</span>
                     </div>
                     <div class="detail-row">
                         <span class="detail-label">Due Date</span>
-                        <span class="detail-value">@Model.DueDate.ToString("dd MMM yyyy")</span>
+                        <span class="detail-value">@Model.Task.DueDate.ToString("dd MMM yyyy")</span>
                     </div>
                     <div class="detail-row">
                         <span class="detail-label">Created</span>
-                        <span class="detail-value">@Model.StartDate.ToString("dd MMM yyyy")</span>
+                        <span class="detail-value">@Model.Task.StartDate.ToString("dd MMM yyyy")</span>
                     </div>
                 </div>
             </div>
@@ -104,18 +100,18 @@
                 <div class="progress-container">
                     <div class="progress-row">
                         <span class="progress-label">Task Progress</span>
-                        <span class="progress-percentage">@Model.Progress%</span>
+                        <span class="progress-percentage">@Model.Task.Progress%</span>
                     </div>
                     <div class="progress-bar">
-                        <div class="progress-fill" style="width: @(Model.Progress)%"></div>
+                        <div class="progress-fill" style="width: @(Model.Task.Progress)%"></div>
                     </div>
                     <div class="progress-row">
                         <span class="progress-label">Hours Worked</span>
-                        <span class="progress-percentage">@Model.ActualHours / @Model.EstimatedHours hours</span>
+                        <span class="progress-percentage">@Model.Task.ActualHours / @Model.Task.EstimatedHours hours</span>
                     </div>
                     <div class="progress-bar">
                         <div class="progress-fill bg-info"
-                            style="width: @(Model.EstimatedHours > 0 ? (Model.ActualHours / Model.EstimatedHours * 100) : 0)%">
+                            style="width: @(Model.Task.EstimatedHours > 0 ? (Model.Task.ActualHours / Model.Task.EstimatedHours * 100) : 0)%">
                         </div>
                     </div>
                 </div>
@@ -128,9 +124,9 @@
                         <h3 class="section-title">
                             <i class="fa-solid fa-check-circle me-2"></i>Completion Reports
                         </h3>
-                        @if (Model.Status != "Pending" && Model.Status != "Completed")
+                        @if (Model.Task.Status != "Pending" && Model.Task.Status != "Completed")
                         {
-                            <a href="@Url.Action("RequestCompletion", "Contractor", new { taskId = Model.TaskId })"
+                            <a href="@Url.Action("RequestCompletion", "Contractor", new { taskId = Model.Task.TaskId })"
                                 class="btn btn-sm btn-success">
                                 <i class="fa-solid fa-plus me-1"></i>Request Completion
                             </a>
@@ -152,9 +148,9 @@
                         <h3 class="section-title">
                             <i class="fa-solid fa-chart-line me-2"></i>Progress Reports
                         </h3>
-                        @if (Model.Status != "Pending" && Model.Status != "Completed")
+                        @if (Model.Task.Status != "Pending" && Model.Task.Status != "Completed")
                         {
-                            <a href="@Url.Action("SubmitProgressReport", "Contractor", new { taskId = Model.TaskId })"
+                            <a href="@Url.Action("SubmitProgressReport", "Contractor", new { taskId = Model.Task.TaskId })"
                                 class="btn btn-sm btn-primary">
                                 <i class="fa-solid fa-plus me-1"></i>Submit Progress
                             </a>
@@ -180,24 +176,40 @@
                     </h3>
                 </div>
                 <div class="d-grid gap-2">
-                    @if (Model.Status == "Pending")
+                    @if (Model.Task.Status == "Pending")
                     {
-                        <button class="btn btn-primary start-task-btn" data-task-id="@Model.TaskId">
+                        <button class="btn btn-primary start-task-btn" data-task-id="@Model.Task.TaskId">
                             <i class="fa-solid fa-play me-1"></i>Start Task
                         </button>
+                        
+                        @* Show requirements for starting task *@
+                        @if (Model.Project != null && !Model.Project.Status.Equals("Active", StringComparison.OrdinalIgnoreCase) && !Model.Project.Status.Equals("Maintenance", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <div class="alert alert-warning alert-sm mb-0" role="alert">
+                                <i class="fa-solid fa-info-circle me-1"></i>
+                                <small>Task can only be started when project status is Active or Maintenance. Current project status: <strong>@Model.Project.Status</strong></small>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info alert-sm mb-0" role="alert">
+                                <i class="fa-solid fa-info-circle me-1"></i>
+                                <small>Task is ready to start. Project status: <strong>@(Model.Project?.Status ?? "Unknown")</strong></small>
+                            </div>
+                        }
                     }
-                    @if (Model.Status != "Pending" && Model.Status != "Completed")
+                    @if (Model.Task.Status != "Pending" && Model.Task.Status != "Completed")
                     {
-                        <a href="@Url.Action("SubmitProgressReport", "Contractor", new { taskId = Model.TaskId })"
+                        <a href="@Url.Action("SubmitProgressReport", "Contractor", new { taskId = Model.Task.TaskId })"
                             class="btn btn-warning">
                             <i class="fa-solid fa-chart-line me-1"></i>Submit Progress
                         </a>
-                        <a href="@Url.Action("RequestCompletion", "Contractor", new { taskId = Model.TaskId })"
+                        <a href="@Url.Action("RequestCompletion", "Contractor", new { taskId = Model.Task.TaskId })"
                             class="btn btn-success">
                             <i class="fa-solid fa-check me-1"></i>Request Completion
                         </a>
                     }
-                    <a href="@Url.Action("ProjectDetail", "Contractor", new { projectId = Model.ProjectId })"
+                    <a href="@Url.Action("ProjectDetail", "Contractor", new { projectId = Model.Task.ProjectId })"
                         class="btn btn-secondary">
                         <i class="fa-solid fa-arrow-left me-1"></i>Back to Project
                     </a>
@@ -219,13 +231,25 @@
                         <div class="accordion-body">
                             <div class="info-grid">
                                 <div class="info-item"><span class="info-label">Project</span><span
-                                        class="info-value">@Model.ProjectName</span></div>
+                                        class="info-value">@Model.Task.ProjectName</span></div>
                                 <div class="info-item"><span class="info-label">Project ID</span><span
-                                        class="info-value">@Model.ProjectId</span></div>
+                                        class="info-value">@Model.Task.ProjectId</span></div>
+                                <div class="info-item"><span class="info-label">Project Status</span><span
+                                        class="info-value">
+                                        <span class="badge badge-@(Model.Project?.Status?.ToLower() switch {
+                                            "active" => "success",
+                                            "maintenance" => "warning", 
+                                            "completed" => "primary",
+                                            "draft" => "secondary",
+                                            "planning" => "info",
+                                            "cancelled" => "danger",
+                                            _ => "light"
+                                        })">@(Model.Project?.Status ?? "Unknown")</span>
+                                    </span></div>
                                 <div class="info-item"><span class="info-label">Client</span><span
-                                        class="info-value">Not Available</span></div>
+                                        class="info-value">@(Model.Client?.FullName ?? "Not Available")</span></div>
                                 <div class="info-item"><span class="info-label">Project Manager</span><span
-                                        class="info-value">Not Available</span></div>
+                                        class="info-value">@(Model.ProjectManager?.FullName ?? "Not Available")</span></div>
                             </div>
                         </div>
                     </div>
@@ -244,11 +268,11 @@
                         <div class="accordion-body">
                             <div class="budget-grid">
                                 <div class="budget-item"><span class="budget-label">Estimated Hours</span><span
-                                        class="budget-value">@Model.EstimatedHours hours</span></div>
+                                        class="budget-value">@Model.Task.EstimatedHours hours</span></div>
                                 <div class="budget-item"><span class="budget-label">Hours Worked</span><span
-                                        class="budget-value">@Model.ActualHours hours</span></div>
+                                        class="budget-value">@Model.Task.ActualHours hours</span></div>
                                 <div class="budget-item"><span class="budget-label">Remaining</span><span
-                                        class="budget-value">@(Model.EstimatedHours - Model.ActualHours) hours</span>
+                                        class="budget-value">@(Model.Task.EstimatedHours - Model.Task.ActualHours) hours</span>
                                 </div>
                             </div>
                         </div>
@@ -271,7 +295,7 @@
 <script>
     // Load progress and completion reports when page loads
     document.addEventListener('DOMContentLoaded', function () {
-        const taskId = '@Model.TaskId';
+        const taskId = '@Model.Task.TaskId';
         loadProgressReports(taskId);
         loadCompletionReports(taskId);
     });
@@ -290,6 +314,14 @@
     // Start task function
     async function startTask(taskId) {
         try {
+            // Show loading state
+            const button = document.querySelector('.start-task-btn');
+            if (button) {
+                const originalText = button.innerHTML;
+                button.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Starting...';
+                button.disabled = true;
+            }
+
             const response = await fetch('/Contractor/UpdateTaskStatus', {
                 method: 'PUT',
                 headers: {
@@ -302,14 +334,57 @@
             });
 
             if (response.ok) {
-                location.reload(); // Refresh the page to show updated status
+                // Show success message
+                showNotification('Task started successfully!', 'success');
+                // Refresh the page to show updated status
+                setTimeout(() => location.reload(), 1000);
             } else {
                 const error = await response.json();
-                alert('Error starting task: ' + (error.error || 'Unknown error'));
+                console.error('Task start validation failed:', error);
+                
+                // Show specific error messages based on validation failure
+                let errorMessage = 'Error starting task: ' + (error.error || 'Unknown error');
+                
+                if (error.currentStatus) {
+                    errorMessage = `Cannot start task. Current status is "${error.currentStatus}". Tasks can only be started from Pending status.`;
+                } else if (error.projectStatus) {
+                    errorMessage = `Cannot start task. Project status is "${error.projectStatus}". Tasks can only be started when the project is Active or Maintenance.`;
+                }
+                
+                showNotification(errorMessage, 'error');
             }
         } catch (error) {
             console.error('Error starting task:', error);
-            alert('Error starting task: ' + error.message);
+            showNotification('Error starting task: ' + error.message, 'error');
+        } finally {
+            // Reset button state
+            const button = document.querySelector('.start-task-btn');
+            if (button) {
+                button.innerHTML = '<i class="fa-solid fa-play me-1"></i>Start Task';
+                button.disabled = false;
+            }
         }
+    }
+
+    // Notification function
+    function showNotification(message, type) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        // Add to page
+        document.body.appendChild(notification);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
     }
 </script>

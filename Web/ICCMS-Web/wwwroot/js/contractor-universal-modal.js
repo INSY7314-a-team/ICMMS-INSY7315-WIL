@@ -100,6 +100,17 @@ function initializeModalEventListeners() {
     console.log("❌ Completion Request form not found!");
   }
 
+  // Start task button event listeners
+  document.addEventListener("click", function (e) {
+    if (e.target.closest(".start-task-btn")) {
+      const button = e.target.closest(".start-task-btn");
+      const taskId = button.getAttribute("data-task-id");
+      if (taskId) {
+        startTaskFromButton(taskId, button);
+      }
+    }
+  });
+
   console.log("✅ Universal modal event listeners initialized");
 }
 
@@ -327,6 +338,39 @@ function loadProgressReports(taskId) {
                                     }</div>
                                 </div>
                             </div>
+                            ${
+                              report.attachedDocumentIds &&
+                              report.attachedDocumentIds.length > 0
+                                ? `
+                                <div class="mt-3">
+                                    <small class="text-muted">Attachments:</small>
+                                    <div class="row mt-2">
+                                        ${report.attachedDocumentIds
+                                          .map(
+                                            (docId) => `
+                                            <div class="col-md-3 mb-2">
+                                                <div class="attachment-thumbnail" data-doc-id="${docId}">
+                                                    <img src="${
+                                                      docId.startsWith("http")
+                                                        ? docId
+                                                        : `/api/documents/${docId}/download`
+                                                    }" 
+                                                         class="attachment-image" 
+                                                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                                                         onclick="openImageModal('${docId}')" />
+                                                    <div class="attachment-placeholder" style="display: none;">
+                                                        <i class="fa-solid fa-file"></i>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `
+                                          )
+                                          .join("")}
+                                    </div>
+                                </div>
+                            `
+                                : ""
+                            }
                         </div>
                     </div>
                 `
@@ -391,6 +435,50 @@ function getStatusIcon(status) {
     default:
       return "fa-question-circle";
   }
+}
+
+/**
+ * Open image modal for viewing attachments
+ */
+function openImageModal(documentId) {
+  // Create modal if it doesn't exist
+  let modal = document.getElementById("imageModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "imageModal";
+    modal.className = "modal fade";
+    modal.innerHTML = `
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Image Preview</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center">
+            <img id="modalImage" src="" class="img-fluid" style="max-height: 70vh;" />
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <a id="downloadLink" href="" class="btn btn-primary" download>
+              <i class="fa-solid fa-download me-1"></i>Download
+            </a>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  // Set image source and download link
+  const imageUrl = documentId.startsWith("http")
+    ? documentId
+    : `/api/documents/${documentId}/download`;
+  document.getElementById("modalImage").src = imageUrl;
+  document.getElementById("downloadLink").href = imageUrl;
+
+  // Show modal
+  const bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
 }
 
 /**
@@ -459,6 +547,39 @@ function loadCompletionReports(taskId) {
                                     ).toLocaleDateString()}</div>
                                 </div>
                             </div>
+                            ${
+                              report.attachedDocumentIds &&
+                              report.attachedDocumentIds.length > 0
+                                ? `
+                                <div class="mt-3">
+                                    <small class="text-muted">Attachments:</small>
+                                    <div class="row mt-2">
+                                        ${report.attachedDocumentIds
+                                          .map(
+                                            (docId) => `
+                                            <div class="col-md-3 mb-2">
+                                                <div class="attachment-thumbnail" data-doc-id="${docId}">
+                                                    <img src="${
+                                                      docId.startsWith("http")
+                                                        ? docId
+                                                        : `/api/documents/${docId}/download`
+                                                    }" 
+                                                         class="attachment-image" 
+                                                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                                                         onclick="openImageModal('${docId}')" />
+                                                    <div class="attachment-placeholder" style="display: none;">
+                                                        <i class="fa-solid fa-file"></i>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `
+                                          )
+                                          .join("")}
+                                    </div>
+                                </div>
+                            `
+                                : ""
+                            }
                             <div class="mb-2">
                                 <small class="text-muted">Completion Summary:</small>
                                 <p class="mb-1">${escapeHtml(
@@ -526,6 +647,98 @@ function loadCompletionReports(taskId) {
       container.innerHTML =
         '<div class="text-danger text-center py-3">Failed to load completion reports</div>';
     });
+}
+
+/**
+ * Start task from button click (handles both modal and list buttons)
+ */
+async function startTaskFromButton(taskId, button) {
+  try {
+    // Show loading state
+    const originalText = button.innerHTML;
+    button.innerHTML =
+      '<i class="fa-solid fa-spinner fa-spin me-1"></i>Starting...';
+    button.disabled = true;
+
+    const response = await fetch("/Contractor/UpdateTaskStatus", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        taskId: taskId,
+        status: "In Progress",
+      }),
+    });
+
+    if (response.ok) {
+      // Show success message
+      showNotification("Task started successfully!", "success");
+
+      // If this is a modal button, close the modal and refresh the page
+      if (button.id === "startTaskBtn") {
+        const modal = bootstrap.Modal.getInstance(
+          document.getElementById("taskDetailsModal")
+        );
+        if (modal) {
+          modal.hide();
+        }
+        setTimeout(() => location.reload(), 1000);
+      } else {
+        // If this is a list button, just refresh the page
+        setTimeout(() => location.reload(), 1000);
+      }
+    } else {
+      const error = await response.json();
+      console.error("Task start validation failed:", error);
+
+      // Show specific error messages based on validation failure
+      let errorMessage =
+        "Error starting task: " + (error.error || "Unknown error");
+
+      if (error.currentStatus) {
+        errorMessage = `Cannot start task. Current status is "${error.currentStatus}". Tasks can only be started from Pending status.`;
+      } else if (error.projectStatus) {
+        errorMessage = `Cannot start task. Project status is "${error.projectStatus}". Tasks can only be started when the project is Active or Maintenance.`;
+      }
+
+      showNotification(errorMessage, "error");
+    }
+  } catch (error) {
+    console.error("Error starting task:", error);
+    showNotification("Error starting task: " + error.message, "error");
+  } finally {
+    // Reset button state
+    button.innerHTML = originalText;
+    button.disabled = false;
+  }
+}
+
+/**
+ * Show notification to user
+ */
+function showNotification(message, type) {
+  // Create notification element
+  const notification = document.createElement("div");
+  notification.className = `alert alert-${
+    type === "success" ? "success" : "danger"
+  } alert-dismissible fade show position-fixed`;
+  notification.style.cssText =
+    "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
+  notification.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  `;
+
+  // Add to page
+  document.body.appendChild(notification);
+
+  // Auto remove after 5 seconds
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.remove();
+    }
+  }, 5000);
 }
 
 /**

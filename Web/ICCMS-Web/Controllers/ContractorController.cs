@@ -574,8 +574,69 @@ namespace ICCMS_Web.Controllers
                     return NotFound(new { error = "Task not found" });
                 }
 
+                // Get additional project information using contractor endpoints
+                var projects = await _apiClient.GetAsync<List<ProjectDto>>(
+                    "/api/contractors/projects",
+                    User
+                );
+
+                // Find the specific project from the contractor's projects
+                ProjectDto? specificProject = projects?.FirstOrDefault(p =>
+                    p.ProjectId == task.ProjectId
+                );
+
+                // Get client information
+                UserDto? client = null;
+                if (!string.IsNullOrEmpty(specificProject?.ClientId))
+                {
+                    try
+                    {
+                        client = await _apiClient.GetAsync<UserDto>(
+                            $"/api/users/{specificProject.ClientId}",
+                            User
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(
+                            ex,
+                            "Could not fetch client info for project {ProjectId}",
+                            task.ProjectId
+                        );
+                    }
+                }
+
+                // Get project manager information
+                UserDto? projectManager = null;
+                if (!string.IsNullOrEmpty(specificProject?.ProjectManagerId))
+                {
+                    try
+                    {
+                        projectManager = await _apiClient.GetAsync<UserDto>(
+                            $"/api/users/{specificProject.ProjectManagerId}",
+                            User
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(
+                            ex,
+                            "Could not fetch project manager info for project {ProjectId}",
+                            task.ProjectId
+                        );
+                    }
+                }
+
+                var viewModel = new ContractorTaskDetailViewModel
+                {
+                    Task = task,
+                    Client = client,
+                    ProjectManager = projectManager,
+                    Project = specificProject,
+                };
+
                 _logger.LogInformation("✅ Task found: {TaskName}", task.Name);
-                return View(task);
+                return View(viewModel);
             }
             catch (Exception ex)
             {
@@ -637,6 +698,78 @@ namespace ICCMS_Web.Controllers
                 {
                     _logger.LogWarning("❌ Task {TaskId} not found", request.TaskId);
                     return NotFound(new { error = "Task not found" });
+                }
+
+                // Validate task start conditions
+                if (
+                    request.Status.Equals("In Progress", StringComparison.OrdinalIgnoreCase)
+                    || request.Status.Equals("InProgress", StringComparison.OrdinalIgnoreCase)
+                    || request.Status.Equals("In-Progress", StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    // Check if task is currently in Pending status
+                    if (!existingTask.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogWarning(
+                            "❌ Cannot start task {TaskId} - current status is {CurrentStatus}, must be Pending",
+                            request.TaskId,
+                            existingTask.Status
+                        );
+                        return BadRequest(
+                            new
+                            {
+                                error = "Task can only be started if it's currently in Pending status",
+                                currentStatus = existingTask.Status,
+                            }
+                        );
+                    }
+
+                    // Get project information to check project status
+                    var projects = await _apiClient.GetAsync<List<ProjectDto>>(
+                        "/api/contractors/projects",
+                        currentUser
+                    );
+
+                    var project = projects?.FirstOrDefault(p =>
+                        p.ProjectId == existingTask.ProjectId
+                    );
+                    if (project == null)
+                    {
+                        _logger.LogWarning(
+                            "❌ Project {ProjectId} not found for task {TaskId}",
+                            existingTask.ProjectId,
+                            request.TaskId
+                        );
+                        return BadRequest(new { error = "Project information not found" });
+                    }
+
+                    // Check if project status allows task starting
+                    var projectStatus = project.Status?.Trim();
+                    if (
+                        !projectStatus.Equals("Active", StringComparison.OrdinalIgnoreCase)
+                        && !projectStatus.Equals("Maintenance", StringComparison.OrdinalIgnoreCase)
+                    )
+                    {
+                        _logger.LogWarning(
+                            "❌ Cannot start task {TaskId} - project {ProjectId} status is {ProjectStatus}, must be Active or Maintenance",
+                            request.TaskId,
+                            existingTask.ProjectId,
+                            projectStatus
+                        );
+                        return BadRequest(
+                            new
+                            {
+                                error = "Task can only be started if the project status is Active or Maintenance",
+                                projectStatus = projectStatus,
+                            }
+                        );
+                    }
+
+                    _logger.LogInformation(
+                        "✅ Task start validation passed - Task: {TaskStatus}, Project: {ProjectStatus}",
+                        existingTask.Status,
+                        projectStatus
+                    );
                 }
 
                 // Update only the status field
