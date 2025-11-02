@@ -190,7 +190,11 @@ fun ClientInvoicesScreen(
                     }
                 }
             } else {
-                items(uiState.invoices) { invoice ->
+                items(uiState.invoices.filter {
+                    it.status.equals("pending", ignoreCase = true) ||
+                    it.status.equals("paid", ignoreCase = true) ||
+                    it.status.equals("overdue", ignoreCase = true)
+                }) { invoice ->
                     InvoiceCard(
                         invoice = invoice,
                         onClick = { onNavigateToInvoiceDetails(invoice.invoiceId) },

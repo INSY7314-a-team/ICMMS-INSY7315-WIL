@@ -26,6 +26,7 @@ import com.example.iccms_mobile.ui.viewmodel.ClientDashboardViewModel
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.collections.filter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,7 +118,13 @@ fun ClientQuotationsScreen(
                     }
                 }
             } else {
-                items(uiState.quotations) { quotation ->
+                items(
+                    uiState.quotations.filter {
+                        it.status.equals("senttoclient", ignoreCase = true) ||
+                        it.status.equals("clientaccepted", ignoreCase = true) ||
+                        it.status.equals("rejected", ignoreCase = true)
+                    })
+                { quotation ->
                     QuotationCard(
                         quotation = quotation,
                         onClick = { onNavigateToQuotationDetails(quotation.quotationId) },

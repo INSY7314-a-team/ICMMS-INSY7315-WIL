@@ -209,7 +209,9 @@ fun MaintenanceRequestCard(
                         modifier = Modifier.padding(top = 6.dp)
                     )
                 }
-                PriorityChip(priority = request.priority)
+                // Status
+                StatusChip(status = request.status)
+                // PriorityChip(priority = request.priority)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -224,18 +226,21 @@ fun MaintenanceRequestCard(
             ) {
                 Column {
                     Text(
-                        text = "Status",
+                        text = "Priority",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 4.dp)
                     )
-                    StatusChip(status = request.status)
+                    // Priority
+                    PriorityChip(priority = request.priority) // StatusChip(status = request.status)
                 }
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = "Created",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 4.dp)
                     )
                     Text(
                         text = formatDate(request.createdAt),
@@ -361,7 +366,7 @@ fun MaintenanceRequestCard(
 fun PriorityChip(priority: String) {
     val (backgroundColor, textColor) = when (priority.lowercase()) {
         "high" -> MaterialTheme.colorScheme.error to MaterialTheme.colorScheme.onError
-        "medium" -> MaterialTheme.colorScheme.secondary to MaterialTheme.colorScheme.onSecondary
+        "medium" -> MaterialTheme.colorScheme.secondary to Color(0xFFFFFFFF) // MaterialTheme.colorScheme.onSecondary
         "low" -> MaterialTheme.colorScheme.tertiary to MaterialTheme.colorScheme.onTertiary
         else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }

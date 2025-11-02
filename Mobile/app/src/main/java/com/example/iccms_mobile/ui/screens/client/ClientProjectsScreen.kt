@@ -1,5 +1,7 @@
 package com.example.iccms_mobile.ui.screens.client
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,7 +24,11 @@ import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClientProjectsScreen(
@@ -145,7 +151,12 @@ fun ClientProjectsScreen(
                     }
                 }
             } else {
-                items(uiState.projects) { project ->
+                items(uiState.projects.filter {
+                    it.status.equals("planning", ignoreCase = true) ||
+                    it.status.equals("completed", ignoreCase = true) ||
+                    it.status.equals("active", ignoreCase = true) ||
+                    it.status.equals("maintenance", ignoreCase = true)
+                }) { project ->
                     ProjectCard(
                         project = project,
                         onClick = { onNavigateToProjectDetails(project.projectId) }
@@ -200,6 +211,7 @@ fun StatCard(
 
 // Project Card
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun ProjectCard(
     project: Project,
@@ -281,7 +293,8 @@ fun ProjectCard(
                     Text(
                         text = "Budget",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp)
                     )
                     Text(
                         text = "R${NumberFormat.getNumberInstance().format(project.budgetPlanned)}",
@@ -290,20 +303,52 @@ fun ProjectCard(
                         color = Color(0xFF006400) // dark green
                     )
                 }
-                Column(horizontalAlignment = Alignment.End) {
+                Column(horizontalAlignment = Alignment.Start) {
                     Text(
-                        text = "⏳ Duration",
+                        text = "Start Date",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp)
                     )
                     Text(
-                        text = "${project.startDatePlanned} - ${project.endDatePlanned}",//"$daysBetween days",
+                        text = formatDateString(project.endDatePlanned),//project.startDatePlanned,//"$daysBetween days",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Column(horizontalAlignment = Alignment.Start) {
+                    Text(
+                        text = "End Date",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                    Text(
+                        text = formatDateString(project.endDatePlanned)/*project.endDatePlanned*/,//"$daysBetween days",
+
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Medium
                     )
                 }
             }
+            /*
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "⏳ End Date",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+                Text(
+                    text = "${project.startDatePlanned} - ${project.endDatePlanned}",//"$daysBetween days",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            */
         }
     }
 }
@@ -387,9 +432,11 @@ fun ProjectCard(
 @Composable
 fun StatusChip(status: String) {
     val (backgroundColor, textColor) = when (status.lowercase()) {
-        "active" -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimary
-        "completed" -> MaterialTheme.colorScheme.tertiary to MaterialTheme.colorScheme.onTertiary
-        "pending" -> MaterialTheme.colorScheme.secondary to MaterialTheme.colorScheme.onSecondary
+        "planning" -> MaterialTheme.colorScheme.tertiary to MaterialTheme.colorScheme.onTertiary // Yellow with balck
+        "completed" -> Color(0xFF006400) to Color(0xFFFFFFFF)//MaterialTheme.colorScheme.tertiary to MaterialTheme.colorScheme.onTertiary
+        "maintenance" -> MaterialTheme.colorScheme.error to MaterialTheme.colorScheme.onError
+        "active" -> Color(0xFF0080FF) to Color(0xFFFFFFFF) // MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimary
+        "pending" -> MaterialTheme.colorScheme.secondary to Color(0xFFFFFFFF) // MaterialTheme.colorScheme.onSecondary
         "overdue" -> MaterialTheme.colorScheme.error to MaterialTheme.colorScheme.onError
         "paid" -> Color(0xFF006400) /*Color(0xFF2ECC71) */to Color(0xFFFFFFFF)
         else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
@@ -405,5 +452,19 @@ fun StatusChip(status: String) {
             color = textColor,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
         )
+    }
+}
+
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun formatDateString(dateString: String?): String {
+    if (dateString.isNullOrBlank()) return "No date"
+
+    return try {
+        ZonedDateTime.parse(dateString)
+            .format(DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH))
+    } catch (e: Exception) {
+        dateString // fallback to raw string if parsing fails
     }
 }

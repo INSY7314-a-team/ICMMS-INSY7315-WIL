@@ -128,7 +128,7 @@ fun ClientDashboardOverviewScreen(
                     item {
                         StatCard(
                             title = "Pending Quotes",
-                            value = uiState.quotations.count { it.status.lowercase() == "pending" }.toString(),
+                            value = uiState.quotations.count { it.status.lowercase() == "senttoclient" }.toString(),
                             color = MaterialTheme.colorScheme.secondary
                         )
                     }
@@ -190,7 +190,8 @@ fun ClientDashboardOverviewScreen(
                                 Text(
                                     text = "Total Budget",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(vertical = 4.dp)
                                 )
                                 Text(
                                     text = "R${NumberFormat.getNumberInstance().format(uiState.projects.sumOf { it.budgetPlanned.toDouble() })}",
@@ -205,7 +206,8 @@ fun ClientDashboardOverviewScreen(
                                 Text(
                                     text = "Outstanding",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(vertical = 4.dp)
                                 )
                                 Text(
                                     text = "R${NumberFormat.getNumberInstance().format(uiState.invoices.filter { it.status.lowercase() == "pending" }.sumOf { it.totalAmount })}",

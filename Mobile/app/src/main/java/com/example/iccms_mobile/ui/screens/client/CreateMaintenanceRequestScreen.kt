@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
@@ -104,6 +105,48 @@ fun CreateMaintenanceRequestScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     } else {
+                        // Only show completed projects
+                        uiState.projects
+                            .filter { it.status.equals("completed", ignoreCase = true) }
+                            .forEach { project ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .selectable(
+                                            selected = selectedProject?.projectId == project.projectId,
+                                            onClick = { selectedProject = project },
+                                            role = Role.RadioButton
+                                        )
+                                        .padding(vertical = 10.dp, horizontal = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = selectedProject?.projectId == project.projectId,
+                                        onClick = { selectedProject = project }
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text(
+                                            text = project.name,
+                                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                                        )
+                                        Text(
+                                            text = project.description,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(vertical = 4.dp)
+                                        )
+                                        Text(
+                                            text = "Status: ${project.status}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color(0xFF006400) // MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+
+                        /* Old code: Remove code
                         uiState.projects.forEach { project ->
                             Row(
                                 modifier = Modifier
@@ -139,7 +182,9 @@ fun CreateMaintenanceRequestScreen(
                                     )
                                 }
                             }
-                        }
+                        }*/
+
+
                     }
                 }
             }
@@ -297,7 +342,7 @@ fun CreateMaintenanceRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-                    if (selectedProject != null && description.isNotBlank() && requestedBy.isNotBlank()) {
+                    if (selectedProject != null && description.isNotBlank()) {
                         val currentDate =
                             SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(
                                 Date()
@@ -325,7 +370,7 @@ fun CreateMaintenanceRequestScreen(
                     .fillMaxWidth()
                     .height(55.dp),
                 shape = RoundedCornerShape(16.dp),
-                enabled = selectedProject != null && description.isNotBlank() && requestedBy.isNotBlank() && !uiState.isLoading
+                enabled = selectedProject != null && description.isNotBlank() && !uiState.isLoading
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
