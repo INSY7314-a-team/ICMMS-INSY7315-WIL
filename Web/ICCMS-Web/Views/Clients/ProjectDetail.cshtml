@@ -343,14 +343,15 @@
                                                     <i class="fa-solid fa-eye"></i>
                                                 </button>
                                                 
-                                                <!-- Rate Contractor Button (only for completed tasks with assigned contractor) -->
-                                                @if (task.Status == "Completed" && !string.IsNullOrEmpty(task.AssignedTo))
+                                                <!-- Rate Contractor Button (only for completed tasks with assigned contractor that haven't been rated) -->
+                                                @if (task.Status == "Completed" && !string.IsNullOrEmpty(task.AssignedTo) && !Model.IsTaskRated(task.TaskId))
                                                 {
                                                     <button class="btn btn-sm btn-warning text-dark"
                                                         data-bs-toggle="modal"
                                                         data-bs-target="#rateContractorModal"
                                                         data-contractor-id="@task.AssignedTo"
                                                         data-contractor-name="@Model.GetContractorName(task.AssignedTo)"
+                                                        data-task-id="@task.TaskId"
                                                         title="Rate Contractor">
                                                         <i class="fa-solid fa-star"></i>
                                                     </button>

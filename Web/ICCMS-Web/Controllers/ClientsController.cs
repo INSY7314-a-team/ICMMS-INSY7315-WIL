@@ -1,12 +1,11 @@
 using System.IO;
-using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using System.Threading.Tasks;
 using DinkToPdf;
 using DinkToPdf.Contracts;
@@ -238,6 +237,39 @@ namespace ICCMS_Web.Controllers
                     overallProgress = (int)tasks.Average(t => t.Progress);
                 }
 
+                // Check which tasks have been rated by the current client
+                var clientId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var ratedTasks = new Dictionary<string, bool>();
+
+                if (!string.IsNullOrEmpty(clientId))
+                {
+                    var completedTasksWithContractors = tasks
+                        .Where(t => t.Status == "Completed" && !string.IsNullOrEmpty(t.AssignedTo))
+                        .ToList();
+
+                    foreach (var task in completedTasksWithContractors)
+                    {
+                        try
+                        {
+                            var hasRated = await _apiClient.GetAsync<bool>(
+                                $"/api/contractorrating/task/{task.TaskId}/contractor/{task.AssignedTo}",
+                                User
+                            );
+                            ratedTasks[task.TaskId] = hasRated;
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(
+                                ex,
+                                "Failed to check rating status for task {TaskId}",
+                                task.TaskId
+                            );
+                            // Default to false if check fails
+                            ratedTasks[task.TaskId] = false;
+                        }
+                    }
+                }
+
                 var viewModel = new ClientProjectDetailViewModel
                 {
                     Project = project,
@@ -249,6 +281,7 @@ namespace ICCMS_Web.Controllers
                     Invoices = invoices,
                     Contractors = contractors,
                     OverallProgress = overallProgress,
+                    RatedTasks = ratedTasks,
                 };
 
                 return View(viewModel);
@@ -1401,7 +1434,9 @@ namespace ICCMS_Web.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> SubmitContractorRating([FromBody] SubmitRatingRequest request)
+        public async Task<IActionResult> SubmitContractorRating(
+            [FromBody] SubmitRatingRequest request
+        )
         {
             _logger.LogInformation(
                 "⭐ [SubmitContractorRating] Submitting rating for contractor {ContractorId}",
@@ -1415,7 +1450,9 @@ namespace ICCMS_Web.Controllers
 
             if (request.RatingValue < 1 || request.RatingValue > 5)
             {
-                return Json(new { success = false, error = "Rating value must be between 1 and 5" });
+                return Json(
+                    new { success = false, error = "Rating value must be between 1 and 5" }
+                );
             }
 
             try
