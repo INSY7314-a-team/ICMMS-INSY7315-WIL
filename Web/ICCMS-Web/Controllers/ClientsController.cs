@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using DinkToPdf;
 using DinkToPdf.Contracts;
 using ICCMS_Web.Models;
-using ICCMS_Web.Models;
 using ICCMS_Web.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -1398,6 +1397,56 @@ namespace ICCMS_Web.Controllers
             {
                 _logger.LogError(ex, "🔥 Error retrieving invoice {Id}", id);
                 return StatusCode(500, "Failed to load invoice details");
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SubmitContractorRating([FromBody] SubmitRatingRequest request)
+        {
+            _logger.LogInformation(
+                "⭐ [SubmitContractorRating] Submitting rating for contractor {ContractorId}",
+                request.ContractorId
+            );
+
+            if (string.IsNullOrEmpty(request.ContractorId))
+            {
+                return Json(new { success = false, error = "Contractor ID is required" });
+            }
+
+            if (request.RatingValue < 1 || request.RatingValue > 5)
+            {
+                return Json(new { success = false, error = "Rating value must be between 1 and 5" });
+            }
+
+            try
+            {
+                var endpoint = "/api/contractorrating";
+                var rating = await _apiClient.PostAsync<ContractorRatingDto>(
+                    endpoint,
+                    request,
+                    User
+                );
+
+                if (rating == null)
+                {
+                    _logger.LogWarning(
+                        "❌ [SubmitContractorRating] Failed to submit rating for contractor {ContractorId}",
+                        request.ContractorId
+                    );
+                    return Json(new { success = false, error = "Failed to submit rating" });
+                }
+
+                _logger.LogInformation(
+                    "✅ [SubmitContractorRating] Rating submitted successfully for contractor {ContractorId}. New average: {Average}",
+                    request.ContractorId,
+                    rating.AverageRating
+                );
+                return Json(new { success = true, rating = rating });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🔥 [SubmitContractorRating] Error submitting rating");
+                return Json(new { success = false, error = ex.Message });
             }
         }
     }
