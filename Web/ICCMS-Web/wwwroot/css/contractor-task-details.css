@@ -1,0 +1,636 @@
+/* Task Details Page Styles - Consistent with Contractor Dashboard */
+
+/* ===========================================
+   TASK DETAILS PAGE LAYOUT
+   =========================================== */
+
+.task-details-page {
+    background-color: var(--primary-bg);
+    min-height: 100vh;
+    color: var(--text-primary);
+}
+
+/* ===========================================
+   TASK HEADER STYLING
+   =========================================== */
+
+.task-status-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.status-pending {
+    background-color: #6c757d;
+    color: var(--text-primary);
+}
+
+.status-badge.status-in-progress {
+    background-color: var(--accent-cyan);
+    color: var(--text-dark);
+}
+
+.status-badge.status-completed {
+    background-color: var(--accent-green);
+    color: var(--text-primary);
+}
+
+.status-badge.status-awaiting-approval {
+    background-color: #ffc107;
+    color: var(--text-dark);
+}
+
+/* ===========================================
+   CARD STYLING
+   =========================================== */
+
+.task-details-page .card {
+    background-color: var(--secondary-bg);
+    border: 1px solid var(--border-primary);
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+}
+
+.task-details-page .card-header {
+    background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+    border-bottom: 2px solid var(--border-primary);
+    border-radius: 12px 12px 0 0;
+    padding: 1.25rem 1.5rem;
+}
+
+.task-details-page .card-header h5 {
+    color: var(--text-primary);
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.task-details-page .card-header h5 i {
+    color: var(--accent-yellow);
+    margin-right: 0.5rem;
+}
+
+.task-details-page .card-body {
+    background-color: var(--secondary-bg);
+    color: var(--text-primary);
+    padding: 1.5rem;
+    border-radius: 0 0 12px 12px;
+}
+
+/* ===========================================
+   INFO ITEM STYLING
+   =========================================== */
+
+.task-details-page .info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(247, 236, 89, 0.1);
+}
+
+.task-details-page .info-item:last-child {
+    border-bottom: none;
+}
+
+.task-details-page .info-label {
+    font-weight: 600;
+    color: var(--accent-yellow);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.task-details-page .info-value {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* ===========================================
+   BUDGET ITEM STYLING
+   =========================================== */
+
+.task-details-page .budget-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(247, 236, 89, 0.1);
+}
+
+.task-details-page .budget-item:last-child {
+    border-bottom: none;
+}
+
+.task-details-page .budget-label {
+    font-weight: 600;
+    color: var(--accent-yellow);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.task-details-page .budget-value {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* ===========================================
+   PROGRESS BARS
+   =========================================== */
+
+.task-details-page .progress {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    height: 8px;
+    overflow: hidden;
+}
+
+.task-details-page .progress-bar {
+    background: linear-gradient(90deg, var(--accent-yellow) 0%, var(--accent-cyan) 100%);
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+.task-details-page .progress-bar.bg-info {
+    background: linear-gradient(90deg, var(--accent-cyan) 0%, #17a2b8 100%);
+}
+
+/* ===========================================
+   PRIORITY BADGES
+   =========================================== */
+
+.task-details-page .priority-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.task-details-page .priority-badge.priority-low {
+    background-color: rgba(25, 135, 84, 0.2);
+    color: #198754;
+    border: 1px solid rgba(25, 135, 84, 0.3);
+}
+
+.task-details-page .priority-badge.priority-medium {
+    background-color: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.task-details-page .priority-badge.priority-high {
+    background-color: rgba(220, 53, 69, 0.2);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+/* ===========================================
+   AWAITING APPROVAL CHIP
+   =========================================== */
+
+.task-details-page .awaiting-approval-chip {
+    background-color: #ffc107;
+    color: #000;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ===========================================
+   BUTTON STYLING
+   =========================================== */
+
+.task-details-page .btn {
+    border-radius: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.task-details-page .btn-primary {
+    background: linear-gradient(135deg, var(--accent-yellow) 0%, #f0d000 100%);
+    color: var(--text-dark);
+    box-shadow: 0 4px 15px rgba(247, 236, 89, 0.3);
+}
+
+.task-details-page .btn-primary:hover {
+    background: linear-gradient(135deg, #f0d000 0%, var(--accent-yellow) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(247, 236, 89, 0.4);
+}
+
+.task-details-page .btn-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #ff8c00 100%);
+    color: var(--text-dark);
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+}
+
+.task-details-page .btn-warning:hover {
+    background: linear-gradient(135deg, #ff8c00 0%, #ffc107 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
+}
+
+.task-details-page .btn-success {
+    background: linear-gradient(135deg, var(--accent-green) 0%, #20c997 100%);
+    color: var(--text-primary);
+    box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
+}
+
+.task-details-page .btn-success:hover {
+    background: linear-gradient(135deg, #20c997 0%, var(--accent-green) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(25, 135, 84, 0.4);
+}
+
+.task-details-page .btn-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: var(--text-primary);
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+}
+
+.task-details-page .btn-secondary:hover {
+    background: linear-gradient(135deg, #5a6268 0%, #6c757d 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+}
+
+/* ===========================================
+   SECTIONS HEADERS
+   =========================================== */
+
+.task-details-page h6 {
+    color: var(--accent-yellow);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 1rem;
+}
+
+/* ===========================================
+   PROGRESS REPORTS CONTAINER
+   =========================================== */
+
+.task-details-page #progressReportsContainer,
+.task-details-page #completionReportsContainer {
+    min-height: 100px;
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN
+   =========================================== */
+
+@media (max-width: 768px) {
+    .task-details-page .card-body {
+        padding: 1rem;
+    }
+    
+    .task-details-page .info-item,
+    .task-details-page .budget-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .task-details-page .info-value,
+    .task-details-page .budget-value {
+        align-self: flex-end;
+    }
+    
+    .task-details-page .d-grid {
+        gap: 0.75rem;
+    }
+}
+
+/* ===========================================
+   LOADING STATES
+   =========================================== */
+
+.task-details-page .spinner-border-sm {
+    color: var(--accent-yellow);
+}
+
+.task-details-page .text-center.py-3 {
+    color: var(--text-muted);
+}
+
+/* ===========================================
+   ALERT STYLING
+   =========================================== */
+
+.task-details-page .alert {
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.task-details-page .alert-warning {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 193, 7, 0.05) 100%);
+    color: #ffc107;
+    border-left: 4px solid #ffc107;
+}
+
+.task-details-page .alert i {
+    color: #ffc107;
+}
+
+/* ===========================================
+   CONSTRUCTION THEME ACCENTS
+   =========================================== */
+
+.task-details-page .card-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: repeating-linear-gradient(
+        45deg,
+        var(--primary-bg),
+        var(--primary-bg) 8px,
+        var(--accent-yellow) 8px,
+        var(--accent-yellow) 16px
+    );
+}
+
+.task-details-page .card-header {
+    position: relative;
+}
+
+.budget-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.budget-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background-color: #3e4a5c;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.budget-label {
+    color: #aeb9c8;
+}
+
+.budget-value {
+    font-weight: 600;
+    color: #ffffff;
+}
+
+/* Accordion Info/Budget Grid Styling */
+.task-details-page .accordion-body .info-grid,
+.task-details-page .accordion-body .budget-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.task-details-page .accordion-body .info-item,
+.task-details-page .accordion-body .budget-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(247, 236, 89, 0.2);
+}
+
+.task-details-page .accordion-body .info-item:last-child,
+.task-details-page .accordion-body .budget-item:last-child {
+    border-bottom: none;
+}
+
+.task-details-page .accordion-body .info-label,
+.task-details-page .accordion-body .budget-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+}
+
+.task-details-page .accordion-body .info-value,
+.task-details-page .accordion-body .budget-value {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* Task Details Grid Styling */
+.task-details-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(247, 236, 89, 0.2);
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+}
+
+.detail-value {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* Progress Container Styling */
+.progress-container {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.progress-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.progress-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+}
+
+.progress-percentage {
+    color: #F7EC59;
+    font-weight: 600;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--accent-yellow);
+    transition: width 0.3s ease;
+}
+
+.progress-fill.bg-info {
+    background: var(--accent-cyan);
+}
+
+/* Accordion Styling to Match ProjectDetail.cshtml */
+.task-details-page .accordion-item {
+    background-color: var(--secondary-bg);
+    border: 1px solid var(--border-primary);
+    margin-bottom: 1rem;
+    border-radius: 8px !important;
+}
+
+.task-details-page .accordion-header {
+    border-radius: 8px !important;
+}
+
+.task-details-page .accordion-button {
+    background-color: var(--secondary-bg);
+    color: var(--text-primary);
+    font-weight: 600;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    border: none;
+    padding: 1rem 1.25rem;
+}
+
+.task-details-page .accordion-button:not(.collapsed) {
+    background-color: var(--primary-bg);
+    color: var(--accent-yellow);
+}
+
+.task-details-page .accordion-button:focus {
+    box-shadow: 0 0 0 0.2rem rgba(247, 236, 89, 0.25);
+    border-color: transparent;
+}
+
+.task-details-page .accordion-body {
+    background-color: var(--primary-bg);
+    border-radius: 0 0 8px 8px;
+    padding: 1.25rem;
+}
+
+.task-details-page .accordion-button::after {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.task-details-page .accordion-button:not(.collapsed)::after {
+    filter: invert(1) grayscale(100%) brightness(200%);
+    transform: rotate(-180deg);
+}
+
+/* ===========================================
+   ATTACHMENT THUMBNAILS STYLING
+   =========================================== */
+
+.attachment-thumbnail {
+    position: relative;
+    display: inline-block;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.attachment-thumbnail:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.attachment-thumbnail img,
+.attachment-image {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid rgba(247, 236, 89, 0.3);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: block;
+}
+
+.attachment-thumbnail:hover img,
+.attachment-thumbnail:hover .attachment-image {
+    border-color: var(--accent-yellow);
+    box-shadow: 0 0 10px rgba(247, 236, 89, 0.3);
+}
+
+.attachment-placeholder {
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, #2a2b35 0%, #1a1b25 100%);
+    border: 2px solid rgba(247, 236, 89, 0.3);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    transition: all 0.3s ease;
+}
+
+.attachment-placeholder:hover {
+    border-color: var(--accent-yellow);
+    color: var(--accent-yellow);
+    transform: translateY(-2px);
+}
+
+.attachment-placeholder i {
+    font-size: 24px;
+}
+
+/* Attachment grid layout */
+.attachment-thumbnail + .attachment-thumbnail {
+    margin-left: 0.5rem;
+}
+
+/* Responsive attachment grid */
+@media (max-width: 768px) {
+    .attachment-thumbnail img,
+    .attachment-image,
+    .attachment-placeholder {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .attachment-thumbnail + .attachment-thumbnail {
+        margin-left: 0.25rem;
+    }
+}

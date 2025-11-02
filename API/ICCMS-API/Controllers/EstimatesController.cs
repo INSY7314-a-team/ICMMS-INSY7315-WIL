@@ -1,3 +1,4 @@
+using ICCMS_API.Auth;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -13,16 +14,19 @@ namespace ICCMS_API.Controllers
         private readonly IFirebaseService _firebaseService;
         private readonly IAiProcessingService _aiProcessingService;
         private readonly IMaterialDatabaseService _materialDatabaseService;
+        private readonly IAuditLogService _auditLogService;
 
         public EstimatesController(
             IFirebaseService firebaseService,
             IAiProcessingService aiProcessingService,
-            IMaterialDatabaseService materialDatabaseService
+            IMaterialDatabaseService materialDatabaseService,
+            IAuditLogService auditLogService
         )
         {
             _firebaseService = firebaseService;
             _aiProcessingService = aiProcessingService;
             _materialDatabaseService = materialDatabaseService;
+            _auditLogService = auditLogService;
         }
 
         [HttpGet]
@@ -79,6 +83,10 @@ namespace ICCMS_API.Controllers
                 var estimateId = await _firebaseService.AddDocumentAsync("estimates", estimate);
                 estimate.EstimateId = estimateId;
                 await _firebaseService.UpdateDocumentAsync("estimates", estimateId, estimate);
+                
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Estimate", "Estimate Created", $"Estimate {estimateId} created for project {estimate.ProjectId}", userId ?? "system", estimateId);
+                
                 Console.WriteLine("Estimate created with ID: " + estimateId);
                 return Ok(estimate);
             }
@@ -130,10 +138,16 @@ namespace ICCMS_API.Controllers
                     request.ContractorId
                 );
 
+                // Ensure BlueprintUrl is explicitly set from request
+                estimate.BlueprintUrl = request.BlueprintUrl;
                 estimate.CreatedAt = DateTime.UtcNow;
                 var estimateId = await _firebaseService.AddDocumentAsync("estimates", estimate);
                 estimate.EstimateId = estimateId;
                 await _firebaseService.UpdateDocumentAsync("estimates", estimateId, estimate);
+                
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Estimate", "Blueprint Processed", $"Blueprint processed and estimate {estimateId} created for project {request.ProjectId}", userId ?? "system", estimateId);
+                
                 Console.WriteLine("Estimate created with ID: " + estimateId);
 
                 return Ok(estimate);
@@ -162,7 +176,10 @@ namespace ICCMS_API.Controllers
                     request.ClientId
                 );
                 var quotationId = await _firebaseService.AddDocumentAsync("quotations", quotation);
-
+                
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Estimate", "Estimate Converted to Quotation", $"Estimate {id} converted to quotation {quotationId}", userId ?? "system", id);
+                
                 return Ok(quotationId);
             }
             catch (Exception ex)

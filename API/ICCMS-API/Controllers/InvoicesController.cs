@@ -14,14 +14,17 @@ namespace ICCMS_API.Controllers
     {
         private readonly IFirebaseService _firebaseService;
         private readonly IInvoiceWorkflowService _invoiceWorkflow;
+        private readonly IAuditLogService _auditLogService;
 
         public InvoicesController(
             IFirebaseService firebaseService,
-            IInvoiceWorkflowService invoiceWorkflow
+            IInvoiceWorkflowService invoiceWorkflow,
+            IAuditLogService auditLogService
         )
         {
             _firebaseService = firebaseService;
             _invoiceWorkflow = invoiceWorkflow;
+            _auditLogService = auditLogService;
         }
 
         [HttpGet]
@@ -123,6 +126,10 @@ namespace ICCMS_API.Controllers
                 Pricing.Recalculate(invoice);
 
                 var invoiceId = await _firebaseService.AddDocumentAsync("invoices", invoice);
+                
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Invoice", "Invoice Created", $"Invoice {invoiceId} created for client {invoice.ClientId}", userId ?? "system", invoiceId);
+                
                 return Ok(invoiceId);
             }
             catch (Exception ex)
@@ -173,6 +180,10 @@ namespace ICCMS_API.Controllers
                 var invoice = await _invoiceWorkflow.IssueAsync(id);
                 if (invoice == null)
                     return NotFound();
+                
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Invoice", "Invoice Issued", $"Invoice {id} issued", userId ?? "system", id);
+                
                 return Ok();
             }
             catch (InvalidOperationException ex)
@@ -194,6 +205,10 @@ namespace ICCMS_API.Controllers
                 var invoice = await _invoiceWorkflow.MarkPaidAsync(id, body.PaidDate, body.PaidBy);
                 if (invoice == null)
                     return NotFound();
+                
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Invoice", "Invoice Paid", $"Invoice {id} marked as paid by {body.PaidBy}", userId ?? "system", id);
+                
                 return Ok();
             }
             catch (InvalidOperationException ex)
@@ -215,6 +230,10 @@ namespace ICCMS_API.Controllers
                 var invoice = await _invoiceWorkflow.CancelAsync(id);
                 if (invoice == null)
                     return NotFound();
+                
+                var userId = User.UserId();
+                _auditLogService.LogAsync("Invoice", "Invoice Cancelled", $"Invoice {id} cancelled", userId ?? "system", id);
+                
                 return Ok();
             }
             catch (InvalidOperationException ex)

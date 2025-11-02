@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
+using ICCMS_API.Auth;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -15,11 +16,20 @@ namespace ICCMS_API.Controllers
     {
         private readonly IAuthService _authService;
         private readonly IFirebaseService _firebaseService;
+        private readonly IWorkflowMessageService _workflowMessageService;
+        private readonly IAuditLogService _auditLogService;
 
-        public ContractorsController(IAuthService authService, IFirebaseService firebaseService)
+        public ContractorsController(
+            IAuthService authService,
+            IFirebaseService firebaseService,
+            IWorkflowMessageService workflowMessageService,
+            IAuditLogService auditLogService
+        )
         {
             _authService = authService;
             _firebaseService = firebaseService;
+            _workflowMessageService = workflowMessageService;
+            _auditLogService = auditLogService;
         }
 
         [HttpGet("Project/Tasks")]
@@ -158,6 +168,16 @@ namespace ICCMS_API.Controllers
                 }
 
                 await _firebaseService.UpdateDocumentAsync("tasks", id, task);
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Contractor Update",
+                    "Task Updated",
+                    $"Task {task.Name} ({id}) updated by contractor",
+                    userId ?? "system",
+                    id
+                );
+
                 return Ok(task);
             }
             catch (Exception ex)
@@ -238,6 +258,108 @@ namespace ICCMS_API.Controllers
                     message = "Contractor API is running",
                 }
             );
+        }
+
+        [HttpGet("messaging/available-users")]
+        public async Task<ActionResult<List<object>>> GetAvailableUsersForMessaging()
+        {
+            try
+            {
+                var contractorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(contractorId))
+                {
+                    return Unauthorized("Contractor ID not found");
+                }
+
+                // Get all projects where this contractor has tasks
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var contractorTasks = tasks.Where(t => t.AssignedTo == contractorId).ToList();
+                var projectIds = contractorTasks.Select(t => t.ProjectId).Distinct().ToList();
+
+                if (!projectIds.Any())
+                {
+                    return Ok(new List<object>());
+                }
+
+                // Get all projects to find their Project Managers
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var contractorProjects = projects
+                    .Where(p => projectIds.Contains(p.ProjectId))
+                    .ToList();
+
+                // Get unique Project Manager IDs
+                var pmIds = contractorProjects
+                    .Where(p => !string.IsNullOrEmpty(p.ProjectManagerId))
+                    .Select(p => p.ProjectManagerId)
+                    .Distinct()
+                    .ToList();
+
+                // Get all users to find Project Managers and Admins
+                var users = await _firebaseService.GetCollectionAsync<User>("users");
+
+                // Get Project Managers and Admins
+                var projectManagersAndAdmins = users
+                    .Where(u => pmIds.Contains(u.UserId) || u.Role == "Admin")
+                    .ToList();
+
+                var availableUsers = projectManagersAndAdmins
+                    .Select(u => new
+                    {
+                        UserId = u.UserId,
+                        FullName = u.FullName,
+                        Role = u.Role,
+                        Email = u.Email,
+                    })
+                    .ToList();
+
+                return Ok(availableUsers);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("messaging/available-projects")]
+        public async Task<ActionResult<List<object>>> GetAvailableProjectsForMessaging()
+        {
+            try
+            {
+                var contractorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(contractorId))
+                {
+                    return Unauthorized("Contractor ID not found");
+                }
+
+                // Get all projects where this contractor has tasks
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var contractorTasks = tasks.Where(t => t.AssignedTo == contractorId).ToList();
+                var projectIds = contractorTasks.Select(t => t.ProjectId).Distinct().ToList();
+
+                if (!projectIds.Any())
+                {
+                    return Ok(new List<object>());
+                }
+
+                // Get the projects
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var contractorProjects = projects
+                    .Where(p => projectIds.Contains(p.ProjectId))
+                    .Select(p => new
+                    {
+                        ProjectId = p.ProjectId,
+                        Name = p.Name,
+                        Description = p.Description,
+                        Status = p.Status,
+                    })
+                    .ToList();
+
+                return Ok(contractorProjects);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
         }
 
         [HttpGet("debug/tasks")]
@@ -560,6 +682,52 @@ namespace ICCMS_API.Controllers
                     report
                 );
 
+                // Update task progress if provided
+                if (report.ProgressPercentage.HasValue)
+                {
+                    task.Progress = report.ProgressPercentage.Value;
+                    await _firebaseService.UpdateDocumentAsync("tasks", taskId, task);
+
+                    Console.WriteLine(
+                        $"[SubmitProgressReport] Updated task {taskId} progress to {report.ProgressPercentage.Value}%"
+                    );
+                }
+
+                // Send workflow notification to project manager
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(currentUserId))
+                {
+                    // Get the project to find the project manager
+                    var project = await _firebaseService.GetDocumentAsync<Project>(
+                        "projects",
+                        task.ProjectId
+                    );
+                    var projectManagerId = project?.ProjectManagerId ?? string.Empty;
+
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "progress_report",
+                        EntityId = report.ProgressReportId,
+                        EntityType = "progress_report",
+                        Action = "submitted",
+                        ProjectId = task.ProjectId,
+                        UserId = currentUserId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "reportId", report.ProgressReportId },
+                            { "submittedById", currentUserId },
+                            { "projectManagerId", projectManagerId },
+                            { "taskName", task.Name },
+                            { "projectName", project?.Name ?? "Unknown Project" },
+                            { "progressPercentage", report.ProgressPercentage?.ToString() ?? "0" },
+                            { "notes", report.Description ?? "" },
+                            { "reportDate", report.SubmittedAt.ToString("MMM dd, yyyy") },
+                            { "submittedByName", currentUserId }, // This should be the user's name, but we'll use ID for now
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
+                }
+
                 return Ok(report);
             }
             catch (Exception ex)
@@ -620,6 +788,38 @@ namespace ICCMS_API.Controllers
                 // Update task status to "Awaiting Approval"
                 task.Status = "Awaiting Approval";
                 await _firebaseService.UpdateDocumentAsync("tasks", taskId, task);
+
+                // Send workflow notification to project manager
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(currentUserId))
+                {
+                    // Get the project to find the project manager
+                    var project = await _firebaseService.GetDocumentAsync<Project>(
+                        "projects",
+                        task.ProjectId
+                    );
+                    var projectManagerId = project?.ProjectManagerId ?? string.Empty;
+
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "completion_request",
+                        EntityId = taskId,
+                        EntityType = "task",
+                        Action = "completion_requested",
+                        ProjectId = task.ProjectId,
+                        UserId = currentUserId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "taskId", taskId },
+                            { "requestedById", currentUserId },
+                            { "projectManagerId", projectManagerId },
+                            { "taskName", task.Name },
+                            { "projectName", project?.Name ?? "Unknown Project" },
+                            { "requestedByName", currentUserId }, // This should be the user's name, but we'll use ID for now
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
+                }
 
                 return Ok(
                     new
@@ -740,6 +940,35 @@ namespace ICCMS_API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("projects")]
+        public async Task<IActionResult> GetProjects()
+        {
+            try
+            {
+                var contractorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(contractorId))
+                {
+                    return Unauthorized("User not identified.");
+                }
+
+                var tasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var contractorTasks = tasks.Where(t => t.AssignedTo == contractorId).ToList();
+                var projectIds = contractorTasks.Select(t => t.ProjectId).Distinct().ToList();
+
+                var projects = await _firebaseService.GetCollectionAsync<Project>("projects");
+                var contractorProjects = projects
+                    .Where(p => projectIds.Contains(p.ProjectId))
+                    .ToList();
+
+                return Ok(contractorProjects);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                return StatusCode(500, "An error occurred while fetching projects.");
             }
         }
     }

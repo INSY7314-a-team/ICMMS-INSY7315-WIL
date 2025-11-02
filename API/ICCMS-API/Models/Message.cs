@@ -63,5 +63,13 @@ namespace ICCMS_API.Models
 
         [FirestoreProperty("hasAttachments")]
         public bool HasAttachments { get; set; } = false;
+
+        [FirestoreProperty("status")]
+        public string Status { get; set; } = "active"; // "active", "deleted", "archived"
+    }
+
+    public class MessageWithSender : Message
+    {
+        public string SenderName { get; set; } = string.Empty;
     }
 }

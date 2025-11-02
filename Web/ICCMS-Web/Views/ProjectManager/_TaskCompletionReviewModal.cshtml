@@ -63,13 +63,24 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const taskCompletionModal = document.getElementById('taskCompletionReviewModal');
-        const completionRejectionModal = document.getElementById('completionRejectionModal');
+        const taskCompletionModalElement = document.getElementById('taskCompletionReviewModal');
+        const completionRejectionModalElement = document.getElementById('completionRejectionModal');
+        
+        // Create Bootstrap modal instances
+        const taskCompletionModal = taskCompletionModalElement ? new bootstrap.Modal(taskCompletionModalElement) : null;
+        const completionRejectionModal = completionRejectionModalElement ? new bootstrap.Modal(completionRejectionModalElement) : null;
         const taskCompletionContent = document.getElementById('taskCompletionContent');
         const approveCompletionBtn = document.getElementById('approveCompletionBtn');
         const rejectCompletionBtn = document.getElementById('rejectCompletionBtn');
         const confirmRejectCompletionBtn = document.getElementById('confirmRejectCompletionBtn');
         const rejectionFeedback = document.getElementById('rejectionFeedback');
+
+        // Check if all required elements exist
+        if (!taskCompletionModal || !completionRejectionModal || !taskCompletionContent || 
+            !approveCompletionBtn || !rejectCompletionBtn || !confirmRejectCompletionBtn || !rejectionFeedback) {
+            console.warn('Task completion modal elements not found');
+            return;
+        }
 
         let currentTaskId = null;
 
@@ -158,9 +169,11 @@
         });
 
         // Reset rejection feedback when modal is shown
-        completionRejectionModal.addEventListener('show.bs.modal', function () {
-            rejectionFeedback.value = '';
-        });
+        if (completionRejectionModal) {
+            completionRejectionModal.addEventListener('show.bs.modal', function () {
+                rejectionFeedback.value = '';
+            });
+        }
 
         // Global function to show task completion (called from approval actions)
         window.showTaskCompletion = function (taskId) {

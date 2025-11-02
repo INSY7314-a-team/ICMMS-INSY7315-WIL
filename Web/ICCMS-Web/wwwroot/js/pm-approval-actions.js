@@ -51,6 +51,66 @@ function initializeApprovalActions() {
 
 // Progress report approval functions removed - reports are now auto-approved
 
+function approveProgressReport(reportId) {
+  console.log(`Approving progress report: ${reportId}`);
+
+  // Show loading state
+  const button = document.querySelector(`[data-report-id="${reportId}"]`);
+  if (button) {
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Approving...';
+  }
+
+  // Make API call to approve progress report
+  fetch(`/ProjectManager/ApproveProgressReport/${reportId}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      RequestVerificationToken: getAntiForgeryToken(),
+    },
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        showSuccessMessage("Progress report approved successfully");
+        // Refresh the page or update UI
+        location.reload();
+      } else {
+        showErrorMessage(data.message || "Failed to approve progress report");
+      }
+    })
+    .catch((error) => {
+      console.error("Error approving progress report:", error);
+      showErrorMessage("Error approving progress report");
+    })
+    .finally(() => {
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-check"></i> Approve';
+      }
+    });
+}
+
+function showProgressReport(reportId) {
+  console.log(`Showing progress report details: ${reportId}`);
+
+  // Make API call to get progress report details
+  fetch(`/ProjectManager/GetProgressReport/${reportId}`)
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        // Show progress report details in a modal
+        showProgressReportModal(data.report);
+      } else {
+        showErrorMessage(data.message || "Failed to load progress report");
+      }
+    })
+    .catch((error) => {
+      console.error("Error loading progress report:", error);
+      showErrorMessage("Error loading progress report");
+    });
+}
+
 function approveTaskCompletion(taskId) {
   console.log("Approve task completion:", taskId);
 
@@ -63,7 +123,7 @@ function approveTaskCompletion(taskId) {
 
   // Make real API call
   fetch(
-    `/ProjectManager/ApproveCompletionReport?id=${encodeURIComponent(taskId)}`,
+    `/ProjectManager/ApproveTaskCompletion?taskId=${encodeURIComponent(taskId)}`,
     {
       method: "POST",
       headers: {
@@ -71,18 +131,28 @@ function approveTaskCompletion(taskId) {
       },
     }
   )
-    .then(async (response) => {
-      console.log("📡 Approval response status:", response.status);
-      const responseData = await response.json();
+  .then(async (response) => {
+    console.log("📡 Approval response status:", response.status);
+    
+    // Check if response has content before trying to parse JSON
+    const responseText = await response.text();
+    console.log("📡 Response text:", responseText);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    // Try to parse JSON, but handle empty responses
+    let responseData;
+    try {
+      responseData = responseText ? JSON.parse(responseText) : { success: false, message: "Empty response" };
+    } catch (parseError) {
+      console.error("❌ Failed to parse JSON response:", parseError);
+      throw new Error("Invalid response format from server");
+    }
 
-      if (!response.ok) {
-        throw new Error(
-          responseData.error || `HTTP error! status: ${response.status}`
-        );
-      }
-
-      return responseData;
-    })
+    return responseData;
+  })
     .then((data) => {
       console.log("✅ Task completion approved successfully:", data);
 
@@ -486,4 +556,113 @@ function showInfoMessage(message) {
   } else {
     console.log("Info:", message);
   }
+}
+
+function getAntiForgeryToken() {
+  const token = document.querySelector(
+    'input[name="__RequestVerificationToken"]'
+  );
+  return token ? token.value : "";
+}
+
+function showErrorMessage(message) {
+  if (typeof window.PMProjectDetail?.showErrorMessage === "function") {
+    window.PMProjectDetail.showErrorMessage(message);
+  } else {
+    alert(message);
+  }
+}
+
+function showProgressReportModal(report) {
+  // Create modal HTML
+  const modalHtml = `
+    <div class="modal fade" id="progressReportModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Progress Report Details</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <h6>Task Information</h6>
+                <p><strong>Task:</strong> ${report.taskName || "N/A"}</p>
+                <p><strong>Contractor:</strong> ${
+                  report.contractorName || "N/A"
+                }</p>
+                <p><strong>Date:</strong> ${new Date(
+                  report.submittedAt
+                ).toLocaleDateString()}</p>
+              </div>
+              <div class="col-md-6">
+                <h6>Progress Details</h6>
+                <p><strong>Hours Worked:</strong> ${report.hoursWorked || 0}</p>
+                <p><strong>Progress:</strong> ${
+                  report.progressPercentage || 0
+                }%</p>
+                <p><strong>Status:</strong> <span class="badge bg-info">${
+                  report.status || "Submitted"
+                }</span></p>
+              </div>
+            </div>
+            <div class="row mt-3">
+              <div class="col-12">
+                <h6>Description</h6>
+                <p>${report.description || "No description provided"}</p>
+              </div>
+            </div>
+            ${
+              report.attachments && report.attachments.length > 0
+                ? `
+              <div class="row mt-3">
+                <div class="col-12">
+                  <h6>Attachments</h6>
+                  <ul class="list-group">
+                    ${report.attachments
+                      .map(
+                        (attachment) => `
+                      <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-file me-2"></i>${attachment.fileName}</span>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewAttachment('${attachment.documentId}', 'progress', '${report.reportId}')">
+                          <i class="fas fa-eye"></i> View
+                        </button>
+                      </li>
+                    `
+                      )
+                      .join("")}
+                  </ul>
+                </div>
+              </div>
+            `
+                : ""
+            }
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-success" onclick="approveProgressReport('${
+              report.reportId
+            }')">
+              <i class="fas fa-check"></i> Approve Report
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Remove existing modal if any
+  const existingModal = document.getElementById("progressReportModal");
+  if (existingModal) {
+    existingModal.remove();
+  }
+
+  // Add modal to page
+  document.body.insertAdjacentHTML("beforeend", modalHtml);
+
+  // Show modal
+  const modal = new bootstrap.Modal(
+    document.getElementById("progressReportModal")
+  );
+  modal.show();
 }

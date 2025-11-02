@@ -83,23 +83,49 @@ function deleteTask(taskId) {
   }
 
   // Show loading state
-  showInfoMessage("Deleting task...");
+  const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+  const deleteBtn = taskCard?.querySelector('.delete-task-btn');
+  if (deleteBtn) {
+    deleteBtn.disabled = true;
+    deleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+  }
 
-  // Simulate API call
-  setTimeout(() => {
-    // Remove the task card from the UI
-    const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
-    if (taskCard) {
-      taskCard.remove();
+  // Call API to delete task
+  fetch(`/ProjectManager/DeleteTask?id=${encodeURIComponent(taskId)}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'RequestVerificationToken': (document.querySelector('input[name="__RequestVerificationToken"]') || {}).value || ''
     }
-
-    showSuccessMessage("Task deleted successfully");
-
-    // Refresh tasks list
-    if (typeof window.refreshTasksList === "function") {
-      window.refreshTasksList();
-    }
-  }, 1000);
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Remove the task card from the UI
+        if (taskCard) {
+          taskCard.remove();
+        }
+        showSuccessMessage("Task deleted successfully");
+        // Refresh the page to update the UI
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      } else {
+        showErrorMessage(data.message || "Failed to delete task");
+        if (deleteBtn) {
+          deleteBtn.disabled = false;
+          deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+        }
+      }
+    })
+    .catch(error => {
+      console.error("Error deleting task:", error);
+      showErrorMessage("An error occurred while deleting the task");
+      if (deleteBtn) {
+        deleteBtn.disabled = false;
+        deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+      }
+    });
 }
 
 function populateTaskForm(taskData) {

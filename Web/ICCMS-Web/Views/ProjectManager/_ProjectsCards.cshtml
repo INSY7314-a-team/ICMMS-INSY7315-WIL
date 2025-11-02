@@ -8,7 +8,9 @@
     ViewBag.Estimate = null;
     ViewBag.Progress = 0;
     ViewBag.StatusBadgeClass = "badge-light";
-    ViewBag.ClientName = null;
+    
+    // Set client name to ClientId as fallback (will be resolved by frontend if needed)
+    ViewBag.ClientName = project.ClientId;
 
     @await Html.PartialAsync("_ProjectCard", project)
 }

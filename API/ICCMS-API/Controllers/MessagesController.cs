@@ -1,3 +1,6 @@
+using System.Security.Claims;
+using ICCMS_API.Auth;
+using ICCMS_API.Helpers;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -61,48 +64,52 @@ namespace ICCMS_API.Controllers
             try
             {
                 var messages = await _firebaseService.GetCollectionAsync<Message>("messages");
-                
+
                 // Apply filters
                 if (!string.IsNullOrEmpty(messageType))
                 {
-                    messages = messages.Where(m => m.MessageType.Equals(messageType, StringComparison.OrdinalIgnoreCase)).ToList();
+                    messages = messages
+                        .Where(m =>
+                            m.MessageType.Equals(messageType, StringComparison.OrdinalIgnoreCase)
+                        )
+                        .ToList();
                 }
-                
+
                 if (!string.IsNullOrEmpty(projectId))
                 {
                     messages = messages.Where(m => m.ProjectId == projectId).ToList();
                 }
-                
+
                 if (!string.IsNullOrEmpty(senderId))
                 {
                     messages = messages.Where(m => m.SenderId == senderId).ToList();
                 }
-                
+
                 if (!string.IsNullOrEmpty(receiverId))
                 {
                     messages = messages.Where(m => m.ReceiverId == receiverId).ToList();
                 }
-                
+
                 if (!string.IsNullOrEmpty(threadId))
                 {
                     messages = messages.Where(m => m.ThreadId == threadId).ToList();
                 }
-                
+
                 if (isRead.HasValue)
                 {
                     messages = messages.Where(m => m.IsRead == isRead.Value).ToList();
                 }
-                
+
                 if (startDate.HasValue)
                 {
                     messages = messages.Where(m => m.SentAt >= startDate.Value).ToList();
                 }
-                
+
                 if (endDate.HasValue)
                 {
                     messages = messages.Where(m => m.SentAt <= endDate.Value).ToList();
                 }
-                
+
                 return Ok(messages.OrderByDescending(m => m.SentAt));
             }
             catch (Exception ex)
@@ -123,28 +130,32 @@ namespace ICCMS_API.Controllers
             try
             {
                 var threads = await _firebaseService.GetCollectionAsync<MessageThread>("threads");
-                
+
                 // Apply filters
                 if (!string.IsNullOrEmpty(projectId))
                 {
                     threads = threads.Where(t => t.ProjectId == projectId).ToList();
                 }
-                
+
                 if (!string.IsNullOrEmpty(threadType))
                 {
-                    threads = threads.Where(t => t.ThreadType.Equals(threadType, StringComparison.OrdinalIgnoreCase)).ToList();
+                    threads = threads
+                        .Where(t =>
+                            t.ThreadType.Equals(threadType, StringComparison.OrdinalIgnoreCase)
+                        )
+                        .ToList();
                 }
-                
+
                 if (startDate.HasValue)
                 {
                     threads = threads.Where(t => t.CreatedAt >= startDate.Value).ToList();
                 }
-                
+
                 if (endDate.HasValue)
                 {
                     threads = threads.Where(t => t.CreatedAt <= endDate.Value).ToList();
                 }
-                
+
                 return Ok(threads.Where(t => t.IsActive).OrderByDescending(t => t.LastMessageAt));
             }
             catch (Exception ex)
@@ -170,7 +181,9 @@ namespace ICCMS_API.Controllers
             try
             {
                 // Get all threads
-                var allThreads = await _firebaseService.GetCollectionAsync<MessageThread>("threads");
+                var allThreads = await _firebaseService.GetCollectionAsync<MessageThread>(
+                    "threads"
+                );
                 var activeThreads = allThreads.Where(t => t.IsActive).ToList();
 
                 // Get all users for name resolution
@@ -193,7 +206,9 @@ namespace ICCMS_API.Controllers
                 // Thread type filter
                 if (!string.IsNullOrEmpty(threadType) && threadType != "all")
                 {
-                    filteredThreads = filteredThreads.Where(t => t.ThreadType.Equals(threadType, StringComparison.OrdinalIgnoreCase));
+                    filteredThreads = filteredThreads.Where(t =>
+                        t.ThreadType.Equals(threadType, StringComparison.OrdinalIgnoreCase)
+                    );
                 }
 
                 // User filter (check if user is in participants)
@@ -205,7 +220,9 @@ namespace ICCMS_API.Controllers
                 // Date filters
                 if (startDate.HasValue)
                 {
-                    filteredThreads = filteredThreads.Where(t => t.LastMessageAt >= startDate.Value);
+                    filteredThreads = filteredThreads.Where(t =>
+                        t.LastMessageAt >= startDate.Value
+                    );
                 }
 
                 if (endDate.HasValue)
@@ -217,10 +234,15 @@ namespace ICCMS_API.Controllers
                 if (!string.IsNullOrEmpty(searchTerm))
                 {
                     var searchLower = searchTerm.ToLower();
-                    filteredThreads = filteredThreads.Where(t => 
-                        t.Subject.ToLower().Contains(searchLower) ||
-                        (projectsDict.ContainsKey(t.ProjectId) && projectsDict[t.ProjectId].ToLower().Contains(searchLower)) ||
-                        t.Participants.Any(p => usersDict.ContainsKey(p) && usersDict[p].ToLower().Contains(searchLower))
+                    filteredThreads = filteredThreads.Where(t =>
+                        t.Subject.ToLower().Contains(searchLower)
+                        || (
+                            projectsDict.ContainsKey(t.ProjectId)
+                            && projectsDict[t.ProjectId].ToLower().Contains(searchLower)
+                        )
+                        || t.Participants.Any(p =>
+                            usersDict.ContainsKey(p) && usersDict[p].ToLower().Contains(searchLower)
+                        )
                     );
                 }
 
@@ -228,21 +250,27 @@ namespace ICCMS_API.Controllers
                 if (!string.IsNullOrEmpty(readStatus) && readStatus != "all")
                 {
                     var threadsWithReadStatus = new List<MessageThread>();
-                    
+
                     foreach (var thread in filteredThreads.Take(100)) // Limit to 100 for performance
                     {
                         try
                         {
-                            var messages = await _firebaseService.GetCollectionAsync<Message>("messages");
-                            var threadMessages = messages.Where(m => m.ThreadId == thread.ThreadId).ToList();
-                            
+                            var messages = await _firebaseService.GetCollectionAsync<Message>(
+                                "messages"
+                            );
+                            var threadMessages = messages
+                                .Where(m => m.ThreadId == thread.ThreadId)
+                                .ToList();
+
                             if (threadMessages.Any())
                             {
                                 var hasUnreadMessages = threadMessages.Any(m => !m.IsRead);
                                 var allRead = threadMessages.All(m => m.IsRead);
-                                
-                                if ((readStatus == "unread" && hasUnreadMessages) || 
-                                    (readStatus == "read" && allRead))
+
+                                if (
+                                    (readStatus == "unread" && hasUnreadMessages)
+                                    || (readStatus == "read" && allRead)
+                                )
                                 {
                                     threadsWithReadStatus.Add(thread);
                                 }
@@ -254,12 +282,14 @@ namespace ICCMS_API.Controllers
                             continue;
                         }
                     }
-                    
+
                     filteredThreads = threadsWithReadStatus.AsQueryable();
                 }
 
                 // Order by last message date
-                var orderedThreads = filteredThreads.OrderByDescending(t => t.LastMessageAt).ToList();
+                var orderedThreads = filteredThreads
+                    .OrderByDescending(t => t.LastMessageAt)
+                    .ToList();
 
                 // Apply pagination
                 var totalCount = orderedThreads.Count;
@@ -273,29 +303,31 @@ namespace ICCMS_API.Controllers
                 var threadSummaries = new List<ThreadSummary>();
                 foreach (var thread in pagedThreads)
                 {
-                    var participantNames = thread.Participants
-                        .Where(p => usersDict.ContainsKey(p))
+                    var participantNames = thread
+                        .Participants.Where(p => usersDict.ContainsKey(p))
                         .Select(p => usersDict[p])
                         .ToList();
 
-                    var projectName = projectsDict.ContainsKey(thread.ProjectId) 
-                        ? projectsDict[thread.ProjectId] 
+                    var projectName = projectsDict.ContainsKey(thread.ProjectId)
+                        ? projectsDict[thread.ProjectId]
                         : "Unknown Project";
 
-                    threadSummaries.Add(new ThreadSummary
-                    {
-                        ThreadId = thread.ThreadId,
-                        Subject = thread.Subject,
-                        ProjectId = thread.ProjectId,
-                        ProjectName = projectName,
-                        ThreadType = thread.ThreadType,
-                        Participants = thread.Participants,
-                        ParticipantNames = participantNames,
-                        MessageCount = thread.MessageCount,
-                        LastMessageAt = thread.LastMessageAt,
-                        CreatedAt = thread.CreatedAt,
-                        IsActive = thread.IsActive
-                    });
+                    threadSummaries.Add(
+                        new ThreadSummary
+                        {
+                            ThreadId = thread.ThreadId,
+                            Subject = thread.Subject,
+                            ProjectId = thread.ProjectId,
+                            ProjectName = projectName,
+                            ThreadType = thread.ThreadType,
+                            Participants = thread.Participants,
+                            ParticipantNames = participantNames,
+                            MessageCount = thread.MessageCount,
+                            LastMessageAt = thread.LastMessageAt,
+                            CreatedAt = thread.CreatedAt,
+                            IsActive = thread.IsActive,
+                        }
+                    );
                 }
 
                 var response = new FilteredThreadsResponse
@@ -304,7 +336,7 @@ namespace ICCMS_API.Controllers
                     TotalCount = totalCount,
                     Page = page,
                     PageSize = pageSize,
-                    TotalPages = totalPages
+                    TotalPages = totalPages,
                 };
 
                 return Ok(response);
@@ -348,6 +380,28 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpGet("user/{userId}/workflow")]
+        public async Task<ActionResult<List<WorkflowMessage>>> GetWorkflowMessagesByUser(
+            string userId
+        )
+        {
+            try
+            {
+                var workflowMessages = await _firebaseService.GetCollectionAsync<WorkflowMessage>(
+                    "workflow-messages"
+                );
+                var userWorkflowMessages = workflowMessages
+                    .Where(wm => wm.Recipients.Contains(userId))
+                    .OrderByDescending(wm => wm.CreatedAt)
+                    .ToList();
+                return Ok(userWorkflowMessages);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
         [HttpGet("project/{projectId}")]
         public async Task<ActionResult<List<Message>>> GetMessagesByProject(string projectId)
         {
@@ -363,14 +417,26 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        // =================================================================================================
+        // POST: /api/messages
+        // =================================================================================================
+        [Authorize]
         [HttpPost]
-        public async Task<ActionResult<string>> CreateMessage(
-            [FromBody] CreateMessageRequest request
-        )
+        public async Task<IActionResult> CreateMessage([FromBody] CreateMessageRequest request)
         {
             try
             {
-                // Validate the message
+                // 1. Get sender ID from authenticated user
+                var senderId = User.UserId();
+                if (string.IsNullOrEmpty(senderId))
+                {
+                    return Unauthorized("Sender not identified.");
+                }
+
+                // 2. Populate sender ID in request for validation
+                request.SenderId = senderId;
+
+                // 3. Validate the request
                 var validationResult = await _validationService.ValidateMessageAsync(request);
                 if (!validationResult.IsValid)
                 {
@@ -384,189 +450,192 @@ namespace ICCMS_API.Controllers
                     );
                 }
 
-                // Create message from validated request
+                MessageThread thread;
+                bool isNewThread = false;
+
+                // 4. Find or Create the Thread
+                if (!string.IsNullOrEmpty(request.ThreadId))
+                {
+                    // A threadId was provided, so we're replying.
+                    thread = await _firebaseService.GetDocumentAsync<MessageThread>(
+                        "threads",
+                        request.ThreadId
+                    );
+
+                    if (thread == null)
+                    {
+                        // Thread not found in threads collection. Try to reconstruct from existing messages.
+                        Console.WriteLine(
+                            $"[CreateMessage] Thread {request.ThreadId} not found in threads collection. Attempting to reconstruct from messages."
+                        );
+
+                        var messages = await _firebaseService.GetCollectionAsync<Message>(
+                            "messages"
+                        );
+                        var threadMessages = messages
+                            .Where(m => m.ThreadId == request.ThreadId)
+                            .ToList();
+
+                        if (!threadMessages.Any())
+                        {
+                            return BadRequest(
+                                "Thread not found - no messages exist for this thread."
+                            );
+                        }
+
+                        var firstMessage = threadMessages.OrderBy(m => m.SentAt).First();
+
+                        // Reconstruct thread from message data
+                        thread = new MessageThread
+                        {
+                            ThreadId = request.ThreadId,
+                            Subject = firstMessage.Subject,
+                            ProjectId = firstMessage.ProjectId,
+                            Participants = firstMessage.ThreadParticipants ?? new List<string>(),
+                            CreatedAt = firstMessage.SentAt,
+                            IsActive = true,
+                            ThreadType =
+                                (firstMessage.ThreadParticipants?.Count ?? 0) > 2
+                                    ? "group"
+                                    : "direct",
+                            StarterMessageId = firstMessage.MessageId,
+                            LastMessageId = threadMessages
+                                .OrderByDescending(m => m.SentAt)
+                                .First()
+                                .MessageId,
+                            LastMessageAt = threadMessages.Max(m => m.SentAt),
+                        };
+
+                        // Save the reconstructed thread to the threads collection
+                        await _firebaseService.AddDocumentWithIdAsync(
+                            "threads",
+                            thread.ThreadId,
+                            thread
+                        );
+                        Console.WriteLine(
+                            $"[CreateMessage] Reconstructed and saved thread {thread.ThreadId} to threads collection."
+                        );
+                    }
+
+                    Console.WriteLine(
+                        $"[CreateMessage] Replying to thread {thread.ThreadId}. Populating details."
+                    );
+
+                    // Populate request fields from thread for validation and message creation
+                    request.ProjectId = thread.ProjectId;
+                    request.Subject = thread.Subject;
+                    request.ThreadParticipants = thread.Participants;
+
+                    // If replying to a thread, and ReceiverId is not provided, find it.
+                    if (string.IsNullOrEmpty(request.ReceiverId))
+                    {
+                        request.ReceiverId = thread.Participants.FirstOrDefault(p => p != senderId);
+                        Console.WriteLine(
+                            $"[CreateMessage] ReceiverId was missing. Inferred as {request.ReceiverId}."
+                        );
+                    }
+                }
+                else if (
+                    request.ThreadParticipants != null
+                    && request.ThreadParticipants.Count == 2
+                )
+                {
+                    // No threadId provided, this is a new direct message. Check if a thread already exists.
+                    var threads = await _firebaseService.GetCollectionAsync<MessageThread>(
+                        "threads"
+                    );
+                    var requestParticipants = new HashSet<string>(request.ThreadParticipants);
+
+                    thread = threads.FirstOrDefault(t =>
+                        t.ThreadType == "direct"
+                        && t.Participants != null
+                        && t.Participants.Count == 2
+                        && new HashSet<string>(t.Participants).SetEquals(requestParticipants)
+                    );
+
+                    if (thread == null)
+                    {
+                        // No existing thread found, create one.
+                        isNewThread = true;
+                        thread = new MessageThread
+                        {
+                            ThreadId = Guid.NewGuid().ToString(),
+                            Subject = request.Subject,
+                            Participants = request.ThreadParticipants,
+                            CreatedAt = DateTime.UtcNow,
+                            IsActive = true,
+                            ThreadType = "direct",
+                        };
+                    }
+                }
+                else
+                {
+                    return BadRequest("New direct messages must have exactly two participants.");
+                }
+
+                // 5. Create the Message
                 var message = new Message
                 {
                     MessageId = Guid.NewGuid().ToString(),
-                    SenderId = request.SenderId,
+                    SenderId = senderId,
                     ReceiverId = request.ReceiverId,
+                    ThreadParticipants = thread.Participants,
                     ProjectId = request.ProjectId,
-                    Subject = request.Subject,
+                    Subject = thread.Subject,
                     Content = request.Content,
                     SentAt = DateTime.UtcNow,
-                    ThreadId = request.ThreadId ?? Guid.NewGuid().ToString(),
-                    ParentMessageId = request.ParentMessageId,
-                    IsThreadStarter = string.IsNullOrEmpty(request.ThreadId),
-                    ThreadDepth = string.IsNullOrEmpty(request.ParentMessageId) ? 0 : 1,
-                    MessageType = request.MessageType,
-                    ThreadParticipants = request.ThreadParticipants,
+                    ThreadId = thread.ThreadId,
+                    IsThreadStarter = isNewThread,
+                    IsRead = false,
+                    MessageType = "direct",
                 };
+                await _firebaseService.AddDocumentWithIdAsync(
+                    "messages",
+                    message.MessageId,
+                    message
+                );
 
-                // If this is a new thread starter, create thread ID
-                if (string.IsNullOrEmpty(request.ThreadId))
+                // 6. Update and Save the Thread Document
+                thread.LastMessageAt = message.SentAt;
+                if (isNewThread)
                 {
-                    message.IsThreadStarter = true;
-                    message.ThreadDepth = 0;
-                    message.MessageType = "thread";
-                }
-
-                var messageId = await _firebaseService.AddDocumentAsync("messages", message);
-
-                // Update thread information if this is a thread starter
-                if (message.IsThreadStarter)
-                {
-                    await CreateOrUpdateThreadAsync(message);
-                }
-                else if (!string.IsNullOrEmpty(message.ThreadId))
-                {
-                    await UpdateThreadAsync(message);
-                }
-
-                // Send push notification to the receiver
-                await SendMessageNotificationAsync(message);
-
-                // Return warnings if any
-                if (validationResult.Warnings.Any())
-                {
-                    return Ok(new { messageId, warnings = validationResult.Warnings });
-                }
-
-                return Ok(messageId);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
-        }
-
-        [HttpPost("broadcast")]
-        public async Task<ActionResult<string>> BroadcastMessage(
-            [FromBody] BroadcastMessageRequest request
-        )
-        {
-            try
-            {
-                var messageId = Guid.NewGuid().ToString();
-                var sentAt = DateTime.UtcNow;
-
-                // Get all users in the project
-                var users = await _firebaseService.GetCollectionAsync<User>("users");
-                var projectUsers = users.Where(u => u.IsActive).ToList();
-
-                var deviceTokens = new List<string>();
-                var notifications = new List<Task>();
-
-                foreach (var user in projectUsers)
-                {
-                    if (!string.IsNullOrEmpty(user.DeviceToken))
-                    {
-                        deviceTokens.Add(user.DeviceToken);
-                    }
-
-                    // Create individual message record for each user
-                    var message = new Message
-                    {
-                        MessageId = $"{messageId}_{user.UserId}",
-                        SenderId = request.SenderId,
-                        ReceiverId = user.UserId,
-                        ProjectId = request.ProjectId,
-                        Subject = request.Subject,
-                        Content = request.Content,
-                        IsRead = false,
-                        SentAt = sentAt,
-                    };
-
-                    await _firebaseService.AddDocumentAsync("messages", message);
-                }
-
-                // Send push notification to all users with device tokens
-                if (deviceTokens.Any())
-                {
-                    var notificationData = new Dictionary<string, string>
-                    {
-                        { "messageId", messageId },
-                        { "senderId", request.SenderId },
-                        { "projectId", request.ProjectId },
-                        { "type", "broadcast" },
-                        { "action", "broadcast_message" },
-                    };
-
-                    await _notificationService.SendToMultipleDevicesAsync(
-                        deviceTokens,
-                        request.Subject,
-                        request.Content,
-                        notificationData
+                    await _firebaseService.AddDocumentWithIdAsync(
+                        "threads",
+                        thread.ThreadId,
+                        thread
                     );
                 }
+                else
+                {
+                    await _firebaseService.UpdateDocumentAsync("threads", thread.ThreadId, thread);
+                }
 
-                return Ok(new { messageId, recipientsCount = projectUsers.Count });
+                // 7. Return a detailed success response
+                return Ok(
+                    new
+                    {
+                        message = "Message sent successfully.",
+                        threadId = thread.ThreadId,
+                        messageId = message.MessageId,
+                    }
+                );
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                // Log the exception
+                return StatusCode(
+                    500,
+                    new { message = "An unexpected error occurred.", error = ex.Message }
+                );
             }
         }
 
-        [HttpPost("thread")]
-        public async Task<ActionResult<string>> CreateThread([FromBody] CreateThreadRequest request)
-        {
-            try
-            {
-                var threadId = Guid.NewGuid().ToString();
-                var messageId = Guid.NewGuid().ToString();
-                var sentAt = DateTime.UtcNow;
-
-                // Create the starter message
-                var starterMessage = new Message
-                {
-                    MessageId = messageId,
-                    SenderId = HttpContext.Items["UserId"] as string ?? string.Empty,
-                    ReceiverId = request.Participants.FirstOrDefault() ?? string.Empty,
-                    ProjectId = request.ProjectId,
-                    Subject = request.Subject,
-                    Content = request.Content,
-                    SentAt = sentAt,
-                    ThreadId = threadId,
-                    IsThreadStarter = true,
-                    ThreadDepth = 0,
-                    MessageType = "thread",
-                    ThreadParticipants = request.Participants,
-                };
-
-                await _firebaseService.AddDocumentAsync("messages", starterMessage);
-
-                // Create thread record
-                var thread = new MessageThread
-                {
-                    ThreadId = threadId,
-                    ProjectId = request.ProjectId,
-                    Subject = request.Subject,
-                    StarterMessageId = messageId,
-                    StarterUserId = starterMessage.SenderId,
-                    Participants = request.Participants,
-                    MessageCount = 1,
-                    LastMessageAt = sentAt,
-                    LastMessageId = messageId,
-                    LastMessageSenderId = starterMessage.SenderId,
-                    CreatedAt = sentAt,
-                    ThreadType = request.ThreadType,
-                    Tags = request.Tags,
-                };
-
-                await _firebaseService.AddDocumentAsync("threads", thread);
-
-                // Send notifications to all participants
-                await SendThreadNotificationAsync(starterMessage, request.Participants);
-
-                return Ok(new { threadId, messageId });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
-        }
-
-        [HttpPost("reply")]
+        // =================================================================================================
+        // POST: /api/messages/reply
+        // This is being deprecated in favor of the more robust CreateMessage endpoint.
+        // The logic is now handled by providing a threadId to CreateMessage.
+        // =================================================================================================
+        [NonAction] // Disabling this endpoint to prevent ambiguity
         public async Task<ActionResult<string>> ReplyToMessage(
             [FromBody] ReplyToMessageRequest request
         )
@@ -587,7 +656,7 @@ namespace ICCMS_API.Controllers
 
                 var messageId = Guid.NewGuid().ToString();
                 var sentAt = DateTime.UtcNow;
-                var senderId = HttpContext.Items["UserId"] as string ?? string.Empty;
+                var senderId = User.UserId() ?? string.Empty;
 
                 // Create reply message
                 var replyMessage = new Message
@@ -607,7 +676,11 @@ namespace ICCMS_API.Controllers
                     ThreadParticipants = parentMessage.ThreadParticipants,
                 };
 
-                await _firebaseService.AddDocumentAsync("messages", replyMessage);
+                await _firebaseService.AddDocumentWithIdAsync(
+                    "messages",
+                    replyMessage.MessageId,
+                    replyMessage
+                );
 
                 // Update thread information
                 await UpdateThreadAsync(replyMessage);
@@ -641,7 +714,7 @@ namespace ICCMS_API.Controllers
                 }
 
                 var threadSummaries = new List<ThreadSummary>();
-                var currentUserId = HttpContext.Items["UserId"] as string;
+                var currentUserId = User.UserId();
 
                 foreach (var thread in threads.Where(t => t.IsActive))
                 {
@@ -693,7 +766,7 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpGet("thread/{threadId}")]
-        public async Task<ActionResult<List<Message>>> GetThreadMessages(string threadId)
+        public async Task<ActionResult<List<MessageWithSender>>> GetThreadMessages(string threadId)
         {
             try
             {
@@ -703,11 +776,336 @@ namespace ICCMS_API.Controllers
                     .OrderBy(m => m.SentAt)
                     .ToList();
 
-                return Ok(threadMessages);
+                Console.WriteLine($"Found {threadMessages.Count} messages for thread {threadId}");
+                foreach (var msg in threadMessages)
+                {
+                    Console.WriteLine(
+                        $"Message: {msg.MessageId}, SenderId: '{msg.SenderId}', Content: {msg.Content.Substring(0, Math.Min(50, msg.Content.Length))}..."
+                    );
+                }
+
+                // Get unique sender IDs
+                var senderIds = threadMessages.Select(m => m.SenderId).Distinct().ToList();
+                Console.WriteLine(
+                    $"Found {senderIds.Count} unique sender IDs: {string.Join(", ", senderIds)}"
+                );
+
+                // Fetch sender information
+                var senders = new Dictionary<string, string>();
+                foreach (var senderId in senderIds)
+                {
+                    if (!string.IsNullOrEmpty(senderId) && senderId != "system")
+                    {
+                        try
+                        {
+                            Console.WriteLine($"Fetching user info for senderId: {senderId}");
+                            var user = await _firebaseService.GetDocumentAsync<User>(
+                                "users",
+                                senderId
+                            );
+                            if (user != null)
+                            {
+                                senders[senderId] =
+                                    user.FullName
+                                    ?? $"User {senderId.Substring(0, Math.Min(8, senderId.Length))}";
+                                Console.WriteLine($"Found user: {senders[senderId]}");
+                            }
+                            else
+                            {
+                                senders[senderId] =
+                                    $"User {senderId.Substring(0, Math.Min(8, senderId.Length))}";
+                                Console.WriteLine(
+                                    $"User not found, using fallback: {senders[senderId]}"
+                                );
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error fetching user {senderId}: {ex.Message}");
+                            senders[senderId] =
+                                $"User {senderId.Substring(0, Math.Min(8, senderId.Length))}";
+                        }
+                    }
+                    else if (senderId == "system")
+                    {
+                        senders[senderId] = "System";
+                        Console.WriteLine($"System sender: {senders[senderId]}");
+                    }
+                    else
+                    {
+                        senders[senderId] = "Unknown User";
+                        Console.WriteLine($"Empty senderId, using: {senders[senderId]}");
+                    }
+                }
+
+                // Create message with sender info
+                var messagesWithSenders = threadMessages
+                    .Select(m => new MessageWithSender
+                    {
+                        MessageId = m.MessageId,
+                        SenderId = m.SenderId,
+                        SenderName = senders.GetValueOrDefault(m.SenderId, "Unknown User"),
+                        ReceiverId = m.ReceiverId,
+                        ProjectId = m.ProjectId,
+                        Subject = m.Subject,
+                        Content = m.Content,
+                        IsRead = m.IsRead,
+                        SentAt = m.SentAt,
+                        ReadAt = m.ReadAt,
+                        ThreadId = m.ThreadId,
+                        ParentMessageId = m.ParentMessageId,
+                        IsThreadStarter = m.IsThreadStarter,
+                        ThreadDepth = m.ThreadDepth,
+                        MessageType = m.MessageType,
+                        ThreadParticipants = m.ThreadParticipants,
+                        ReplyCount = m.ReplyCount,
+                        LastReplyAt = m.LastReplyAt,
+                        HasAttachments = m.HasAttachments,
+                    })
+                    .ToList();
+
+                Console.WriteLine(
+                    $"Returning {messagesWithSenders.Count} messages with sender info"
+                );
+                return Ok(messagesWithSenders);
             }
             catch (Exception ex)
             {
                 return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpPost("thread/{threadId}/mark-as-read")]
+        public async Task<IActionResult> MarkThreadAsRead(string threadId)
+        {
+            try
+            {
+                var userId = User.UserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated." });
+                }
+
+                // Check if this is a workflow message thread (workflow messages use their WorkflowMessageId as threadId)
+                var workflowMessage = await _workflowService.GetWorkflowMessageAsync(threadId);
+                if (workflowMessage != null)
+                {
+                    Console.WriteLine(
+                        $"======== [MarkThreadAsRead] Thread {threadId} is a workflow message, using workflow message marking ========"
+                    );
+
+                    // Check if user is a recipient
+                    if (!workflowMessage.Recipients.Contains(userId))
+                    {
+                        Console.WriteLine(
+                            $"======== [MarkThreadAsRead] User {userId} is not a recipient of workflow message {threadId} ========"
+                        );
+                        return Forbid("User is not a recipient of this workflow message.");
+                    }
+
+                    // Mark workflow message as read
+                    var success = await _workflowService.MarkWorkflowMessageAsReadAsync(
+                        threadId,
+                        userId
+                    );
+                    if (success)
+                    {
+                        var workflowUnreadCount = await GetUnreadCountForUser(userId);
+                        return Ok(
+                            new
+                            {
+                                message = "Workflow message marked as read.",
+                                unreadCount = workflowUnreadCount,
+                                success = true,
+                            }
+                        );
+                    }
+                    else
+                    {
+                        return BadRequest(
+                            new
+                            {
+                                message = "Failed to mark workflow message as read.",
+                                unreadCount = -1,
+                                success = false,
+                            }
+                        );
+                    }
+                }
+
+                // Handle regular message threads
+                var thread = await _firebaseService.GetDocumentAsync<MessageThread>(
+                    "threads",
+                    threadId
+                );
+                if (thread == null)
+                {
+                    Console.WriteLine(
+                        $"======== [MarkThreadAsRead] Thread {threadId} not found in threads collection ========"
+                    );
+                    return BadRequest("Thread not found.");
+                }
+
+                // Check if user is a participant of this thread
+                if (thread.Participants == null || !thread.Participants.Contains(userId))
+                {
+                    Console.WriteLine(
+                        $"======== [MarkThreadAsRead] User {userId} is not a participant of thread {threadId} ========"
+                    );
+                    return Forbid("User is not a participant of this thread.");
+                }
+
+                var messages = await _firebaseService.GetCollectionAsync<Message>("messages");
+                var threadMessages = messages.Where(m => m.ThreadId == threadId).ToList();
+
+                Console.WriteLine(
+                    $"======== [MarkThreadAsRead] Found {threadMessages.Count} total messages in thread {threadId} ========"
+                );
+                foreach (var msg in threadMessages)
+                {
+                    Console.WriteLine(
+                        $"======== [MarkThreadAsRead] Message {msg.MessageId}: Sender={msg.SenderId}, Receiver={msg.ReceiverId}, IsRead={msg.IsRead}, Participants={string.Join(",", msg.ThreadParticipants ?? new List<string>())} ========"
+                    );
+                }
+
+                if (!threadMessages.Any())
+                {
+                    return Ok(new { message = "No messages found in thread." });
+                }
+
+                var messagesToUpdate = threadMessages
+                    .Where(m =>
+                        (
+                            m.ReceiverId == userId
+                            || (
+                                m.ThreadParticipants != null
+                                && m.ThreadParticipants.Contains(userId)
+                            )
+                        )
+                        && m.SenderId != userId
+                        && !m.IsRead
+                    )
+                    .ToList();
+
+                Console.WriteLine(
+                    $"======== [MarkThreadAsRead] Found {messagesToUpdate.Count} messages to mark as read for user {userId} in thread {threadId} ========"
+                );
+
+                if (messagesToUpdate.Count > 0)
+                {
+                    Console.WriteLine(
+                        $"======== [MarkThreadAsRead] Message IDs to update: {string.Join(", ", messagesToUpdate.Select(m => m.MessageId))} ========"
+                    );
+                }
+
+                var updateTasks = new List<Task>();
+                foreach (var message in messagesToUpdate)
+                {
+                    message.IsRead = true;
+                    message.ReadAt = DateTime.UtcNow;
+                    updateTasks.Add(
+                        _firebaseService.UpdateDocumentAsync("messages", message.MessageId, message)
+                    );
+                }
+
+                await Task.WhenAll(updateTasks);
+                Console.WriteLine(
+                    $"======== [MarkThreadAsRead] Completed updating {updateTasks.Count} messages in Firebase ========"
+                );
+
+                // Verify the updates worked by re-fetching
+                var verifyMessages = await _firebaseService.GetCollectionAsync<Message>("messages");
+                var verifyThreadMessages = verifyMessages
+                    .Where(m => m.ThreadId == threadId)
+                    .ToList();
+                var stillUnread = verifyThreadMessages
+                    .Where(m =>
+                        (
+                            m.ReceiverId == userId
+                            || (
+                                m.ThreadParticipants != null
+                                && m.ThreadParticipants.Contains(userId)
+                            )
+                        )
+                        && m.SenderId != userId
+                        && !m.IsRead
+                    )
+                    .ToList();
+
+                Console.WriteLine(
+                    $"======== [MarkThreadAsRead] After update verification: {stillUnread.Count} messages still unread in this thread ========"
+                );
+                if (stillUnread.Any())
+                {
+                    foreach (var msg in stillUnread)
+                    {
+                        Console.WriteLine(
+                            $"======== [MarkThreadAsRead] Still unread: {msg.MessageId} (IsRead={msg.IsRead}) ========"
+                        );
+                    }
+                }
+
+                var unreadCount = await GetUnreadCountForUser(userId);
+                Console.WriteLine(
+                    $"======== [MarkThreadAsRead] Recalculated unread count for user {userId} is {unreadCount}. ========"
+                );
+
+                return Ok(
+                    new
+                    {
+                        message = $"{messagesToUpdate.Count} message(s) marked as read.",
+                        unreadCount = unreadCount,
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                return StatusCode(500, new { message = $"An error occurred: {ex.Message}" });
+            }
+        }
+
+        [HttpPost("cleanup-duplicates")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public async Task<IActionResult> CleanupDuplicateMessages()
+        {
+            try
+            {
+                var messages = await _firebaseService.GetCollectionAsync<Message>("messages");
+                var groupedByMessageId = messages.GroupBy(m => m.MessageId);
+
+                var duplicatesRemoved = 0;
+                foreach (var group in groupedByMessageId.Where(g => g.Count() > 1))
+                {
+                    // Keep the most recently read message, or if none are read, keep the most recent one
+                    var messagesToRemove = group
+                        .OrderByDescending(m => m.IsRead)
+                        .ThenByDescending(m => m.SentAt)
+                        .Skip(1) // Skip the first (best) one
+                        .ToList();
+
+                    foreach (var message in messagesToRemove)
+                    {
+                        // We need to find the document by its Firestore ID, not MessageId
+                        // This is tricky because we don't have the Firestore document ID stored
+                        // For now, we'll just log the issue
+                        Console.WriteLine(
+                            $"======== [Cleanup] Found duplicate MessageId: {message.MessageId}, IsRead: {message.IsRead} ========"
+                        );
+                        duplicatesRemoved++;
+                    }
+                }
+
+                return Ok(
+                    new
+                    {
+                        message = $"Found {duplicatesRemoved} duplicate messages. Manual cleanup required due to Firestore ID mismatch.",
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Error during cleanup: {ex.Message}" });
             }
         }
 
@@ -768,7 +1166,7 @@ namespace ICCMS_API.Controllers
                     FileType = file.ContentType,
                     FileSize = file.Length,
                     FileUrl = fileUrl,
-                    UploadedBy = HttpContext.Items["UserId"] as string ?? string.Empty,
+                    UploadedBy = User.UserId() ?? string.Empty,
                     UploadedAt = DateTime.UtcNow,
                     Description = description,
                     Category = category,
@@ -965,27 +1363,23 @@ namespace ICCMS_API.Controllers
             }
         }
 
-        [HttpPost("workflow/quote-approval")]
-        public async Task<ActionResult> SendQuoteApprovalNotification(
-            [FromBody] QuoteApprovalRequest request
+        [HttpGet("workflow/{workflowMessageId}")]
+        public async Task<ActionResult<WorkflowMessage>> GetWorkflowMessage(
+            string workflowMessageId
         )
         {
             try
             {
-                var success = await _workflowService.SendQuoteApprovalNotificationAsync(
-                    request.QuoteId,
-                    request.Action,
-                    request.UserId
+                var workflowMessage = await _workflowService.GetWorkflowMessageAsync(
+                    workflowMessageId
                 );
 
-                if (success)
+                if (workflowMessage == null)
                 {
-                    return Ok(new { message = "Quote approval notification sent successfully" });
+                    return NotFound(new { error = "Workflow message not found" });
                 }
-                else
-                {
-                    return BadRequest(new { error = "Failed to send quote approval notification" });
-                }
+
+                return Ok(workflowMessage);
             }
             catch (Exception ex)
             {
@@ -993,82 +1387,75 @@ namespace ICCMS_API.Controllers
             }
         }
 
-        [HttpPost("workflow/invoice-payment")]
-        public async Task<ActionResult> SendInvoicePaymentNotification(
-            [FromBody] InvoicePaymentRequest request
-        )
+        [HttpPost("workflow/{workflowMessageId}/mark-as-read")]
+        public async Task<IActionResult> MarkWorkflowMessageAsRead(string workflowMessageId)
         {
             try
             {
-                var success = await _workflowService.SendInvoicePaymentNotificationAsync(
-                    request.InvoiceId,
-                    request.Action,
-                    request.UserId
+                var userId = User.UserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated." });
+                }
+
+                var success = await _workflowService.MarkWorkflowMessageAsReadAsync(
+                    workflowMessageId,
+                    userId
                 );
 
                 if (success)
                 {
-                    return Ok(new { message = "Invoice payment notification sent successfully" });
+                    return Ok(new { message = "Workflow message marked as read.", success = true });
                 }
                 else
                 {
                     return BadRequest(
-                        new { error = "Failed to send invoice payment notification" }
+                        new
+                        {
+                            message = "Failed to mark workflow message as read.",
+                            success = false,
+                        }
                     );
                 }
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                Console.WriteLine($"Error marking workflow message as read: {ex.Message}");
+                return StatusCode(
+                    500,
+                    new
+                    {
+                        message = "An error occurred while marking workflow message as read.",
+                        success = false,
+                    }
+                );
             }
         }
 
-        [HttpPost("workflow/project-update")]
-        public async Task<ActionResult> SendProjectUpdateNotification(
-            [FromBody] ProjectUpdateRequest request
+        [HttpPost("workflow")]
+        public async Task<ActionResult> CreateWorkflowMessage(
+            [FromBody] WorkflowMessage workflowMessage
         )
         {
             try
             {
-                var success = await _workflowService.SendProjectUpdateNotificationAsync(
-                    request.ProjectId,
-                    request.UpdateType,
-                    request.UserId
+                var workflowMessageId = await _workflowService.CreateWorkflowMessageAsync(
+                    workflowMessage
                 );
 
-                if (success)
+                if (!string.IsNullOrEmpty(workflowMessageId))
                 {
-                    return Ok(new { message = "Project update notification sent successfully" });
+                    return Ok(
+                        new
+                        {
+                            message = "Workflow message created successfully",
+                            workflowMessageId = workflowMessageId,
+                        }
+                    );
                 }
                 else
                 {
-                    return BadRequest(new { error = "Failed to send project update notification" });
-                }
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
-        }
-
-        [HttpPost("workflow/system-alert")]
-        public async Task<ActionResult> SendSystemAlert([FromBody] SystemAlertRequest request)
-        {
-            try
-            {
-                var success = await _workflowService.SendSystemAlertAsync(
-                    request.AlertType,
-                    request.Message,
-                    request.Recipients
-                );
-
-                if (success)
-                {
-                    return Ok(new { message = "System alert sent successfully" });
-                }
-                else
-                {
-                    return BadRequest(new { error = "Failed to send system alert" });
+                    return BadRequest(new { error = "Failed to create workflow message" });
                 }
             }
             catch (Exception ex)
@@ -1091,13 +1478,50 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpDelete("thread/{threadId}")]
+        [Authorize(Roles = "Admin,Tester")]
+        public async Task<IActionResult> DeleteThread(string threadId)
+        {
+            try
+            {
+                Console.WriteLine($"Deleting thread {threadId}");
+                // 1. Get all messages for the thread
+                var messages = await _firebaseService.GetCollectionAsync<Message>("messages");
+                var threadMessages = messages.Where(m => m.ThreadId == threadId).ToList();
+
+                // 2. Delete all messages in the thread
+                if (threadMessages.Any())
+                {
+                    var deleteMessageTasks = threadMessages
+                        .Select(message =>
+                            _firebaseService.DeleteDocumentAsync("messages", message.MessageId)
+                        )
+                        .ToList();
+                    await Task.WhenAll(deleteMessageTasks);
+                }
+
+                // 3. Delete the thread itself and get confirmation
+                await _firebaseService.DeleteDocumentAsync("threads", threadId);
+                return Ok(new { message = "Thread and all its messages deleted successfully." });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to delete thread {threadId}: {ex.Message}");
+                return StatusCode(
+                    500,
+                    new { message = $"An error occurred while deleting the thread: {ex.Message}" }
+                );
+            }
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteMessage(string id)
         {
             try
             {
                 await _firebaseService.DeleteDocumentAsync("messages", id);
-                return NoContent();
+
+                return Ok(new { message = "Message deleted successfully." });
             }
             catch (Exception ex)
             {
@@ -1145,23 +1569,20 @@ namespace ICCMS_API.Controllers
                 var thread = new MessageThread
                 {
                     ThreadId = message.ThreadId,
-                    ProjectId = message.ProjectId,
                     Subject = message.Subject,
-                    StarterMessageId = message.MessageId,
-                    StarterUserId = message.SenderId,
                     Participants = message.ThreadParticipants,
-                    MessageCount = 1,
+                    ProjectId = message.ProjectId,
+                    CreatedAt = DateTime.UtcNow,
                     LastMessageAt = message.SentAt,
-                    LastMessageId = message.MessageId,
-                    LastMessageSenderId = message.SenderId,
-                    CreatedAt = message.SentAt,
-                    ThreadType = "general",
+                    IsActive = true,
+                    ThreadType = message.ThreadParticipants.Count > 2 ? "group" : "direct", // Assuming 2 participants is direct
                 };
 
-                await _firebaseService.AddDocumentAsync("threads", thread);
+                await _firebaseService.AddDocumentWithIdAsync("threads", thread.ThreadId, thread);
             }
             catch (Exception ex)
             {
+                // Log error
                 Console.WriteLine($"Error creating thread: {ex.Message}");
             }
         }
@@ -1181,11 +1602,14 @@ namespace ICCMS_API.Controllers
                     thread.LastMessageSenderId = message.SenderId;
 
                     // Update participants if new ones are added
-                    foreach (var participant in message.ThreadParticipants)
+                    if (message.ThreadParticipants != null)
                     {
-                        if (!thread.Participants.Contains(participant))
+                        foreach (var participant in message.ThreadParticipants)
                         {
-                            thread.Participants.Add(participant);
+                            if (!thread.Participants.Contains(participant))
+                            {
+                                thread.Participants.Add(participant);
+                            }
                         }
                     }
 
@@ -1282,6 +1706,96 @@ namespace ICCMS_API.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"Error getting unread count: {ex.Message}");
+                return 0;
+            }
+        }
+
+        private async Task<int> GetUnreadCountForUser(string userId)
+        {
+            try
+            {
+                // Get unread count from regular messages
+                var messages = await _firebaseService.GetCollectionAsync<Message>("messages");
+
+                // Group messages by MessageId to handle duplicates
+                var messagesById = messages.GroupBy(m => m.MessageId);
+
+                var unreadMessageIds = new HashSet<string>();
+                foreach (var messageGroup in messagesById)
+                {
+                    // A message is considered unread if ANY of its duplicates is unread
+                    // (since we might have updated some but not all duplicates)
+                    var isAnyUnread = messageGroup.Any(m =>
+                        !m.IsRead
+                        && m.SenderId != userId
+                        && (
+                            m.ReceiverId == userId
+                            || (
+                                m.ThreadParticipants != null
+                                && m.ThreadParticipants.Contains(userId)
+                            )
+                        )
+                    );
+
+                    if (isAnyUnread)
+                    {
+                        unreadMessageIds.Add(messageGroup.Key);
+                    }
+                }
+
+                // Get unread count from workflow messages
+                var workflowMessages = await _firebaseService.GetCollectionAsync<WorkflowMessage>(
+                    "workflow-messages"
+                );
+                var unreadWorkflowMessages = workflowMessages
+                    .Where(wm => wm.Recipients.Contains(userId) && !wm.IsRead)
+                    .ToList();
+
+                var totalUnreadCount = unreadMessageIds.Count + unreadWorkflowMessages.Count;
+
+                Console.WriteLine(
+                    $"======== [GetUnreadCountForUser] Found {unreadMessageIds.Count} unread regular messages and {unreadWorkflowMessages.Count} unread workflow messages for user {userId} (total: {totalUnreadCount}) ========"
+                );
+
+                if (unreadMessageIds.Any())
+                {
+                    // Get thread breakdown for regular messages
+                    var unreadMessages = messages
+                        .Where(m => unreadMessageIds.Contains(m.MessageId))
+                        .ToList();
+                    var unreadByThread = unreadMessages.GroupBy(m => m.ThreadId ?? "NoThread");
+                    foreach (var threadGroup in unreadByThread)
+                    {
+                        Console.WriteLine(
+                            $"======== [GetUnreadCountForUser] Thread {threadGroup.Key}: {threadGroup.Count()} unread messages ========"
+                        );
+                        foreach (var msg in threadGroup)
+                        {
+                            Console.WriteLine(
+                                $"======== [GetUnreadCountForUser]   - Message {msg.MessageId}: Sender={msg.SenderId}, Receiver={msg.ReceiverId} ========"
+                            );
+                        }
+                    }
+                }
+
+                if (unreadWorkflowMessages.Any())
+                {
+                    Console.WriteLine(
+                        $"======== [GetUnreadCountForUser] Unread workflow messages: ========"
+                    );
+                    foreach (var wm in unreadWorkflowMessages)
+                    {
+                        Console.WriteLine(
+                            $"======== [GetUnreadCountForUser]   - WorkflowMessage {wm.WorkflowMessageId}: {wm.Subject} ========"
+                        );
+                    }
+                }
+
+                return totalUnreadCount;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting unread count for user {userId}: {ex.Message}");
                 return 0;
             }
         }

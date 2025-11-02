@@ -49,6 +49,15 @@ namespace ICCMS_API.Models
 
         [FirestoreProperty("metadata")]
         public Dictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
+
+        [FirestoreProperty("isRead")]
+        public bool IsRead { get; set; } = false;
+
+        [FirestoreProperty("readAt")]
+        public DateTime? ReadAt { get; set; }
+
+        [FirestoreProperty("readBy")]
+        public string? ReadBy { get; set; }
     }
 
     public class WorkflowMessageTemplate

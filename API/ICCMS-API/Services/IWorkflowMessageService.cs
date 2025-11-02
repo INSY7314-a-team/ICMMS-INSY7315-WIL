@@ -10,20 +10,10 @@ namespace ICCMS_API.Services
             string? workflowType = null
         );
         Task<WorkflowMessage?> GetWorkflowMessageAsync(string workflowMessageId);
-        Task<bool> ProcessSystemEventAsync(SystemEvent systemEvent);
-        Task<bool> SendQuoteApprovalNotificationAsync(string quoteId, string action, string userId);
-        Task<bool> SendInvoicePaymentNotificationAsync(
-            string invoiceId,
-            string action,
-            string userId
-        );
-        Task<bool> SendProjectUpdateNotificationAsync(
-            string projectId,
-            string updateType,
-            string userId
-        );
-        Task<bool> SendSystemAlertAsync(string alertType, string message, List<string> recipients);
+        Task<bool> CreateWorkflowMessageAsync(SystemEvent systemEvent);
+
         Task<List<WorkflowMessageTemplate>> GetMessageTemplatesAsync();
         Task<WorkflowMessageTemplate?> GetMessageTemplateAsync(string workflowType, string action);
+        Task<bool> MarkWorkflowMessageAsReadAsync(string workflowMessageId, string userId);
     }
 }

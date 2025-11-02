@@ -1,0 +1,51 @@
+@model ICCMS_Web.Models.ProjectDto
+
+<div class="project-card construction-border-thin">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="card-title mb-1">@Model.Name</h5>
+            <p class="card-subtitle text-muted mb-0">@Model.Description</p>
+        </div>
+        <span class="badge bg-@(Model.Status?.ToLower() switch
+        {
+            "active" => "success",
+            "completed" => "primary",
+            "on hold" => "warning",
+            "cancelled" => "danger",
+            _ => "secondary"
+        })">@Model.Status</span>
+    </div>
+
+    <div class="card-body">
+        <div class="mb-2">
+            <small class="progress-label">Progress</small>
+            <div class="progress mb-2">
+                <div class="progress-bar" role="progressbar" style="width:@ViewBag.Progress%" 
+                     aria-valuenow="@ViewBag.Progress" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <span class="progress-percentage">@ViewBag.Progress%</span>
+        </div>
+
+        <div class="stat-item">
+            <small>Budget</small>
+            <span>R @Model.BudgetPlanned.ToString("N0")</span>
+        </div>
+        <div class="stat-item">
+            <small>Start Date</small>
+            <span>@Model.StartDate.ToString("MMM dd, yyyy")</span>
+        </div>
+        <div class="stat-item">
+            <small>End Date</small>
+            <span>@Model.EndDatePlanned.ToString("MMM dd, yyyy")</span>
+        </div>
+    </div>
+
+    <div class="card-footer d-flex justify-content-between align-items-center">
+        <button type="button" class="btn btn-action btn-primary"
+                onclick="openProjectDetails('@Model.ProjectId')">
+            <i class="fa-solid fa-eye me-1"></i> View Details
+        </button>
+        <span class="text-muted small">Client: @ViewBag.ClientName</span>
+    </div>
+
+</div>

@@ -1,40 +1,64 @@
-@* Simple modal to pick an existing blueprint document for a project *@
+@* Simple modal to pick an existing blueprint document for a project - New Design System *@
 <div class="modal fade" id="blueprintPickerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content"
-            style="background-color: var(--secondary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);">
-            <div class="modal-header"
-                style="background-color: var(--primary-bg); border-bottom: 1px solid var(--accent-yellow);">
-                <h5 class="modal-title" style="color: var(--text-light);">Select Blueprint</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-upload"></i>
+                    Select Blueprint
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label" style="color: var(--text-light);">Upload New Blueprint</label>
-                    <form id="bp-upload-form">
-                        <div class="input-group">
-                            <input type="file" class="form-control" id="bp-file" accept=".pdf,.dwg,.png,.jpg,.jpeg"
-                                style="background-color: var(--primary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);" />
-                            <input type="text" class="form-control" id="bp-desc" placeholder="Description (optional)"
-                                style="background-color: var(--primary-bg); color: var(--text-light); border: 1px solid var(--accent-yellow);" />
-                            <button class="btn btn-primary" type="submit"
-                                style="background-color: var(--accent-yellow); color: var(--text-dark); border: 1px solid var(--accent-yellow);"><i
-                                    class="fa-solid fa-upload"></i>
-                                Upload</button>
+                <!-- Upload Section -->
+                <div class="modal-card mb-4">
+                    <div class="modal-card-header">
+                        <div class="modal-card-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
                         </div>
+                        <h6 class="modal-card-title">Upload New Blueprint</h6>
+                    </div>
+                    <form id="bp-upload-form">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Select File</label>
+                                <input type="file" class="form-control" id="bp-file" accept=".pdf,.dwg,.png,.jpg,.jpeg" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Description (Optional)</label>
+                                <input type="text" class="form-control" id="bp-desc" placeholder="Blueprint description" />
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button class="btn btn-primary w-100" type="submit">
+                                    <i class="fa-solid fa-upload me-1"></i>Upload
+                                </button>
+                            </div>
+                        </div>
+                        <div id="bp-upload-msg" class="small mt-2 text-muted"></div>
                     </form>
-                    <div id="bp-upload-msg" class="small mt-1" style="color: var(--text-muted);"></div>
                 </div>
-                <hr style="border-color: var(--accent-yellow);" />
-                <div id="bp-list" class="list-group small">
-                    <div style="color: var(--text-muted);">Loading...</div>
+
+                <!-- Existing Blueprints Section -->
+                <div class="modal-card">
+                    <div class="modal-card-header">
+                        <div class="modal-card-icon">
+                            <i class="fas fa-folder-open"></i>
+                        </div>
+                        <h6 class="modal-card-title">Existing Blueprints</h6>
+                    </div>
+                    <div id="bp-list" class="list-group">
+                        <div class="modal-empty-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <h5>Loading Blueprints...</h5>
+                            <p>Please wait while we fetch available blueprints</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer"
-                style="background-color: var(--primary-bg); border-top: 1px solid var(--accent-yellow);">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-                    style="background-color: var(--text-muted); color: var(--text-light); border: 1px solid var(--text-muted);">Close</button>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </button>
             </div>
         </div>
     </div>

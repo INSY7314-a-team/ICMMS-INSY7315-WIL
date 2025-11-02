@@ -1,1053 +1,124 @@
-@model ICCMS_Web.Controllers.MessageThreadsViewModel
+@using System.Security.Claims
+@model ICCMS_Web.Models.UserMessagesViewModel
 @{
-    ViewData["Title"] = "Messages Management";
+    ViewData["Title"] = "Messages";
+    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 }
 
-@functions {
-    string GetMessageTypeIcon(string messageType)
-    {
-        return messageType.ToLower() switch
-        {
-            "direct" => "envelope",
-            "thread" => "comments",
-            "broadcast" => "bullhorn",
-            "general" => "folder",
-            _ => "envelope"
-        };
-    }
-}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+<link href="~/css/messages.css" rel="stylesheet" />
 
-<link href="~/css/messages-management.css" rel="stylesheet" />
-
-<div class="messages-container">
-    <!-- Header -->
-    <div class="messages-dashboard-header construction-border">
-        <div class="d-flex justify-content-between align-items-center">
-        <div>
-                <h1 class="messages-dashboard-title">
-                    <i class="fas fa-envelope me-3"></i>Messages Management Dashboard
-            </h1>
-                <p class="messages-dashboard-subtitle">Monitor message threads, track communications, and manage system messages</p>
+<div class="chat-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-tabs">
+                <button class="tab-button active" id="system-tab">
+                    <i class="fas fa-bell"></i> System Messages
+                </button>
+                <button class="tab-button" id="direct-tab">
+                    <i class="fas fa-paper-plane"></i> Direct Messages
+                </button>
             </div>
+            <div class="new-message-container">
+                <button class="new-message-button" id="newMessageButton" style="display: none;" data-bs-toggle="modal"
+                    data-bs-target="#sendMessageModal">
+                    <i class="fas fa-pencil-alt"></i> New Message
+                </button>
+            </div>
+        </div>
+        <div class="chat-list" id="threadsList">
+            <!-- Thread items will be loaded here -->
         </div>
     </div>
 
-    <!-- Alerts -->
-    @if (TempData["Success"] != null)
-    {
-        <div class="messages-alert messages-alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i> @TempData["Success"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <!-- Chat Window -->
+    <div class="chat-window">
+        <div id="noThreadSelected" class="no-selection">
+            <div class="no-selection-content">
+                <i class="fas fa-comments"></i>
+                <h4>Select a conversation</h4>
+                <p>Choose a conversation from the list to view messages.</p>
+            </div>
         </div>
-    }
-    @if (TempData["Error"] != null)
-    {
-        <div class="messages-alert messages-alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i> @TempData["Error"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
 
-    <!-- Stats Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="messages-stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-comments"></i>
-                </div>
-                <h2 class="card-value">@Model.TotalThreads</h2>
-                <p class="card-title">Total Threads</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="messages-stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-envelope"></i>
-                </div>
-                <h2 class="card-value">@Model.Threads.Sum(t => t.MessageCount)</h2>
-                <p class="card-title">Total Messages</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="messages-stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-envelope-open"></i>
-                </div>
-                <h2 class="card-value">@Model.Threads.Sum(t => t.Messages.Count(m => !m.IsRead))</h2>
-                <p class="card-title">Unread Messages</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="messages-stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-clock"></i>
-                </div>
-                <h2 class="card-value">@Model.Threads.Count(t => t.LastMessageAt > DateTime.UtcNow.AddDays(-7))</h2>
-                <p class="card-title">Active This Week</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Search and Filter Section -->
-    <div class="messages-content-card">
-        <div class="messages-card-header">
-            <h5 class="messages-card-title">
-                <i class="fas fa-search"></i> Search & Filter Messages
-            </h5>
-        </div>
-        <div style="padding: 25px;">
-            <!-- Search Section -->
-            <div class="search-section" style="margin-bottom: 20px;">
-                <div class="search-input-group">
-                    <input type="text" class="search-input" id="searchTerm" name="searchTerm" value="@Model.CurrentSearchTerm" placeholder="Search messages by subject, content, sender, or receiver...">
-                    <button type="button" class="search-btn" onclick="applyFilters()" title="Search">
-                        <i class="fas fa-search"></i>
+        <div id="threadView" style="display: none;">
+            <div class="chat-header">
+                <h5 id="selectedThreadSubject"></h5>
+                <div class="chat-header-actions">
+                    <button class="icon-button" id="refreshButton" title="Refresh">
+                        <i class="fas fa-sync-alt"></i>
                     </button>
-                    <button type="button" class="clear-search-btn" onclick="clearFilters()" title="Clear Search">
+                    <button class="icon-button" id="closeChatButton" title="Close Chat">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
             </div>
-            
-            <!-- Advanced Filters -->
-            <div class="advanced-filters-grid">
-                <div class="filter-item">
-                    <label class="filter-label">Message Type</label>
-                    <select class="filter-select" id="filterType">
-                        <option value="all" selected="@(Model.CurrentFilter == "all")">All Types</option>
-                        <option value="direct" selected="@(Model.CurrentFilter == "direct")">Direct</option>
-                        <option value="thread" selected="@(Model.CurrentFilter == "thread")">Thread</option>
-                        <option value="broadcast" selected="@(Model.CurrentFilter == "broadcast")">Broadcast</option>
-                    </select>
-                </div>
-                
-                <div class="filter-item">
-                    <label class="filter-label">Project</label>
-                    <select class="filter-select" id="projectFilter">
-                        <option value="all" selected="@(Model.ProjectFilter == "all")">All Projects</option>
-                        @if (Model.AvailableProjects != null)
-                        {
-                            @foreach (var project in Model.AvailableProjects)
-                            {
-                                <option value="@project.ProjectId" selected="@(Model.ProjectFilter == project.ProjectId)">@project.ProjectName</option>
-                            }
-                        }
-                    </select>
-                </div>
-                
-                <div class="filter-item">
-                    <label class="filter-label">User</label>
-                    <select class="filter-select" id="userFilter">
-                        <option value="all" selected="@(Model.UserFilter == "all")">All Users</option>
-                        @if (Model.AvailableUsers != null)
-                        {
-                            @foreach (var user in Model.AvailableUsers)
-                            {
-                                <option value="@user.UserId" selected="@(Model.UserFilter == user.UserId)">@user.UserName</option>
-                            }
-                        }
-                    </select>
-                </div>
-                
-                <div class="filter-item">
-                    <label class="filter-label">Read Status</label>
-                    <select class="filter-select" id="readFilter">
-                        <option value="all" selected="@(Model.ReadFilter == "all")">All Messages</option>
-                        <option value="read" selected="@(Model.ReadFilter == "read")">Read Only</option>
-                        <option value="unread" selected="@(Model.ReadFilter == "unread")">Unread Only</option>
-                    </select>
-                </div>
-                
-                <div class="filter-item">
-                    <label class="filter-label">Start Date</label>
-                    <div class="date-picker-container">
-                        <input type="date" class="filter-input" id="startDate" value="@Model.StartDate?.ToString("yyyy-MM-dd")">
-                    </div>
-                </div>
-                
-                <div class="filter-item">
-                    <label class="filter-label">End Date</label>
-                    <div class="date-picker-container">
-                        <input type="date" class="filter-input" id="endDate" value="@Model.EndDate?.ToString("yyyy-MM-dd")">
-                    </div>
-                </div>
+            <div class="messages" id="messagesContainer">
+                <!-- Messages will be loaded here -->
             </div>
-            
-            <!-- Filter Actions -->
-            <div class="filter-actions">
-                <button class="filter-action-btn primary" onclick="applyFilters()">
-                    <i class="fas fa-filter me-2"></i>Apply Filters
+            <div class="chat-input-area" id="messageInputArea" style="display: none;">
+                <input type="text" class="chat-input" id="threadMessageInput" placeholder="Type a message...">
+                <button class="send-button" id="sendThreadMessageBtn">
+                    <i class="fas fa-paper-plane"></i>
                 </button>
-                <button class="filter-action-btn secondary" onclick="clearFilters()">
-                    <i class="fas fa-eraser me-2"></i>Clear All
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Message Threads Display -->
-    <div class="messages-content-card">
-        <div class="messages-card-header">
-            <h5 class="messages-card-title">
-                <i class="fas fa-comments"></i> Message Threads
-            </h5>
-        </div>
-        <div class="messages-table-container">
-            @if (Model.Threads.Any())
-            {
-                <div class="table-responsive">
-                    <table class="messages-table" id="threadsTable">
-                        <thead>
-                            <tr>
-                                <th>
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-comments me-2"></i>Thread
-                                    </div>
-                                </th>
-                                <th>
-                                    <i class="fas fa-folder me-2"></i>Project
-                                </th>
-                                <th>
-                                    <i class="fas fa-hashtag me-2"></i>Messages
-                                </th>
-                                <th>
-                                    <i class="fas fa-users me-2"></i>Participants
-                                </th>
-                                <th>
-                                    <i class="fas fa-clock me-2"></i>Last Activity
-                                </th>
-                                <th>
-                                    <i class="fas fa-tag me-2"></i>Type
-                                </th>
-                                <th class="text-end">
-                                    <i class="fas fa-cogs me-2"></i>Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var thread in Model.Threads)
-                            {
-                                <tr class="thread-row clickable-row" data-thread-id="@thread.ThreadId" 
-                                    data-project="@thread.ProjectId"
-                                    data-type="@thread.ThreadType.ToLower()"
-                                    onclick="toggleThread('@thread.ThreadId')"
-                                    style="cursor: pointer;">
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="thread-avatar">
-                                                <i class="fas fa-comments"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">@thread.Subject</h6>
-                                                <small class="text-muted">ID: @thread.ThreadId.Substring(0, Math.Min(8, thread.ThreadId.Length))...</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex flex-column">
-                                            <span class="fw-medium">@(thread.ProjectName ?? "Unknown Project")</span>
-                                            <small style="color: rgba(255, 255, 255, 0.7);">@thread.ProjectId</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="messages-badge messages-badge-info">
-                                            <i class="fas fa-comment me-1"></i>@thread.MessageCount
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="messages-badge messages-badge-secondary">
-                                            <i class="fas fa-users me-1"></i>@thread.Participants.Count
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex flex-column">
-                                            <span class="fw-medium">@thread.LastMessageAt.ToString("MMM dd, yyyy")</span>
-                                            <small style="color: rgba(255, 255, 255, 0.7);">@thread.LastMessageAt.ToString("HH:mm")</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        @{
-                                            var typeBadgeClass = thread.ThreadType.ToLower() switch
-                                            {
-                                                "direct" => "direct",
-                                                "thread" => "thread",
-                                                "broadcast" => "broadcast",
-                                                "general" => "general",
-                                                _ => "general"
-                                            };
-                                        }
-                                        <span class="messages-badge @typeBadgeClass">
-                                            @thread.ThreadType
-                                        </span>
-                                    </td>
-                                    <td class="text-end" onclick="event.stopPropagation();">
-                                        <div class="btn-group" role="group">
-                                            <button type="button" class="messages-btn messages-btn-secondary dropdown-toggle" 
-                                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="fas fa-ellipsis-v"></i>
-                                            </button>
-                                            <ul class="messages-dropdown-menu dropdown-menu dropdown-menu-end">
-                                                <li>
-                                                    <a class="messages-dropdown-item dropdown-item" href="#" onclick="viewThreadDetails('@thread.ThreadId')">
-                                                        <i class="fas fa-info-circle"></i>Thread Details
-                                                    </a>
-                                                </li>
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <a class="messages-dropdown-item dropdown-item" href="#" onclick="confirmDeleteThread('@thread.ThreadId', '@thread.Subject')">
-                                                        <i class="fas fa-trash"></i>Delete Thread
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </td>
-                                </tr>
-                                
-                                <!-- Expandable Messages Row -->
-                                <tr class="thread-messages-row" id="thread-@thread.ThreadId" style="display: none;">
-                                    <td colspan="7">
-                                        <div class="thread-messages-content">
-                                            <div class="messages-subheader">
-                                                <h6 class="mb-3">
-                                                    <i class="fas fa-comments me-2"></i>Messages in this thread
-                                                </h6>
-                                            </div>
-                                            @if (thread.Messages.Any())
-                                            {
-                                                @foreach (var message in thread.Messages.OrderBy(m => m.SentAt))
-                                                {
-                                                    <div class="message-item">
-                                                        <div class="message-header">
-                                                            <div class="d-flex align-items-center">
-                                                                <div class="message-avatar">
-                                                                    <i class="fas fa-user"></i>
-                                                                </div>
-                                                                <div class="message-sender-info">
-                                                                    <span class="message-sender">@(message.SenderName ?? "Unknown User")</span>
-                                                                    @if (!string.IsNullOrEmpty(message.ReceiverName))
-                                                                    {
-                                                                        <span class="message-receiver"> → @message.ReceiverName</span>
-                                                                    }
-                                                                </div>
-                                                                <div class="message-timestamp">@message.SentAt.ToString("MMM dd, yyyy HH:mm")</div>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <div class="message-content">@message.Content</div>
-                                                        
-                                                        <div class="message-actions">
-                                                            <span class="read-status @(message.IsRead ? "read" : "unread")">
-                                                                @(message.IsRead ? "Read" : "Unread")
-                                                            </span>
-                                                            
-                                                            @if (message.AttachmentCount > 0)
-                                                            {
-                                                                <span class="message-attachment-icon">
-                                                                    <i class="fas fa-paperclip"></i> @message.AttachmentCount
-                                                                </span>
-                                                            }
-                                                            
-                                                            <button class="messages-btn messages-btn-info messages-btn-sm" onclick="viewThreadDetails('@thread.ThreadId')">
-                                                                <i class="fas fa-info-circle"></i> Thread Details
-                                                            </button>
-                                                            
-                                                            <button class="messages-btn messages-btn-danger messages-btn-sm" onclick="confirmDeleteMessage('@message.MessageId', '@message.SenderName')">
-                                                                <i class="fas fa-trash"></i> Delete
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                }
-                                            }
-                                            else
-                                            {
-                                                <div class="messages-empty-state">
-                                                    <i class="fas fa-comment-slash"></i>
-                                                    <p>No messages found in this thread</p>
-                                                </div>
-                                            }
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Pagination Controls -->
-                @if (Model.TotalPages > 1)
-                {
-                    <div class="pagination-container">
-                        <div class="pagination-info">
-                            <span>Showing @Model.StartIndex to @Model.EndIndex of @Model.TotalThreads threads</span>
-                        </div>
-                        <nav aria-label="Message threads pagination">
-                            <ul class="pagination">
-                                @if (Model.HasPreviousPage)
-                                {
-                                    <li class="page-item">
-                                        <a class="page-link" href="@Url.Action("Index", new { page = Model.CurrentPage - 1, pageSize = Model.PageSize, filterType = Model.CurrentFilter, projectFilter = Model.ProjectFilter, userFilter = Model.UserFilter, threadFilter = Model.ThreadFilter, readFilter = Model.ReadFilter, searchTerm = Model.CurrentSearchTerm, startDate = Model.StartDate, endDate = Model.EndDate })" aria-label="Previous">
-                                            <span aria-hidden="true">&laquo;</span>
-                                        </a>
-                                    </li>
-                                }
-                                
-                                @{
-                                    int startPage = Math.Max(1, Model.CurrentPage - 2);
-                                    int endPage = Math.Min(Model.TotalPages, Model.CurrentPage + 2);
-                                }
-                                
-                                @if (startPage > 1)
-                                {
-                                    <li class="page-item">
-                                        <a class="page-link" href="@Url.Action("Index", new { page = 1, pageSize = Model.PageSize, filterType = Model.CurrentFilter, projectFilter = Model.ProjectFilter, userFilter = Model.UserFilter, threadFilter = Model.ThreadFilter, readFilter = Model.ReadFilter, searchTerm = Model.CurrentSearchTerm, startDate = Model.StartDate, endDate = Model.EndDate })">1</a>
-                                    </li>
-                                    @if (startPage > 2)
-                                    {
-                                        <li class="page-item disabled">
-                                            <span class="page-link">...</span>
-                                        </li>
-                                    }
-                                }
-                                
-                                @for (int i = startPage; i <= endPage; i++)
-                                {
-                                    <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
-                                        <a class="page-link" href="@Url.Action("Index", new { page = i, pageSize = Model.PageSize, filterType = Model.CurrentFilter, projectFilter = Model.ProjectFilter, userFilter = Model.UserFilter, threadFilter = Model.ThreadFilter, readFilter = Model.ReadFilter, searchTerm = Model.CurrentSearchTerm, startDate = Model.StartDate, endDate = Model.EndDate })">@i</a>
-                                    </li>
-                                }
-                                
-                                @if (endPage < Model.TotalPages)
-                                {
-                                    @if (endPage < Model.TotalPages - 1)
-                                    {
-                                        <li class="page-item disabled">
-                                            <span class="page-link">...</span>
-                                        </li>
-                                    }
-                                    <li class="page-item">
-                                        <a class="page-link" href="@Url.Action("Index", new { page = Model.TotalPages, pageSize = Model.PageSize, filterType = Model.CurrentFilter, projectFilter = Model.ProjectFilter, userFilter = Model.UserFilter, threadFilter = Model.ThreadFilter, readFilter = Model.ReadFilter, searchTerm = Model.CurrentSearchTerm, startDate = Model.StartDate, endDate = Model.EndDate })">@Model.TotalPages</a>
-                                    </li>
-                                }
-                                
-                                @if (Model.HasNextPage)
-                                {
-                                    <li class="page-item">
-                                        <a class="page-link" href="@Url.Action("Index", new { page = Model.CurrentPage + 1, pageSize = Model.PageSize, filterType = Model.CurrentFilter, projectFilter = Model.ProjectFilter, userFilter = Model.UserFilter, threadFilter = Model.ThreadFilter, readFilter = Model.ReadFilter, searchTerm = Model.CurrentSearchTerm, startDate = Model.StartDate, endDate = Model.EndDate })" aria-label="Next">
-                                            <span aria-hidden="true">&raquo;</span>
-                                        </a>
-                                    </li>
-                                }
-                            </ul>
-                        </nav>
-                    </div>
-                }
-            }
-            else
-            {
-                <div class="messages-empty-state">
-                    <i class="fas fa-comments"></i>
-                    <h4>No message threads found</h4>
-                    <p>No threads match your current filters</p>
-                </div>
-            }
-        </div>
-    </div>
-</div>
-
-<!-- Message Details Modal -->
-<div class="modal fade messages-modal" id="messageDetailsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-info-circle me-2"></i> Message Details
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="messageDetailsContent">
-                <!-- Content will be loaded here -->
             </div>
         </div>
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade messages-modal" id="deleteConfirmModal" tabindex="-1">
-    <div class="modal-dialog">
+<!-- Send Message Modal -->
+<div class="modal fade" id="sendMessageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-exclamation-triangle me-2"></i> Confirm Delete
-                </h5>
+                <h5 class="modal-title">New Message</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete this message from <strong id="deleteSenderName"></strong>?</p>
-                <p class="text-muted">This action cannot be undone.</p>
+                <form id="sendMessageForm">
+                    <div class="mb-3">
+                        <label for="recipientSelect" class="form-label">To:</label>
+                        <select class="form-select" id="recipientSelect" required>
+                            <option value="" disabled selected>Select a recipient...</option>
+                            @foreach (var user in Model.AvailableUsers)
+                            {
+                                <option value="@user.UserId">@user.FullName (@user.Role)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="projectSelect" class="form-label">Project (Optional):</label>
+                        <select class="form-select" id="projectSelect">
+                            <option value="">Select a project...</option>
+                            @foreach (var project in Model.AvailableProjects)
+                            {
+                                <option value="@project.ProjectId">@project.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="messageSubject" class="form-label">Subject:</label>
+                        <input type="text" class="form-control" id="messageSubject" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="messageContent" class="form-label">Message:</label>
+                        <textarea class="form-control" id="messageContent" rows="4" required></textarea>
+                    </div>
+                </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
-                    <i class="fas fa-trash me-2"></i>Delete Message
-                </button>
+                <button type="button" class="cancelMessageButton" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="sendMessageButton" id="sendMessageBtnModal">Send</button>
             </div>
         </div>
     </div>
 </div>
 
+
 @section Scripts {
     <script>
-        let messageToDelete = null;
-
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            // Auto-dismiss alerts after 5 seconds
-            setTimeout(() => {
-                const alerts = document.querySelectorAll('.alert');
-                alerts.forEach(alert => {
-                    if (alert.parentNode) {
-                        alert.remove();
-                    }
-                });
-            }, 5000);
-
-            // Add event listeners for real-time filtering
-            const searchInput = document.getElementById('searchTerm');
-            if (searchInput) {
-                searchInput.addEventListener('input', function() {
-                    // Trigger applyFilters after a short delay for better UX
-                    setTimeout(applyFilters, 1000);
-                });
-            }
-
-            // Add event listeners for filter dropdowns
-            const filterSelects = document.querySelectorAll('.filter-select');
-            filterSelects.forEach(select => {
-                select.addEventListener('change', applyFilters);
-            });
-
-            // Add event listeners for date inputs
-            const dateInputs = document.querySelectorAll('.filter-input[type="date"]');
-            dateInputs.forEach(input => {
-                input.addEventListener('change', applyFilters);
-            });
-        });
-
-        // Toggle thread expansion
-        function toggleThread(threadId) {
-            const threadElement = document.getElementById('thread-' + threadId);
-            
-            if (threadElement) {
-                const isExpanded = threadElement.style.display !== 'none';
-                
-                if (isExpanded) {
-                    threadElement.style.display = 'none';
-                } else {
-                    // Load messages for this thread if not already loaded
-                    loadThreadMessages(threadId, threadElement);
-                    threadElement.style.display = 'table-row';
-                }
-            }
-        }
-
-        // Load messages for a specific thread
-        async function loadThreadMessages(threadId, threadElement) {
-            // Check if messages are already loaded
-            const messagesContent = threadElement.querySelector('.thread-messages-content');
-            if (messagesContent && messagesContent.dataset.loaded === 'true') {
-                return; // Messages already loaded
-            }
-
-            // Show loading indicator
-            messagesContent.innerHTML = `
-                <div class="messages-loading">
-                    <i class="fas fa-spinner fa-spin"></i> Loading messages...
-                </div>
-            `;
-
-            try {
-                const response = await fetch(`/Messages/GetThreadMessages?threadId=${threadId}`);
-                const data = await response.json();
-                
-                if (data.success && data.messages) {
-                    // Update the messages content
-                    updateThreadMessages(threadId, data.messages);
-                    messagesContent.dataset.loaded = 'true';
-                } else {
-                    messagesContent.innerHTML = `
-                        <div class="messages-empty-state">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <p>Failed to load messages</p>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                console.error('Error loading thread messages:', error);
-                messagesContent.innerHTML = `
-                    <div class="messages-empty-state">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <p>Error loading messages</p>
-                    </div>
-                `;
-            }
-        }
-
-        // Update thread messages display
-        function updateThreadMessages(threadId, messages) {
-            const messagesContent = document.querySelector(`#thread-${threadId} .thread-messages-content`);
-            
-            let html = `
-                <div class="messages-subheader">
-                    <h6 class="mb-3">
-                        <i class="fas fa-comments me-2"></i>Messages in this thread (${messages.length})
-                    </h6>
-                </div>
-            `;
-
-            if (messages.length > 0) {
-                messages.forEach(message => {
-                    html += `
-                        <div class="message-item">
-                            <div class="message-header">
-                                <div class="d-flex align-items-center">
-                                    <div class="message-avatar">
-                                        <i class="fas fa-user"></i>
-                                    </div>
-                                    <div class="message-sender-info">
-                                        <span class="message-sender">${message.senderName || 'Unknown User'}</span>
-                                        ${message.receiverName ? `<span class="message-receiver"> → ${message.receiverName}</span>` : ''}
-                                    </div>
-                                    <div class="message-timestamp">${new Date(message.sentAt).toLocaleString()}</div>
-                                </div>
-                            </div>
-                            
-                            <div class="message-content">${message.content}</div>
-                            
-                            <div class="message-actions">
-                                <span class="read-status ${message.isRead ? 'read' : 'unread'}">
-                                    ${message.isRead ? 'Read' : 'Unread'}
-                                </span>
-                                
-                                ${message.attachmentCount > 0 ? `
-                                    <span class="message-attachment-icon">
-                                        <i class="fas fa-paperclip"></i> ${message.attachmentCount}
-                                    </span>
-                                ` : ''}
-                                
-                                <button class="messages-btn messages-btn-info messages-btn-sm" onclick="viewThreadDetails('${threadId}')">
-                                    <i class="fas fa-info-circle"></i> Thread Details
-                                </button>
-                                
-                                <button class="messages-btn messages-btn-danger messages-btn-sm" onclick="confirmDeleteMessage('${message.messageId}', '${message.senderName}')">
-                                    <i class="fas fa-trash"></i> Delete
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                });
-            } else {
-                html += `
-                    <div class="messages-empty-state">
-                        <i class="fas fa-comment-slash"></i>
-                        <p>No messages found in this thread</p>
-                    </div>
-                `;
-            }
-
-            messagesContent.innerHTML = html;
-        }
-
-        // View thread details
-        async function viewThreadDetails(threadId) {
-            // Find the thread in the model data
-            const threads = @Html.Raw(Json.Serialize(Model.Threads));
-            let foundThread = null;
-            
-            threads.forEach(thread => {
-                if (thread.threadId === threadId) {
-                    foundThread = thread;
-                }
-            });
-            
-            if (foundThread) {
-                const content = document.getElementById('messageDetailsContent');
-                
-                // Show loading state
-                content.innerHTML = `
-                    <div class="text-center py-4">
-                        <div class="spinner-border text-warning" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mt-3 text-light">Loading thread details...</p>
-                    </div>
-                `;
-                
-                const modal = new bootstrap.Modal(document.getElementById('messageDetailsModal'));
-                modal.show();
-                
-                try {
-                    // Fetch detailed thread information
-                    const response = await fetch(`/Messages/GetThreadMessages?threadId=${threadId}`);
-                    const data = await response.json();
-                    
-                    let participantsHtml = '';
-                    if (foundThread.participants && foundThread.participants.length > 0) {
-                        participantsHtml = foundThread.participants.map(participant => 
-                            `<span class="participant-badge">${participant}</span>`
-                        ).join('');
-                    } else {
-                        participantsHtml = '<span class="text-muted">No participants data available</span>';
-                    }
-                    
-                    let messagesHtml = '';
-                    if (data.success && data.messages && data.messages.length > 0) {
-                        const recentMessages = data.messages.slice(-3); // Show last 3 messages
-                        messagesHtml = recentMessages.map(message => `
-                            <div class="recent-message">
-                                <div class="message-meta">
-                                    <strong class="message-sender">${message.senderName || 'Unknown User'}</strong>
-                                    <span class="message-time">${new Date(message.sentAt).toLocaleString()}</span>
-                                </div>
-                                <div class="message-preview">${message.content.substring(0, 100)}${message.content.length > 100 ? '...' : ''}</div>
-                            </div>
-                        `).join('');
-                    } else {
-                        messagesHtml = '<div class="text-muted">No recent messages available</div>';
-                    }
-                    
-                    const threadAge = Math.floor((new Date() - new Date(foundThread.lastMessageAt)) / (1000 * 60 * 60 * 24));
-                    const activityStatus = threadAge < 1 ? 'Very Active' : threadAge < 7 ? 'Active' : threadAge < 30 ? 'Moderate' : 'Inactive';
-                    const statusColor = threadAge < 1 ? '#6BF178' : threadAge < 7 ? '#F7EC59' : threadAge < 30 ? '#FFB347' : '#FF5964';
-                    
-                    content.innerHTML = `
-                        <div class="thread-details-container">
-                            <!-- Thread Header -->
-                            <div class="thread-details-header">
-                                <div class="thread-title-section">
-                                    <h4 class="thread-title">
-                                        <i class="fas fa-comments me-2"></i>${foundThread.subject}
-                                    </h4>
-                                    <div class="thread-meta-info">
-                                        <span class="thread-id">ID: ${foundThread.threadId.substring(0, 8)}...</span>
-                                        <span class="thread-type-badge ${foundThread.threadType.toLowerCase()}">${foundThread.threadType}</span>
-                                    </div>
-                                </div>
-                                <div class="thread-status-section">
-                                    <div class="activity-indicator" style="background: ${statusColor}">
-                                        <i class="fas fa-circle"></i>
-                                        ${activityStatus}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Thread Stats Grid -->
-                            <div class="thread-stats-grid">
-                                <div class="stat-card">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-comment-dots"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="stat-number">${foundThread.messageCount}</div>
-                                        <div class="stat-label">Messages</div>
-                                    </div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-users"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="stat-number">${foundThread.participants ? foundThread.participants.length : 0}</div>
-                                        <div class="stat-label">Participants</div>
-                                    </div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-clock"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="stat-number">${threadAge}</div>
-                                        <div class="stat-label">Days Old</div>
-                                    </div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-folder"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="stat-number">${foundThread.projectName ? '1' : '0'}</div>
-                                        <div class="stat-label">Projects</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Project Information -->
-                            <div class="info-section">
-                                <h6 class="info-section-title">
-                                    <i class="fas fa-project-diagram"></i> Project Information
-                                </h6>
-                                <div class="project-info">
-                                    <div class="project-name">${foundThread.projectName || 'No Project Assigned'}</div>
-                                    <div class="project-id">Project ID: ${foundThread.projectId || 'N/A'}</div>
-                                </div>
-                            </div>
-                            
-                            <!-- Participants -->
-                            <div class="info-section">
-                                <h6 class="info-section-title">
-                                    <i class="fas fa-users"></i> Participants (${foundThread.participants ? foundThread.participants.length : 0})
-                                </h6>
-                                <div class="participants-container">
-                                    ${participantsHtml}
-                                </div>
-                            </div>
-                            
-                            <!-- Recent Messages -->
-                            <div class="info-section">
-                                <h6 class="info-section-title">
-                                    <i class="fas fa-history"></i> Recent Messages
-                                </h6>
-                                <div class="recent-messages-container">
-                                    ${messagesHtml}
-                                </div>
-                            </div>
-                            
-                            <!-- Thread Timeline -->
-                            <div class="info-section">
-                                <h6 class="info-section-title">
-                                    <i class="fas fa-timeline"></i> Thread Timeline
-                                </h6>
-                                <div class="timeline-container">
-                                    <div class="timeline-item">
-                                        <div class="timeline-marker created"></div>
-                                        <div class="timeline-content">
-                                            <div class="timeline-title">Thread Created</div>
-                                            <div class="timeline-time">${new Date(foundThread.lastMessageAt).toLocaleString()}</div>
-                                        </div>
-                                    </div>
-                                    <div class="timeline-item">
-                                        <div class="timeline-marker active"></div>
-                                        <div class="timeline-content">
-                                            <div class="timeline-title">Last Activity</div>
-                                            <div class="timeline-time">${new Date(foundThread.lastMessageAt).toLocaleString()}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                } catch (error) {
-                    console.error('Error loading thread details:', error);
-                    content.innerHTML = `
-                        <div class="text-center py-4">
-                            <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
-                            <h5>Error Loading Details</h5>
-                            <p class="text-muted">Unable to load detailed thread information.</p>
-                        </div>
-                    `;
-                }
-            }
-        }
-
-        // Confirm delete thread
-        function confirmDeleteThread(threadId, threadSubject) {
-            if (confirm(`Are you sure you want to delete the thread "${threadSubject}"? This will delete all messages in this thread.`)) {
-                // Implement thread deletion logic here
-                showAlert('info', 'Thread deletion functionality will be implemented in the next update.');
-            }
-        }
-
-        // View message details
-        function viewMessageDetails(messageId) {
-            // Find the message in the model data
-            const threads = @Html.Raw(Json.Serialize(Model.Threads));
-            let foundMessage = null;
-            
-            threads.forEach(thread => {
-                thread.messages.forEach(message => {
-                    if (message.messageId === messageId) {
-                        foundMessage = message;
-                    }
-                });
-            });
-            
-            if (foundMessage) {
-                const content = document.getElementById('messageDetailsContent');
-                content.innerHTML = `
-                    <div class="info-section">
-                        <h6 class="info-section-title">
-                            <i class="fas fa-envelope"></i> Message Information
-                        </h6>
-                        <table class="info-table">
-                            <tr>
-                                <td class="info-label">Message ID:</td>
-                                <td class="info-value"><code class="info-code">${foundMessage.messageId}</code></td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">Sender:</td>
-                                <td class="info-value">
-                                    <div class="info-user-name">${foundMessage.senderName || 'Unknown User'}</div>
-                                    <div class="info-user-id">${foundMessage.senderId}</div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">Receiver:</td>
-                                <td class="info-value">
-                                    <div class="info-user-name">${foundMessage.receiverName || 'Unknown User'}</div>
-                                    <div class="info-user-id">${foundMessage.receiverId}</div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">Sent At:</td>
-                                <td class="info-value">
-                                    <span class="info-timestamp">${new Date(foundMessage.sentAt).toLocaleString()}</span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">Status:</td>
-                                <td class="info-value">
-                                    <span class="info-badge ${foundMessage.isRead ? 'info-badge-primary' : ''}" style="background: ${foundMessage.isRead ? '#6BF178' : '#FF5964'}; color: ${foundMessage.isRead ? '#1A1B25' : '#FFFFFF'};">
-                                        ${foundMessage.isRead ? 'Read' : 'Unread'}
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">Attachments:</td>
-                                <td class="info-value">${foundMessage.attachmentCount} file(s)</td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div class="info-section">
-                        <h6 class="info-section-title">
-                            <i class="fas fa-comment"></i> Message Content
-                        </h6>
-                        <div class="info-description" style="background: rgba(247, 236, 89, 0.1); padding: 15px; border-radius: 8px; border-left: 4px solid #F7EC59;">
-                            ${foundMessage.content}
-                        </div>
-                    </div>
-                `;
-                
-                const modal = new bootstrap.Modal(document.getElementById('messageDetailsModal'));
-                modal.show();
-            }
-        }
-
-        // Confirm delete message
-        function confirmDeleteMessage(messageId, senderName) {
-            messageToDelete = messageId;
-            document.getElementById('deleteSenderName').textContent = senderName || 'Unknown User';
-            
-            const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-            modal.show();
-        }
-
-        // Delete message
-        function deleteMessage() {
-            if (messageToDelete) {
-                fetch('@Url.Action("DeleteMessage")', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                    },
-                    body: JSON.stringify({ messageId: messageToDelete })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Close modal
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'));
-                        modal.hide();
-                        
-                        // Show success message
-                        showAlert('success', data.message);
-                        
-                        // Reload page after a short delay
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
-                    } else {
-                        showAlert('danger', data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showAlert('danger', 'An error occurred while deleting the message.');
-                });
-            }
-        }
-
-        // Apply filters
-        function applyFilters() {
-            // Show loading state
-            const applyBtn = document.querySelector('.filter-action-btn.primary');
-            if (applyBtn) {
-                const originalText = applyBtn.innerHTML;
-                applyBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Applying...';
-                applyBtn.disabled = true;
-            }
-            
-            // Get all filter values
-            const searchTerm = document.getElementById('searchTerm').value;
-            const filterType = document.getElementById('filterType').value;
-            const projectFilter = document.getElementById('projectFilter').value;
-            const userFilter = document.getElementById('userFilter').value;
-            const readFilter = document.getElementById('readFilter').value;
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            
-            // Build URL with all parameters
-            const url = new URL(window.location.href);
-            url.searchParams.set('searchTerm', searchTerm);
-            url.searchParams.set('filterType', filterType);
-            url.searchParams.set('projectFilter', projectFilter);
-            url.searchParams.set('userFilter', userFilter);
-            url.searchParams.set('readFilter', readFilter);
-            url.searchParams.set('startDate', startDate);
-            url.searchParams.set('endDate', endDate);
-            url.searchParams.set('page', '1'); // Reset to first page
-            
-            console.log('Filter values:', {
-                searchTerm, filterType, projectFilter, userFilter, readFilter, startDate, endDate
-            });
-            console.log('Navigating to:', url.toString());
-            
-            // Navigate to the new URL
-            window.location.href = url.toString();
-        }
-
-        // Clear filters
-        function clearFilters() {
-            document.getElementById('searchTerm').value = '';
-            document.getElementById('filterType').value = 'all';
-            document.getElementById('projectFilter').value = 'all';
-            document.getElementById('userFilter').value = 'all';
-            document.getElementById('readFilter').value = 'all';
-            document.getElementById('startDate').value = '';
-            document.getElementById('endDate').value = '';
-            
-            applyFilters();
-        }
-
-        // Show alert message
-        function showAlert(type, message) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `messages-alert messages-alert-${type} alert-dismissible fade show`;
-            alertDiv.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i> ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            
-            document.querySelector('.messages-container').insertBefore(alertDiv, document.querySelector('.messages-dashboard-header').nextSibling);
-            
-            // Auto-dismiss after 5 seconds
-            setTimeout(() => {
-                if (alertDiv.parentNode) {
-                    alertDiv.remove();
-                }
-            }, 5000);
-        }
-
-        // Set up delete confirmation
-        document.getElementById('confirmDeleteBtn').addEventListener('click', deleteMessage);
+        window.currentUserId = '@currentUserId';
     </script>
+    <script src="~/js/messages.js"></script>
 }

@@ -26,7 +26,7 @@
                 <h6 class="card-title mb-1 fw-bold">
                     @Model.Name
                 </h6>
-                <p class="card-subtitle small mb-0">
+                <p class="card-subtitle small mb-0 client-name">
                     @{
                         // Prefer client name if available
                         var clientName = ViewBag.ClientName as string;
@@ -40,14 +40,7 @@
                 </p>
             </div>
             <div class="text-end d-flex align-items-center gap-2">
-                @if (!string.Equals(Model.Status, "Draft", StringComparison.OrdinalIgnoreCase))
-                {
-                    <button type="button" class="btn btn-sm btn-outline-primary" title="View details"
-                        onclick="viewProjectDetails('@Model.ProjectId')">
-                        <i class="fa-solid fa-eye"></i>
-                    </button>
-                }
-                <span class="status-badge">@Model.Status</span>
+                <span class="status-badge @Model.Status.ToLower()">@Model.Status</span>
             </div>
         </div>
     </div>
@@ -80,32 +73,25 @@
             </div>
         </div>
 
-        <!-- Progress Bar -->
-        <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-                <small class="progress-label">Project Progress:</small>
-                <small class="progress-percentage">@progress%</small>
-            </div>
-            <div class="progress">
-                <div class="progress-bar" role="progressbar" style="width: @progress%;" aria-valuenow="@progress"
-                    aria-valuemin="0" aria-valuemax="100"></div>
-            </div>
+        <div class="estimates-container">
+            <!-- Estimate Info -->
+            @if (estimate != null)
+            {
+                <div class="estimate-info">
+                    <small class="estimate-label">Latest Estimate</small>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="estimate-amount">R @estimate.TotalAmount.ToString("N0")</span>
+                        <small class="estimate-date">@estimate.CreatedAt.ToString("MMM dd")</small>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="no-estimate-display">
+                    <small class="no-estimate-text">No estimate yet</small>
+                </div>
+            }
         </div>
-
-        <!-- Task Progress -->
-        @if (totalTasks > 0)
-        {
-            <div class="task-progress">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <small class="progress-label">Task Progress</small>
-                    <small class="progress-percentage">@taskProgress%</small>
-                </div>
-                <div class="progress">
-                    <div class="progress-bar" role="progressbar" style="width: @taskProgress%" aria-valuenow="@taskProgress"
-                        aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-            </div>
-        }
 
         <!-- Phases Summary -->
         @if (phases.Any())
@@ -174,85 +160,15 @@
             </div>
         }
 
-        <!-- Estimate Info -->
-        @if (estimate != null)
+        <!-- Continue Button for Draft Projects -->
+        @if (string.Equals(Model.Status, "Draft", StringComparison.OrdinalIgnoreCase))
         {
-            <div class="estimate-info">
-                <small class="estimate-label">Latest Estimate</small>
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="estimate-amount">R @estimate.TotalAmount.ToString("N0")</span>
-                    <small class="estimate-date">@estimate.CreatedAt.ToString("MMM dd")</small>
-                </div>
+            <div class="draft-continue-section mt-3">
+                <button type="button" class="btn btn-warning btn-sm w-100 continue-btn" onclick="continueProjectSetup('@Model.ProjectId')">
+                    <i class="fa-solid fa-arrow-right me-2"></i>Continue
+                </button>
             </div>
         }
-    </div>
-
-    <div class="card-footer">
-        <div class="action-buttons">
-            @if (string.Equals(Model.Status, "Draft", StringComparison.OrdinalIgnoreCase))
-            {
-                <!-- Primary action for Draft projects -->
-                <button type="button" class="btn-action btn-primary" onclick="continueProjectSetup('@Model.ProjectId')"
-                    title="Continue project setup">
-                    Continue Setup
-                </button>
-            }
-            else if (string.Equals(Model.Status, "Active", StringComparison.OrdinalIgnoreCase))
-            {
-                <!-- Primary action for Active projects -->
-                <button type="button" class="btn-action btn-primary" onclick="viewProjectDetails('@Model.ProjectId')"
-                    title="View Progress">
-                    View Progress
-                </button>
-
-                <!-- Secondary actions dropdown -->
-                <div class="dropdown">
-                    <button class="btn-action btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        Manage
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#" onclick="openPlanEditor('@Model.ProjectId','phases')">Add
-                                Phases</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="openPlanEditor('@Model.ProjectId','tasks')">Assign
-                                Tasks</a></li>
-                    </ul>
-                </div>
-            }
-            else
-            {
-                <!-- Primary action for Planning and other statuses -->
-                <button type="button" class="btn-action btn-primary" onclick="openProjectEstimates('@Model.ProjectId')"
-                    title="View Estimates">
-                    View Estimates
-                </button>
-
-                <!-- Secondary actions dropdown -->
-                <div class="dropdown">
-                    <button class="btn-action btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        Manage
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#" onclick="openPlanEditor('@Model.ProjectId','phases')">Add
-                                Phases</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="openPlanEditor('@Model.ProjectId','tasks')">Assign
-                                Tasks</a></li>
-                        @if (estimate == null)
-                        {
-                            <li><a class="dropdown-item" href="#"
-                                    onclick="openBlueprintPicker('@Model.ProjectId', function(url){ processBlueprintAndOpen('@Model.ProjectId', url); })">Process
-                                    Blueprint</a></li>
-                        }
-                        else
-                        {
-                            <li><a class="dropdown-item" href="#" onclick="openEstimateEditor('@Model.ProjectId')">Edit Line
-                                    Items</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="openEstimateEditor('@Model.ProjectId')">Send
-                                    Quote</a></li>
-                        }
-                    </ul>
-                </div>
-            }
-        </div>
     </div>
 </div>
 
@@ -384,49 +300,8 @@
     }
 
     function continueProjectSetup(projectId) {
-        // Open the wizard modal and preload existing draft data
-        const modalEl = document.getElementById('projectCreationWizardModal');
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
-
-        // After wizard created, set its projectId and load data
-        setTimeout(async () => {
-            if (!window.__pcwInstance) return;
-            window.__pcwInstance.projectId = projectId;
-            try {
-                // Load basic project
-                const res = await fetch(`/ProjectManager/GetDraftProject?id=${encodeURIComponent(projectId)}`);
-                const proj = await res.json();
-                if (proj && proj.projectId) {
-                    document.getElementById('projectName').value = proj.name || '';
-                    document.getElementById('projectDescription').value = proj.description || '';
-                    document.getElementById('clientSelect').value = proj.clientId || '';
-                    if (proj.startDate) document.getElementById('startDate').value = (new Date(proj.startDate)).toISOString().slice(0, 10);
-                    if (proj.endDatePlanned) document.getElementById('endDatePlanned').value = (new Date(proj.endDatePlanned)).toISOString().slice(0, 10);
-                    if (typeof proj.budgetPlanned === 'number') document.getElementById('budgetPlanned').value = proj.budgetPlanned;
-                }
-
-                // Load phases
-                const phasesRes = await fetch(`/ProjectManager/GetProjectPhases?id=${encodeURIComponent(projectId)}`);
-                const phases = await phasesRes.json();
-                const phasesContainer = document.getElementById('phasesContainer');
-                phasesContainer.innerHTML = '';
-                phases?.forEach(p => {
-                    phasesContainer.appendChild(window.__pcwInstance.buildPhaseRow(p));
-                });
-
-                // Load tasks
-                const tasksRes = await fetch(`/ProjectManager/GetProjectTasks?id=${encodeURIComponent(projectId)}`);
-                const tasks = await tasksRes.json();
-                const tasksContainer = document.getElementById('tasksContainer');
-                tasksContainer.innerHTML = '';
-                tasks?.forEach(t => {
-                    tasksContainer.appendChild(window.__pcwInstance.buildTaskRow(t));
-                });
-            } catch (e) {
-                console.warn('Failed to preload draft', e);
-            }
-        }, 300);
+        // Use the new editDraftProject function
+        editDraftProject(projectId);
     }
 
     function activateMaintenance(projectId) {
@@ -507,4 +382,23 @@
             document.body.removeChild(toast);
         });
     }
+
+    // Handle project card clicks
+    document.addEventListener('DOMContentLoaded', function () {
+        const projectCard = document.getElementById('project-@Model.ProjectId');
+        if (projectCard) {
+            // Add click handler to card header and body
+            const clickableElements = projectCard.querySelectorAll('.card-header, .card-body');
+            clickableElements.forEach(element => {
+                element.addEventListener('click', function (e) {
+                    // Don't trigger if clicking on buttons or interactive elements
+                    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.dropdown')) {
+                        return;
+                    }
+                    // Navigate to project details
+                    viewProjectDetails('@Model.ProjectId');
+                });
+            });
+        }
+    });
 </script>

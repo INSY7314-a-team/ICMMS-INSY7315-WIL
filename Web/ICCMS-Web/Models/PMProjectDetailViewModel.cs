@@ -61,6 +61,14 @@ namespace ICCMS_Web.Models
         [JsonPropertyName("completedPhases")]
         public int CompletedPhases { get; set; }
 
+        // Project estimates
+        [JsonPropertyName("estimates")]
+        public List<EstimateDto> Estimates { get; set; } = new();
+
+        // Project invoices
+        [JsonPropertyName("invoices")]
+        public List<InvoiceDto> Invoices { get; set; } = new();
+
         // Helper methods for UI
         public string GetStatusBadgeClass(string status)
         {
@@ -116,6 +124,15 @@ namespace ICCMS_Web.Models
             if (!phaseTasks.Any())
                 return 0;
 
+            // If all tasks are completed (status = "Completed"), phase is 100% complete
+            var allTasksCompleted = phaseTasks.All(t => 
+                t.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase));
+            
+            if (allTasksCompleted)
+                return 100;
+
+            // Calculate average progress of tasks in the phase
+            // This will reflect task completion naturally
             return (int)phaseTasks.Average(t => t.Progress);
         }
 

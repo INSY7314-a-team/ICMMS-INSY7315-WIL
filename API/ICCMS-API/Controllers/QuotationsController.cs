@@ -15,14 +15,20 @@ namespace ICCMS_API.Controllers
     {
         private readonly IFirebaseService _firebaseService;
         private readonly IQuoteWorkflowService _quoteWorkflow;
+        private readonly IWorkflowMessageService _workflowMessageService;
+        private readonly IAuditLogService _auditLogService;
 
         public QuotationsController(
             IFirebaseService firebaseService,
-            IQuoteWorkflowService quoteWorkflow
+            IQuoteWorkflowService quoteWorkflow,
+            IWorkflowMessageService workflowMessageService,
+            IAuditLogService auditLogService
         )
         {
             _firebaseService = firebaseService;
             _quoteWorkflow = quoteWorkflow;
+            _workflowMessageService = workflowMessageService;
+            _auditLogService = auditLogService;
         }
 
         [HttpGet]
@@ -160,6 +166,15 @@ namespace ICCMS_API.Controllers
                 // ✅ Step 3: Update Firestore with this new field
                 await _firebaseService.UpdateDocumentAsync("quotations", quotationId, quotation);
 
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Quotation",
+                    "Quotation Created",
+                    $"Quotation {quotationId} created for client {quotation.ClientId}",
+                    userId ?? "system",
+                    quotationId
+                );
+
                 // ✅ Step 4: Return the quotation ID to the caller
                 return Ok(quotationId);
             }
@@ -171,29 +186,40 @@ namespace ICCMS_API.Controllers
 
         [HttpPost("from-estimate/{estimateId}")]
         [Authorize(Roles = "Project Manager,Tester")]
-        public async Task<ActionResult<Quotation>> CreateQuotationFromEstimate(string estimateId, [FromBody] CreateQuotationFromEstimateRequest request)
+        public async Task<ActionResult<Quotation>> CreateQuotationFromEstimate(
+            string estimateId,
+            [FromBody] CreateQuotationFromEstimateRequest request
+        )
         {
             try
             {
                 // ===== 1️⃣ Fetch the Estimate =====
-                var estimate = await _firebaseService.GetDocumentAsync<Estimate>("estimates", estimateId);
+                var estimate = await _firebaseService.GetDocumentAsync<Estimate>(
+                    "estimates",
+                    estimateId
+                );
                 if (estimate == null)
                     return NotFound(new { error = "Estimate not found" });
 
                 // ===== 2️⃣ Fetch the Project to access ClientId =====
-                var project = await _firebaseService.GetDocumentAsync<Project>("projects", estimate.ProjectId);
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    estimate.ProjectId
+                );
                 if (project == null)
                     return NotFound(new { error = "Project not found for estimate" });
 
                 // ===== 3️⃣ Convert Estimate → Quotation Items =====
-                var quotationItems = estimate.LineItems.Select(item => new QuotationItem
-                {
-                    Name = item.Name,
-                    Quantity = item.Quantity,
-                    UnitPrice = item.UnitPrice,
-                    TaxRate = 0.15,
-                    LineTotal = item.LineTotal
-                }).ToList();
+                var quotationItems = estimate
+                    .LineItems.Select(item => new QuotationItem
+                    {
+                        Name = item.Name,
+                        Quantity = item.Quantity,
+                        UnitPrice = item.UnitPrice,
+                        TaxRate = 0.15,
+                        LineTotal = item.LineTotal,
+                    })
+                    .ToList();
 
                 // ===== 4️⃣ Create the Quotation =====
                 var quotation = new Quotation
@@ -201,16 +227,16 @@ namespace ICCMS_API.Controllers
                     QuotationId = Guid.NewGuid().ToString(),
                     EstimateId = estimateId,
                     ProjectId = estimate.ProjectId,
-                    ClientId = project.ClientId,        // ✅ from Project
+                    ClientId = project.ClientId, // ✅ from Project
                     ContractorId = estimate.ContractorId,
                     Description = estimate.Description,
                     Items = quotationItems,
-                    Status = "PendingPMApproval",
+                    Status = "SentToClient",
                     ValidUntil = estimate.ValidUntil,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                     Currency = estimate.Currency ?? "ZAR",
-                    IsAiGenerated = estimate.IsAiGenerated
+                    IsAiGenerated = estimate.IsAiGenerated,
                 };
 
                 // ===== 5️⃣ Calculate totals =====
@@ -223,22 +249,26 @@ namespace ICCMS_API.Controllers
                 quotation.QuotationId = quotationId;
                 await _firebaseService.UpdateDocumentAsync("quotations", quotationId, quotation);
 
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Quotation",
+                    "Quotation Created From Estimate",
+                    $"Quotation {quotationId} created from estimate {estimateId} for client {project.ClientId}",
+                    userId ?? "system",
+                    quotationId
+                );
+
                 // ===== 7️⃣ Return JSON (expected by Web side) =====
-                return Ok(new
-                {
-                    quotationId,
-                    quotation
-                });
+                return Ok(new { quotationId, quotation });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"💥 Exception while creating quotation from estimate {estimateId}: {ex.Message}");
+                Console.WriteLine(
+                    $"💥 Exception while creating quotation from estimate {estimateId}: {ex.Message}"
+                );
                 return StatusCode(500, new { error = ex.Message });
             }
         }
-
-
-
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Project Manager,Tester")]
@@ -305,6 +335,19 @@ namespace ICCMS_API.Controllers
                 var quotation = await _quoteWorkflow.PmApproveAsync(id);
                 if (quotation == null)
                     return NotFound();
+
+                // Note: No notification needed - PM approval is automatic when sending quotes to clients
+                // Client notifications are handled by the client approval/rejection process
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Quotation",
+                    "Quotation Approved",
+                    $"Quote {id} approved by PM",
+                    userId ?? "system",
+                    id
+                );
+
                 return Ok();
             }
             catch (InvalidOperationException ex)
@@ -327,6 +370,45 @@ namespace ICCMS_API.Controllers
                 var quotation = await _quoteWorkflow.PmRejectAsync(id, request.Reason);
                 if (quotation == null)
                     return NotFound();
+
+                // Notify Client about rejection
+                if (!string.IsNullOrEmpty(quotation.ClientId))
+                {
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "quotation_workflow",
+                        EntityId = id,
+                        EntityType = "quotation",
+                        Action = "rejected",
+                        ProjectId = quotation.ProjectId,
+                        UserId = quotation.ClientId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "quotationId", id },
+                            {
+                                "projectName",
+                                await ProjectHelper.GetProjectNameAsync(
+                                    _firebaseService,
+                                    quotation.ProjectId
+                                )
+                            },
+                            { "rejectedByName", "Project Manager" },
+                            { "totalAmount", quotation.GrandTotal },
+                            { "projectManagerId", User.UserId() },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
+                }
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Quotation",
+                    "Quotation Rejected",
+                    $"Quote {id} rejected by PM: {request.Reason}",
+                    userId ?? "system",
+                    id
+                );
+
                 return Ok();
             }
             catch (InvalidOperationException ex)
@@ -349,6 +431,48 @@ namespace ICCMS_API.Controllers
                 var quotation = await _quoteWorkflow.SendToClientAsync(id);
                 if (quotation == null)
                     return NotFound();
+
+                // Log quote sent to client
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Quotation",
+                    "Quote Sent to Client",
+                    $"Quote {quotation.QuotationId} sent to client {quotation.ClientId} for project {quotation.ProjectId}",
+                    userId ?? "system",
+                    quotation.QuotationId
+                );
+
+                // Send workflow notification to client
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(currentUserId))
+                {
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "quotation_workflow",
+                        EntityId = quotation.QuotationId,
+                        EntityType = "quotation",
+                        Action = "sent",
+                        ProjectId = quotation.ProjectId,
+                        UserId = currentUserId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "quotationId", quotation.QuotationId },
+                            {
+                                "projectName",
+                                await ProjectHelper.GetProjectNameAsync(
+                                    _firebaseService,
+                                    quotation.ProjectId
+                                )
+                            },
+                            { "totalAmount", quotation.GrandTotal },
+                            { "clientId", quotation.ClientId },
+                            { "sentById", currentUserId },
+                            { "sentByName", User.Identity.Name ?? "Project Manager" },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
+                }
+
                 return Ok();
             }
             catch (InvalidOperationException ex)
@@ -414,6 +538,20 @@ namespace ICCMS_API.Controllers
                 var result = await _quoteWorkflow.ClientDecisionAsync(id, body.Accept, body.Note);
                 if (result == null)
                     return NotFound();
+
+                // Note: Client doesn't need to be notified about their own decision
+                // PM notification is handled by ClientsController.ApproveQuotation/RejectQuotation
+
+                var userId = User.UserId();
+                var decision = body.Accept ? "approved" : "rejected";
+                _auditLogService.LogAsync(
+                    "Quotation",
+                    $"Quotation {char.ToUpper(decision[0]) + decision.Substring(1)}",
+                    $"Quote {id} {decision} by client: {body.Note}",
+                    userId ?? "system",
+                    id
+                );
+
                 return Ok();
             }
             catch (InvalidOperationException ex)
@@ -435,6 +573,16 @@ namespace ICCMS_API.Controllers
                 var result = await _quoteWorkflow.ConvertToInvoiceAsync(id);
                 if (result == null)
                     return NotFound();
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Quotation",
+                    "Quotation Converted to Invoice",
+                    $"Quote {id} converted to invoice {result.Value.invoiceId}",
+                    userId ?? "system",
+                    id
+                );
+
                 return Ok(result.Value.invoiceId);
             }
             catch (InvalidOperationException ex)
@@ -485,5 +633,25 @@ namespace ICCMS_API.Controllers
     public class PmRejectRequest
     {
         public string? Reason { get; set; }
+    }
+}
+
+// Helper method to get project name
+public static class ProjectHelper
+{
+    public static async Task<string> GetProjectNameAsync(
+        IFirebaseService firebaseService,
+        string projectId
+    )
+    {
+        try
+        {
+            var project = await firebaseService.GetDocumentAsync<Project>("projects", projectId);
+            return project?.Name ?? projectId; // Fallback to project ID if name not found
+        }
+        catch
+        {
+            return projectId; // Fallback to project ID on error
+        }
     }
 }

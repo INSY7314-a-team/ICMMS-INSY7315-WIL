@@ -1,359 +1,215 @@
 @model ICCMS_Web.Controllers.ClientDashboardViewModel
-
 @{
     ViewData["Title"] = "Client Dashboard";
+    Layout = "_Layout";
 }
 
-<!-- Modern Dashboard Header -->
-<div class="dashboard-header bg-gradient-primary text-white py-4 mb-4">
-    <div class="container-fluid">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="h3 mb-0">
-                    <i class="fas fa-user-tie me-3"></i>Client Dashboard
+<div class="pm-dashboard-container">
+    <!-- Header Section -->
+    <div class="dashboard-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="dashboard-title">
+                    <i class="fa-solid fa-user me-3" style="color: #F7EC59;"></i>@User.Identity.Name Dashboard
                 </h1>
-                <p class="mb-0 opacity-75">Welcome back, @User.Identity?.Name! Manage your projects and quotations</p>
+                <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Select a project to view its details.
+                </p>
             </div>
-            <div class="col-md-4 text-md-end">
-                <div class="d-flex align-items-center justify-content-end">
-                    <div class="me-3">
-                        <small class="text-white-50">Last Login</small><br>
-                        <span class="fw-bold">@DateTime.Now.ToString("MMM dd, yyyy")</span>
+        </div>
+    </div>
+
+    <!-- Stats Summary Cards -->
+    <div class="stats-container">
+        <div class="row g-2 mb-3">
+            <div class="col-lg-4 col-md-4 col-sm-12">
+                <div class="stat-card compact">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-folder-open"></i>
                     </div>
-                    <div class="avatar-circle bg-white text-primary">
-                        <i class="fas fa-user"></i>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.TotalProjects</h4>
+                        <p class="stat-label">Total Projects</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-4 col-sm-12">
+                <div class="stat-card compact">
+                    <div class="stat-icon in-progress">
+                        <i class="fa-solid fa-play"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.ActiveProjects</h4>
+                        <p class="stat-label">Active Projects</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-4 col-sm-12">
+                <div class="stat-card compact">
+                    <div class="stat-icon completed">
+                        <i class="fa-solid fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.CompletedProjects</h4>
+                        <p class="stat-label">Completed</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Search and Filter Controls -->
+    <div class="search-section">
+        <div class="search-input-group">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search projects by name..." value="">
+            <button type="button" id="searchBtn" class="search-btn">
+                <i class="fa-solid fa-search"></i>
+            </button>
+            <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Enhanced Filters Section -->
+    <div class="filter-section">
+        <div class="d-flex justify-content-center mb-3">
+            <button type="button" class="filter-toggle-btn" onclick="toggleFilters()">
+                <i class="fa-solid fa-sliders-h me-2"></i>
+                <span id="filterToggleText">Show Filters</span>
+                <i class="fa-solid fa-chevron-down ms-2" id="filterToggleIcon"></i>
+            </button>
+        </div>
+    </div>
+    <div class="filters-panel" id="filtersPanel" style="display: none;">
+        <div class="filter-group">
+            <div class="filter-group-header">
+                <h6 class="mb-0">Project Status</h6>
+            </div>
+            <div class="status-filters">
+                @{
+                    var statuses = new[] { "All", "Planning", "Active", "Completed", "Maintenance" };
+                }
+                @foreach (var status in statuses)
+                {
+                    var icon = status == "Planning" ? "fa-project-diagram"
+                    : status == "Active" ? "fa-play"
+                    : status == "Completed" ? "fa-check-circle"
+                    : status == "Maintenance" ? "fa-wrench" : "fa-list";
+                    <a href="#" class="status-filter-btn" data-status="@status">
+                        <i class="fa-solid @icon me-2"></i>
+                        @status
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Main Projects Section -->
+    <div class="section-header">
+        <h3 class="section-title">
+            Projects
+            <span class="badge badge-secondary">@Model.Projects.Count</span>
+        </h3>
+    </div>
+
+    @if (Model.Projects.Any())
+    {
+        <div class="projects-grid" id="projectsGrid">
+            @foreach (var project in Model.Projects)
+            {
+                ViewBag.StatusBadgeClass = Model.GetStatusBadgeClass(project.Status);
+                @await Html.PartialAsync("~/Views/Shared/_ClientProjectCard.cshtml", project)
+            }
+        </div>
+    }
+    else
+    {
+        <div class="no-projects-message">
+            <div class="text-center py-5">
+                <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No projects found</h4>
+            </div>
+        </div>
+    }
 </div>
 
-<div class="container-fluid">
-    <!-- Alert Messages -->
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-check-circle me-3 fs-4"></i>
-                <div>
-                    <strong>Success!</strong> @TempData["SuccessMessage"]
-                </div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
+<!-- Include dashboard CSS directly -->
+<link rel="stylesheet" href="~/css/pm-dashboard.css" />
+<link rel="stylesheet" href="~/css/project-cards.css" />
 
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-exclamation-triangle me-3 fs-4"></i>
-                <div>
-                    <strong>Error!</strong> @TempData["ErrorMessage"]
-                </div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeDashboard();
+        });
 
-    <!-- Dashboard Stats Cards -->
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card stat-card bg-primary text-white h-100 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title text-white-50 mb-1">Total Projects</h6>
-                            <h2 class="mb-0">@(Model.Projects?.Count ?? 0)</h2>
-                        </div>
-                        <div class="stat-icon">
-                            <i class="fas fa-project-diagram fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card stat-card bg-success text-white h-100 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title text-white-50 mb-1">Active Projects</h6>
-                            <h2 class="mb-0">@(Model.Projects?.Count(p => p.Status?.ToLower() == "active") ?? 0)</h2>
-                        </div>
-                        <div class="stat-icon">
-                            <i class="fas fa-play-circle fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card stat-card bg-warning text-white h-100 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title text-white-50 mb-1">Pending Quotations</h6>
-                            <h2 class="mb-0">@(Model.Quotations?.Count(q => q.Status?.ToLower() == "pending") ?? 0)</h2>
-                        </div>
-                        <div class="stat-icon">
-                            <i class="fas fa-clock fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card stat-card bg-info text-white h-100 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title text-white-50 mb-1">Total Budget</h6>
-                            <h2 class="mb-0">R @(Model.Projects?.Sum(p => p.BudgetPlanned).ToString("N0") ?? "0")</h2>
-                        </div>
-                        <div class="stat-icon">
-                            <i class="fas fa-money-bill-wave fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+        function initializeDashboard() {
+            setupSearch();
+            setupFilters();
+        }
 
-    <!-- Projects Section -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-white border-0 py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-project-diagram me-2 text-primary"></i>My Projects
-                        </h5>
-                        <span class="badge bg-primary">@(Model.Projects?.Count ?? 0) Projects</span>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    @if (Model.Projects?.Any() == true)
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Project Name</th>
-                                        <th>Status</th>
-                                        <th>Budget</th>
-                                        <th>Start Date</th>
-                                        <th>End Date</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var project in Model.Projects)
-                                    {
-                                        <tr>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="project-icon me-3">
-                                                        <i class="fas fa-building text-primary"></i>
-                                                    </div>
-                                                    <div>
-                                                        <h6 class="mb-0">@project.Name</h6>
-                                                        <small class="text-muted">@project.Description</small>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                @{
-                                                    var statusClass = project.Status?.ToLower() switch
-                                                    {
-                                                        "active" => "success",
-                                                        "completed" => "primary",
-                                                        "on hold" => "warning",
-                                                        "cancelled" => "danger",
-                                                        _ => "secondary"
-                                                    };
-                                                }
-                                                <span class="badge bg-@statusClass">@project.Status</span>
-                                            </td>
-                                            <td>
-                                                <div>
-                                                    <strong>R @project.BudgetPlanned.ToString("N0")</strong>
-                                                    @if (project.BudgetActual > 0)
-                                                    {
-                                                        <br><small class="text-muted">Actual: R @project.BudgetActual.ToString("N0")</small>
-                                                    }
-                                                </div>
-                                            </td>
-                                            <td>@project.StartDate.ToString("MMM dd, yyyy")</td>
-                                            <td>@project.EndDatePlanned.ToString("MMM dd, yyyy")</td>
-                                            <td>
-                                                <a href="@Url.Action("ProjectDetails", "Clients", new { id = project.ProjectId })" 
-                                                   class="btn btn-sm btn-outline-primary">
-                                                    <i class="fas fa-eye me-1"></i>View
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-center py-5">
-                            <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
-                            <h5 class="text-muted">No Projects Found</h5>
-                            <p class="text-muted">You don't have any projects assigned yet.</p>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
+        function setupSearch() {
+            const searchInput = document.getElementById("searchInput");
+            const searchBtn = document.getElementById("searchBtn");
+            const clearBtn = document.getElementById("clearSearchBtn");
 
-    <!-- Quotations Section -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-white border-0 py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-file-invoice-dollar me-2 text-success"></i>Quotations
-                        </h5>
-                        <span class="badge bg-success">@(Model.Quotations?.Count ?? 0) Quotations</span>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    @if (Model.Quotations?.Any() == true)
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Description</th>
-                                        <th>Amount</th>
-                                        <th>Status</th>
-                                        <th>Valid Until</th>
-                                        <th>Created</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var quotation in Model.Quotations)
-                                    {
-                                        <tr>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="quotation-icon me-3">
-                                                        <i class="fas fa-file-invoice text-success"></i>
-                                                    </div>
-                                                    <div>
-                                                        <h6 class="mb-0">@quotation.Description</h6>
-                                                        <small class="text-muted">ID: @quotation.QuotationId</small>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <strong>R @quotation.GrandTotal.ToString("N2")</strong>
+            searchBtn?.addEventListener("click", () => applySearch(searchInput.value));
+            clearBtn?.addEventListener("click", () => {
+                searchInput.value = "";
+                applyFilters();
+            });
+            searchInput?.addEventListener("keyup", (event) => {
+                if (event.key === "Enter") {
+                    applyFilters();
+                }
+            });
+        }
 
-                                            </td>
-                                            <td>
-                                                @{
-                                                    var quoteStatusClass = quotation.Status?.ToLower() switch
-                                                    {
-                                                        "pending" => "warning",
-                                                        "approved" => "success",
-                                                        "rejected" => "danger",
-                                                        "expired" => "secondary",
-                                                        _ => "info"
-                                                    };
-                                                }
-                                                <span class="badge bg-@quoteStatusClass">@quotation.Status</span>
-                                            </td>
-                                            <td>@quotation.ValidUntil.ToString("MMM dd, yyyy")</td>
-                                            <td>@quotation.CreatedAt.ToString("MMM dd, yyyy")</td>
-                                            <td>
-                                                <div class="btn-group" role="group">
-                                                    <a href="@Url.Action("QuotationDetails", "Clients", new { id = quotation.QuotationId })" 
-                                                       class="btn btn-sm btn-outline-primary">
-                                                        <i class="fas fa-eye me-1"></i>View
-                                                    </a>
-                                                    @if (quotation.Status?.ToLower() == "pending")
-                                                    {
-                                                        <form method="post" action="@Url.Action("ApproveQuotation", "Clients")" class="d-inline">
-                                                            @Html.AntiForgeryToken()
-                                                            <input type="hidden" name="quotationId" value="@quotation.QuotationId" />
-                                                            <button type="submit" class="btn btn-sm btn-success" 
-                                                                    onclick="return confirm('Are you sure you want to approve this quotation?')">
-                                                                <i class="fas fa-check me-1"></i>Approve
-                                                            </button>
-                                                        </form>
-                                                        <form method="post" action="@Url.Action("RejectQuotation", "Clients")" class="d-inline">
-                                                            @Html.AntiForgeryToken()
-                                                            <input type="hidden" name="quotationId" value="@quotation.QuotationId" />
-                                                            <button type="submit" class="btn btn-sm btn-danger" 
-                                                                    onclick="return confirm('Are you sure you want to reject this quotation?')">
-                                                                <i class="fas fa-times me-1"></i>Reject
-                                                            </button>
-                                                        </form>
-                                                    }
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-center py-5">
-                            <i class="fas fa-file-invoice-dollar fa-3x text-muted mb-3"></i>
-                            <h5 class="text-muted">No Quotations Found</h5>
-                            <p class="text-muted">You don't have any quotations yet.</p>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+        function setupFilters() {
+            document.querySelectorAll('.status-filter-btn').forEach(btn => {
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelectorAll('.status-filter-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    applyFilters();
+                });
+            });
+        }
 
-<style>
-    .dashboard-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    
-    .stat-card {
-        transition: transform 0.2s;
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-2px);
-    }
-    
-    .avatar-circle {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-    }
-    
-    .project-icon, .quotation-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: rgba(13, 110, 253, 0.1);
-    }
-    
-    .quotation-icon {
-        background-color: rgba(25, 135, 84, 0.1);
-    }
-</style>
+        function applyFilters() {
+            const searchQuery = document.getElementById("searchInput").value.toLowerCase();
+            const activeStatusBtn = document.querySelector('.status-filter-btn.active');
+            const statusFilter = activeStatusBtn ? activeStatusBtn.dataset.status : 'All';
+
+            document.querySelectorAll(".projects-grid .project-card-link").forEach(cardLink => {
+                const card = cardLink.querySelector('.project-card');
+                const cardText = card.innerText.toLowerCase();
+                const projectStatus = card.dataset.projectStatus.toLowerCase();
+
+                const searchMatch = cardText.includes(searchQuery);
+                const statusMatch = statusFilter === 'All' || projectStatus === statusFilter.toLowerCase();
+
+                cardLink.style.display = searchMatch && statusMatch ? "" : "none";
+            });
+        }
+
+        function toggleFilters() {
+            const filtersPanel = document.getElementById('filtersPanel');
+            const filterToggleText = document.getElementById('filterToggleText');
+            const filterToggleIcon = document.getElementById('filterToggleIcon');
+
+            if (filtersPanel.style.display === 'none' || filtersPanel.style.display === '') {
+                filtersPanel.style.display = 'block';
+                filterToggleText.textContent = 'Hide Filters';
+                filterToggleIcon.classList.remove('fa-chevron-down');
+                filterToggleIcon.classList.add('fa-chevron-up');
+            } else {
+                filtersPanel.style.display = 'none';
+                filterToggleText.textContent = 'Show Filters';
+                filterToggleIcon.classList.remove('fa-chevron-up');
+                filterToggleIcon.classList.add('fa-chevron-down');
+            }
+        }
+    </script>
+}

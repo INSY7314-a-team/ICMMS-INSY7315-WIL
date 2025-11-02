@@ -5,7 +5,7 @@
     Layout = "_Layout";
 }
 
-<div class="contractor-dashboard-container">
+<div class="contractor-dashboard-container project-detail-page">
     <!-- Breadcrumb Navigation -->
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
@@ -15,233 +15,169 @@
                 </a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
-                <i class="fa-solid fa-project-diagram"></i> @Model.Name
+                <i class="fa-solid fa-folder-open"></i> @Model.Name
             </li>
         </ol>
     </nav>
 
     <!-- Project Header -->
-    <div class="dashboard-header">
-        <h1 class="dashboard-title">
-            <i class="fa-solid fa-project-diagram me-2" style="color: #F7EC59;"></i>@Model.Name
-        </h1>
-        <div class="project-status-section">
-            <div class="status-badge status-@Model.Status.Replace(" ", "-").ToLower()">
-                @Model.Status
+    <div class="dashboard-header mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h1 class="dashboard-title mb-1">
+                    <i class="fa-solid fa-folder-open me-2" style="color: #F7EC59;"></i>@Model.Name
+                </h1>
+                <p class="dashboard-subtitle">@Model.Description</p>
             </div>
-            <div class="progress-info">
+            <div class="project-status-section">
+                <div class="status-badge status-@Model.Status.Replace(" ", "-").ToLower()">
+                    @Model.Status
+                </div>
+            </div>
+        </div>
+        <div class="progress-info mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="progress-label">Overall Progress</span>
                 <span class="progress-percentage">@($"{Model.OverallProgress}%")</span>
-                <div class="progress-bar" role="progressbar" aria-valuenow="@Model.OverallProgress" aria-valuemin="0"
-                    aria-valuemax="100">
-                    <div class="progress-fill" style="width: @($"{Model.OverallProgress}%")"></div>
-                </div>
+            </div>
+            <div class="progress-bar" role="progressbar" aria-valuenow="@Model.OverallProgress" aria-valuemin="0"
+                aria-valuemax="100">
+                <div class="progress-fill" style="width: @($"{Model.OverallProgress}%")"></div>
             </div>
         </div>
     </div>
 
-    <!-- Stats Summary Cards -->
-    <div class="stats-container">
-        <div class="row g-2 mb-3">
-            <div class="col-lg-2 col-md-4 col-sm-6">
-                <div class="stat-card compact">
-                    <div class="stat-icon">
-                        <i class="fa-solid fa-list-check"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h4 class="stat-number">@Model.TotalTasks</h4>
-                        <p class="stat-label">Total Tasks</p>
-                    </div>
+    <!-- Main Content Grid -->
+    <div class="row g-4">
+        <!-- Left Column: Tasks -->
+        <div class="col-lg-8">
+            <div class="tasks-container-refactored">
+                <div class="section-header-content">
+                    <h3 class="section-title">
+                        <i class="fa-solid fa-tasks me-2"></i>Assigned Tasks
+                        <span class="badge bg-secondary ms-2">@Model.Tasks.Count</span>
+                    </h3>
                 </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6">
-                <div class="stat-card compact">
-                    <div class="stat-icon pending">
-                        <i class="fa-solid fa-clock"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h4 class="stat-number">@Model.PendingTasks</h4>
-                        <p class="stat-label">Pending</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6">
-                <div class="stat-card compact">
-                    <div class="stat-icon in-progress">
-                        <i class="fa-solid fa-play"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h4 class="stat-number">@Model.InProgressTasks</h4>
-                        <p class="stat-label">In Progress</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6">
-                <div class="stat-card compact">
-                    <div class="stat-icon completed">
-                        <i class="fa-solid fa-circle-check"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h4 class="stat-number">@Model.CompletedTasks</h4>
-                        <p class="stat-label">Completed</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6">
-                <div class="stat-card compact">
-                    <div class="stat-icon overdue">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h4 class="stat-number">@Model.OverdueTasks</h4>
-                        <p class="stat-label">Overdue</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Project Information Grid -->
-    <div class="project-info-grid">
-        <!-- Project Details -->
-        <div class="stat-card">
-            <h3><i class="fa-solid fa-info-circle"></i> Project Details</h3>
-            <div class="info-grid">
-                <div class="info-item">
-                    <span class="info-label">Project ID:</span>
-                    <span class="info-value">@Model.ProjectId</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Client:</span>
-                    <span class="info-value">@Model.ClientName</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Project Manager:</span>
-                    <span class="info-value">@Model.ProjectManagerName</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Start Date:</span>
-                    <span class="info-value">@Model.StartDate.ToString("dd MMM yyyy")</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Planned End:</span>
-                    <span class="info-value">@Model.EndDatePlanned.ToString("dd MMM yyyy")</span>
-                </div>
-                @if (Model.EndDateActual.HasValue)
-                {
-                    <div class="info-item">
-                        <span class="info-label">Actual End:</span>
-                        <span class="info-value">@Model.EndDateActual.Value.ToString("dd MMM yyyy")</span>
-                    </div>
-                }
-            </div>
-        </div>
-
-        <!-- Budget Information -->
-        <div class="stat-card">
-            <h3><i class="fa-solid fa-dollar-sign"></i> Budget Information</h3>
-            <div class="budget-grid">
-                <div class="budget-item">
-                    <span class="budget-label">Planned Budget:</span>
-                    <span class="budget-value planned">@Model.BudgetPlanned.ToString("C")</span>
-                </div>
-                <div class="budget-item">
-                    <span class="budget-label">Actual Budget:</span>
-                    <span class="budget-value actual">@Model.BudgetActual.ToString("C")</span>
-                </div>
-                <div class="budget-item">
-                    <span class="budget-label">Variance:</span>
-                    <span class="budget-value variance @(Model.BudgetActual > Model.BudgetPlanned ? "over" : "under")">
-                        @((Model.BudgetActual - Model.BudgetPlanned).ToString("C"))
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tasks Section -->
-    <div class="main-projects-section">
-        <div class="section-header-content">
-            <h3 class="section-title">
-                <i class="fa-solid fa-tasks me-2"></i>Assigned Tasks
-                <span class="badge bg-secondary">@Model.Tasks.Count</span>
-            </h3>
-            <div class="section-actions">
-                <div class="sort-controls">
-                    <label for="statusFilter" class="sort-label">Status</label>
-                    <select id="statusFilter" class="dashboard-select">
-                        <option value="">All Status</option>
-                        <option value="Pending">Pending</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Completed">Completed</option>
-                    </select>
-                </div>
-                <div class="sort-controls">
-                    <label for="priorityFilter" class="sort-label">Priority</label>
-                    <select id="priorityFilter" class="dashboard-select">
-                        <option value="">All Priority</option>
-                        <option value="High">High</option>
-                        <option value="Medium">Medium</option>
-                        <option value="Low">Low</option>
-                    </select>
-                </div>
-                <button class="dashboard-btn" id="refreshTasksBtn">
-                    <i class="fa-solid fa-arrows-rotate"></i> Refresh
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div class="tasks-grid" id="tasksList">
-        @foreach (var task in Model.Tasks)
-        {
-            <div class="task-card @(task.IsOverdue ? "overdue" : "")" data-status="@task.Status"
-                data-priority="@task.Priority">
-                <div class="task-card-header">
-                    <div class="task-card-left">
-                        <h4 class="task-card-name">@task.Name</h4>
-                        <span class="task-card-status @task.Status.Replace(" ", "-").ToLower()">@task.Status</span>
-                        <p class="task-card-dates">
-                            @task.StartDate.ToString("dd/MM/yyyy") - @task.DueDate.ToString("dd/MM/yyyy")
-                        </p>
-                    </div>
-                    <div class="task-card-right">
-                        <span class="task-card-priority priority-@task.Priority.ToLower()">@task.Priority</span>
-                        @if (task.IsOverdue)
+                <div class="tasks-list-refactored" id="tasksList">
+                    @if (Model.Tasks.Any())
+                    {
+                        @foreach (var task in Model.Tasks)
                         {
-                            <span class="overdue-badge">OVERDUE</span>
+                            <div class="task-item-refactored @(task.IsOverdue ? "overdue" : "")" data-status="@task.Status"
+                                data-priority="@task.Priority">
+                                <div class="task-item-main-info">
+                                    <div class="task-status-indicator status-@task.Status.Replace(" ", "-").ToLower()"></div>
+                                    <div class="task-content">
+                                        <h5 class="task-name">@task.Name</h5>
+                                        <div class="task-meta">
+                                            <span><i class="fa-solid fa-calendar-day me-1"></i> Due: @task.DueDate.ToString("dd MMM yyyy")</span>
+                                            <span class="mx-2">|</span>
+                                            <span class="priority-badge priority-@task.Priority.ToLower()">@task.Priority</span>
+                                            @if (task.IsOverdue)
+                                            {
+                                                <span class="overdue-chip ms-2"><i class="fa-solid fa-triangle-exclamation me-1"></i>OVERDUE</span>
+                                            }
+                                            @if (task.Status == "Awaiting Approval")
+                                            {
+                                                <span class="awaiting-approval-chip ms-2"><i class="fa-solid fa-clock me-1"></i>AWAITING APPROVAL</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="task-actions">
+                                    @if (task.Status == "Pending")
+                                    {
+                                        <button class="btn btn-sm btn-action-refactored btn-start start-task-btn" data-task-id="@task.TaskId" title="Start Task">
+                                            <i class="fa-solid fa-play"></i>
+                                            <span>Start</span>
+                                        </button>
+                                    }
+                                    <a href="@Url.Action("TaskDetails", "Contractor", new { taskId = task.TaskId })" class="btn btn-sm btn-action-refactored btn-details" title="View Details">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </a>
+                                    @if (task.Status != "Pending" && task.Status != "Completed" && task.Status != "Awaiting Approval")
+                                    {
+                                        <a href="@Url.Action("SubmitProgressReport", "Contractor", new { taskId = task.TaskId })" class="btn btn-sm btn-action-refactored btn-progress" title="Submit Progress">
+                                            <i class="fa-solid fa-upload"></i>
+                                        </a>
+                                    }
+                                    @if (task.Status != "Pending" && task.Status != "Completed" && task.Status != "Awaiting Approval")
+                                    {
+                                        <a href="@Url.Action("RequestCompletion", "Contractor", new { taskId = task.TaskId })" class="btn btn-sm btn-action-refactored btn-complete" title="Request Completion">
+                                            <i class="fa-solid fa-check"></i>
+                                        </a>
+                                    }
+                                </div>
+                            </div>
                         }
-
-                    </div>
-                </div>
-                <div class="task-card-actions">
-                    @if (task.Status == "Pending")
-                    {
-                        <button class="btn btn-xs btn-warning start-task-btn" data-task-id="@task.TaskId">
-                            <i class="fa-solid fa-play"></i> Start
-                        </button>
                     }
-                    <button class="btn btn-xs btn-info view-details-btn" data-bs-toggle="modal"
-                        data-bs-target="#taskDetailsModal" data-task-id="@task.TaskId">
-                        <i class="fa-solid fa-eye"></i> Details
-                    </button>
-                    @if (task.CanSubmitProgress && task.Status != "Pending")
+                    else
                     {
-                        <button class="btn btn-xs btn-primary submit-progress-btn" data-bs-toggle="modal"
-                            data-bs-target="#progressReportModal" data-task-id="@task.TaskId">
-                            <i class="fa-solid fa-upload"></i> Progress
-                        </button>
-                    }
-                    @if (task.CanRequestCompletion && task.Status != "Pending")
-                    {
-
-                        <button class="btn btn-xs btn-success request-completion-btn" data-bs-toggle="modal"
-                            data-bs-target="#completionRequestModal" data-task-id="@task.TaskId">
-                            <i class="fa-solid fa-check"></i> Complete
-                        </button>
+                        <div class="no-tasks-message">
+                            <h4><i class="fa-solid fa-inbox"></i> No tasks assigned</h4>
+                            <p class="text-muted">There are currently no tasks assigned to you for this project.</p>
+                        </div>
                     }
                 </div>
             </div>
-        }
+        </div>
+
+        <!-- Right Column: Stats and Details -->
+        <div class="col-lg-4">
+            <!-- Stats Summary -->
+            <div class="stats-container-refactored mb-4">
+                <div class="row g-3">
+                    <div class="col-6"><div class="stat-card-refactored"><span class="stat-number">@Model.TotalTasks</span><span class="stat-label">Total Tasks</span></div></div>
+                    <div class="col-6"><div class="stat-card-refactored"><span class="stat-number">@Model.PendingTasks</span><span class="stat-label">Pending</span></div></div>
+                    <div class="col-6"><div class="stat-card-refactored"><span class="stat-number">@Model.InProgressTasks</span><span class="stat-label">In Progress</span></div></div>
+                    <div class="col-6"><div class="stat-card-refactored"><span class="stat-number">@Model.CompletedTasks</span><span class="stat-label">Completed</span></div></div>
+                    <div class="col-12"><div class="stat-card-refactored overdue-stat"><span class="stat-number">@Model.OverdueTasks</span><span class="stat-label">Overdue Tasks</span></div></div>
+                </div>
+            </div>
+
+            <!-- Project Details Accordion -->
+            <div class="accordion" id="projectInfoAccordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingOne">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                            <i class="fa-solid fa-info-circle me-2"></i> Project Details
+                        </button>
+                    </h2>
+                    <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#projectInfoAccordion">
+                        <div class="accordion-body">
+                            <div class="info-grid">
+                                <div class="info-item"><span class="info-label">Project ID</span><span class="info-value">@Model.ProjectId</span></div>
+                                <div class="info-item"><span class="info-label">Client</span><span class="info-value">@Model.ClientName</span></div>
+                                <div class="info-item"><span class="info-label">Project Manager</span><span class="info-value">@Model.ProjectManagerName</span></div>
+                                <div class="info-item"><span class="info-label">Start Date</span><span class="info-value">@Model.StartDate.ToString("dd MMM yyyy")</span></div>
+                                <div class="info-item"><span class="info-label">Planned End</span><span class="info-value">@Model.EndDatePlanned.ToString("dd MMM yyyy")</span></div>
+                                @if (Model.EndDateActual.HasValue)
+                                {
+                                    <div class="info-item"><span class="info-label">Actual End</span><span class="info-value">@Model.EndDateActual.Value.ToString("dd MMM yyyy")</span></div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingTwo">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                            <span style="color: #F7EC59; margin-right: 5px;">R</span> Budget Information
+                        </button>
+                    </h2>
+                    <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#projectInfoAccordion">
+                        <div class="accordion-body">
+                             <div class="budget-grid">
+                                <div class="budget-item"><span class="budget-label">Planned</span><span class="budget-value planned">@Model.BudgetPlanned.ToString("C")</span></div>
+                                <div class="budget-item"><span class="budget-label">Actual</span><span class="budget-value actual">@Model.BudgetActual.ToString("C")</span></div>
+                                <div class="budget-item variance"><span class="budget-label">Variance</span><span class="budget-value @(Model.BudgetActual > Model.BudgetPlanned ? "over" : "under")">@((Model.BudgetActual - Model.BudgetPlanned).ToString("C"))</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

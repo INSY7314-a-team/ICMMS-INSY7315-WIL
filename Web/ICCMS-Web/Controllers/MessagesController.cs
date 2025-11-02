@@ -1,262 +1,512 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using System.Text.Json;
 using ICCMS_Web.Models;
+using ICCMS_Web.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ICCMS_Web.Controllers
 {
-    [Authorize(Roles = "Admin,Tester")] // Admins and Testers can access this controller
+    public class MarkThreadAsReadRequest
+    {
+        public string ThreadId { get; set; } = string.Empty;
+    }
+
+    [Authorize(Roles = "Admin,Project Manager,Client,Contractor,Tester")] // All authenticated users can access this controller
     public class MessagesController : Controller
     {
-        private readonly HttpClient _httpClient;
-        private readonly IConfiguration _configuration;
-        private readonly string _apiBaseUrl;
+        private readonly IApiClient _apiClient;
         private readonly ILogger<MessagesController> _logger;
+        private readonly IMessagingService _messagingService;
 
-        public MessagesController(HttpClient httpClient, IConfiguration configuration, ILogger<MessagesController> logger)
+        public MessagesController(
+            IApiClient apiClient,
+            ILogger<MessagesController> logger,
+            IMessagingService messagingService
+        )
         {
-            _httpClient = httpClient;
-            _configuration = configuration;
+            _apiClient = apiClient;
             _logger = logger;
-            _apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7136";
+            _messagingService = messagingService;
         }
 
-        public async Task<IActionResult> Index(
-            int page = 1, 
-            int pageSize = 25, 
-            string filterType = "all", 
-            string projectFilter = "all",
-            string userFilter = "all",
-            string threadFilter = "all",
-            string readFilter = "all",
-            string searchTerm = "",
-            DateTime? startDate = null,
-            DateTime? endDate = null)
+        public async Task<IActionResult> Index()
         {
             try
             {
-                // Get Firebase token from user claims
-                var firebaseToken = User.FindFirst("FirebaseToken")?.Value;
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "Unknown";
 
-                if (string.IsNullOrEmpty(firebaseToken))
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    TempData["Error"] = "Firebase token not found. Please log in again.";
-                    return View(new MessageThreadsViewModel());
+                    TempData["Error"] = "User not authenticated. Please log in again.";
+                    return View(new UserMessagesViewModel());
                 }
 
-                // Clear any existing headers to avoid conflicts
-                _httpClient.DefaultRequestHeaders.Clear();
-                
-                // Set authorization header
-                _httpClient.DefaultRequestHeaders.Authorization = 
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", firebaseToken);
+                // Get workflow messages for the user
+                var workflowThreads = await GetWorkflowMessagesForUser(currentUserId);
 
-                // Use the new efficient filtered threads endpoint
-                var threadsUrl = $"{_apiBaseUrl}/api/messages/admin/threads/filtered";
-                
-                // Build query parameters for all filters
-                var queryParams = new List<string>
+                // Get direct messages for the user
+                var directThreads = await GetDirectMessagesForUser(currentUserId);
+
+                // Get unread count
+                var unreadCount = await _messagingService.GetUnreadCountAsync(currentUserId);
+
+                // Reset circuit breakers for critical endpoints to ensure dropdowns populate
+                _apiClient.ResetCircuitBreaker("/api/admin/users");
+                _apiClient.ResetCircuitBreaker("/api/projectmanager/projects");
+
+                // Get available users and projects for sending messages based on role and project associations
+                var availableUsers = await GetAvailableUsersForMessaging(currentUserId, userRole);
+                var availableProjects = await GetAvailableProjectsForMessaging(
+                    currentUserId,
+                    userRole
+                );
+
+                // Fallback: If no users or projects found, try basic loading
+                if (!availableUsers.Any())
                 {
-                    $"page={page}",
-                    $"pageSize={pageSize}"
+                    _logger.LogWarning(
+                        "No users found with advanced filtering, trying basic user loading"
+                    );
+                    try
+                    {
+                        var allUsers =
+                            await _apiClient.GetAsync<List<UserDto>>("/api/admin/users", User)
+                            ?? new List<UserDto>();
+                        availableUsers = allUsers.Where(u => u.UserId != currentUserId).ToList();
+                        _logger.LogInformation(
+                            "Fallback loaded {Count} users",
+                            availableUsers.Count
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Fallback user loading also failed");
+                    }
+                }
+
+                if (!availableProjects.Any())
+                {
+                    _logger.LogWarning(
+                        "No projects found with advanced filtering, trying basic project loading"
+                    );
+                    try
+                    {
+                        var allProjects =
+                            await _apiClient.GetAsync<List<ProjectDto>>(
+                                "/api/projectmanager/projects",
+                                User
+                            ) ?? new List<ProjectDto>();
+                        availableProjects = allProjects;
+                        _logger.LogInformation(
+                            "Fallback loaded {Count} projects",
+                            availableProjects.Count
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Fallback project loading also failed");
+                    }
+                }
+
+                var viewModel = new UserMessagesViewModel
+                {
+                    WorkflowThreads = workflowThreads,
+                    DirectThreads = directThreads,
+                    AvailableUsers = availableUsers,
+                    AvailableProjects = availableProjects,
+                    UnreadCount = unreadCount,
+                    UserRole = userRole,
+                    CurrentView = "workflow", // Default to workflow messages
                 };
-                
-                if (!string.IsNullOrEmpty(projectFilter) && projectFilter != "all")
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading messages for user");
+                TempData["Error"] = "Error loading messages. Please try again.";
+                return View(new UserMessagesViewModel());
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetUserThreads()
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "Unknown";
+
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    queryParams.Add($"projectId={projectFilter}");
+                    return Json(new { success = false, message = "User not authenticated" });
                 }
-                
-                if (!string.IsNullOrEmpty(filterType) && filterType != "all")
+
+                var threads = await _messagingService.GetUserThreadsAsync(currentUserId, userRole);
+                return Json(new { success = true, threads = threads });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user threads");
+                return Json(new { success = false, message = "Error loading threads" });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetUserThreadsByType(string messageType = "all")
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "Unknown";
+
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    queryParams.Add($"threadType={filterType}");
+                    return Json(new { success = false, message = "User not authenticated" });
                 }
-                
-                if (!string.IsNullOrEmpty(userFilter) && userFilter != "all")
+
+                List<ThreadDto> threads = new List<ThreadDto>();
+
+                if (messageType == "workflow" || messageType == "all")
                 {
-                    queryParams.Add($"userId={userFilter}");
+                    var workflowThreads = await GetWorkflowMessagesForUser(currentUserId);
+                    threads.AddRange(workflowThreads);
                 }
-                
-                if (!string.IsNullOrEmpty(readFilter) && readFilter != "all")
+
+                if (messageType == "direct" || messageType == "all")
                 {
-                    queryParams.Add($"readStatus={readFilter}");
+                    var directThreads = await GetDirectMessagesForUser(currentUserId);
+                    threads.AddRange(directThreads);
                 }
-                
-                if (!string.IsNullOrEmpty(searchTerm))
+
+                return Json(new { success = true, threads = threads });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error getting user threads by type: {MessageType}",
+                    messageType
+                );
+                return Json(new { success = false, message = "Error loading threads" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SendMessage([FromBody] SendMessageRequest request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "Unknown";
+
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
+                    return Json(new { success = false, message = "User not authenticated" });
                 }
-                
-                if (startDate.HasValue)
+
+                // Validate communication hierarchy
+                _logger.LogInformation(
+                    "Validating recipient: {ReceiverId} for {Role} user {CurrentUserId}",
+                    request.ReceiverId,
+                    userRole,
+                    currentUserId
+                );
+
+                // First, try to get the user from the available users list (more efficient)
+                var availableUsers = await GetAvailableUsersForMessaging(currentUserId, userRole);
+                var receiverUser = availableUsers.FirstOrDefault(u =>
+                    u.UserId == request.ReceiverId
+                );
+
+                // If not found in available users, try the GetUserById method as fallback
+                if (receiverUser == null)
                 {
-                    queryParams.Add($"startDate={startDate.Value:yyyy-MM-dd}");
+                    _logger.LogInformation(
+                        "Recipient not found in available users, trying GetUserById"
+                    );
+                    receiverUser = await GetUserById(request.ReceiverId);
                 }
-                
-                if (endDate.HasValue)
+
+                if (receiverUser == null)
                 {
-                    queryParams.Add($"endDate={endDate.Value:yyyy-MM-dd}");
+                    _logger.LogWarning(
+                        "Recipient {ReceiverId} not found for {Role} user {CurrentUserId}",
+                        request.ReceiverId,
+                        userRole,
+                        currentUserId
+                    );
+                    return Json(new { success = false, message = "Recipient not found" });
                 }
-                
-                threadsUrl += "?" + string.Join("&", queryParams);
-                
-                _logger.LogInformation($"Calling API: {threadsUrl}");
-                
-                var threadsResponse = await _httpClient.GetAsync(threadsUrl);
-                
-                if (threadsResponse.IsSuccessStatusCode)
+
+                _logger.LogInformation(
+                    "Recipient found: {FullName} ({Role})",
+                    receiverUser.FullName,
+                    receiverUser.Role
+                );
+
+                if (!_messagingService.CanUserSendMessage(userRole, receiverUser.Role))
                 {
-                    var threadsContent = await threadsResponse.Content.ReadAsStringAsync();
-                    _logger.LogInformation($"Threads API response: {threadsContent.Substring(0, Math.Min(500, threadsContent.Length))}...");
-                    
-                    // Parse the new filtered response format
-                    var filteredResponse = JsonSerializer.Deserialize<FilteredThreadsResponse>(threadsContent, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                    
-                    if (filteredResponse?.Threads != null)
-                    {
-                        _logger.LogInformation($"Received {filteredResponse.Threads.Count} threads from API (page {filteredResponse.Page} of {filteredResponse.TotalPages})");
-                        
-                        // Convert API thread summaries to view models
-                        var allThreads = new List<MessageThreadViewModel>();
-                        
-                        foreach (var apiThread in filteredResponse.Threads)
+                    return Json(
+                        new
                         {
-                            var thread = new MessageThreadViewModel
-                            {
-                                ThreadId = apiThread.ThreadId,
-                                Subject = apiThread.Subject,
-                                ProjectId = apiThread.ProjectId,
-                                ProjectName = apiThread.ProjectName,
-                                MessageCount = apiThread.MessageCount,
-                                LastMessageAt = apiThread.LastMessageAt,
-                                Participants = apiThread.Participants,
-                                ThreadType = apiThread.ThreadType,
-                                Messages = new List<MessageViewModel>()
-                            };
-                            
-                            allThreads.Add(thread);
+                            success = false,
+                            message = "You are not authorized to send messages to this user",
                         }
-                    
-                        // All filtering and pagination is now handled by the API
-                        var pagedThreads = allThreads;
-                        var totalFilteredThreads = filteredResponse.TotalCount;
-                        var totalPages = filteredResponse.TotalPages;
-                        
-                        _logger.LogInformation($"API returned {pagedThreads.Count} threads (page {filteredResponse.Page} of {totalPages}, total: {totalFilteredThreads})");
-                    
-                        // Get available message types
-                        var availableMessageTypes = new List<string> { "direct", "thread", "broadcast", "general" };
-                        
-                        // Get available projects
-                        var availableProjects = new List<ProjectDto>();
-                        try
-                        {
-                            var projectsResponse = await _httpClient.GetAsync($"{_apiBaseUrl}/api/projectmanager/projects");
-                    if (projectsResponse.IsSuccessStatusCode)
-                    {
-                        var projectsContent = await projectsResponse.Content.ReadAsStringAsync();
-                                var projects = JsonSerializer.Deserialize<List<ProjectDto>>(projectsContent, new JsonSerializerOptions
-                        {
-                            PropertyNameCaseInsensitive = true
-                        });
-                        if (projects != null)
-                                {
-                                    availableProjects = projects;
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning($"Could not load projects for dropdown: {ex.Message}");
-                        }
-                        
-                        // Get available users
-                        var availableUsers = new List<UserDto>();
-                        try
-                        {
-                            var usersResponse = await _httpClient.GetAsync($"{_apiBaseUrl}/api/admin/users");
-                            if (usersResponse.IsSuccessStatusCode)
-                            {
-                                var usersContent = await usersResponse.Content.ReadAsStringAsync();
-                                var users = JsonSerializer.Deserialize<List<UserDto>>(usersContent, new JsonSerializerOptions
-                                {
-                                    PropertyNameCaseInsensitive = true
-                                });
-                                if (users != null)
-                                {
-                                    availableUsers = users;
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning($"Could not load users for dropdown: {ex.Message}");
-                        }
-                    
-                    var viewModel = new MessageThreadsViewModel
-                    {
-                        Threads = pagedThreads,
-                            AvailableMessageTypes = availableMessageTypes,
-                            AvailableProjects = availableProjects.Select(p => new ProjectSummary { ProjectId = p.ProjectId, ProjectName = p.Name }).ToList(),
-                            AvailableUsers = availableUsers.Select(u => new UserSummary { UserId = u.UserId, UserName = u.FullName ?? u.Email }).ToList(),
-                            CurrentPage = filteredResponse.Page,
-                            TotalPages = totalPages,
-                            PageSize = filteredResponse.PageSize,
-                        TotalThreads = totalFilteredThreads,
-                            CurrentFilter = filterType ?? "all",
-                            ProjectFilter = projectFilter ?? "all",
-                            UserFilter = userFilter ?? "all",
-                            ReadFilter = readFilter ?? "all",
-                            CurrentSearchTerm = searchTerm ?? "",
-                        StartDate = startDate,
-                        EndDate = endDate
-                    };
-                    
-                        var filterMessage = filterType?.ToLower() != "all" ? $" (Filtered by: {filterType})" : "";
-                    var searchMessage = !string.IsNullOrEmpty(searchTerm) ? $" (Search: {searchTerm})" : "";
-                        TempData["Success"] = $"Showing {pagedThreads.Count} of {totalFilteredThreads} message threads (Page {filteredResponse.Page} of {totalPages}){filterMessage}{searchMessage}";
-                    return View(viewModel);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("API returned null or empty threads");
-                        return View(new MessageThreadsViewModel
-                        {
-                            Threads = new List<MessageThreadViewModel>(),
-                            AvailableMessageTypes = new List<string> { "direct", "thread", "broadcast", "general" },
-                            AvailableProjects = new List<ProjectSummary>(),
-                            AvailableUsers = new List<UserSummary>(),
-                            CurrentPage = 1,
-                            TotalPages = 1,
-                            PageSize = pageSize,
-                            TotalThreads = 0,
-                            CurrentFilter = filterType ?? "all",
-                            ProjectFilter = projectFilter ?? "all",
-                            UserFilter = userFilter ?? "all",
-                            ReadFilter = readFilter ?? "all",
-                            CurrentSearchTerm = searchTerm ?? "",
-                            StartDate = startDate,
-                            EndDate = endDate
-                        });
-                    }
+                    );
                 }
-                else if (threadsResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+
+                var success = await _messagingService.SendDirectMessageAsync(
+                    currentUserId,
+                    request.ReceiverId,
+                    request.ProjectId,
+                    request.Subject,
+                    request.Content
+                );
+
+                if (success)
                 {
-                    TempData["Error"] = "Authentication failed. Your session may have expired. Please log in again.";
-                    return View(new MessageThreadsViewModel());
+                    return Json(new { success = true, message = "Message sent successfully" });
                 }
                 else
                 {
-                    var errorContent = await threadsResponse.Content.ReadAsStringAsync();
-                    TempData["Error"] = $"Failed to retrieve message threads. Status: {threadsResponse.StatusCode}. Error: {errorContent}";
-                    return View(new MessageThreadsViewModel());
+                    return Json(new { success = false, message = "Failed to send message" });
                 }
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Error retrieving message threads: {ex.Message}";
-                return View(new MessageThreadsViewModel());
+                _logger.LogError(ex, "Error sending message");
+                return Json(new { success = false, message = "Error sending message" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SendThreadMessage(
+            [FromBody] SendThreadMessageRequest request
+        )
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "Unknown";
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Json(new { success = false, message = "User not authenticated" });
+                }
+
+                _logger.LogInformation(
+                    "Sending thread message to thread {ThreadId} by user {UserId}",
+                    request.ThreadId,
+                    currentUserId
+                );
+
+                // Let the API handle the logic of finding participants and details.
+                // The web client only needs to provide the thread and the content.
+                var messageRequest = new CreateMessageRequest
+                {
+                    Content = request.Content,
+                    ThreadId = request.ThreadId,
+                };
+
+                var result = await _apiClient.PostAsync<CreateMessageResponse>(
+                    "/api/messages",
+                    messageRequest,
+                    User
+                );
+
+                if (result != null && !string.IsNullOrEmpty(result.MessageId))
+                {
+                    _logger.LogInformation(
+                        "Thread message sent successfully to thread {ThreadId}",
+                        request.ThreadId
+                    );
+                    return Json(new { success = true, message = "Message sent successfully" });
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Failed to send thread message to thread {ThreadId}",
+                        request.ThreadId
+                    );
+                    return Json(new { success = false, message = "Failed to send message" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error sending thread message to thread {ThreadId}",
+                    request.ThreadId
+                );
+                return Json(new { success = false, message = "Error sending message" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ReplyToMessage([FromBody] ReplyToMessageRequest request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "Unknown";
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Json(new { success = false, message = "User not authenticated" });
+                }
+
+                _logger.LogInformation(
+                    "Replying to message {ParentMessageId} by user {UserId}",
+                    request.ParentMessageId,
+                    currentUserId
+                );
+
+                // Get the parent message to validate it can be replied to
+                var parentMessage = await GetMessageById(request.ParentMessageId);
+                if (parentMessage == null)
+                {
+                    return Json(new { success = false, message = "Parent message not found" });
+                }
+
+                // Check if the message can be replied to (not system/workflow messages)
+                if (
+                    parentMessage.MessageType == "workflow"
+                    || parentMessage.MessageType == "system"
+                    || parentMessage.SenderId == "system"
+                )
+                {
+                    return Json(
+                        new { success = false, message = "Cannot reply to this type of message" }
+                    );
+                }
+
+                // Create the reply request for the API
+                var replyRequest = new
+                {
+                    parentMessageId = request.ParentMessageId,
+                    content = request.Content,
+                };
+
+                var result = await _apiClient.PostAsync<CreateMessageResponse>(
+                    "/api/messages/reply",
+                    replyRequest,
+                    User
+                );
+
+                if (result != null && !string.IsNullOrEmpty(result.MessageId))
+                {
+                    _logger.LogInformation(
+                        "Reply sent successfully to message {ParentMessageId}",
+                        request.ParentMessageId
+                    );
+                    return Json(new { success = true, message = "Reply sent successfully" });
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Failed to send reply to message {ParentMessageId}",
+                        request.ParentMessageId
+                    );
+                    return Json(new { success = false, message = "Failed to send reply" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error sending reply to message {ParentMessageId}",
+                    request.ParentMessageId
+                );
+                return Json(new { success = false, message = "Error sending reply" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> MarkThreadAsRead(
+            [FromBody] MarkThreadAsReadRequest request
+        )
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Json(new { success = false, message = "User not authenticated" });
+                }
+
+                if (string.IsNullOrEmpty(request.ThreadId))
+                {
+                    return Json(new { success = false, message = "Thread ID is required" });
+                }
+
+                _logger.LogInformation(
+                    $"[MarkThreadAsRead] Attempting to mark thread {request.ThreadId} as read for user {currentUserId}."
+                );
+
+                var response = await _messagingService.MarkThreadAsReadAsync(
+                    request.ThreadId,
+                    currentUserId
+                );
+
+                if (response != null)
+                {
+                    _logger.LogInformation(
+                        $"[MarkThreadAsRead] Service returned success. New unread count is {response.UnreadCount}."
+                    );
+                    return Json(
+                        new
+                        {
+                            success = true,
+                            message = "Thread marked as read",
+                            unreadCount = response.UnreadCount,
+                        }
+                    );
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        $"[MarkThreadAsRead] Service returned failure for thread {request.ThreadId}."
+                    );
+                    return Json(
+                        new
+                        {
+                            success = false,
+                            message = "Failed to mark thread as read",
+                            unreadCount = -1,
+                        }
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking thread as read");
+                return Json(new { success = false, message = "Error updating thread" });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetUnreadCount()
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Json(new { success = false, count = 0 });
+                }
+
+                var count = await _messagingService.GetUnreadCountAsync(currentUserId);
+                return Json(new { success = true, count = count });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting unread count");
+                return Json(new { success = false, count = 0 });
             }
         }
 
@@ -265,200 +515,1047 @@ namespace ICCMS_Web.Controllers
         {
             try
             {
-                // Get Firebase token from user claims (same as Index method)
-                var firebaseToken = User.FindFirst("FirebaseToken")?.Value;
-                if (string.IsNullOrEmpty(firebaseToken))
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    return Json(new { success = false, message = "Authentication required" });
+                    return Json(new { success = false, message = "User not authenticated" });
                 }
 
-                // Clear any existing headers to avoid conflicts
-                _httpClient.DefaultRequestHeaders.Clear();
-
-                // Set authorization header
-                _httpClient.DefaultRequestHeaders.Authorization = 
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", firebaseToken);
-
-                // Get messages for this specific thread
-                var messagesResponse = await _httpClient.GetAsync($"{_apiBaseUrl}/api/messages/thread/{threadId}");
-                
-                if (messagesResponse.IsSuccessStatusCode)
-                {
-                    var messagesContent = await messagesResponse.Content.ReadAsStringAsync();
-                    var apiMessages = JsonSerializer.Deserialize<List<dynamic>>(messagesContent, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-
-                    // Get users for name mapping
-                    var usersResponse = await _httpClient.GetAsync($"{_apiBaseUrl}/api/admin/users");
-                    var usersDict = new Dictionary<string, string>();
-                    
-                    if (usersResponse.IsSuccessStatusCode)
-                    {
-                        var usersContent = await usersResponse.Content.ReadAsStringAsync();
-                        var users = JsonSerializer.Deserialize<List<dynamic>>(usersContent, new JsonSerializerOptions
-                        {
-                            PropertyNameCaseInsensitive = true
-                        });
-
-                        if (users != null)
-                        {
-                            foreach (var user in users)
-                            {
-                                var userId = user.GetProperty("userId").GetString() ?? string.Empty;
-                                var fullName = user.GetProperty("fullName").GetString() ?? string.Empty;
-                                if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(fullName))
-                                {
-                                    usersDict[userId] = fullName;
-                                }
-                            }
-                        }
-                    }
-
-                    // Convert API messages to view models
-                    var messages = new List<object>();
-                    
-                    if (apiMessages != null)
-                    {
-                        foreach (var apiMessage in apiMessages)
-                        {
-                            var message = new
-                            {
-                                messageId = apiMessage.GetProperty("messageId").GetString() ?? string.Empty,
-                                senderId = apiMessage.GetProperty("senderId").GetString() ?? string.Empty,
-                                receiverId = apiMessage.GetProperty("receiverId").GetString() ?? string.Empty,
-                                content = apiMessage.GetProperty("content").GetString() ?? string.Empty,
-                                isRead = apiMessage.GetProperty("isRead").GetBoolean(),
-                                sentAt = apiMessage.GetProperty("sentAt").GetDateTime(),
-                                attachmentCount = apiMessage.GetProperty("attachments").GetArrayLength(),
-                                senderName = usersDict.ContainsKey(apiMessage.GetProperty("senderId").GetString() ?? string.Empty) 
-                                    ? usersDict[apiMessage.GetProperty("senderId").GetString() ?? string.Empty] 
-                                    : "Unknown User",
-                                receiverName = usersDict.ContainsKey(apiMessage.GetProperty("receiverId").GetString() ?? string.Empty) 
-                                    ? usersDict[apiMessage.GetProperty("receiverId").GetString() ?? string.Empty] 
-                                    : null
-                            };
-                            
-                            messages.Add(message);
-                        }
-                    }
-
-                    return Json(new { success = true, messages = messages });
-                }
-                else
-                {
-                    return Json(new { success = false, message = "Failed to fetch messages" });
-                }
+                var messages = await _messagingService.GetThreadMessagesAsync(
+                    threadId,
+                    currentUserId
+                );
+                return Json(new { success = true, messages });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = ex.Message });
+                _logger.LogError(ex, "Error getting thread messages");
+                return Json(new { success = false, message = "Error loading messages" });
             }
         }
 
-        [HttpPost]
-        public async Task<IActionResult> DeleteMessage(string messageId)
+        private async Task<List<ThreadDto>> GetWorkflowMessagesForUser(string userId)
         {
             try
             {
-                // Get Firebase token from user claims
-                var firebaseToken = User.FindFirst("FirebaseToken")?.Value;
+                _logger.LogInformation("Getting workflow messages for user {UserId}", userId);
 
-                if (string.IsNullOrEmpty(firebaseToken))
+                // Get workflow messages using the dedicated workflow endpoint
+                var workflowMessages = await _apiClient.GetAsync<List<WorkflowMessageDto>>(
+                    $"/api/messages/user/{userId}/workflow",
+                    User
+                );
+
+                if (workflowMessages != null && workflowMessages.Any())
                 {
-                    return Json(new { success = false, message = "Firebase token not found" });
-                }
+                    _logger.LogInformation(
+                        "Deserialized {Count} workflow messages from workflow API",
+                        workflowMessages.Count
+                    );
 
-                // Clear any existing headers to avoid conflicts
-                _httpClient.DefaultRequestHeaders.Clear();
-                
-                // Set authorization header
-                _httpClient.DefaultRequestHeaders.Authorization = 
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", firebaseToken);
+                    // Log some sample workflow messages for debugging
+                    var sampleMessages = workflowMessages
+                        .Take(3)
+                        .Select(wm => new
+                        {
+                            WorkflowMessageId = wm.WorkflowMessageId,
+                            WorkflowType = wm.WorkflowType,
+                            Subject = wm.Subject,
+                            RecipientsCount = wm.Recipients.Count,
+                        })
+                        .ToList();
+                    _logger.LogInformation(
+                        "Sample workflow messages: {SampleMessages}",
+                        string.Join(
+                            " | ",
+                            sampleMessages.Select(sm =>
+                                $"{sm.WorkflowType}:{sm.RecipientsCount} recipients"
+                            )
+                        )
+                    );
 
-                // Delete the message
-                var response = await _httpClient.DeleteAsync($"{_apiBaseUrl}/api/messages/{messageId}");
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    TempData["Success"] = "Message deleted successfully";
-                    return Json(new { success = true, message = "Message deleted successfully" });
+                    _logger.LogInformation("Current user ID: {UserId}", userId);
+
+                    // Convert workflow messages to ThreadDto format
+                    var workflowThreads = workflowMessages
+                        .Select(wm => new ThreadDto
+                        {
+                            ThreadId = string.Empty, // Workflow messages are not threads
+                            Subject = wm.Subject,
+                            ProjectId = wm.ProjectId,
+                            ProjectName = "", // Will be populated from project data if needed
+                            MessageCount = 1, // Each workflow message is a single message
+                            LastMessageAt = wm.CreatedAt,
+                            CreatedAt = wm.CreatedAt,
+                            LastMessageSenderName = "System",
+                            LastMessagePreview =
+                                wm.Content.Length > 50
+                                    ? wm.Content.Substring(0, 47) + "..."
+                                    : wm.Content,
+                            Participants = wm.Recipients,
+                            ParticipantNames = new List<string>(),
+                            ThreadType = "workflow",
+                            HasUnreadMessages = false, // Workflow messages are always considered read
+                            UnreadCount = 0,
+                            IsActive = false,
+                        })
+                        .OrderByDescending(t => t.LastMessageAt)
+                        .ToList();
+
+                    _logger.LogInformation(
+                        "Returning {Count} workflow threads for user {UserId}",
+                        workflowThreads.Count,
+                        userId
+                    );
+                    return workflowThreads;
                 }
                 else
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    return Json(new { success = false, message = $"Failed to delete message: {errorContent}" });
+                    _logger.LogWarning("ApiClient returned null or empty for workflow messages");
                 }
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = $"Error deleting message: {ex.Message}" });
+                _logger.LogError(ex, "Error getting workflow messages for user {UserId}", userId);
+            }
+
+            // If no workflow messages found, return some sample data for testing
+            _logger.LogInformation("No workflow messages found, returning sample data for testing");
+            return new List<ThreadDto>
+            {
+                new ThreadDto
+                {
+                    ThreadId = string.Empty, // Sample workflow message is not a thread
+                    Subject = "Sample Workflow Message",
+                    ProjectId = "sample-project",
+                    ProjectName = "Sample Project",
+                    MessageCount = 1,
+                    LastMessageAt = DateTime.UtcNow.AddHours(-1),
+                    CreatedAt = DateTime.UtcNow.AddHours(-1),
+                    LastMessageSenderName = "System",
+                    LastMessagePreview = "This is a sample workflow message for testing purposes.",
+                    Participants = new List<string> { userId },
+                    ParticipantNames = new List<string>(),
+                    ThreadType = "workflow",
+                    HasUnreadMessages = false,
+                    UnreadCount = 0,
+                    IsActive = false,
+                },
+            };
+        }
+
+        private async Task<List<ThreadDto>> GetDirectMessagesForUser(string userId)
+        {
+            try
+            {
+                // Get direct messages from API
+                _logger.LogInformation("Getting direct messages for user {UserId}", userId);
+                // Get messages using IApiClient with proper authentication
+                var messages = await _apiClient.GetAsync<List<MessageDto>>(
+                    $"/api/messages/user/{userId}",
+                    User
+                );
+
+                _logger.LogInformation(
+                    "Retrieved {Count} messages from API for user {UserId}",
+                    messages?.Count ?? 0,
+                    userId
+                );
+
+                if (messages != null && messages.Any())
+                {
+                    _logger.LogInformation(
+                        "Processing {Count} messages for user {UserId}",
+                        messages.Count,
+                        userId
+                    );
+
+                    // Log first few messages for debugging
+                    foreach (var msg in messages.Take(3))
+                    {
+                        _logger.LogInformation(
+                            "Message: {MessageId}, Sender: {SenderId}, Receiver: {ReceiverId}, Subject: {Subject}",
+                            msg.MessageId,
+                            msg.SenderId,
+                            msg.ReceiverId,
+                            msg.Subject
+                        );
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("No messages returned from API for user {UserId}", userId);
+                }
+
+                if (messages != null)
+                {
+                    // Group messages by thread - include messages where user is sender OR receiver
+                    // Note: Direct messages are created as "thread" type in the API, so we need to filter for both
+                    // But we want to distinguish between direct messages (2 participants) and project threads (multiple participants)
+                    var directMessages = messages
+                        .Where(m =>
+                            (m.MessageType == "direct" || m.MessageType == "thread")
+                            && (m.SenderId == userId || m.ReceiverId == userId)
+                            && m.ThreadParticipants != null
+                            && m.ThreadParticipants.Count == 2 // Only 2 participants = direct message
+                        )
+                        .ToList();
+
+                    _logger.LogInformation(
+                        "Found {Count} direct messages for user {UserId}",
+                        directMessages.Count,
+                        userId
+                    );
+
+                    // Log details about the filtering
+                    var threadMessages = messages.Where(m => m.MessageType == "thread").ToList();
+                    var directTypeMessages = messages
+                        .Where(m => m.MessageType == "direct")
+                        .ToList();
+                    var twoParticipantMessages = messages
+                        .Where(m => m.ThreadParticipants != null && m.ThreadParticipants.Count == 2)
+                        .ToList();
+
+                    _logger.LogInformation(
+                        "Filtering details: Thread messages: {ThreadCount}, Direct messages: {DirectCount}, Two-participant messages: {TwoParticipantCount}",
+                        threadMessages.Count,
+                        directTypeMessages.Count,
+                        twoParticipantMessages.Count
+                    );
+
+                    var threadGroups = directMessages.GroupBy(m => m.ThreadId).ToList();
+
+                    var threads = threadGroups
+                        .Select(group => new ThreadDto
+                        {
+                            ThreadId = group.Key,
+                            Subject = group.First().Subject,
+                            ProjectId = group.First().ProjectId,
+                            ProjectName = "", // Will be populated from project data if needed
+                            MessageCount = group.Count(),
+                            LastMessageAt = group.Max(m => m.SentAt),
+                            CreatedAt = group.Min(m => m.SentAt),
+                            LastMessageSenderName =
+                                group.OrderByDescending(m => m.SentAt).First().SenderName
+                                ?? "Unknown",
+                            LastMessagePreview =
+                                group.OrderByDescending(m => m.SentAt).First().Content.Length > 50
+                                    ? group
+                                        .OrderByDescending(m => m.SentAt)
+                                        .First()
+                                        .Content.Substring(0, 47) + "..."
+                                    : group.OrderByDescending(m => m.SentAt).First().Content,
+                            Participants = group
+                                .Select(m => m.SenderId)
+                                .Union(group.Select(m => m.ReceiverId))
+                                .Distinct()
+                                .ToList(),
+                            ParticipantNames = new List<string>(), // Will be populated if needed
+                            ThreadType = "direct",
+                            // Handle duplicates: group by MessageId and check if any duplicate is unread
+                            HasUnreadMessages = group
+                                .GroupBy(m => m.MessageId)
+                                .Any(msgGroup =>
+                                    msgGroup.Any(m => !m.IsRead && m.SenderId != userId)
+                                ),
+                            UnreadCount = group
+                                .GroupBy(m => m.MessageId)
+                                .Count(msgGroup =>
+                                    msgGroup.Any(m => !m.IsRead && m.SenderId != userId)
+                                ),
+                            IsActive = false,
+                        })
+                        .OrderByDescending(t => t.LastMessageAt)
+                        .ToList();
+
+                    _logger.LogInformation(
+                        "Created {Count} direct message threads for user {UserId}",
+                        threads.Count,
+                        userId
+                    );
+                    foreach (var thread in threads)
+                    {
+                        _logger.LogInformation(
+                            "Thread: {ThreadId}, Subject: {Subject}, Messages: {Count}",
+                            thread.ThreadId,
+                            thread.Subject,
+                            thread.MessageCount
+                        );
+                    }
+
+                    return threads;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting direct messages for user {UserId}", userId);
+            }
+
+            // If no direct messages found, return some sample data for testing
+            _logger.LogInformation("No direct messages found, returning sample data for testing");
+            return new List<ThreadDto>
+            {
+                new ThreadDto
+                {
+                    ThreadId = "sample-direct-1",
+                    Subject = "Sample Direct Message",
+                    ProjectId = "sample-project",
+                    ProjectName = "Sample Project",
+                    MessageCount = 1,
+                    LastMessageAt = DateTime.UtcNow.AddHours(-2),
+                    CreatedAt = DateTime.UtcNow.AddHours(-2),
+                    LastMessageSenderName = "John Doe",
+                    LastMessagePreview = "This is a sample direct message for testing purposes.",
+                    Participants = new List<string> { userId, "sender-1" },
+                    ParticipantNames = new List<string>(),
+                    ThreadType = "direct",
+                    HasUnreadMessages = true,
+                    UnreadCount = 1,
+                    IsActive = false,
+                },
+            };
+        }
+
+        private async Task<MessageDto?> GetMessageById(string messageId)
+        {
+            try
+            {
+                var messages = await _apiClient.GetAsync<List<MessageDto>>(
+                    $"/api/messages/user/{User.FindFirst(ClaimTypes.NameIdentifier)?.Value}",
+                    User
+                );
+                return messages?.FirstOrDefault(m => m.MessageId == messageId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting message by ID: {MessageId}", messageId);
+                return null;
             }
         }
-    }
 
-    // View Models
-    public class MessageThreadsViewModel
-    {
-        public List<MessageThreadViewModel> Threads { get; set; } = new List<MessageThreadViewModel>();
-        public int CurrentPage { get; set; } = 1;
-        public int PageSize { get; set; } = 25;
-        public int TotalThreads { get; set; } = 0;
-        public int TotalPages { get; set; } = 0;
-        public List<string> AvailableMessageTypes { get; set; } = new List<string>();
-        public List<ProjectSummary> AvailableProjects { get; set; } = new List<ProjectSummary>();
-        public List<UserSummary> AvailableUsers { get; set; } = new List<UserSummary>();
-        public string CurrentFilter { get; set; } = "all";
-        public string ProjectFilter { get; set; } = "all";
-        public string UserFilter { get; set; } = "all";
-        public string ThreadFilter { get; set; } = "all";
-        public string ReadFilter { get; set; } = "all";
-        public string CurrentSearchTerm { get; set; } = "";
-        public DateTime? StartDate { get; set; }
-        public DateTime? EndDate { get; set; }
-        
-        public bool HasPreviousPage => CurrentPage > 1;
-        public bool HasNextPage => CurrentPage < TotalPages;
-        public int StartIndex => (CurrentPage - 1) * PageSize + 1;
-        public int EndIndex => Math.Min(StartIndex + PageSize - 1, TotalThreads);
-    }
+        private async Task<UserDto?> GetUserById(string userId)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "Unknown";
 
-    public class MessageThreadViewModel
-    {
-        public string ThreadId { get; set; } = string.Empty;
-        public string Subject { get; set; } = string.Empty;
-        public string ProjectId { get; set; } = string.Empty;
-        public string ProjectName { get; set; } = string.Empty;
-        public int MessageCount { get; set; }
-        public DateTime LastMessageAt { get; set; }
-        public List<MessageViewModel> Messages { get; set; } = new List<MessageViewModel>();
-        public List<string> Participants { get; set; } = new List<string>();
-        public string ThreadType { get; set; } = "general";
-    }
+                _logger.LogInformation(
+                    "Getting user by ID: {UserId} for {Role} user {CurrentUserId}",
+                    userId,
+                    userRole,
+                    currentUserId
+                );
 
-    public class MessageViewModel
-    {
-        public string MessageId { get; set; } = string.Empty;
-        public string SenderId { get; set; } = string.Empty;
-        public string SenderName { get; set; } = string.Empty;
-        public string ReceiverId { get; set; } = string.Empty;
-        public string ReceiverName { get; set; } = string.Empty;
-        public string Content { get; set; } = string.Empty;
-        public bool IsRead { get; set; }
-        public DateTime SentAt { get; set; }
-        public int AttachmentCount { get; set; }
-    }
+                // Use role-specific endpoints to get users
+                if (userRole == "Contractor")
+                {
+                    var contractorUsers = await _apiClient.GetAsync<List<object>>(
+                        "/api/contractors/messaging/available-users",
+                        User
+                    );
+                    if (contractorUsers != null && contractorUsers.Any())
+                    {
+                        var user = contractorUsers.FirstOrDefault(u =>
+                            GetPropertyValue(u, "UserId") == userId
+                            || GetPropertyValue(u, "userId") == userId
+                        );
 
-    public class ProjectSummary
-    {
-        public string ProjectId { get; set; } = string.Empty;
-        public string ProjectName { get; set; } = string.Empty;
-    }
+                        if (user != null)
+                        {
+                            return new UserDto
+                            {
+                                UserId =
+                                    GetPropertyValue(user, "UserId")
+                                    ?? GetPropertyValue(user, "userId")
+                                    ?? "",
+                                FullName =
+                                    GetPropertyValue(user, "FullName")
+                                    ?? GetPropertyValue(user, "fullName")
+                                    ?? "Unknown User",
+                                Role =
+                                    GetPropertyValue(user, "Role")
+                                    ?? GetPropertyValue(user, "role")
+                                    ?? "",
+                                Email =
+                                    GetPropertyValue(user, "Email")
+                                    ?? GetPropertyValue(user, "email")
+                                    ?? "",
+                            };
+                        }
+                    }
+                }
+                else if (userRole == "Client")
+                {
+                    var clientUsers = await _apiClient.GetAsync<List<object>>(
+                        "/api/clients/messaging/available-users",
+                        User
+                    );
+                    if (clientUsers != null && clientUsers.Any())
+                    {
+                        var user = clientUsers.FirstOrDefault(u =>
+                            GetPropertyValue(u, "UserId") == userId
+                            || GetPropertyValue(u, "userId") == userId
+                        );
 
-    public class UserSummary
-    {
-        public string UserId { get; set; } = string.Empty;
-        public string UserName { get; set; } = string.Empty;
+                        if (user != null)
+                        {
+                            return new UserDto
+                            {
+                                UserId =
+                                    GetPropertyValue(user, "UserId")
+                                    ?? GetPropertyValue(user, "userId")
+                                    ?? "",
+                                FullName =
+                                    GetPropertyValue(user, "FullName")
+                                    ?? GetPropertyValue(user, "fullName")
+                                    ?? "Unknown User",
+                                Role =
+                                    GetPropertyValue(user, "Role")
+                                    ?? GetPropertyValue(user, "role")
+                                    ?? "",
+                                Email =
+                                    GetPropertyValue(user, "Email")
+                                    ?? GetPropertyValue(user, "email")
+                                    ?? "",
+                            };
+                        }
+                    }
+                }
+                else
+                {
+                    // For Admins and PMs, use the admin endpoint
+                    var users = await _apiClient.GetAsync<List<UserDto>>("/api/admin/users", User);
+                    return users?.FirstOrDefault(u => u.UserId == userId);
+                }
+
+                _logger.LogWarning(
+                    "User {UserId} not found in available users for {Role} user {CurrentUserId}",
+                    userId,
+                    userRole,
+                    currentUserId
+                );
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user by ID: {UserId}", userId);
+            }
+            return null;
+        }
+
+        private async Task<List<UserDto>> GetAvailableUsersForMessaging(
+            string currentUserId,
+            string userRole
+        )
+        {
+            try
+            {
+                _logger.LogInformation(
+                    "Getting available users for {Role} user {UserId}",
+                    userRole,
+                    currentUserId
+                );
+
+                List<UserDto> allUsers = new List<UserDto>();
+
+                // Use role-specific endpoints
+                if (userRole == "Contractor")
+                {
+                    _logger.LogInformation("Using contractor-specific endpoint for users");
+                    var contractorUsers = await _apiClient.GetAsync<List<object>>(
+                        "/api/contractors/messaging/available-users",
+                        User
+                    );
+                    if (contractorUsers != null && contractorUsers.Any())
+                    {
+                        _logger.LogInformation(
+                            "Retrieved {Count} contractor users from API",
+                            contractorUsers.Count
+                        );
+
+                        // Log the first user for debugging
+                        if (contractorUsers.Any())
+                        {
+                            var firstUser = contractorUsers.First();
+                            _logger.LogInformation(
+                                "First user data: {UserData}",
+                                JsonSerializer.Serialize(firstUser)
+                            );
+                        }
+
+                        allUsers = contractorUsers
+                            .Select(u => new UserDto
+                            {
+                                UserId =
+                                    GetPropertyValue(u, "UserId")
+                                    ?? GetPropertyValue(u, "userId")
+                                    ?? "",
+                                FullName =
+                                    GetPropertyValue(u, "FullName")
+                                    ?? GetPropertyValue(u, "fullName")
+                                    ?? "Unknown User",
+                                Role =
+                                    GetPropertyValue(u, "Role")
+                                    ?? GetPropertyValue(u, "role")
+                                    ?? "",
+                                Email =
+                                    GetPropertyValue(u, "Email")
+                                    ?? GetPropertyValue(u, "email")
+                                    ?? "",
+                            })
+                            .ToList();
+
+                        _logger.LogInformation(
+                            "Processed {Count} users with names: {Names}",
+                            allUsers.Count,
+                            string.Join(", ", allUsers.Select(u => $"'{u.FullName}'"))
+                        );
+                    }
+                    else
+                    {
+                        _logger.LogInformation(
+                            "No contractor users returned from API or empty array"
+                        );
+                    }
+                }
+                else if (userRole == "Client")
+                {
+                    _logger.LogInformation("Using client-specific endpoint for users");
+                    var clientUsers = await _apiClient.GetAsync<List<object>>(
+                        "/api/clients/messaging/available-users",
+                        User
+                    );
+                    if (clientUsers != null && clientUsers.Any())
+                    {
+                        allUsers = clientUsers
+                            .Select(u => new UserDto
+                            {
+                                UserId = GetPropertyValue(u, "UserId") ?? "",
+                                FullName = GetPropertyValue(u, "FullName") ?? "",
+                                Role = GetPropertyValue(u, "Role") ?? "",
+                                Email = GetPropertyValue(u, "Email") ?? "",
+                            })
+                            .ToList();
+                    }
+                    else
+                    {
+                        _logger.LogInformation("No client users returned from API or empty array");
+                    }
+                }
+                else if (userRole == "Project Manager")
+                {
+                    _logger.LogInformation("Using project manager-specific endpoint for users");
+                    allUsers =
+                        await _apiClient.GetAsync<List<UserDto>>(
+                            "/api/projectmanager/messaging/available-users",
+                            User
+                        ) ?? new List<UserDto>();
+                    allUsers = allUsers.Where(u => u.UserId != currentUserId).ToList();
+                }
+                else
+                {
+                    // Admins and PMs use the original endpoint
+                    _logger.LogInformation("Using admin endpoint for {Role} user", userRole);
+                    allUsers =
+                        await _apiClient.GetAsync<List<UserDto>>("/api/admin/users", User)
+                        ?? new List<UserDto>();
+                    // Filter out self
+                    allUsers = allUsers.Where(u => u.UserId != currentUserId).ToList();
+                }
+
+                _logger.LogInformation("Retrieved {Count} total users from API", allUsers.Count);
+
+                var filteredUsers = allUsers.Where(u => u.UserId != currentUserId).ToList();
+
+                _logger.LogInformation(
+                    "Filtered {Count} available users for {Role} user {UserId}",
+                    filteredUsers.Count,
+                    userRole,
+                    currentUserId
+                );
+
+                return filteredUsers;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error getting available users for messaging for {Role} user {UserId}",
+                    userRole,
+                    currentUserId
+                );
+                return new List<UserDto>();
+            }
+        }
+
+        private async Task<List<ProjectDto>> GetAvailableProjectsForMessaging(
+            string currentUserId,
+            string userRole
+        )
+        {
+            try
+            {
+                _logger.LogInformation(
+                    "Getting available projects for {Role} user {UserId}",
+                    userRole,
+                    currentUserId
+                );
+
+                List<ProjectDto> allProjects = new List<ProjectDto>();
+
+                // Use role-specific endpoints
+                if (userRole == "Contractor")
+                {
+                    _logger.LogInformation("Using contractor-specific endpoint for projects");
+                    var contractorProjects = await _apiClient.GetAsync<List<object>>(
+                        "/api/contractors/messaging/available-projects",
+                        User
+                    );
+                    if (contractorProjects != null && contractorProjects.Any())
+                    {
+                        _logger.LogInformation(
+                            "Retrieved {Count} contractor projects from API",
+                            contractorProjects.Count
+                        );
+
+                        // Log the first project for debugging
+                        if (contractorProjects.Any())
+                        {
+                            var firstProject = contractorProjects.First();
+                            _logger.LogInformation(
+                                "First project data: {ProjectData}",
+                                JsonSerializer.Serialize(firstProject)
+                            );
+                        }
+
+                        allProjects = contractorProjects
+                            .Select(p => new ProjectDto
+                            {
+                                ProjectId =
+                                    GetPropertyValue(p, "ProjectId")
+                                    ?? GetPropertyValue(p, "projectId")
+                                    ?? "",
+                                Name =
+                                    GetPropertyValue(p, "Name")
+                                    ?? GetPropertyValue(p, "name")
+                                    ?? "Unnamed Project",
+                                Description =
+                                    GetPropertyValue(p, "Description")
+                                    ?? GetPropertyValue(p, "description")
+                                    ?? "",
+                                Status =
+                                    GetPropertyValue(p, "Status")
+                                    ?? GetPropertyValue(p, "status")
+                                    ?? "",
+                            })
+                            .ToList();
+
+                        _logger.LogInformation(
+                            "Processed {Count} projects with names: {Names}",
+                            allProjects.Count,
+                            string.Join(", ", allProjects.Select(p => $"'{p.Name}'"))
+                        );
+                    }
+                    else
+                    {
+                        _logger.LogInformation(
+                            "No contractor projects returned from API or empty array"
+                        );
+                    }
+                }
+                else if (userRole == "Client")
+                {
+                    _logger.LogInformation("Using client-specific endpoint for projects");
+                    var clientProjects = await _apiClient.GetAsync<List<object>>(
+                        "/api/clients/messaging/available-projects",
+                        User
+                    );
+                    if (clientProjects != null && clientProjects.Any())
+                    {
+                        allProjects = clientProjects
+                            .Select(p => new ProjectDto
+                            {
+                                ProjectId = GetPropertyValue(p, "ProjectId") ?? "",
+                                Name = GetPropertyValue(p, "Name") ?? "",
+                                Description = GetPropertyValue(p, "Description") ?? "",
+                                Status = GetPropertyValue(p, "Status") ?? "",
+                            })
+                            .ToList();
+                    }
+                    else
+                    {
+                        _logger.LogInformation(
+                            "No client projects returned from API or empty array"
+                        );
+                    }
+                }
+                else
+                {
+                    // Admins and PMs use the original endpoint
+                    _logger.LogInformation(
+                        "Using projectmanager endpoint for {Role} user",
+                        userRole
+                    );
+                    allProjects =
+                        await _apiClient.GetAsync<List<ProjectDto>>(
+                            "/api/projectmanager/projects",
+                            User
+                        ) ?? new List<ProjectDto>();
+                }
+
+                _logger.LogInformation(
+                    "Retrieved {Count} total projects from API",
+                    allProjects.Count
+                );
+
+                // The API endpoints already handle project filtering for Contractors and Clients
+                // No need for additional filtering here - trust the API
+                var filteredProjects = allProjects;
+
+                _logger.LogInformation(
+                    "Filtered {Count} available projects for {Role} user {UserId}",
+                    filteredProjects.Count,
+                    userRole,
+                    currentUserId
+                );
+
+                return filteredProjects;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error getting available projects for messaging for {Role} user {UserId}",
+                    userRole,
+                    currentUserId
+                );
+                return new List<ProjectDto>();
+            }
+        }
+
+        private bool CanUserMessage(
+            string senderId,
+            string senderRole,
+            string receiverId,
+            string receiverRole
+        )
+        {
+            // Use the existing messaging service logic
+            return _messagingService.CanUserSendMessage(senderRole, receiverRole);
+        }
+
+        private async Task<bool> AreUsersAssociatedWithSameProjects(
+            string userId1,
+            string userId2,
+            string userRole
+        )
+        {
+            try
+            {
+                // Get projects for both users
+                var user1Projects = await GetUserProjects(userId1, userRole);
+                var user2Projects = await GetUserProjects(userId2, userRole);
+
+                // Check if they have any projects in common
+                var user1ProjectIds = user1Projects.Select(p => p.ProjectId).ToHashSet();
+                var commonProjects = user2Projects.Any(p => user1ProjectIds.Contains(p.ProjectId));
+
+                _logger.LogInformation(
+                    "Users {UserId1} and {UserId2} have common projects: {HasCommon}",
+                    userId1,
+                    userId2,
+                    commonProjects
+                );
+
+                return commonProjects;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error checking project associations between users {UserId1} and {UserId2}",
+                    userId1,
+                    userId2
+                );
+                return false;
+            }
+        }
+
+        private async Task<bool> IsUserAssociatedWithProject(
+            string userId,
+            string projectId,
+            string userRole,
+            List<ProjectDto> userProjects
+        )
+        {
+            try
+            {
+                return userProjects.Any(p => p.ProjectId == projectId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error checking if user {UserId} is associated with project {ProjectId}",
+                    userId,
+                    projectId
+                );
+                return false;
+            }
+        }
+
+        private async Task<List<ProjectDto>> GetUserProjects(string userId, string userRole)
+        {
+            try
+            {
+                // Get projects for user
+
+                if (userRole == "Contractor")
+                {
+                    // Get projects where contractor has tasks using the correct endpoint
+                    // Call contractor projects API
+                    var contractorProjects = await _apiClient.GetAsync<List<ProjectDto>>(
+                        "/api/contractors/projects",
+                        User
+                    );
+
+                    var result = contractorProjects ?? new List<ProjectDto>();
+                    _logger.LogInformation(
+                        "Contractor {UserId} has {Count} projects",
+                        userId,
+                        result.Count
+                    );
+                    return result;
+                }
+                else if (userRole == "Client")
+                {
+                    // Get projects where client is associated
+                    _logger.LogInformation(
+                        "Calling client projects API: /api/client/projects/{UserId}",
+                        userId
+                    );
+                    var clientProjects = await _apiClient.GetAsync<List<ProjectDto>>(
+                        $"/api/client/projects/{userId}",
+                        User
+                    );
+                    var result = clientProjects ?? new List<ProjectDto>();
+                    _logger.LogInformation(
+                        "Client {UserId} has {Count} projects",
+                        userId,
+                        result.Count
+                    );
+                    return result;
+                }
+                else
+                {
+                    // For Admins and PMs, return all projects
+                    _logger.LogInformation(
+                        "Getting all projects for {Role} user {UserId}",
+                        userRole,
+                        userId
+                    );
+                    var allProjects = await _apiClient.GetAsync<List<ProjectDto>>(
+                        "/api/projectmanager/projects",
+                        User
+                    );
+                    var result = allProjects ?? new List<ProjectDto>();
+                    _logger.LogInformation(
+                        "{Role} user {UserId} has access to {Count} projects",
+                        userRole,
+                        userId,
+                        result.Count
+                    );
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error getting projects for user {UserId} with role {Role}",
+                    userId,
+                    userRole
+                );
+                return new List<ProjectDto>();
+            }
+        }
+
+        [HttpGet("debug/messages")]
+        public async Task<IActionResult> DebugMessages()
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "Unknown";
+
+                // Get all messages for this user
+                var messages = await _apiClient.GetAsync<List<MessageDto>>(
+                    $"/api/messages/user/{currentUserId}",
+                    User
+                );
+
+                var debugData = new
+                {
+                    UserId = currentUserId,
+                    Role = userRole,
+                    TotalMessages = messages?.Count ?? 0,
+                    DirectMessages = messages
+                        ?.Where(m =>
+                            (m.MessageType == "direct" || m.MessageType == "thread")
+                            && m.ThreadParticipants != null
+                            && m.ThreadParticipants.Count == 2
+                        )
+                        .Count() ?? 0,
+                    WorkflowMessages = messages?.Where(m => m.MessageType == "workflow").Count()
+                        ?? 0,
+                    SampleMessages = messages
+                        ?.Take(5)
+                        .Select(m => new
+                        {
+                            MessageId = m.MessageId,
+                            SenderId = m.SenderId,
+                            ReceiverId = m.ReceiverId,
+                            Subject = m.Subject,
+                            MessageType = m.MessageType,
+                            ThreadId = m.ThreadId,
+                            SentAt = m.SentAt,
+                        })
+                        .ToList(),
+                };
+
+                return Json(debugData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in debug messages endpoint");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("debug/contractor-data")]
+        public async Task<IActionResult> DebugContractorData()
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "Unknown";
+
+                if (userRole != "Contractor")
+                {
+                    return BadRequest("This endpoint is only for contractors");
+                }
+
+                // Get contractor users
+                var contractorUsers = await _apiClient.GetAsync<List<object>>(
+                    "/api/contractors/messaging/available-users",
+                    User
+                );
+
+                // Get contractor projects
+                var contractorProjects = await _apiClient.GetAsync<List<object>>(
+                    "/api/contractors/messaging/available-projects",
+                    User
+                );
+
+                var debugData = new
+                {
+                    UserId = currentUserId,
+                    Role = userRole,
+                    Users = new
+                    {
+                        Count = contractorUsers?.Count ?? 0,
+                        RawData = contractorUsers?.Take(2).ToList(),
+                        ProcessedData = contractorUsers
+                            ?.Select(u => new
+                            {
+                                UserId = GetPropertyValue(u, "UserId"),
+                                FullName = GetPropertyValue(u, "FullName"),
+                                Role = GetPropertyValue(u, "Role"),
+                                Email = GetPropertyValue(u, "Email"),
+                            })
+                            .Take(2)
+                            .ToList(),
+                    },
+                    Projects = new
+                    {
+                        Count = contractorProjects?.Count ?? 0,
+                        RawData = contractorProjects?.Take(2).ToList(),
+                        ProcessedData = contractorProjects
+                            ?.Select(p => new
+                            {
+                                ProjectId = GetPropertyValue(p, "ProjectId"),
+                                Name = GetPropertyValue(p, "Name"),
+                                Description = GetPropertyValue(p, "Description"),
+                                Status = GetPropertyValue(p, "Status"),
+                            })
+                            .Take(2)
+                            .ToList(),
+                    },
+                };
+
+                return Json(debugData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in debug endpoint");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        private string? GetPropertyValue(object obj, string propertyName)
+        {
+            try
+            {
+                if (obj is JsonElement jsonElement)
+                {
+                    // Try exact property name first
+                    if (jsonElement.TryGetProperty(propertyName, out var property))
+                    {
+                        return property.GetString();
+                    }
+
+                    // Try case-insensitive search through all properties
+                    foreach (var prop in jsonElement.EnumerateObject())
+                    {
+                        if (
+                            string.Equals(
+                                prop.Name,
+                                propertyName,
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                        )
+                        {
+                            return prop.Value.GetString();
+                        }
+                    }
+
+                    // Log for debugging
+                    _logger.LogWarning(
+                        "Property '{PropertyName}' not found in JsonElement. Available properties: {Properties}",
+                        propertyName,
+                        string.Join(", ", jsonElement.EnumerateObject().Select(p => p.Name))
+                    );
+
+                    return null;
+                }
+                else
+                {
+                    // Handle regular objects using reflection
+                    var property = obj.GetType().GetProperty(propertyName);
+                    return property?.GetValue(obj)?.ToString();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Error getting property '{PropertyName}' from object",
+                    propertyName
+                );
+                return null;
+            }
+        }
     }
 }

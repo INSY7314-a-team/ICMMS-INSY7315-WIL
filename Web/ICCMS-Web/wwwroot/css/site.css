@@ -56,8 +56,10 @@
 }
 
 .stat-card:hover {
+  background: rgba(247, 236, 89, 0.15);
+  border-color: #F7EC59;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(247, 236, 89, 0.2);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .stat-icon {
@@ -406,9 +408,9 @@
 .stat-item {
   text-align: center;
   padding: 0.3rem 0.2rem;
-  background: rgba(247, 236, 89, 0.1);
-  border-radius: 4px;
-  border: 1px solid rgba(247, 236, 89, 0.2);
+  background: linear-gradient(135deg, #2A2B35 0%, #1A1B25 100%);
+  border-radius: 12px;
+  border: 1px solid rgb(219, 209, 77);
   transition: all 0.3s ease;
 }
 
@@ -764,6 +766,7 @@ html {
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
   box-shadow: 0 0 0 0.1rem var(--text-light), 0 0 0 0.25rem var(--accent-yellow);
+  box-shadow: 0 0 0 0.1rem var(--text-light), 0 0 0 0.25rem var(--accent-yellow);
 }
 
 html {
@@ -779,6 +782,9 @@ body {
     background: var(--accent-yellow);
     color: var(--text-dark);
     border: 2px solid var(--accent-yellow);
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    border: 2px solid var(--accent-yellow);
     border-radius: 25px;
     font-weight: 600;
     padding: 0.75rem 2rem;
@@ -787,13 +793,18 @@ body {
 .btn-workflow-white:hover {
     background: var(--text-light);
     color: var(--text-dark);
+    background: var(--text-light);
+    color: var(--text-dark);
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
     transform: translateY(-2px);
 }
 
 .main-btn-style {
   background: linear-gradient(270deg, var(--accent-yellow), #E6D547, var(--accent-yellow));
+  background: linear-gradient(270deg, var(--accent-yellow), #E6D547, var(--accent-yellow));
   background-size: 400% 400%;
+  color: var(--text-dark);
+  border: 2px solid var(--accent-yellow);
   color: var(--text-dark);
   border: 2px solid var(--accent-yellow);
   border-radius: 25px;
@@ -849,6 +860,8 @@ body {
 .main-btn-style:hover {
   background: var(--text-light);
   color: var(--text-dark);
+  background: var(--text-light);
+  color: var(--text-dark);
   box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
   transform: translateY(-2px);
 }
@@ -867,6 +880,9 @@ body {
 }
 
 .main-bounce{
+  background: linear-gradient(135deg, var(--accent-yellow) 0%, #E6D547 100%);
+  color: var(--text-dark);
+  border: 2px solid var(--accent-yellow);
   background: linear-gradient(135deg, var(--accent-yellow) 0%, #E6D547 100%);
   color: var(--text-dark);
   border: 2px solid var(--accent-yellow);
@@ -890,6 +906,8 @@ body {
 .btn-main-style {
   background: linear-gradient(135deg, var(--accent-yellow) 0%, #E6D547 100%);
   color: var(--text-dark);
+  background: linear-gradient(135deg, var(--accent-yellow) 0%, #E6D547 100%);
+  color: var(--text-dark);
   border: transparent; 
   border-radius: 25px;
   font-weight: 700;
@@ -899,6 +917,9 @@ body {
   letter-spacing: 0.5px;
 }
 .btn-main-style:hover {
+  background: var(--text-light);
+  color: var(--text-dark);
+  box-shadow: 0 8px 20px rgba(247, 236, 89, 0.5);
   background: var(--text-light);
   color: var(--text-dark);
   box-shadow: 0 8px 20px rgba(247, 236, 89, 0.5);
@@ -920,12 +941,17 @@ body {
   background: var(--accent-yellow);
   color: var(--text-dark);
   box-shadow: 0 6px 15px rgba(26,27,37,0.4);
+  background: var(--accent-yellow);
+  color: var(--text-dark);
+  box-shadow: 0 6px 15px rgba(26,27,37,0.4);
   transform: translateY(-2px);
 }
 
 /* === TERTIARY BUTTON === */
 /* White/outline style — light, less dominant, used for "Learn More", "See Details" */
 .btn-tertiary-style {
+  background: var(--text-light);
+  color: var(--text-dark);
   background: var(--text-light);
   color: var(--text-dark);
   border: transparent;
@@ -938,6 +964,9 @@ body {
   background: var(--accent-yellow);
   color: var(--text-dark);
   box-shadow: 0 6px 15px rgba(247, 236, 89, 0.4);
+  background: var(--accent-yellow);
+  color: var(--text-dark);
+  box-shadow: 0 6px 15px rgba(247, 236, 89, 0.4);
   transform: translateY(-2px);
 }
 
@@ -945,6 +974,7 @@ body {
 /* Minimal link-style CTA with subtle underline — for less important actions */
 .btn-accent-style {
   background: transparent;
+  color: var(--text-dark);
   color: var(--text-dark);
   border: none;
   font-weight: 600;
@@ -960,9 +990,11 @@ body {
   width: 0;
   height: 2px;
   background: var(--accent-yellow);
+  background: var(--accent-yellow);
   transition: width 0.3s ease;
 }
 .btn-accent-style:hover {
+  color: var(--accent-yellow);
   color: var(--accent-yellow);
 }
 .btn-accent-style:hover::after {

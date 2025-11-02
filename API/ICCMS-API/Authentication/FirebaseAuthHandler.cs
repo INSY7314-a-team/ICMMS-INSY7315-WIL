@@ -11,19 +11,20 @@ namespace ICCMS_API.Authentication
         public FirebaseAuthHandler(
             IOptionsMonitor<FirebaseAuthSchemeOptions> options,
             ILoggerFactory logger,
-            UrlEncoder encoder,
-            ISystemClock clock
+            UrlEncoder encoder
         )
-            : base(options, logger, encoder, clock) { }
+            : base(options, logger, encoder) { }
 
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            var token = Request.Headers["Authorization"].FirstOrDefault()?.Split(" ").Last();
+            if (!Request.Headers.ContainsKey("Authorization"))
+                return AuthenticateResult.Fail("Authorization header was not found.");
 
-            if (string.IsNullOrEmpty(token))
-            {
-                return AuthenticateResult.NoResult();
-            }
+            string? bearerToken = Request.Headers["Authorization"];
+            if (string.IsNullOrEmpty(bearerToken) || !bearerToken.StartsWith("Bearer "))
+                return AuthenticateResult.Fail("Invalid token format.");
+
+            var token = bearerToken.Substring("Bearer ".Length);
 
             try
             {
@@ -32,9 +33,10 @@ namespace ICCMS_API.Authentication
                 var firebaseService =
                     Context.RequestServices.GetRequiredService<IFirebaseService>();
 
+                Console.WriteLine("Attempting to verify Firebase token...");
                 // Verify Firebase token
                 var firebaseToken = await authService.VerifyTokenAsync(token);
-                
+                Console.WriteLine($"Token verified successfully for UID: {firebaseToken.Uid}");
 
                 // Get user data from Firestore
                 var user = await firebaseService.GetDocumentAsync<Models.User>(
@@ -66,6 +68,9 @@ namespace ICCMS_API.Authentication
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"Authentication failed: {ex.Message}");
+                Console.WriteLine($"Exception type: {ex.GetType().Name}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 return AuthenticateResult.Fail($"Authentication failed: {ex.Message}");
             }
         }

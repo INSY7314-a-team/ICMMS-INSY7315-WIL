@@ -1,0 +1,92 @@
+@model ICCMS_Web.Models.SubmitProgressReportViewModel
+
+@{
+    ViewData["Title"] = "Submit Progress Report";
+}
+
+<div class="container-fluid contractor-dashboard-container py-5">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="@Url.Action("Dashboard", "Contractor")"><i
+                        class="fa-solid fa-home"></i> Dashboard</a></li>
+            <li class="breadcrumb-item"><a
+                    href="@Url.Action("ProjectDetail", "Contractor", new { projectId = Model.ProjectId })"><i
+                        class="fa-solid fa-folder-open"></i> @Model.ProjectName</a></li>
+            <li class="breadcrumb-item active" aria-current="page"><i class="fa-solid fa-upload"></i> Submit Progress
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="dashboard-header text-center mb-5">
+        <h1 class="form-header">
+            <i class="fa-solid fa-upload me-2" style="color: #F7EC59;"></i>Submit Progress Report
+        </h1>
+        <p class="lead dashboard-subtitle text-muted">
+            Provide a detailed update for task: <strong>@Model.TaskName</strong>
+        </p>
+    </div>
+
+    <!-- Form -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-8">
+            <div class="form-container-card construction-border yellow-glow">
+                <form asp-action="SubmitProgressReport" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-4"></div>
+                    <input type="hidden" asp-for="TaskId" />
+                    <input type="hidden" asp-for="TaskName" />
+                    <input type="hidden" asp-for="ProjectId" />
+                    <input type="hidden" asp-for="ProjectName" />
+
+                    <div class="mb-4">
+                        <label asp-for="Description" class="form-label fw-semibold"></label>
+                        <textarea asp-for="Description" class="form-control form-control-lg" rows="6"
+                            placeholder="Provide a detailed summary of the progress made..."></textarea>
+                        <span asp-validation-for="Description" class="text-danger mt-1 d-block"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label asp-for="HoursWorked" class="form-label fw-semibold"></label>
+                            <input type="number" asp-for="HoursWorked" class="form-control form-control-lg" step="0.1"
+                                placeholder="e.g., 4.5" />
+                            <span asp-validation-for="HoursWorked" class="text-danger mt-1 d-block"></span>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <label asp-for="ProgressPercentage" class="form-label fw-semibold"></label>
+                            <input type="number" asp-for="ProgressPercentage" class="form-control form-control-lg"
+                                min="0" max="100" placeholder="e.g., 75" />
+                            <span asp-validation-for="ProgressPercentage" class="text-danger mt-1 d-block"></span>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            <label asp-for="AttachmentFile" class="form-label fw-semibold"></label>
+                            <input type="file" asp-for="AttachmentFile" class="form-control form-control-lg" />
+                            <span asp-validation-for="AttachmentFile" class="text-danger mt-1 d-block"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-actions text-end border-top border-secondary pt-4 mt-3">
+                        <a href="@Url.Action("ProjectDetail", "Contractor", new { projectId = Model.ProjectId })"
+                            class="btn btn-secondary-custom btn-lg me-2">
+                            <i class="fa-solid fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary-custom btn-lg">
+                            <i class="fa-solid fa-paper-plane me-2"></i>Submit Report
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

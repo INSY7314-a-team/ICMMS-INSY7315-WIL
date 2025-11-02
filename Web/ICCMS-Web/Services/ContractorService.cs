@@ -301,10 +301,16 @@ namespace ICCMS_Web.Services
 
                 Console.WriteLine($"[ContractorService] ✅ Task found: {task.Name}");
 
-                var project = await _apiClient.GetAsync<ProjectDto>(
-                    $"/api/projectmanager/project/{task.ProjectId}",
+                // Get projects using contractor endpoint
+                var projects = await _apiClient.GetAsync<List<ProjectDto>>(
+                    "/api/contractors/projects",
                     currentUser
                 );
+                var project = projects?.FirstOrDefault(p => p.ProjectId == task.ProjectId);
+
+                // Get progress reports to calculate actual hours
+                var progressReports = await GetProgressReportsAsync(taskId);
+                var calculatedActualHours = progressReports.Sum(pr => pr.HoursWorked);
 
                 return new ContractorTaskDto
                 {
@@ -320,7 +326,7 @@ namespace ICCMS_Web.Services
                     CompletedDate = task.CompletedDate,
                     Progress = task.Progress,
                     EstimatedHours = task.EstimatedHours,
-                    ActualHours = task.ActualHours,
+                    ActualHours = calculatedActualHours, // Use calculated hours from progress reports
                     ProjectName = project?.Name ?? "Unknown Project",
                     ProjectBudget = (decimal)(project?.BudgetPlanned ?? 0),
                     IsOverdue = task.DueDate < DateTime.UtcNow && task.Status != "Completed",
@@ -370,35 +376,6 @@ namespace ICCMS_Web.Services
                     "Error submitting progress report for task {TaskId}",
                     report.TaskId
                 );
-                throw;
-            }
-        }
-
-        public async Task<ContractorCompletionResultDto> RequestCompletionAsync(
-            string taskId,
-            string notes,
-            string? documentId
-        )
-        {
-            try
-            {
-                var requestData = new { notes, documentId };
-                var currentUser = _currentUserService.GetCurrentUser();
-                var result = await _apiClient.PutAsync<ContractorCompletionResultDto>(
-                    $"/api/contractors/task/{taskId}/request-completion",
-                    requestData,
-                    currentUser
-                );
-                return result
-                    ?? new ContractorCompletionResultDto
-                    {
-                        Message = "Completion request submitted",
-                        TaskId = taskId,
-                    };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error requesting completion for task {TaskId}", taskId);
                 throw;
             }
         }
@@ -475,6 +452,132 @@ namespace ICCMS_Web.Services
             {
                 _logger.LogError(ex, "Error getting progress reports for task {TaskId}", taskId);
                 return new List<ProgressReportDto>();
+            }
+        }
+
+        public async Task<ContractorTaskDto?> GetTaskWithFullProjectInfoAsync(string taskId)
+        {
+            try
+            {
+                Console.WriteLine(
+                    $"[ContractorService] 🔍 Getting enhanced task details for taskId: {taskId}"
+                );
+                var currentUser = _currentUserService.GetCurrentUser();
+                Console.WriteLine(
+                    $"[ContractorService] 👤 Current user: {currentUser?.Identity?.Name}"
+                );
+
+                Console.WriteLine(
+                    $"[ContractorService] 📡 Calling API: /api/contractors/task/{taskId}"
+                );
+                var task = await _apiClient.GetAsync<ProjectTaskDto>(
+                    $"/api/contractors/task/{taskId}",
+                    currentUser
+                );
+
+                if (task == null)
+                {
+                    Console.WriteLine($"[ContractorService] ❌ Task not found in API response");
+                    return null;
+                }
+
+                Console.WriteLine($"[ContractorService] ✅ Task found: {task.Name}");
+
+                // Get projects using contractor endpoint
+                var projects = await _apiClient.GetAsync<List<ProjectDto>>(
+                    "/api/contractors/projects",
+                    currentUser
+                );
+                var project = projects?.FirstOrDefault(p => p.ProjectId == task.ProjectId);
+
+                // Get client information
+                UserDto? client = null;
+                if (!string.IsNullOrEmpty(project?.ClientId))
+                {
+                    try
+                    {
+                        client = await _apiClient.GetAsync<UserDto>(
+                            $"/api/users/{project.ClientId}",
+                            currentUser
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(
+                            $"[ContractorService] ⚠️ Could not fetch client info: {ex.Message}"
+                        );
+                    }
+                }
+
+                // Get project manager information
+                UserDto? projectManager = null;
+                if (!string.IsNullOrEmpty(project?.ProjectManagerId))
+                {
+                    try
+                    {
+                        projectManager = await _apiClient.GetAsync<UserDto>(
+                            $"/api/users/{project.ProjectManagerId}",
+                            currentUser
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(
+                            $"[ContractorService] ⚠️ Could not fetch project manager info: {ex.Message}"
+                        );
+                    }
+                }
+
+                // Get progress reports to calculate actual hours
+                var progressReports = await GetProgressReportsAsync(taskId);
+                var calculatedActualHours = progressReports.Sum(pr => pr.HoursWorked);
+
+                var contractorTask = new ContractorTaskDto
+                {
+                    TaskId = task.TaskId,
+                    ProjectId = task.ProjectId,
+                    Name = task.Name,
+                    Description = task.Description,
+                    AssignedTo = task.AssignedTo,
+                    Priority = task.Priority,
+                    Status = task.Status,
+                    StartDate = task.StartDate,
+                    DueDate = task.DueDate,
+                    CompletedDate = task.CompletedDate,
+                    Progress = task.Progress,
+                    EstimatedHours = task.EstimatedHours,
+                    ActualHours = calculatedActualHours, // Use calculated hours from progress reports
+                    ProjectName = project?.Name ?? "Unknown Project",
+                    ProjectBudget = (decimal)(project?.BudgetPlanned ?? 0),
+                    IsOverdue = task.DueDate < DateTime.UtcNow && task.Status != "Completed",
+                    DaysUntilDue = Math.Max(0, (task.DueDate - DateTime.UtcNow).Days),
+                    StatusBadgeClass = GetStatusBadgeClass(task.Status),
+                    CanSubmitProgress =
+                        task.Status.Equals("In Progress", StringComparison.OrdinalIgnoreCase)
+                        || task.Status.Equals("InProgress", StringComparison.OrdinalIgnoreCase)
+                        || task.Status.Equals("In-Progress", StringComparison.OrdinalIgnoreCase),
+                    CanRequestCompletion =
+                        task.Status.Equals("In Progress", StringComparison.OrdinalIgnoreCase)
+                        || task.Status.Equals("InProgress", StringComparison.OrdinalIgnoreCase)
+                        || task.Status.Equals("In-Progress", StringComparison.OrdinalIgnoreCase),
+                };
+
+                // Store additional info in ViewBag for the view
+                // We'll need to modify the controller to pass this data
+
+                return contractorTask;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"[ContractorService] ❌ Error getting enhanced task details: {ex.Message}"
+                );
+                _logger.LogError(
+                    ex,
+                    "Error getting enhanced task details for task {TaskId}",
+                    taskId
+                );
+                return null;
             }
         }
 
