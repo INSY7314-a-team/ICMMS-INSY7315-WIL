@@ -43,6 +43,8 @@ fun ContractorDocumentsScreen(
                 }
             )
         },
+
+        /*
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNavigateToUploadDocument,
@@ -54,6 +56,9 @@ fun ContractorDocumentsScreen(
                 )
             }
         }
+        */
+
+
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -93,7 +98,7 @@ fun ContractorDocumentsScreen(
             if (uiState.documents.isEmpty() && !uiState.isLoading) {
                 item {
                     Card(
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(
                             modifier = Modifier
@@ -153,7 +158,8 @@ fun DocumentCard(
         onClick = onClick,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -242,7 +248,8 @@ fun DocumentCard(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Download")
                 }
-                
+
+                /*
                 if (document.Status.lowercase() == "pending") {
                     Button(
                         onClick = onDelete,
@@ -260,6 +267,8 @@ fun DocumentCard(
                         Text("Delete")
                     }
                 }
+                */
+
             }
         }
     }

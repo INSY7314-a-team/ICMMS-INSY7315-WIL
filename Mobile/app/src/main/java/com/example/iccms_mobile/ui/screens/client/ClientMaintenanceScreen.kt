@@ -203,7 +203,7 @@ fun MaintenanceRequestCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Requested by: ${request.requestedBy}",
+                        text = "Project: ${request.projectId}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 6.dp)

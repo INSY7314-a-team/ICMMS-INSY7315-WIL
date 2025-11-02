@@ -33,7 +33,7 @@ fun ContractorDashboardScreen(
     val tabs = listOf(
         TabItem("Overview", Icons.Default.Home),
         TabItem("Tasks", Icons.Default.List),
-        TabItem("Phases", Icons.Default.Build),
+      //  TabItem("Phases", Icons.Default.Build),
         TabItem("Documents", Icons.Default.Menu)
     )
     Scaffold(
@@ -97,11 +97,11 @@ fun ContractorDashboardScreen(
                     viewModel = contractorViewModel,
                     onNavigateToTaskDetails = onNavigateToTaskDetails
                 )
-                2 -> ContractorPhasesScreen(
+               /* 2 -> ContractorPhasesScreen(
                     viewModel = contractorViewModel,
                     onNavigateToPhaseDetails = onNavigateToPhaseDetails
-                )
-                3 -> ContractorDocumentsScreen(
+                ) */
+                2 -> ContractorDocumentsScreen(
                     viewModel = contractorViewModel,
                     onNavigateToUploadDocument = onNavigateToUploadDocument,
                     onNavigateToDocumentDetails = onNavigateToDocumentDetails
