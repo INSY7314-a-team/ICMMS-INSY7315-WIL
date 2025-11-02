@@ -1,0 +1,42 @@
+name: Snyk Security
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  snyk-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET for dependency resolution
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install Snyk CLI
+        uses: snyk/actions/setup@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      # 🔹 Scan both Web and API projects for vulnerable packages
+      - name: Snyk Open Source dependency scan
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          snyk test --file=Web/ICCMS-Web.sln --sarif > snyk-results.sarif || true
+          snyk test --file=Api/ICCMS-API.sln --sarif >> snyk-results.sarif || true
+
+      # 🔹 Upload results to GitHub Security tab
+      - name: Upload results to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk-results.sarif
