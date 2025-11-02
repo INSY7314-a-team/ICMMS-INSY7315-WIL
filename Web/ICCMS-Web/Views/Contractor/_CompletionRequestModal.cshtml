@@ -1,0 +1,90 @@
+<!-- Completion Request Modal -->
+<div class="modal fade" id="completionRequestModal" tabindex="-1" aria-labelledby="completionRequestModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="completionRequestModalLabel">
+                    <i class="fa-solid fa-check me-2"></i>Request Task Completion
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="completionRequestForm" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <input type="hidden" id="completionRequestTaskId" name="taskId" value="" />
+
+                    <!-- Task Information -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Task Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h6 id="completionModalTaskName">Loading...</h6>
+                                    <p class="text-muted mb-1">Project: <span
+                                            id="completionModalProjectName">Loading...</span>
+                                    </p>
+                                    <p class="text-muted mb-0">Description: <span
+                                            id="completionModalTaskDescription">Loading...</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Completion Request Form -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="completionDate" class="form-label">Completion Date *</label>
+                            <input type="date" class="form-control" id="completionDate" name="completionDate" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="finalHours" class="form-label">Final Hours Worked *</label>
+                            <input type="number" class="form-control" id="finalHours" name="finalHours" step="0.1"
+                                min="0.1" placeholder="0.0" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="completionNotes" class="form-label">Completion Summary *</label>
+                            <textarea class="form-control" id="completionNotes" name="completionNotes" rows="4"
+                                placeholder="Provide a summary of the completed work..." required></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="qualityCheck" class="form-label">Quality Check</label>
+                            <textarea class="form-control" id="qualityCheck" name="qualityCheck" rows="3"
+                                placeholder="Describe any quality checks performed..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Document Upload -->
+                    <div class="mb-3">
+                        <label for="completionDocuments" class="form-label">Attach Completion Documents
+                            (Optional)</label>
+                        <input type="file" class="form-control" id="completionDocuments" name="documents" multiple
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif">
+                        <div class="form-text">Supported formats: PDF, DOC, DOCX, JPG, PNG, GIF (Max 10MB each)</div>
+                    </div>
+
+                    <!-- Document Preview -->
+                    <div id="completionDocumentPreview" style="display: none;">
+                        <h6>Selected Documents:</h6>
+                        <div id="completionDocumentList" class="list-group"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success" id="submitCompletionRequestBtn">
+                        <i class="fa-solid fa-check me-1"></i>Request Completion
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Completion Request Modal - Scripts moved to contractor-task-actions.js -->

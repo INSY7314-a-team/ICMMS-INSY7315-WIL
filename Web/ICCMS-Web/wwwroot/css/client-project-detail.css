@@ -1,0 +1,65 @@
+/* General Container */
+.client-project-detail-container {
+    padding: 2rem;
+    background-color: #f8f9fa;
+}
+
+/* Project Header */
+.project-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.project-title {
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.project-description {
+    color: #6c757d;
+}
+
+.header-meta .badge {
+    font-size: 1rem;
+    padding: 0.5em 0.75em;
+}
+
+.project-dates {
+    margin-left: 1rem;
+    color: #6c757d;
+}
+
+/* Progress Section */
+.progress-section {
+    margin-bottom: 2rem;
+}
+
+.progress-title {
+    margin-bottom: 0.5rem;
+}
+
+.progress {
+    height: 1.5rem;
+}
+
+/* Tabs */
+.project-tabs {
+    margin-bottom: 2rem;
+}
+
+.project-tabs .nav-link {
+    color: #495057;
+    font-weight: 500;
+}
+
+.project-tabs .nav-link.active {
+    color: #007bff;
+    border-color: #dee2e6 #dee2e6 #fff;
+}

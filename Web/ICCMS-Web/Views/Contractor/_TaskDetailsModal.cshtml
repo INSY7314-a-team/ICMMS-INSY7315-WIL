@@ -1,0 +1,117 @@
+<!-- Task Details Modal -->
+<div class="modal fade" id="taskDetailsModal" tabindex="-1" aria-labelledby="taskDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="taskDetailsModalLabel">
+                    <i class="fa-solid fa-eye me-2"></i>Task Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Task Information -->
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <h4 id="modalTaskName" class="mb-2">Loading...</h4>
+                        <p class="text-muted mb-1">Project: <span id="modalProjectName">Loading...</span></p>
+                        <p class="text-muted mb-0">Description: <span id="modalTaskDescription">Loading...</span></p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="mb-2">
+                            <span class="badge bg-secondary me-2" id="modalTaskStatus">Loading...</span>
+                            <span class="badge bg-secondary" id="modalTaskPriority">Loading...</span>
+                        </div>
+                        <small class="text-muted">
+                            <i class="fa-solid fa-calendar me-1"></i>
+                            <span id="modalStartDate">Loading...</span> - <span id="modalDueDate">Loading...</span>
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Progress Section -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="mb-2">Task Progress</h6>
+                        <div class="progress mb-2">
+                            <div class="progress-bar" id="modalTaskProgress" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted" id="modalTaskProgressText">0%</small>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="mb-2">Hours Worked</h6>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-info" id="modalHoursProgress" role="progressbar"
+                                style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted" id="modalHoursText">0 / 0 hours</small>
+                    </div>
+                </div>
+
+                <!-- Budget Information -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="mb-2">Budget Information</h6>
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <small class="text-muted">Project Budget</small>
+                                        <div class="fw-bold" id="modalProjectBudget">R 0</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted">Assigned To</small>
+                                        <div class="fw-bold" id="modalAssignedTo">Loading...</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted">Created</small>
+                                        <div class="fw-bold" id="modalCreatedDate">Loading...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Reports Section -->
+                <div class="mb-4">
+                    <h6 class="mb-3">
+                        <i class="fa-solid fa-chart-line me-2"></i>Progress Reports
+                    </h6>
+                    <div id="progressReportsContainer">
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading progress reports...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Completion Reports Section -->
+                <div class="mb-4">
+                    <h6 class="mb-3">
+                        <i class="fa-solid fa-check-circle me-2"></i>Completion Reports
+                    </h6>
+                    <div id="completionReportsContainer">
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading completion reports...
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="startTaskBtn" style="display: none;">
+                    <i class="fa-solid fa-play me-1"></i>Start Task
+                </button>
+                <button type="button" class="btn btn-warning" id="submitProgressBtn" style="display: none;">
+                    <i class="fa-solid fa-chart-line me-1"></i>Submit Progress
+                </button>
+                <button type="button" class="btn btn-success" id="requestCompletionBtn" style="display: none;">
+                    <i class="fa-solid fa-check me-1"></i>Request Completion
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Task Details Modal - Scripts moved to contractor-task-actions.js -->

@@ -1,0 +1,62 @@
+@model ICCMS_Web.Models.InvoiceDto
+
+<div class="project-card construction-border-thin">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="card-title mb-1">
+                Invoice @if (!string.IsNullOrWhiteSpace(Model.InvoiceNumber))
+                {
+                    @("#" + Model.InvoiceNumber)
+                }
+                else
+                {
+                    @("#" + Model.InvoiceId)
+                }
+            </h5>
+            <p class="card-subtitle text-muted mb-0">@Model.Description</p>
+        </div>
+        <span class="badge bg-@(Model.Status?.ToLower() switch
+        {
+            "draft" => "secondary",
+            "unpaid" => "warning",
+            "paid" => "success",
+            "overdue" => "danger",
+            _ => "info"
+        })">@Model.Status</span>
+    </div>
+
+    <div class="card-body">
+        <div class="stat-item mb-2">
+            <small>Total Amount:</small>
+            <span class="fw-bold">R @Model.TotalAmount.ToString("N2")</span>
+        </div>
+        <div class="stat-item mb-2">
+            <small>Issued:</small>
+            <span>@Model.IssuedDate.ToString("MMM dd, yyyy")</span>
+        </div>
+        <div class="stat-item mb-2">
+            <small>Due:</small>
+            <span>@Model.DueDate.ToString("MMM dd, yyyy")</span>
+        </div>
+        <div class="stat-item mb-2">
+            <small>Linked Quotation:</small>
+            <span class="text-muted">#@Model.QuotationId</span>
+        </div>
+    </div>
+
+    <div class="card-footer d-flex justify-content-between align-items-center">
+        <button type="button"
+                class="btn btn-action btn-primary"
+                onclick="openInvoiceDetails('@Model.InvoiceId')">
+            <i class="fa-solid fa-eye me-1"></i> View Details
+        </button>
+
+        @if (Model.Status?.ToLower() == "unpaid")
+        {
+            <button type="button" class="btn btn-success btn-sm"
+                    onclick="alert('Payment processing not yet implemented');">
+                <i class="fa-solid fa-credit-card me-1"></i> Pay Now
+            </button>
+        }
+    </div>
+</div>

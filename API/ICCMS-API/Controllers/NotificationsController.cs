@@ -1,11 +1,13 @@
-using Microsoft.AspNetCore.Mvc;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ICCMS_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin,Project Manager,Client,Contractor,Tester")] // All authenticated users can access notifications
     public class NotificationsController : ControllerBase
     {
         private readonly IFirebaseService _firebaseService;
@@ -20,7 +22,9 @@ namespace ICCMS_API.Controllers
         {
             try
             {
-                var notifications = await _firebaseService.GetCollectionAsync<Notification>("notifications");
+                var notifications = await _firebaseService.GetCollectionAsync<Notification>(
+                    "notifications"
+                );
                 return Ok(notifications);
             }
             catch (Exception ex)
@@ -34,7 +38,10 @@ namespace ICCMS_API.Controllers
         {
             try
             {
-                var notification = await _firebaseService.GetDocumentAsync<Notification>("notifications", id);
+                var notification = await _firebaseService.GetDocumentAsync<Notification>(
+                    "notifications",
+                    id
+                );
                 if (notification == null)
                     return NotFound();
                 return Ok(notification);
@@ -50,7 +57,9 @@ namespace ICCMS_API.Controllers
         {
             try
             {
-                var notifications = await _firebaseService.GetCollectionAsync<Notification>("notifications");
+                var notifications = await _firebaseService.GetCollectionAsync<Notification>(
+                    "notifications"
+                );
                 var userNotifications = notifications.Where(n => n.UserId == userId).ToList();
                 return Ok(userNotifications);
             }
@@ -61,12 +70,18 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpGet("user/{userId}/unread")]
-        public async Task<ActionResult<List<Notification>>> GetUnreadNotificationsByUser(string userId)
+        public async Task<ActionResult<List<Notification>>> GetUnreadNotificationsByUser(
+            string userId
+        )
         {
             try
             {
-                var notifications = await _firebaseService.GetCollectionAsync<Notification>("notifications");
-                var unreadNotifications = notifications.Where(n => n.UserId == userId && !n.IsRead).ToList();
+                var notifications = await _firebaseService.GetCollectionAsync<Notification>(
+                    "notifications"
+                );
+                var unreadNotifications = notifications
+                    .Where(n => n.UserId == userId && !n.IsRead)
+                    .ToList();
                 return Ok(unreadNotifications);
             }
             catch (Exception ex)
@@ -76,12 +91,17 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<string>> CreateNotification([FromBody] Notification notification)
+        public async Task<ActionResult<string>> CreateNotification(
+            [FromBody] Notification notification
+        )
         {
             try
             {
                 notification.CreatedAt = DateTime.UtcNow;
-                var notificationId = await _firebaseService.AddDocumentAsync("notifications", notification);
+                var notificationId = await _firebaseService.AddDocumentAsync(
+                    "notifications",
+                    notification
+                );
                 return Ok(notificationId);
             }
             catch (Exception ex)
@@ -91,7 +111,10 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateNotification(string id, [FromBody] Notification notification)
+        public async Task<IActionResult> UpdateNotification(
+            string id,
+            [FromBody] Notification notification
+        )
         {
             try
             {
@@ -109,7 +132,10 @@ namespace ICCMS_API.Controllers
         {
             try
             {
-                var notification = await _firebaseService.GetDocumentAsync<Notification>("notifications", id);
+                var notification = await _firebaseService.GetDocumentAsync<Notification>(
+                    "notifications",
+                    id
+                );
                 if (notification == null)
                     return NotFound();
 

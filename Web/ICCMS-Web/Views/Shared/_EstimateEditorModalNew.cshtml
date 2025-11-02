@@ -1,0 +1,976 @@
+@* Modal to edit estimate line items for a project - New Design System *@
+<div class="modal fade" id="estimateEditorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <h5 class="modal-title">
+                            <i class="fas fa-calculator"></i>
+                            Estimate Editor
+                        </h5>
+                        <div class="modal-subtitle" id="ee-projectBadge"></div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary" id="ee-btnRegenerate">
+                            <i class="fa-solid fa-robot me-1"></i>Regenerate
+                        </button>
+                    </div>
+                    <button class="btn btn-primary" id="ee-btnAdd">
+                        <i class="fa-solid fa-plus me-1"></i>Add Item
+                    </button>
+                </div>
+
+                <!-- Line Items Container -->
+                <div id="ee-line-items-container" style="min-height: 300px;">
+                    <!-- Line items will be rendered here by category -->
+                </div>
+
+                <!-- Summary Section -->
+                <div class="modal-card mt-4">
+                    <div class="modal-card-header">
+                        <div class="modal-card-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <h6 class="modal-card-title">Estimate Summary</h6>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Line Items</div>
+                                        <div class="metric-value" id="ee-item-count">0</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Categories</div>
+                                        <div class="metric-value success" id="ee-category-count">0</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Total Items</div>
+                                        <div class="metric-value" id="ee-total-items">0</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-end">
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted">Subtotal:</span>
+                                        <span class="metric-value" id="ee-subtotal" style="font-size: 1.2rem;">R 0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted">Tax (15%):</span>
+                                        <span class="metric-value" id="ee-tax" style="font-size: 1.2rem;">R 0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center" style="border-top: 2px solid var(--accent-yellow); padding-top: 0.5rem;">
+                                        <span class="text-primary fw-bold">Total:</span>
+                                        <span class="metric-value" id="ee-total" style="font-size: 1.4rem;">R 0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <div class="text-muted" style="font-size: 0.9rem;">
+                        <i class="fa-solid fa-info-circle me-1"></i>Click Save to save your changes
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i>Cancel
+                        </button>
+                        <button type="button" class="btn btn-primary" id="ee-btnSave">
+                            <i class="fas fa-save me-1"></i>Save Estimate
+                        </button>
+                        <button type="button" class="btn btn-primary" id="ee-btnSendQuote">
+                            <i class="fa-solid fa-paper-plane me-1"></i>Send Quote
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        let projectId = null;
+        let estimate = null;
+
+        function open(project, estimateId = null) {
+            console.log(`🚀 Opening estimate editor for project: ${project}, estimateId: ${estimateId}`);
+            projectId = project;
+            document.getElementById('ee-projectBadge').textContent = `Project: ${project}`;
+
+            // Show the modal first
+            const modalElement = document.getElementById('estimateEditorModal');
+            if (!modalElement) {
+                console.error('❌ Estimate editor modal element not found');
+                alert('Estimate editor modal not found. Please refresh the page.');
+                return;
+            }
+
+            // Clean up any lingering backdrops from other modals (e.g., Bob's modal)
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            existingBackdrops.forEach(backdrop => backdrop.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+            
+            // Clean up any previous modal instances
+            const existingModal = bootstrap.Modal.getInstance(modalElement);
+            if (existingModal) {
+                existingModal.dispose();
+            }
+            
+            const modal = new bootstrap.Modal(modalElement);
+            
+            // Add event listener for modal cleanup when hidden
+            modalElement.addEventListener('hidden.bs.modal', function onModalHidden() {
+                // Clean up any leftover state
+                estimate = null;
+                
+                // Ensure backdrop is removed
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                backdrops.forEach(backdrop => backdrop.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+                
+                // Remove this event listener to prevent memory leaks
+                modalElement.removeEventListener('hidden.bs.modal', onModalHidden);
+            }, { once: true });
+            
+            modal.show();
+
+            // Restore original modal content
+            const modalBody = document.querySelector('#estimateEditorModal .modal-body');
+            modalBody.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary" id="ee-btnRegenerate">
+                            <i class="fa-solid fa-robot me-1"></i>Regenerate
+                        </button>
+                    </div>
+                    <button class="btn btn-primary" id="ee-btnAdd">
+                        <i class="fa-solid fa-plus me-1"></i>Add Item
+                    </button>
+                </div>
+
+                <div id="ee-line-items-container" style="min-height: 300px;">
+                    <div class="modal-empty-state">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <h5>No Line Items</h5>
+                        <p>Add items manually or process a blueprint to get started.</p>
+                    </div>
+                </div>
+
+                <div class="modal-card mt-4">
+                    <div class="modal-card-header">
+                        <div class="modal-card-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <h6 class="modal-card-title">Estimate Summary</h6>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Line Items</div>
+                                        <div class="metric-value" id="ee-item-count">0</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Categories</div>
+                                        <div class="metric-value success" id="ee-category-count">0</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Total Items</div>
+                                        <div class="metric-value" id="ee-total-items">0</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-end">
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted">Subtotal:</span>
+                                        <span class="metric-value" id="ee-subtotal" style="font-size: 1.2rem;">R 0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted">Tax (15%):</span>
+                                        <span class="metric-value" id="ee-tax" style="font-size: 1.2rem;">R 0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center" style="border-top: 2px solid var(--accent-yellow); padding-top: 0.5rem;">
+                                        <span class="text-primary fw-bold">Total:</span>
+                                        <span class="metric-value" id="ee-total" style="font-size: 1.4rem;">R 0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            reattachEventListeners();
+            loadEstimate(estimateId);
+        }
+
+        function reattachEventListeners() {
+            // Remove old listeners to prevent duplicates
+            const addBtn = document.getElementById('ee-btnAdd');
+            const saveBtn = document.getElementById('ee-btnSave');
+            const sendQuoteBtn = document.getElementById('ee-btnSendQuote');
+            const regenBtn = document.getElementById('ee-btnRegenerate');
+            
+            // Clone buttons to remove all event listeners (nuclear option)
+            if (addBtn) {
+                const newAddBtn = addBtn.cloneNode(true);
+                addBtn.parentNode?.replaceChild(newAddBtn, addBtn);
+            }
+            if (saveBtn) {
+                const newSaveBtn = saveBtn.cloneNode(true);
+                saveBtn.parentNode?.replaceChild(newSaveBtn, saveBtn);
+            }
+            if (sendQuoteBtn) {
+                const newSendBtn = sendQuoteBtn.cloneNode(true);
+                sendQuoteBtn.parentNode?.replaceChild(newSendBtn, sendQuoteBtn);
+            }
+            if (regenBtn) {
+                const newRegenBtn = regenBtn.cloneNode(true);
+                regenBtn.parentNode?.replaceChild(newRegenBtn, regenBtn);
+            }
+            
+            // Add item button
+            document.getElementById('ee-btnAdd')?.addEventListener('click', function() {
+                const current = collectItems();
+                current.push({
+                    name: '',
+                    description: '',
+                    category: '',
+                    unit: '',
+                    quantity: 0,
+                    unitPrice: 0,
+                });
+                renderItems(current);
+            });
+
+            // Save button
+            document.getElementById('ee-btnSave')?.addEventListener('click', async function() {
+                await saveEstimate();
+            });
+
+            // Send quote button - with proper event handling
+            let isSending = false;
+            document.getElementById('ee-btnSendQuote')?.addEventListener('click', async function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (isSending) {
+                    console.log('⏳ Send quote already in progress, ignoring click');
+                    return;
+                }
+                
+                const btn = this;
+                isSending = true;
+                btn.disabled = true;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Sending...';
+                
+                try {
+                    await sendQuote();
+                } catch (error) {
+                    console.error('Error in sendQuote:', error);
+                } finally {
+                    // Re-enable button after a delay
+                    setTimeout(() => {
+                        isSending = false;
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                    }, 2000);
+                }
+            });
+
+            // Regenerate button
+            document.getElementById('ee-btnRegenerate')?.addEventListener('click', async function() {
+                await regenerateEstimate();
+            });
+        }
+
+        // Load estimate data
+        async function loadEstimate(specificEstimateId = null) {
+            try {
+                console.log(`🔍 Loading estimates for project: ${projectId}${specificEstimateId ? `, specific estimate: ${specificEstimateId}` : ''}`);
+                
+                const response = await fetch(`/ProjectManager/GetProjectEstimates?projectId=${projectId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                });
+                
+                console.log(`📡 API Response status: ${response.status}`);
+                
+                if (response.ok) {
+                    const estimates = await response.json();
+                    console.log(`📊 Found ${estimates ? estimates.length : 0} estimates`);
+                    
+                    if (estimates && estimates.length > 0) {
+                        // If specific estimate ID provided, find that estimate
+                        if (specificEstimateId) {
+                            estimate = estimates.find(e => e.estimateId === specificEstimateId);
+                            if (estimate) {
+                                console.log(`✅ Loaded specific estimate:`, estimate);
+                            } else {
+                                console.warn(`⚠️ Specific estimate ${specificEstimateId} not found, using latest`);
+                                estimate = estimates[0];
+                            }
+                        } else {
+                            estimate = estimates[0]; // Get the first estimate (latest)
+                            console.log(`✅ Loaded latest estimate:`, estimate);
+                        }
+                        
+                        // Ensure lineItems is set if missing
+                        if (!estimate.lineItems) {
+                            estimate.lineItems = [];
+                        }
+                        
+                        render();
+                    } else {
+                        estimate = { 
+                            lineItems: [],
+                            totalAmount: 0,
+                            projectId: projectId
+                        };
+                        console.log(`ℹ️ No estimates found, using empty estimate`);
+                        render();
+                    }
+                } else {
+                    const errorText = await response.text();
+                    console.error(`❌ Failed to load estimate - Status: ${response.status}, Error: ${errorText}`);
+                    estimate = { 
+                        lineItems: [],
+                        totalAmount: 0,
+                        projectId: projectId
+                    };
+                    render();
+                }
+            } catch (error) {
+                console.error('❌ Error loading estimate:', error);
+                estimate = { 
+                    lineItems: [],
+                    totalAmount: 0,
+                    projectId: projectId
+                };
+                render();
+            }
+        }
+
+        // Collect items from form
+        function collectItems() {
+            const items = [];
+            const inputs = document.querySelectorAll('#ee-line-items-container input[data-f]');
+            
+            // Group inputs by their data-i attribute
+            const itemGroups = {};
+            inputs.forEach(input => {
+                const index = input.getAttribute('data-i');
+                const field = input.getAttribute('data-f');
+                
+                if (!itemGroups[index]) {
+                    itemGroups[index] = {};
+                }
+                itemGroups[index][field] = input.value;
+            });
+
+            // Convert groups to items
+            Object.values(itemGroups).forEach(itemData => {
+                if (itemData.name || itemData.description) {
+                    items.push({
+                        name: itemData.name || '',
+                        description: itemData.description || '',
+                        category: itemData.category || '',
+                        unit: itemData.unit || '',
+                        quantity: parseFloat(itemData.quantity) || 0,
+                        unitPrice: parseFloat(itemData.unitPrice) || 0,
+                        lineTotal: (parseFloat(itemData.quantity) || 0) * (parseFloat(itemData.unitPrice) || 0)
+                    });
+                }
+            });
+
+            return items;
+        }
+
+        // Render items
+        function renderItems(items) {
+            const container = document.getElementById('ee-line-items-container');
+            if (!container) return;
+
+            if (!items || items.length === 0) {
+                container.innerHTML = `
+                    <div class="modal-empty-state">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <h5>No Line Items</h5>
+                        <p>Add items manually or process a blueprint to get started.</p>
+                    </div>
+                `;
+                updateSummary();
+                return;
+            }
+
+            // Group items by category
+            const groupedItems = groupItemsByCategory(items);
+
+            container.innerHTML = Object.keys(groupedItems).map(category => `
+                <div class="modal-card mb-3">
+                    <div class="modal-card-header">
+                        <div class="modal-card-icon">
+                            <i class="fas fa-layer-group"></i>
+                        </div>
+                        <h6 class="modal-card-title">${category || 'Uncategorized'}</h6>
+                        <div class="text-end">
+                            <div class="metric-value" style="font-size: 1rem;">
+                                ${formatCurrency(groupedItems[category].reduce((sum, item) => sum + (item.lineTotal || 0), 0))}
+                            </div>
+                            <small class="text-muted">Category Total</small>
+                        </div>
+                    </div>
+                    <div class="row">
+                        ${groupedItems[category].map((item, index) => renderLineItem(item, index)).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            updateSummary();
+        }
+
+        // Group items by category
+        function groupItemsByCategory(lineItems) {
+            const grouped = {};
+            lineItems.forEach((item, index) => {
+                const category = item.category || 'Uncategorized';
+                if (!grouped[category]) {
+                    grouped[category] = [];
+                }
+                grouped[category].push({ ...item, originalIndex: index });
+            });
+            return grouped;
+        }
+
+        // Render individual line item
+        function renderLineItem(item, index) {
+            return `
+                <div class="col-md-12 mb-1">
+                    <div class="modal-list-item estimate-line-item">
+                        <div class="row align-items-center">
+                            <div class="col-md-1 text-center">
+                                <button class="btn btn-sm btn-outline-info" data-action="toggle-details" data-i="${item.originalIndex}" title="View Details">
+                                    <i class="fa-solid fa-chevron-right" data-icon="${item.originalIndex}"></i>
+                                </button>
+                            </div>
+                            <div class="col-md-5">
+                                <input class="form-control form-control-sm" value="${escapeHtml(item.name || '')}" 
+                                       data-f="name" data-i="${item.originalIndex}" 
+                                       placeholder="Item name">
+                            </div>
+                            <div class="col-md-2">
+                                <input class="form-control form-control-sm" value="${escapeHtml(item.unit || '')}" 
+                                       data-f="unit" data-i="${item.originalIndex}" 
+                                       placeholder="Unit">
+                            </div>
+                            <div class="col-md-1">
+                                <input type="number" step="0.01" class="form-control form-control-sm text-end" 
+                                       value="${Number(item.quantity || 0)}" data-f="quantity" data-i="${item.originalIndex}">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" step="0.01" class="form-control form-control-sm text-end" 
+                                       value="${Number(item.unitPrice || 0)}" data-f="unitPrice" data-i="${item.originalIndex}" 
+                                       placeholder="0.00">
+                            </div>
+                            <div class="col-md-1 text-end">
+                                <div class="metric-value" style="font-size: 0.75rem;" data-line-total="${item.originalIndex}">
+                                    ${formatCurrency((item.quantity || 0) * (item.unitPrice || 0))}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-2" id="details-${item.originalIndex}" style="display: none;">
+                            <div class="col-md-12">
+                                <div class="estimate-details-box">
+                                    <div class="row">
+                                        <div class="col-md-12 mb-2">
+                                            <label class="form-label">Description</label>
+                                            <textarea class="form-control form-control-sm" rows="2" 
+                                                      data-f="description" data-i="${item.originalIndex}" 
+                                                      placeholder="Item description">${escapeHtml(item.description || '')}</textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Category</label>
+                                            <input class="form-control form-control-sm" value="${escapeHtml(item.category || '')}" 
+                                                   data-f="category" data-i="${item.originalIndex}" 
+                                                   placeholder="Category">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Notes</label>
+                                            <input class="form-control form-control-sm" value="${escapeHtml(item.notes || '')}" 
+                                                   data-f="notes" data-i="${item.originalIndex}" 
+                                                   placeholder="Additional notes">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-md-12 text-end">
+                                            <button class="btn btn-sm btn-outline-danger" data-action="del" data-i="${item.originalIndex}" title="Delete Item">
+                                                <i class="fa-solid fa-trash me-1"></i>Delete Item
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Update summary
+        function updateSummary() {
+            if (!estimate) return;
+
+            const lineItems = estimate.lineItems || [];
+            const categories = new Set(lineItems.map(item => item.category || 'Uncategorized'));
+            
+            const subtotal = lineItems.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unitPrice || 0)), 0);
+            const tax = subtotal * 0.15;
+            const total = subtotal + tax;
+
+            // Update counts
+            document.getElementById('ee-item-count').textContent = lineItems.length;
+            document.getElementById('ee-category-count').textContent = categories.size;
+            document.getElementById('ee-total-items').textContent = lineItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
+
+            // Update amounts
+            document.getElementById('ee-subtotal').textContent = formatCurrency(subtotal);
+            document.getElementById('ee-tax').textContent = formatCurrency(tax);
+            document.getElementById('ee-total').textContent = formatCurrency(total);
+        }
+
+        // Save estimate
+        async function saveEstimate() {
+            try {
+                console.log('💾 Saving estimate for project:', projectId);
+                
+                // Collect current data
+                const lineItems = collectItems();
+                const totalAmount = lineItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+                
+                const estimateData = {
+                    projectId: projectId,
+                    estimateId: estimate?.estimateId || null,
+                    lineItems: lineItems,
+                    totalAmount: totalAmount,
+                    description: estimate?.description || 'Manual estimate'
+                };
+
+                console.log('📊 Estimate data:', estimateData);
+
+                // Use the SaveEstimate endpoint
+                if (!estimate?.estimateId) {
+                    alert('No estimate ID found. Please reload the estimate and try again.');
+                    return;
+                }
+
+                const url = `/ProjectManager/SaveEstimate?estimateId=${estimate.estimateId}`;
+                console.log(`🔄 Saving estimate via PUT to ${url}`);
+
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(estimateData)
+                });
+
+                console.log('📡 Response status:', response.status);
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('✅ Estimate saved successfully:', result);
+                    
+                    // Update local estimate with returned data
+                    if (result.estimateId) {
+                        estimate.estimateId = result.estimateId;
+                    }
+                    
+                    alert('Estimate saved successfully!');
+                } else {
+                    const errorText = await response.text();
+                    console.error('❌ Failed to save estimate:', response.status, errorText);
+                    alert(`Failed to save estimate: ${response.status} - ${errorText}`);
+                }
+            } catch (error) {
+                console.error('❌ Error saving estimate:', error);
+                alert(`Error saving estimate: ${error.message}`);
+            }
+        }
+
+        // Send quote
+        async function sendQuote() {
+            try {
+                // First save the estimate to ensure we have the latest data
+                await saveEstimate();
+                
+                if (!estimate?.estimateId) {
+                    alert('No estimate ID found. Please save the estimate first.');
+                    return;
+                }
+                
+                console.log('📝 Creating quotation from estimate:', estimate.estimateId);
+                
+                // Call the API endpoint to create quotation from estimate
+                const response = await fetch(`/ProjectManager/CreateQuoteFromEstimate?estimateId=${estimate.estimateId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('✅ Quotation created successfully - full response:', result);
+                    
+                    // Handle different response formats
+                    let quotationId = null;
+                    
+                    // Format 1: { success: true, quotation: "quotationIdString" }
+                    if (result.quotation && typeof result.quotation === 'string') {
+                        quotationId = result.quotation;
+                    }
+                    // Format 2: { success: true, quotation: QuotationDto object with quotationId property }
+                    else if (result.quotation && typeof result.quotation === 'object') {
+                        quotationId = result.quotation.quotationId || result.quotation.id || result.quotation.QuotationId;
+                    }
+                    // Format 3: Direct quotationId field
+                    else if (result.quotationId) {
+                        quotationId = result.quotationId;
+                    }
+                    // Format 4: QuotationDto object directly
+                    else if (result.id) {
+                        quotationId = result.id;
+                    }
+                    
+                    if (quotationId) {
+                        // Update quotation status to "SentToClient"
+                        console.log('📝 Sending quotation to client:', quotationId);
+                        const sendResponse = await fetch(`/ProjectManager/SendQuoteToClient?quotationId=${quotationId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            credentials: 'same-origin'
+                        });
+                        
+                        if (sendResponse.ok) {
+                            console.log('✅ Quotation status updated to SentToClient');
+                            alert(`Quote created and sent successfully! Quotation ID: ${quotationId}`);
+                        } else {
+                            const errorText = await sendResponse.text();
+                            console.error('❌ Failed to send quotation to client:', sendResponse.status, errorText);
+                            alert(`Quote created successfully, but failed to send to client: ${errorText}`);
+                        }
+                    } else {
+                        console.warn('Could not extract quotation ID from response:', JSON.stringify(result, null, 2));
+                        alert('Quote created successfully, but quotation ID not found in response. Check console for details.');
+                    }
+                } else {
+                    const errorText = await response.text();
+                    console.error('❌ Failed to create quotation:', response.status, errorText);
+                    alert(`Failed to create quotation: ${response.status} - ${errorText}`);
+                }
+            } catch (error) {
+                console.error('❌ Error sending quote:', error);
+                alert(`Error creating quotation: ${error.message}`);
+            }
+        }
+
+        // Regenerate estimate - reprocess the same blueprint through Bob
+        async function regenerateEstimate() {
+            try {
+                console.log('🤖 Regenerating estimate for project:', projectId);
+                
+                if (!estimate?.blueprintUrl) {
+                    alert('No blueprint URL found for this estimate. Cannot regenerate without an original blueprint.');
+                    return;
+                }
+                
+                if (!confirm('This will reprocess the blueprint and may overwrite your current estimate. Continue?')) {
+                    return;
+                }
+                
+                const btn = document.getElementById('ee-btnRegenerate');
+                const originalText = btn ? btn.innerHTML : '';
+                
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Regenerating...';
+                }
+                
+                // Use the processBlueprintAndOpen function from pm-project-detail.js which includes Bob's logs
+                if (typeof window.processBlueprintAndOpen === 'function') {
+                    // Close the estimate editor modal first
+                    const modalElement = document.getElementById('estimateEditorModal');
+                    if (modalElement) {
+                        const modal = bootstrap.Modal.getInstance(modalElement);
+                        if (modal) {
+                            modal.hide();
+                        }
+                    }
+                    
+                    // Call processBlueprintAndOpen which shows Bob's processing modal and logs
+                    await window.processBlueprintAndOpen(projectId, estimate.blueprintUrl);
+                } else {
+                    // Fallback if function not available - just process without logs
+                    const success = await processBlueprint(estimate.blueprintUrl);
+                    if (success) {
+                        await loadEstimate();
+                        alert('Estimate regenerated successfully!');
+                    } else {
+                        alert('Failed to regenerate estimate.');
+                    }
+                    
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error regenerating estimate:', error);
+                alert(`Error regenerating estimate: ${error.message}`);
+                
+                const btn = document.getElementById('ee-btnRegenerate');
+                if (btn) {
+                    btn.disabled = false;
+                    const originalText = btn.getAttribute('data-original-text') || '<i class="fa-solid fa-robot me-1"></i>Regenerate';
+                    btn.innerHTML = originalText;
+                }
+            }
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Render function (alias for renderItems)
+        function render() {
+            renderItems(estimate?.lineItems || []);
+        }
+
+        // Collect function (alias for collectItems)
+        function collect() {
+            if (estimate) {
+                estimate.lineItems = collectItems();
+            }
+        }
+
+        function formatCurrency(amount) {
+            if (!amount) return 'R 0.00';
+            return 'R ' + Number(amount).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // Update individual line total without re-rendering entire container
+        function updateLineTotal(itemIndex) {
+            console.log('updateLineTotal called for item:', itemIndex);
+            
+            const quantityInput = document.querySelector(`input[data-f="quantity"][data-i="${itemIndex}"]`);
+            const unitPriceInput = document.querySelector(`input[data-f="unitPrice"][data-i="${itemIndex}"]`);
+            const lineTotalElement = document.querySelector(`[data-line-total="${itemIndex}"]`);
+            
+            console.log('Found elements:', {
+                quantityInput: !!quantityInput,
+                unitPriceInput: !!unitPriceInput,
+                lineTotalElement: !!lineTotalElement
+            });
+            
+            if (quantityInput && unitPriceInput && lineTotalElement) {
+                const quantity = parseFloat(quantityInput.value) || 0;
+                const unitPrice = parseFloat(unitPriceInput.value) || 0;
+                const lineTotal = quantity * unitPrice;
+                
+                console.log('Calculating:', quantity, 'x', unitPrice, '=', lineTotal);
+                lineTotalElement.textContent = formatCurrency(lineTotal);
+                console.log('Updated line total to:', formatCurrency(lineTotal));
+            } else {
+                console.error('Missing elements for item:', itemIndex);
+            }
+        }
+
+        // Event delegation for dynamic content - FIXED AUTO-SAVE ISSUE
+        document.addEventListener('input', function (e) {
+            if (e.target && e.target.matches('#ee-line-items-container input[data-f]')) {
+                console.log('Input event detected:', e.target.getAttribute('data-f'), 'value:', e.target.value);
+                
+                // Only update summary, don't re-render entire container
+                collect();
+                updateSummary();
+                
+                // Update the specific line total for this item
+                const itemIndex = e.target.getAttribute('data-i');
+                if (itemIndex !== null) {
+                    console.log('Updating line total for item:', itemIndex);
+                    updateLineTotal(itemIndex);
+                }
+            }
+        });
+
+        // Additional event listener specifically for quantity and unit price changes
+        document.addEventListener('input', function (e) {
+            if (e.target && (e.target.matches('input[data-f="quantity"]') || e.target.matches('input[data-f="unitPrice"]'))) {
+                console.log('Quantity/UnitPrice change detected:', e.target.getAttribute('data-f'), 'value:', e.target.value);
+                
+                const itemIndex = e.target.getAttribute('data-i');
+                if (itemIndex !== null) {
+                    console.log('Force updating line total for item:', itemIndex);
+                    // Small delay to ensure the input value is updated
+                    setTimeout(() => {
+                        updateLineTotal(itemIndex);
+                    }, 10);
+                }
+            }
+        });
+
+        document.addEventListener('click', function (e) {
+            const delEl = e.target.closest('[data-action="del"]');
+            if (delEl) {
+                const i = Number(delEl.getAttribute('data-i'));
+                if (estimate && estimate.lineItems && i >= 0 && i < estimate.lineItems.length) {
+                    estimate.lineItems.splice(i, 1);
+                    render();
+                }
+            }
+            
+            const toggleEl = e.target.closest('[data-action="toggle-details"]');
+            if (toggleEl) {
+                const i = toggleEl.getAttribute('data-i');
+                const detailsDiv = document.getElementById(`details-${i}`);
+                const icon = document.querySelector(`[data-icon="${i}"]`);
+                
+                if (detailsDiv && icon) {
+                    if (detailsDiv.style.display === 'none') {
+                        detailsDiv.style.display = 'block';
+                        icon.classList.remove('fa-chevron-right');
+                        icon.classList.add('fa-chevron-down');
+                    } else {
+                        detailsDiv.style.display = 'none';
+                        icon.classList.remove('fa-chevron-down');
+                        icon.classList.add('fa-chevron-right');
+                    }
+                }
+            }
+        });
+
+        // Process Blueprint functions (existing implementation)
+        async function processBlueprint(url) {
+            const btn = document.getElementById('ee-btnPickBlueprint');
+            let originalText = '';
+
+            if (btn) {
+                originalText = btn.innerHTML;
+                try {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing Blueprint...';
+                } catch (e) {
+                    console.log('Button not available for loading state update');
+                }
+            }
+
+            try {
+                let res = await fetch('/ProjectManager/ProcessBlueprint', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectId, blueprintUrl: url })
+                });
+                if (!res.ok && res.status === 404) {
+                    res = await fetch(`${window.location.origin}/ProjectManager/ProcessBlueprint`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ projectId, blueprintUrl: url })
+                    });
+                }
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error('ProcessBlueprint failed', res.status, text);
+                    alert(`Failed to process blueprint (status ${res.status}).`);
+                    return false;
+                }
+
+                const responseData = await res.json();
+                console.log('ProcessBlueprint response:', responseData);
+
+                if (responseData.estimateId) {
+                    if (!estimate) {
+                        estimate = {};
+                    }
+                    estimate.estimateId = responseData.estimateId;
+                    console.log('Estimate ID set:', responseData.estimateId);
+                } else {
+                    console.warn('No estimateId in response:', responseData);
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                await loadEstimate();
+                return true;
+            } catch (e) {
+                console.error('ProcessBlueprint exception', e);
+                if (e.message && e.message.includes('Failed to load estimate')) {
+                    alert('Blueprint processed successfully, but failed to load the results. Please refresh the page.');
+                } else {
+                    alert('Failed to process blueprint (network error).');
+                }
+                return false;
+            } finally {
+                if (btn && originalText) {
+                    try {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                    } catch (e) {
+                        console.log('Button not available for state restoration');
+                    }
+                }
+            }
+        }
+
+        window.processBlueprintAndOpen = async function (projectIdParam, url) {
+            projectId = projectIdParam;
+            const modal = new bootstrap.Modal(document.getElementById('estimateEditorModal'));
+            modal.show();
+            await processBlueprint(url);
+        };
+
+        window.openEstimateEditor = open;
+    })();
+</script>

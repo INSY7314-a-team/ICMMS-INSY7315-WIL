@@ -1,0 +1,105 @@
+@* No @model binding — pure dynamic modal *@
+@using System.Text.Json
+
+<div class="modal fade" id="quotationModal" tabindex="-1" aria-labelledby="quotationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title fw-bold"><i class="fas fa-file-invoice-dollar me-2"></i> Create Quotation</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body p-4">
+        <!-- Hidden -->
+        <input type="hidden" id="quotationId" value="@Model.QuotationId" />
+        <input type="hidden" id="projectId" value="@Model.ProjectId" />
+        <input type="hidden" id="clientId" value="@Model.ClientId" />
+        <input type="hidden" id="contractorId" value="@Model.ContractorId" />
+
+        <!-- Header Summary -->
+        <div class="mb-3">
+        <h6 class="fw-bold text-secondary mb-1">Project: <span id="popupProjectName" class="text-dark"></span></h6>
+        <h6 class="fw-bold text-secondary mb-1">Client: <span id="popupClientName" class="text-dark"></span></h6>
+        <h6 class="fw-bold text-secondary">Description: <span id="popupDescription" class="text-dark"></span></h6>
+        </div>
+
+        <hr />
+
+        <!-- Line Items -->
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Name</th><th>Description</th><th>Category</th><th>Unit</th>
+                <th>Qty</th><th>Unit Price</th><th>Line Total</th><th>Remove</th>
+              </tr>
+            </thead>
+            <tbody id="quotationItemsTable"></tbody>
+          </table>
+        </div>
+
+        <div class="mt-2">
+          <button id="btnAddLine" class="btn btn-sm btn-outline-primary fw-bold">
+            <i class="fas fa-plus me-1"></i> Add Line Item
+          </button>
+        </div>
+
+        <hr />
+
+        <!-- Totals -->
+        <div class="card p-3 mt-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span>Tax Rate (%)</span>
+            <input id="taxRateInput" type="number" class="form-control w-auto text-end" value="15" step="1" />
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span>Markup (%)</span>
+            <input id="markupRateInput" type="number" class="form-control w-auto text-end" value="@Model.MarkupRate" step="1" />
+        </div>
+
+        <hr class="my-2" />
+
+        <div class="d-flex justify-content-between">
+            <span>Subtotal:</span>
+            <span id="subtotalDisplay" class="fw-bold">R 0.00</span>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <span>Tax Total:</span>
+            <span id="taxDisplay" class="fw-bold">R 0.00</span>
+        </div>
+
+        <div class="d-flex justify-content-between fw-bold mt-2">
+            <span>Grand Total:</span>
+            <span id="grandTotalDisplay" class="text-success">R 0.00</span>
+        </div>
+        </div>
+      </div>
+
+      <div class="modal-footer d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button id="btnSubmitQuotation" class="btn btn-success fw-bold">
+          <i class="fas fa-paper-plane me-1"></i> Submit Quotation
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+  <script src="~/js/quotation-popup.js">
+  // === When modal opens, inject the correct ProjectId ===
+const quotationModal = document.getElementById("quotationModal");
+quotationModal.addEventListener("show.bs.modal", event => {
+  const trigger = event.relatedTarget;
+  const projectId = trigger?.getAttribute("data-project-id") || "";
+  document.getElementById("projectId").value = projectId;
+  console.log("📦 Loaded projectId into QuotationPopup:", projectId);
+});
+
+  </script>
+  
+}

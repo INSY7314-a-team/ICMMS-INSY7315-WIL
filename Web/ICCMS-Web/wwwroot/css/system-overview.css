@@ -1,0 +1,666 @@
+/* System Overview Dashboard Styles - Construction Theme */
+
+.system-overview-container {
+    padding: 20px;
+    background-color: #1A1B25;
+    min-height: 100vh;
+}
+
+/* ===========================================
+   CONSTRUCTION THEME - DIAGONAL STRIPES
+   =========================================== */
+
+.construction-border {
+    border: 3px solid;
+    border-image: repeating-linear-gradient(
+        45deg,
+        #1A1B25,
+        #1A1B25 8px,
+        #F7EC59 8px,
+        #F7EC59 16px
+    ) 1;
+}
+
+.construction-border-thin {
+    border: 2px solid;
+    border-image: repeating-linear-gradient(
+        45deg,
+        #1A1B25,
+        #1A1B25 6px,
+        #F7EC59 6px,
+        #F7EC59 12px
+    ) 1;
+}
+
+/* ===========================================
+   DASHBOARD HEADER
+   =========================================== */
+
+.system-dashboard-header {
+    color: #FFFFFF;
+    padding: 25px 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    position: relative;
+    overflow: hidden;
+}
+
+.system-dashboard-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(247, 236, 89, 0.1) 0%, transparent 70%);
+    animation: float 6s ease-in-out infinite;
+}
+
+.system-dashboard-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: #FFFFFF;
+    position: relative;
+    z-index: 1;
+}
+
+.system-dashboard-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.system-status-indicator {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #6BF178;
+    box-shadow: 0 0 0 0 rgba(107, 241, 120, 0.7);
+    animation: pulse 2s infinite;
+}
+
+/* ===========================================
+   STAT CARDS
+   =========================================== */
+.stat-card {
+    background: var(--secondary-bg);
+    color: var(--text-primary);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(247, 236, 89, 0.2);
+}
+
+.stat-card:hover {
+    background: rgba(247, 236, 89, 0.15);
+    border-color: #F7EC59;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.stat-card .stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+}
+.stat-card .stat-icon {
+    color: #F7EC59;
+    background: transparent;
+}
+
+
+.stat-card .stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: #F7EC59;
+}
+
+.stat-card .stat-label {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin: 0;
+}
+.stat-card.compact {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+}
+.stat-card.compact .stat-icon {
+    margin-right: 15px;
+    margin-bottom: 0;
+}
+.stat-card.compact .stat-number {
+    font-size: 1.75rem;
+    margin-bottom: 2px;
+}
+
+
+/* ===========================================
+   Section Header
+   =========================================== */
+
+   .section-header {
+    color: var(--text-primary);
+    padding: 20px 0px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+     border-bottom: 1px solid rgba(247, 236, 89, 0.2);
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+/* ===========================================
+   HEALTH STATUS INDICATORS
+   =========================================== */
+
+.health-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.health-indicator.healthy {
+    background: linear-gradient(135deg, #6BF178 0%, #4ECDC4 100%);
+    color: #1A1B25;
+    box-shadow: 0 2px 8px rgba(107, 241, 120, 0.3);
+}
+
+.health-indicator.warning {
+    background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+    color: #1A1B25;
+    box-shadow: 0 2px 8px rgba(247, 236, 89, 0.3);
+}
+
+.health-indicator.critical {
+    background: linear-gradient(135deg, #FF5964 0%, #E53E3E 100%);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(255, 89, 100, 0.3);
+}
+
+.health-indicator.unknown {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+}
+
+.health-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.health-dot.healthy {
+    background: #6BF178;
+    box-shadow: 0 0 0 0 rgba(107, 241, 120, 0.7);
+}
+
+.health-dot.warning {
+    background: #F7EC59;
+    box-shadow: 0 0 0 0 rgba(247, 236, 89, 0.7);
+}
+
+.health-dot.critical {
+    background: #FF5964;
+    box-shadow: 0 0 0 0 rgba(255, 89, 100, 0.7);
+}
+
+.health-dot.unknown {
+    background: #6c757d;
+    box-shadow: 0 0 0 0 rgba(108, 117, 125, 0.7);
+}
+
+/* ===========================================
+   ACTIVITY FEED
+   =========================================== */
+
+.activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 15px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-item:hover {
+    background: rgba(247, 236, 89, 0.05);
+    transform: translateX(5px);
+    padding-left: 10px;
+}
+
+.activity-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1A1B25;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-description {
+    color: #FFFFFF;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+    line-height: 1.4;
+}
+
+.activity-meta {
+    color: #B0B0B0;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.activity-time {
+    color: #F7EC59;
+    font-weight: 500;
+}
+
+/* ===========================================
+   ALERT SYSTEM
+   =========================================== */
+
+.alert-item {
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    border-left: 4px solid;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.alert-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.alert-item.info {
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    border-left-color: #17a2b8;
+    color: #0c5460;
+}
+
+.alert-item.warning {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border-left-color: #ffc107;
+    color: #856404;
+}
+
+.alert-item.critical {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    border-left-color: #dc3545;
+    color: #721c24;
+}
+
+.alert-item.success {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border-left-color: #28a745;
+    color: #155724;
+}
+
+.alert-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.alert-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.alert-timestamp {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.alert-message {
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+/* ===========================================
+   PROGRESS BARS
+   =========================================== */
+
+.progress-container {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.progress-label {
+    color: #F7EC59;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.progress-bar-container {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    height: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #F7EC59 0%, #6BF178 100%);
+    border-radius: 10px;
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    animation: shimmer 2s infinite;
+}
+
+/* ===========================================
+   API STATUS GRID
+   =========================================== */
+
+.api-status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.api-endpoint-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.api-endpoint-card:hover {
+    background: rgba(247, 236, 89, 0.1);
+    border-color: #F7EC59;
+    transform: translateY(-2px);
+}
+
+.api-endpoint-name {
+    color: #FFFFFF;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+    font-family: 'Courier New', monospace;
+}
+
+.api-endpoint-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.api-endpoint-time {
+    color: #B0B0B0;
+    font-size: 0.75rem;
+}
+
+/* ===========================================
+   REFRESH BUTTON
+   =========================================== */
+
+.refresh-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+    color: #1A1B25;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(247, 236, 89, 0.3);
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.refresh-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(247, 236, 89, 0.5);
+}
+
+.refresh-btn:active {
+    transform: scale(0.95);
+}
+
+.refresh-btn.spinning {
+    animation: spin 1s linear infinite;
+}
+
+/* ===========================================
+   LOADING STATES
+   =========================================== */
+
+.loading-skeleton {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 4px;
+}
+
+.loading-skeleton.title {
+    height: 20px;
+    width: 60%;
+    margin-bottom: 10px;
+}
+
+.loading-skeleton.value {
+    height: 40px;
+    width: 80%;
+    margin-bottom: 15px;
+}
+
+.loading-skeleton.text {
+    height: 16px;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+/* ===========================================
+   ANIMATIONS
+   =========================================== */
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(180deg); }
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(107, 241, 120, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(107, 241, 120, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(107, 241, 120, 0);
+    }
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN
+   =========================================== */
+
+@media (max-width: 768px) {
+    .system-dashboard-title {
+        font-size: 2rem;
+    }
+    
+    .system-stat-card {
+        padding: 20px;
+    }
+    
+    .system-stat-card .card-value {
+        font-size: 2rem;
+    }
+    
+    .api-status-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .refresh-btn {
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .system-overview-container {
+        padding: 10px;
+    }
+    
+    .system-dashboard-header {
+        padding: 20px;
+    }
+    
+    .system-card-header {
+        padding: 15px 20px;
+    }
+    
+    .activity-item {
+        padding: 10px 0;
+    }
+    
+    .activity-icon {
+        width: 35px;
+        height: 35px;
+        font-size: 14px;
+    }
+}
+
+/* ===========================================
+   DARK THEME ENHANCEMENTS
+   =========================================== */
+
+.system-overview-container {
+    background: linear-gradient(135deg, #1A1B25 0%, #0D1821 100%);
+}
+
+.system-content-card {
+    background: linear-gradient(135deg, #0D1821 0%, #1A1B25 100%);
+}
+
+.system-stat-card {
+    background: linear-gradient(135deg, #0D1821 0%, #1A1B25 100%);
+}
+
+/* ===========================================
+   CUSTOM SCROLLBAR
+   =========================================== */
+
+.system-overview-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.system-overview-container::-webkit-scrollbar-track {
+    background: #1A1B25;
+}
+
+.system-overview-container::-webkit-scrollbar-thumb {
+    background: #F7EC59;
+    border-radius: 4px;
+}
+
+.system-overview-container::-webkit-scrollbar-thumb:hover {
+    background: #E6D547;
+}

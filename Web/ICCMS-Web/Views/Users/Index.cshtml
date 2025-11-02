@@ -1,453 +1,329 @@
-@model List<ICCMS_Web.Models.User>
+@model List<ICCMS_Web.Models.UserDto>
 
 @{
     ViewData["Title"] = "User Management Dashboard";
+    Layout = "_Layout";
 }
 
-<!-- Modern Dashboard Header -->
-<div class="dashboard-header bg-gradient-primary text-white py-4 mb-4">
-    <div class="container-fluid">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="h3 mb-0">
+<div class="user-management-container">
+    <!-- Dashboard Header -->
+    <div class="user-dashboard-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="user-dashboard-title">
                     <i class="fas fa-users-cog me-3"></i>User Management Dashboard
                 </h1>
-                <p class="mb-0 opacity-75">Manage system users, roles, and permissions</p>
+                <p class="user-dashboard-subtitle">Manage system users, roles, and permissions</p>
             </div>
-            <div class="col-md-4 text-md-end">
-                <a href="@Url.Action("Create", "Users")" class="btn btn-light btn-lg shadow-sm">
+            <div>
+                <a href="@Url.Action("Create", "Users")" class="user-btn user-btn-primary">
                     <i class="fas fa-user-plus me-2"></i>Add New User
                 </a>
             </div>
         </div>
     </div>
-</div>
-
-<div class="container-fluid">
-    <!-- Alert Messages -->
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-check-circle me-3 fs-4"></i>
-                <div>
-                    <strong>Success!</strong> @TempData["SuccessMessage"]
-                </div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-exclamation-triangle me-3 fs-4"></i>
-                <div>
-                    <strong>Error!</strong> @TempData["ErrorMessage"]
-                </div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
 
     <!-- Dashboard Stats Cards -->
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card stat-card bg-primary text-white h-100 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title text-white-50 mb-1">Total Users</h6>
-                            <h2 class="mb-0">@(Model?.Count ?? 0)</h2>
-                        </div>
-                        <div class="stat-icon">
-                            <i class="fas fa-users fa-2x opacity-75"></i>
-                        </div>
+    <div class="stats-container">
+        <div class="row g-2 mb-3">
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@(Model?.Count ?? 0)</h4>
+                        <p class="stat-label">Total Users</p>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card stat-card bg-success text-white h-100 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title text-white-50 mb-1">Active Users</h6>
-                            <h2 class="mb-0">@(Model?.Count(u => u.IsActive) ?? 0)</h2>
-                        </div>
-                        <div class="stat-icon">
-                            <i class="fas fa-user-check fa-2x opacity-75"></i>
-                        </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@(Model?.Count(u => u.IsActive) ?? 0)</h4>
+                        <p class="stat-label">Active Users</p>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card stat-card bg-warning text-white h-100 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title text-white-50 mb-1">Admins</h6>
-                            <h2 class="mb-0">@(Model?.Count(u => u.Role?.ToLower() == "admin") ?? 0)</h2>
-                        </div>
-                        <div class="stat-icon">
-                            <i class="fas fa-shield-alt fa-2x opacity-75"></i>
-                        </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@(Model?.Count(u => u.Role?.ToLower() == "admin") ?? 0)</h4>
+                        <p class="stat-label">Admins</p>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card stat-card bg-info text-white h-100 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title text-white-50 mb-1">Managers</h6>
-                            <h2 class="mb-0">@(Model?.Count(u => u.Role?.ToLower() == "manager") ?? 0)</h2>
-                        </div>
-                        <div class="stat-icon">
-                            <i class="fas fa-user-tie fa-2x opacity-75"></i>
-                        </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@(Model?.Count(u => u.Role?.ToLower() == "project manager") ?? 0)</h4>
+                        <p class="stat-label">Managers</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon">
+                        <i class="fas fa-hammer"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@(Model?.Count(u => u.Role?.ToLower() == "contractor") ?? 0)</h4>
+                        <p class="stat-label">Contractors</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon">
+                        <i class="fas fa-user-tag"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@(Model?.Count(u => u.Role?.ToLower() == "client") ?? 0)</h4>
+                        <p class="stat-label">Clients</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Content Card -->
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-white border-0 py-3">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <h5 class="card-title mb-0 text-dark">
-                        <i class="fas fa-list me-2 text-primary"></i>User Directory
-                    </h5>
-                </div>
-                <div class="col-md-6">
-                    <div class="d-flex gap-2 justify-content-md-end">
-                        <div class="input-group input-group-sm" style="max-width: 300px;">
-                            <span class="input-group-text bg-light border-end-0">
-                                <i class="fas fa-search text-muted"></i>
-                            </span>
-                            <input type="text" class="form-control border-start-0" id="userSearch" 
-                                   placeholder="Search users..." autocomplete="off">
-                        </div>
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" 
-                                    data-bs-toggle="dropdown">
-                                <i class="fas fa-filter me-1"></i>Filter
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#" data-filter="all">All Users</a></li>
-                                <li><a class="dropdown-item" href="#" data-filter="active">Active Only</a></li>
-                                <li><a class="dropdown-item" href="#" data-filter="inactive">Inactive Only</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="#" data-filter="admin">Admins</a></li>
-                                <li><a class="dropdown-item" href="#" data-filter="manager">Managers</a></li>
-                                <li><a class="dropdown-item" href="#" data-filter="user">Regular Users</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
+
+    <!-- Search and Filter Controls -->
+    <div class="search-section">
+        <div class="search-input-group">
+            <input type="text" id="userSearch" class="search-input" placeholder="Search users by name, email, or phone...">
+            <button type="button" class="search-btn">
+                <i class="fa-solid fa-search"></i>
+            </button>
+            <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+     <!-- Enhanced Filters Section -->
+    <div class="filter-section">
+        <div class="d-flex justify-content-center mb-3">
+            <button type="button" class="filter-toggle-btn" onclick="toggleFilters()">
+                <i class="fa-solid fa-sliders-h me-2"></i>
+                <span id="filterToggleText">Show Filters</span>
+                <i class="fa-solid fa-chevron-down ms-2" id="filterToggleIcon"></i>
+            </button>
+        </div>
+    </div>
+    <div class="filters-panel" id="filtersPanel" style="display: none;">
+        <div class="filter-group">
+            <div class="filter-group-header">
+                <h6 class="mb-0">Filter by Role</h6>
+            </div>
+            <div class="status-filters">
+                <a href="#" class="status-filter-btn" data-filter="all">All Users</a>
+                <a href="#" class="status-filter-btn" data-filter="admin">Admins</a>
+                <a href="#" class="status-filter-btn" data-filter="project manager">Project Managers</a>
+                <a href="#" class="status-filter-btn" data-filter="contractor">Contractors</a>
+                <a href="#" class="status-filter-btn" data-filter="client">Clients</a>
             </div>
         </div>
+        <div class="filter-group">
+            <div class="filter-group-header">
+                <h6 class="mb-0">Filter by Status</h6>
+            </div>
+             <div class="status-filters">
+                <a href="#" class="status-filter-btn" data-filter="active">Active Only</a>
+                <a href="#" class="status-filter-btn" data-filter="inactive">Inactive Only</a>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Main Content -->
+    <div class="section-header">
+        <h3 class="section-title">
+            <i class="fas fa-list me-2"></i>User Directory
+        </h3>
+    </div>
         
-        <div class="card-body p-0">
-            @if (Model != null && Model.Any())
-            {
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0" id="usersTable">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="border-0 ps-4">
+    <div class="user-table-container">
+        @if (Model != null && Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="user-table" id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-user me-2"></i>User
+                                </div>
+                            </th>
+                            <th>
+                                <i class="fas fa-envelope me-2"></i>Contact
+                            </th>
+                            <th>
+                                <i class="fas fa-shield-alt me-2"></i>Role
+                            </th>
+                            <th>
+                                <i class="fas fa-calendar me-2"></i>Created
+                            </th>
+                            <th>
+                                <i class="fas fa-toggle-on me-2"></i>Status
+                            </th>
+                            <th class="text-end">
+                                <i class="fas fa-cogs me-2"></i>Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in Model)
+                        {
+                            <tr class="user-row" data-user-id="@user.UserId" 
+                                data-status="@(user.IsActive ? "active" : "inactive")"
+                                data-role="@user.Role?.ToLower()">
+                                <td>
                                     <div class="d-flex align-items-center">
-                                        <i class="fas fa-user me-2 text-muted"></i>User
+                                        <div class="user-avatar">
+                                            <span>@user.FullName.Substring(0, Math.Min(2, user.FullName.Length)).ToUpper()</span>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-semibold">@user.FullName</h6>
+                                            <small class="text-muted">ID: @user.UserId.Substring(0, Math.Min(8, user.UserId.Length))...</small>
+                                        </div>
                                     </div>
-                                </th>
-                                <th class="border-0">
-                                    <i class="fas fa-envelope me-2 text-muted"></i>Contact
-                                </th>
-                                <th class="border-0">
-                                    <i class="fas fa-shield-alt me-2 text-muted"></i>Role
-                                </th>
-                                <th class="border-0">
-                                    <i class="fas fa-calendar me-2 text-muted"></i>Created
-                                </th>
-                                <th class="border-0">
-                                    <i class="fas fa-toggle-on me-2 text-muted"></i>Status
-                                </th>
-                                <th class="border-0 text-end pe-4">
-                                    <i class="fas fa-cogs me-2 text-muted"></i>Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var user in Model)
-                            {
-                                <tr class="user-row" data-user-id="@user.UserId" 
-                                    data-status="@(user.IsActive ? "active" : "inactive")"
-                                    data-role="@user.Role?.ToLower()">
-                                    <td class="ps-4">
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar-circle me-3">
-                                                <span class="avatar-text">@user.FullName.Substring(0, Math.Min(2, user.FullName.Length)).ToUpper()</span>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">@user.FullName</h6>
-                                                <small class="text-muted">ID: @user.UserId.Substring(0, Math.Min(8, user.UserId.Length))...</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex flex-column">
-                                            <a href="mailto:@user.Email" class="text-decoration-none text-dark">
-                                                <i class="fas fa-envelope me-1 text-muted"></i>@user.Email
-                                            </a>
-                                            @if (!string.IsNullOrEmpty(user.Phone))
-                                            {
-                                                <a href="tel:@user.Phone" class="text-decoration-none text-muted small">
-                                                    <i class="fas fa-phone me-1"></i>@user.Phone
-                                                </a>
-                                            }
-                                            else
-                                            {
-                                                <span class="text-muted small">
-                                                    <i class="fas fa-phone me-1"></i>No phone
-                                                </span>
-                                            }
-                                        </div>
-                                    </td>
-                                    <td>
-                                        @{
-                                            var roleConfig = user.Role?.ToLower() switch
-                                            {
-                                                "admin" => new { badgeClass = "bg-danger", icon = "fas fa-shield-alt" },
-                                                "manager" => new { badgeClass = "bg-warning", icon = "fas fa-user-tie" },
-                                                "user" => new { badgeClass = "bg-info", icon = "fas fa-user" },
-                                                _ => new { badgeClass = "bg-secondary", icon = "fas fa-user" }
-                                            };
-                                        }
-                                        <span class="badge @roleConfig.badgeClass rounded-pill">
-                                            <i class="@roleConfig.icon me-1"></i>@user.Role
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex flex-column">
-                                            <span class="fw-medium">@user.CreatedAt.ToString("MMM dd, yyyy")</span>
-                                            <small class="text-muted">@user.CreatedAt.ToString("HH:mm")</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        @if (user.IsActive)
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <a href="mailto:@user.Email" class="text-decoration-none" style="color: #FFFFFF;">
+                                            <i class="fas fa-envelope me-1"></i>@user.Email
+                                        </a>
+                                        @if (!string.IsNullOrEmpty(user.Phone))
                                         {
-                                            <span class="badge bg-success rounded-pill">
-                                                <i class="fas fa-check-circle me-1"></i>Active
-                                            </span>
+                                            <a href="tel:@user.Phone" class="text-decoration-none small" style="color: rgba(255, 255, 255, 0.7);">
+                                                <i class="fas fa-phone me-1"></i>@user.Phone
+                                            </a>
                                         }
                                         else
                                         {
-                                            <span class="badge bg-danger rounded-pill">
-                                                <i class="fas fa-times-circle me-1"></i>Inactive
+                                            <span class="small" style="color: rgba(255, 255, 255, 0.7);">
+                                                <i class="fas fa-phone me-1"></i>No phone
                                             </span>
                                         }
-                                    </td>
-                                    <td class="text-end pe-4">
-                                        <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" 
-                                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="fas fa-ellipsis-v"></i>
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                    </div>
+                                </td>
+                                <td>
+                                    @{
+                                        var roleBadgeClass = user.Role?.ToLower() switch
+                                        {
+                                            "admin" => "admin",
+                                            "project manager" => "manager",
+                                            "contractor" => "contractor",
+                                            "client" => "client",
+                                            _ => "admin"
+                                        };
+                                    }
+                                    <span class="user-badge @roleBadgeClass">
+                                        @user.Role
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <span class="fw-medium">@user.CreatedAt.ToString("MMM dd, yyyy")</span>
+                                        <small style="color: rgba(255, 255, 255, 0.7);">@user.CreatedAt.ToString("HH:mm")</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (user.IsActive)
+                                    {
+                                        <span class="user-badge active">
+                                            <i class="fas fa-check-circle me-1"></i>Active
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="user-badge inactive">
+                                            <i class="fas fa-times-circle me-1"></i>Inactive
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="user-btn user-btn-secondary dropdown-toggle" 
+                                                data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="user-dropdown-menu dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a class="user-dropdown-item dropdown-item" href="@Url.Action("Edit", "Users", new { id = user.UserId })">
+                                                    <i class="fas fa-edit"></i>Edit User
+                                                </a>
+                                            </li>
+                                            @if (user.IsActive)
+                                            {
                                                 <li>
-                                                    <a class="dropdown-item" href="@Url.Action("Edit", "Users", new { id = user.UserId })">
-                                                        <i class="fas fa-edit me-2 text-primary"></i>Edit User
-                                                    </a>
-                                                </li>
-                                                @if (user.IsActive)
-                                                {
-                                                    <li>
-                                                        <form asp-action="Deactivate" method="post" class="d-inline">
-                                                            @Html.AntiForgeryToken()
-                                                            <input type="hidden" name="userId" value="@user.UserId" />
-                                                            <button type="submit" class="dropdown-item text-warning" 
-                                                                    onclick="return confirm('Are you sure you want to deactivate @user.FullName?')">
-                                                                <i class="fas fa-user-slash me-2"></i>Deactivate
-                                                            </button>
-                                                        </form>
-                                                    </li>
-                                                }
-                                                else
-                                                {
-                                                    <li>
-                                                        <form asp-action="Activate" method="post" class="d-inline">
-                                                            @Html.AntiForgeryToken()
-                                                            <input type="hidden" name="userId" value="@user.UserId" />
-                                                            <button type="submit" class="dropdown-item text-success">
-                                                                <i class="fas fa-user-check me-2"></i>Activate
-                                                            </button>
-                                                        </form>
-                                                    </li>
-                                                }
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <form asp-action="Delete" method="post" class="d-inline">
+                                                    <form asp-action="Deactivate" method="post" class="d-inline">
                                                         @Html.AntiForgeryToken()
                                                         <input type="hidden" name="userId" value="@user.UserId" />
-                                                        <button type="submit" class="dropdown-item text-danger" 
-                                                                onclick="return confirm('Are you sure you want to permanently delete @user.FullName? This action cannot be undone.')">
-                                                            <i class="fas fa-trash me-2"></i>Delete Permanently
+                                                        <button type="submit" class="user-dropdown-item dropdown-item" 
+                                                                onclick="return confirm('Are you sure you want to deactivate @user.FullName?')">
+                                                            <i class="fas fa-user-slash"></i>Deactivate
                                                         </button>
                                                     </form>
                                                 </li>
-                                            </ul>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-            else
-            {
-                <div class="text-center py-5">
-                    <div class="empty-state">
-                        <i class="fas fa-users fa-4x text-muted mb-4"></i>
-                        <h4 class="text-muted mb-3">No Users Found</h4>
-                        <p class="text-muted mb-4">There are no users in the system yet. Start by adding your first user.</p>
-                        <a href="@Url.Action("Create", "Users")" class="btn btn-primary btn-lg">
-                            <i class="fas fa-user-plus me-2"></i>Add First User
-                        </a>
-                    </div>
-                </div>
-            }
-        </div>
+                                            }
+                                            else
+                                            {
+                                                <li>
+                                                    <form asp-action="Activate" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="userId" value="@user.UserId" />
+                                                        <button type="submit" class="user-dropdown-item dropdown-item">
+                                                            <i class="fas fa-user-check"></i>Activate
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                            }
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form asp-action="Delete" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="userId" value="@user.UserId" />
+                                                    <button type="submit" class="user-dropdown-item dropdown-item" 
+                                                            onclick="return confirm('Are you sure you want to permanently delete @user.FullName? This action cannot be undone.')">
+                                                        <i class="fas fa-trash"></i>Delete Permanently
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="user-empty-state">
+                <i class="fas fa-users"></i>
+                <h4>No Users Found</h4>
+                <p>There are no users in the system yet. Start by adding your first user.</p>
+                <a href="@Url.Action("Create", "Users")" class="user-btn user-btn-primary">
+                    <i class="fas fa-user-plus me-2"></i>Add First User
+                </a>
+            </div>
+        }
     </div>
 </div>
 
-<!-- Custom CSS for Modern Dashboard -->
-<style>
-    .bg-gradient-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    
-    .stat-card {
-        transition: transform 0.2s ease-in-out;
-        border: none;
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-2px);
-    }
-    
-    .avatar-circle {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 14px;
-    }
-    
-    .table th {
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.5px;
-    }
-    
-    .table td {
-        vertical-align: middle;
-        border-top: 1px solid #f8f9fa;
-    }
-    
-    .user-row {
-        transition: background-color 0.2s ease;
-    }
-    
-    .user-row:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .dropdown-menu {
-        border: none;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-        border-radius: 0.5rem;
-    }
-    
-    .dropdown-item {
-        padding: 0.5rem 1rem;
-        transition: background-color 0.2s ease;
-    }
-    
-    .dropdown-item:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .empty-state {
-        padding: 3rem 0;
-    }
-    
-    .alert {
-        border: none;
-        border-radius: 0.5rem;
-    }
-    
-    .btn {
-        border-radius: 0.5rem;
-        font-weight: 500;
-    }
-    
-    .card {
-        border-radius: 0.75rem;
-        border: none;
-    }
-    
-    .input-group-text {
-        border-radius: 0.5rem 0 0 0.5rem;
-    }
-    
-    .form-control {
-        border-radius: 0 0.5rem 0.5rem 0;
-    }
-    
-    /* Animation for alerts */
-    .alert {
-        animation: slideInDown 0.3s ease-out;
-    }
-    
-    @@keyframes slideInDown {
-        from {
-            transform: translateY(-20px);
-            opacity: 0;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
-    
-    /* Responsive adjustments */
-    @@media (max-width: 768px) {
-        .dashboard-header .btn-lg {
-            font-size: 0.875rem;
-            padding: 0.5rem 1rem;
-        }
-        
-        .stat-card .stat-icon {
-            display: none;
-        }
-        
-        .table-responsive {
-            font-size: 0.875rem;
-        }
-    }
-</style>
+<!-- Include User Management CSS -->
+<link rel="stylesheet" href="~/css/user-management.css" />
 
 @section Scripts {
     <script>
@@ -456,6 +332,10 @@
             setTimeout(function() {
                 $('.alert').fadeOut('slow');
             }, 5000);
+            
+            // Ensure filter dropdown is closed on page load (not action dropdowns)
+            $('.dropdown-menu:not(.user-dropdown-menu)').removeClass('show');
+            $('.dropdown-toggle:not([data-bs-toggle="dropdown"])').attr('aria-expanded', 'false');
             
             // Search functionality
             $('#userSearch').on('keyup', function() {
@@ -496,11 +376,14 @@
                         case 'admin':
                             show = role === 'admin';
                             break;
-                        case 'manager':
-                            show = role === 'manager';
+                        case 'project manager':
+                            show = role === 'project manager';
                             break;
-                        case 'user':
-                            show = role === 'user';
+                        case 'contractor':
+                            show = role === 'contractor';
+                            break;
+                        case 'client':
+                            show = role === 'client';
                             break;
                     }
                     
@@ -514,6 +397,10 @@
                 // Update active filter button
                 $('[data-filter]').removeClass('active');
                 $(this).addClass('active');
+                
+                // Close the dropdown after selection
+                $(this).closest('.dropdown-menu').removeClass('show');
+                $(this).closest('.dropdown').find('.dropdown-toggle').attr('aria-expanded', 'false');
             });
             
             // Enhanced confirmation dialogs
@@ -530,6 +417,60 @@
                     e.preventDefault();
                 }
             });
+            
+            // Handle action dropdown clicks specifically
+            $('.user-btn.dropdown-toggle').on('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Close all other action dropdowns
+                $('.user-dropdown-menu').removeClass('show');
+                $('.user-btn.dropdown-toggle').attr('aria-expanded', 'false');
+                
+                // Toggle current dropdown
+                var dropdown = $(this).next('.user-dropdown-menu');
+                var isOpen = dropdown.hasClass('show');
+                
+                if (isOpen) {
+                    dropdown.removeClass('show');
+                    $(this).attr('aria-expanded', 'false');
+                } else {
+                    dropdown.addClass('show');
+                    $(this).attr('aria-expanded', 'true');
+                }
+            });
+            
+            // Close filter dropdown when clicking outside (not action dropdowns)
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('.dropdown').length) {
+                    $('.dropdown-menu:not(.user-dropdown-menu)').removeClass('show');
+                    $('.dropdown-toggle:not([data-bs-toggle="dropdown"])').attr('aria-expanded', 'false');
+                }
+                
+                // Close action dropdowns when clicking outside
+                if (!$(e.target).closest('.user-btn.dropdown-toggle').length && !$(e.target).closest('.user-dropdown-menu').length) {
+                    $('.user-dropdown-menu').removeClass('show');
+                    $('.user-btn.dropdown-toggle').attr('aria-expanded', 'false');
+                }
+            });
         });
+
+        function toggleFilters() {
+            const filtersPanel = document.getElementById('filtersPanel');
+            const filterToggleText = document.getElementById('filterToggleText');
+            const filterToggleIcon = document.getElementById('filterToggleIcon');
+
+            if (filtersPanel.style.display === 'none' || filtersPanel.style.display === '') {
+                filtersPanel.style.display = 'block';
+                filterToggleText.textContent = 'Hide Filters';
+                filterToggleIcon.classList.remove('fa-chevron-down');
+                filterToggleIcon.classList.add('fa-chevron-up');
+            } else {
+                filtersPanel.style.display = 'none';
+                filterToggleText.textContent = 'Show Filters';
+                filterToggleIcon.classList.remove('fa-chevron-up');
+                filterToggleIcon.classList.add('fa-chevron-down');
+            }
+        }
     </script>
 }

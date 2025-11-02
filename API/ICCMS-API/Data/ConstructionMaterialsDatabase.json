@@ -1,0 +1,252 @@
+{
+  "materials": [
+    {
+      "id": "brick_stock_001",
+      "name": "Brick",
+      "unit": "PIECE",
+      "unitPrice": 2.43,
+      "category": "Masonry",
+      "description": "Stock clay/plaster brick (7 MPa) - SABS approved",
+      "supplier": "Cashbuild",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "brick_face_001",
+      "name": "External Wall Brick",
+      "unit": "PIECE",
+      "unitPrice": 3.03,
+      "category": "Masonry",
+      "description": "Semi-face clay brick - SABS approved",
+      "supplier": "Leroy Merlin",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "cement_001",
+      "name": "Cement",
+      "unit": "BAG",
+      "unitPrice": 77.39,
+      "category": "Concrete",
+      "description": "50kg PPC Surecem (32.5R) bag - SABS approved",
+      "supplier": "Leroy Merlin",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "concrete_001",
+      "name": "Concrete",
+      "unit": "CUBIC_METER",
+      "unitPrice": 1170.00,
+      "category": "Concrete",
+      "description": "25 MPa ready-mix concrete - SABS approved",
+      "supplier": "Royal Concrete",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "steel_rebar_001",
+      "name": "Reinforcing Steel",
+      "unit": "PIECE",
+      "unitPrice": 103.48,
+      "category": "Reinforcement",
+      "description": "12mm deformed rebar, 6m length - SABS approved",
+      "supplier": "Leroy Merlin",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "roofing_tiles_001",
+      "name": "Roofing Tiles",
+      "unit": "PIECE",
+      "unitPrice": 10.39,
+      "category": "Roofing",
+      "description": "Double Roman concrete tile - SABS approved",
+      "supplier": "Cashbuild",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "windows_001",
+      "name": "Windows",
+      "unit": "PIECE",
+      "unitPrice": 812.13,
+      "category": "Windows",
+      "description": "Aluminum window frame (~900×900mm) - SABS approved",
+      "supplier": "Cashbuild",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "interior_door_001",
+      "name": "Interior Doors",
+      "unit": "PIECE",
+      "unitPrice": 664.30,
+      "category": "Doors",
+      "description": "Parklane medium-duty hollow core door - SABS approved",
+      "supplier": "Cashbuild",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "exterior_door_001",
+      "name": "Exterior Doors",
+      "unit": "PIECE",
+      "unitPrice": 1391.26,
+      "category": "Doors",
+      "description": "Solid hardwood Kalahari Sun door - SABS approved",
+      "supplier": "Cashbuild",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "pvc_pipe_001",
+      "name": "PVC Pipes",
+      "unit": "PIECE",
+      "unitPrice": 182.56,
+      "category": "Plumbing",
+      "description": "110mm diameter PVC pipe, 6m length - SABS approved",
+      "supplier": "Cashbuild",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "electrical_wire_001",
+      "name": "Electrical Wiring",
+      "unit": "ROLL",
+      "unitPrice": 1521.74,
+      "category": "Electrical",
+      "description": "2.5mm² twin & earth cable (100m roll) - SABS approved",
+      "supplier": "Point Hardware",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "electrical_panel_001",
+      "name": "Electrical Panel",
+      "unit": "PIECE",
+      "unitPrice": 790.43,
+      "category": "Electrical",
+      "description": "12-way distribution board (populated) - SABS approved",
+      "supplier": "Builders",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "hvac_duct_001",
+      "name": "HVAC Ducts",
+      "unit": "PIECE",
+      "unitPrice": 156.52,
+      "category": "HVAC",
+      "description": "150mm flexible duct, 3m length - SABS approved",
+      "supplier": "STEP Building Supplies",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "hvac_unit_001",
+      "name": "HVAC Unit",
+      "unit": "PIECE",
+      "unitPrice": 5651.30,
+      "category": "HVAC",
+      "description": "12,000 BTU split air conditioner - SABS approved",
+      "supplier": "Builders",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "floor_tiles_001",
+      "name": "Floor Tiles",
+      "unit": "SQUARE_METER",
+      "unitPrice": 104.26,
+      "category": "Finishing",
+      "description": "500×500mm ceramic floor tile - SABS approved",
+      "supplier": "TopT",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "paint_001",
+      "name": "Paint",
+      "unit": "LITER",
+      "unitPrice": 43.47,
+      "category": "Finishing",
+      "description": "Plascon Micatex exterior paint (R869.48 per 20L) - SABS approved",
+      "supplier": "Build it",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "insulation_001",
+      "name": "Insulation",
+      "unit": "SQUARE_METER",
+      "unitPrice": 98.55,
+      "category": "Insulation",
+      "description": "135mm Isotherm ceiling roll (~6m²) - SABS approved",
+      "supplier": "Isotherm SA",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "drywall_001",
+      "name": "Drywall",
+      "unit": "SHEET",
+      "unitPrice": 208.69,
+      "category": "Finishing",
+      "description": "12.5mm gypsum board (1.2×2.7m sheet) - SABS approved",
+      "supplier": "Promo (Guzzle)",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "lighting_001",
+      "name": "Lighting Fixtures",
+      "unit": "PIECE",
+      "unitPrice": 521.74,
+      "category": "Electrical",
+      "description": "Modern LED pendant light - SABS approved",
+      "supplier": "Smart Life",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "plumbing_fixtures_001",
+      "name": "Plumbing Fixtures",
+      "unit": "PIECE",
+      "unitPrice": 277.39,
+      "category": "Plumbing",
+      "description": "Cobra 15mm pillar tap - SABS approved",
+      "supplier": "Builders",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "labor_001",
+      "name": "General Labor",
+      "unit": "HOUR",
+      "unitPrice": 85.00,
+      "category": "Labor",
+      "description": "General construction labor",
+      "supplier": "Local Contractors",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    },
+    {
+      "id": "equipment_001",
+      "name": "Equipment Rental",
+      "unit": "DAY",
+      "unitPrice": 450.00,
+      "category": "Equipment",
+      "description": "Heavy construction equipment rental",
+      "supplier": "Local Equipment Rental",
+      "lastUpdated": "2024-10-16T10:00:00Z"
+    }
+  ],
+  "categories": [
+    "Concrete",
+    "Masonry", 
+    "Finishing",
+    "Reinforcement",
+    "Roofing",
+    "Electrical",
+    "Plumbing",
+    "Insulation",
+    "Windows",
+    "Doors",
+    "HVAC",
+    "Labor",
+    "Equipment"
+  ],
+  "units": [
+    "KG",
+    "PIECE",
+    "LITER",
+    "CUBIC_METER",
+    "SQUARE_METER",
+    "METER",
+    "HOUR",
+    "DAY",
+    "BAG",
+    "ROLL",
+    "SHEET"
+  ]
+}

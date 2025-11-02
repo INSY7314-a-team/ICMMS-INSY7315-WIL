@@ -1,0 +1,50 @@
+@model ICCMS_Web.Models.ContractorProjectCardDto
+
+<div class="project-card-link" data-project-id="@Model.ProjectId">
+    <!-- Project Header (Clickable Link) -->
+    <a href="@Url.Action("ProjectDetail", "Contractor", new { projectId = Model.ProjectId })"
+        class="project-card-header compact project-card-link">
+        <div class="project-header-content">
+            <div class="project-name-section">
+                <h5 class="project-name">@Model.ProjectName</h5>
+            </div>
+            <div class="project-stats">
+                <span class="project-budget">
+                    <i class="fa-solid fa-dollar-sign"></i>
+                    @Model.ProjectBudget.ToString("C")
+                </span>
+                <span class="project-progress">
+                    <i class="fa-solid fa-chart-line"></i>
+                    @Model.OverallProgress%
+                </span>
+            </div>
+            <div class="project-summary">
+                <span class="task-count">
+                    <i class="fa-solid fa-tasks"></i>
+                    @Model.TotalTasks
+                </span>
+                <span class="completed-count">
+                    <i class="fa-solid fa-check-circle"></i>
+                    @Model.CompletedTasks
+                </span>
+                <span class="in-progress-count">
+                    <i class="fa-solid fa-play"></i>
+                    @Model.InProgressTasks
+                </span>
+            </div>
+            <div class="project-header-right">
+                @if (Model.OverdueTasks > 0)
+                {
+                    <div class="overdue-indicator">
+                        <div class="red-dot">
+                            <span class="overdue-count">@Model.OverdueTasks</span>
+                        </div>
+                    </div>
+                }
+                <div class="project-link-icon">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </div>
+            </div>
+        </div>
+    </a>
+</div>

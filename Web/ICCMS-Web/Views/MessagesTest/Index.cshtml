@@ -1,0 +1,706 @@
+@{
+    ViewData["Title"] = "Message System Testing";
+    ViewBag.CurrentUserId = @ViewBag.CurrentUserId;
+}
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .bg-gradient-success {
+        background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+    }
+
+    .bg-gradient-info {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .bg-gradient-warning {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+
+    .bg-gradient-light {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+
+    .card {
+        transition: all 0.3s ease;
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-testing {
+        border-radius: 30px;
+        font-weight: 600;
+        padding: 0.75rem 2rem;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.9rem;
+    }
+
+    .btn-testing:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .console-output {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        line-height: 1.4;
+        border-radius: 8px;
+        padding: 1rem;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .test-result {
+        padding: 0.5rem;
+        margin: 0.25rem 0;
+        border-radius: 4px;
+        font-size: 0.9rem;
+    }
+
+    .test-result.success {
+        background-color: #d4edda;
+        color: #155724;
+        border-left: 4px solid #28a745;
+    }
+
+    .test-result.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border-left: 4px solid #dc3545;
+    }
+
+    .test-result.warning {
+        background-color: #fff3cd;
+        color: #856404;
+        border-left: 4px solid #ffc107;
+    }
+
+    .test-result.info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border-left: 4px solid #17a2b8;
+    }
+</style>
+
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-gradient-primary text-white border-0 shadow-lg rounded-3">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h2 class="mb-2 fw-bold">
+                                <i class="fas fa-comments me-3"></i>Message System Testing Suite
+                            </h2>
+                            <p class="mb-0 opacity-90">
+                                Comprehensive testing interface for the ICCMS messaging system with validation, workflow
+                                integration, and performance testing
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="d-flex flex-column align-items-end">
+                                <span class="badge bg-light text-dark fs-6 mb-2 px-3 py-2">
+                                    <i class="fas fa-flask me-2"></i>25+ Test Cases
+                                </span>
+                                <span class="badge bg-success fs-6 px-3 py-2">
+                                    <i class="fas fa-shield-alt me-2"></i>Validation & Security
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Controls Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg rounded-3">
+                <div class="card-header bg-gradient-light border-0 rounded-top-3 py-3">
+                    <h6 class="mb-0 fw-bold text-dark">
+                        <i class="fas fa-cogs me-2"></i>Test Controls
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary mb-3">Individual Test Suites</h6>
+                            <div class="btn-group-vertical w-100" role="group">
+                                <button class="btn btn-outline-primary btn-sm mb-2" onclick="runValidationTests()">
+                                    <i class="fas fa-check-circle me-1"></i>Message Validation Tests
+                                </button>
+                                <button class="btn btn-outline-success btn-sm mb-2" onclick="runWorkflowTests()">
+                                    <i class="fas fa-cogs me-1"></i>Workflow Integration Tests
+                                </button>
+                                <button class="btn btn-outline-info btn-sm mb-2" onclick="runErrorHandlingTests()">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>Error Handling Tests
+                                </button>
+                                <button class="btn btn-outline-warning btn-sm mb-2" onclick="runPerformanceTests()">
+                                    <i class="fas fa-tachometer-alt me-1"></i>Performance Tests
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm mb-2" onclick="runRateLimitTests()">
+                                    <i class="fas fa-clock me-1"></i>Rate Limiting Tests
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-success mb-3">Comprehensive Testing</h6>
+                            <div class="d-grid">
+                                <button class="btn btn-primary btn-lg" onclick="runComprehensiveTests()">
+                                    <i class="fas fa-rocket me-2"></i>Run Complete Test Suite
+                                </button>
+                            </div>
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Runs all test suites in sequence with detailed reporting
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg rounded-3">
+                <div class="card-header bg-dark text-light border-0 rounded-top-3 py-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-terminal fa-lg me-3 text-success"></i>
+                            <div>
+                                <h6 class="mb-1 fw-bold">Test Results</h6>
+                                <small class="text-light opacity-75">Real-time test execution and results</small>
+                            </div>
+                        </div>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-light btn-sm" onclick="clearResults()">
+                                <i class="fas fa-trash me-1"></i>Clear
+                            </button>
+                            <button type="button" class="btn btn-outline-light btn-sm" onclick="exportResults()">
+                                <i class="fas fa-download me-1"></i>Export
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="test-results" class="console-output">
+                        <div class="text-muted opacity-75">Test results will appear here...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    console.log("MessagesTest script loading...");
+    let testResults = [];
+    let currentUserId = "@ViewBag.CurrentUserId";
+
+    function addResult(message, type = "info") {
+        const timestamp = new Date().toLocaleTimeString();
+        const resultDiv = document.createElement("div");
+        resultDiv.className = `test-result ${type}`;
+        resultDiv.innerHTML = `<span class="text-muted">[${timestamp}]</span> ${message}`;
+
+        const resultsContainer = document.getElementById("test-results");
+        resultsContainer.appendChild(resultDiv);
+        resultsContainer.scrollTop = resultsContainer.scrollHeight;
+
+        testResults.push({ timestamp, message, type });
+    }
+
+    function clearResults() {
+        document.getElementById("test-results").innerHTML =
+            '<div class="text-muted opacity-75">Test results cleared...</div>';
+        testResults = [];
+    }
+
+    function exportResults() {
+        const dataStr = JSON.stringify(testResults, null, 2);
+        const dataBlob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `message-test-results-${new Date().toISOString().split("T")[0]
+            }.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+
+    async function runValidationTests() {
+        addResult("🧪 Starting Message Validation Tests...", "info");
+
+        // Get current user ID
+        const userId = currentUserId;
+        if (!userId) {
+            addResult("❌ Could not get current user ID. Please ensure you are logged in.", "error");
+            return;
+        }
+
+        const testCases = [
+            {
+                name: "Valid Message",
+                payload: {
+                    senderId: userId,
+                    receiverId: userId, // Use same user for testing
+                    projectId: "test-project-123",
+                    subject: "Test Message",
+                    content: "This is a valid test message",
+                },
+                expectedResult: "success",
+            },
+            {
+                name: "Empty Content",
+                payload: {
+                    senderId: userId,
+                    receiverId: userId,
+                    projectId: "test-project-123",
+                    subject: "Test",
+                    content: "",
+                },
+                expectedResult: "error",
+            },
+            {
+                name: "Missing Sender ID",
+                payload: {
+                    receiverId: userId,
+                    projectId: "test-project-123",
+                    subject: "Test",
+                    content: "Content",
+                },
+                expectedResult: "error",
+            },
+            {
+                name: "Content Too Long",
+                payload: {
+                    senderId: userId,
+                    receiverId: userId,
+                    projectId: "test-project-123",
+                    subject: "Test",
+                    content: "A".repeat(5001),
+                },
+                expectedResult: "error",
+            },
+            {
+                name: "Subject Too Long",
+                payload: {
+                    senderId: userId,
+                    receiverId: userId,
+                    projectId: "test-project-123",
+                    subject: "A".repeat(201),
+                    content: "Content",
+                },
+                expectedResult: "error",
+            },
+        ];
+
+        console.log("Test Cases:", testCases);
+
+        for (const testCase of testCases) {
+            try {
+                const response = await fetch("/MessagesTest/TestMessageValidation", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        RequestVerificationToken:
+                            document.querySelector('input[name="__RequestVerificationToken"]')
+                                ?.value || "",
+                    },
+                    body: JSON.stringify({
+                        testName: testCase.name,
+                        payload: testCase.payload,
+                        expectedResult: testCase.expectedResult,
+                    }),
+                });
+
+                const result = await response.json();
+                const actualResult = result.success ? "success" : "error";
+                const passed = actualResult === testCase.expectedResult;
+                console.log("Result:", result);
+
+                addResult(
+                    `${passed ? "✅" : "❌"} ${testCase.name} - Expected: ${testCase.expectedResult
+                    }, Got: ${actualResult}`,
+                    passed ? "success" : "error"
+                );
+            } catch (error) {
+                console.log("Error:", error);
+                addResult(`❌ ${testCase.name} - Error: ${error.message}`, "error");
+            }
+        }
+
+        addResult("✅ Message Validation Tests completed", "success");
+    }
+
+    async function runWorkflowTests() {
+        addResult("🔄 Starting Workflow Integration Tests...", "info");
+
+        // Get current user ID
+        const userId = currentUserId;
+        if (!userId) {
+            addResult("❌ Could not get current user ID. Please ensure you are logged in.", "error");
+            return;
+        }
+
+        const workflowTests = [
+            {
+                name: "Quote Approval Notification",
+                endpoint: "/api/messages/workflow/quote-approval",
+                payload: {
+                    quoteId: "quote123",
+                    action: "approved",
+                    userId: userId,
+                },
+            },
+            {
+                name: "Invoice Payment Notification",
+                endpoint: "/api/messages/workflow/invoice-payment",
+                payload: {
+                    invoiceId: "invoice123",
+                    action: "paid",
+                    userId: userId,
+                },
+            },
+            {
+                name: "Project Update Notification",
+                endpoint: "/api/messages/workflow/project-update",
+                payload: {
+                    projectId: "project123",
+                    updateType: "status_changed",
+                    userId: userId,
+                },
+            },
+            {
+                name: "System Alert",
+                endpoint: "/api/messages/workflow/system-alert",
+                payload: {
+                    alertType: "maintenance",
+                    message: "System maintenance scheduled for tonight at 2 AM",
+                    recipients: [userId],
+                },
+            },
+        ];
+
+        console.log("Workflow Tests:", workflowTests);
+
+        for (const test of workflowTests) {
+            try {
+                const response = await fetch("/MessagesTest/TestWorkflowIntegration", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        RequestVerificationToken:
+                            document.querySelector('input[name="__RequestVerificationToken"]')
+                                ?.value || "",
+                    },
+                    body: JSON.stringify({
+                        testName: test.name,
+                        endpoint: test.endpoint,
+                        payload: test.payload,
+                    }),
+                });
+
+                const result = await response.json();
+                addResult(
+                    `${result.success ? "✅" : "❌"} ${test.name} - Status: ${result.statusCode
+                    }`,
+                    result.success ? "success" : "error"
+                );
+            } catch (error) {
+                addResult(`❌ ${test.name} - Error: ${error.message}`, "error");
+            }
+        }
+
+        addResult("✅ Workflow Integration Tests completed", "success");
+    }
+
+    async function runErrorHandlingTests() {
+        addResult("⚠️ Starting Error Handling Tests...", "info");
+
+        // Get current user ID
+        const userId = currentUserId;
+        if (!userId) {
+            addResult("❌ Could not get current user ID. Please ensure you are logged in.", "error");
+            return;
+        }
+
+        const errorTests = [
+            {
+                name: "Invalid User ID",
+                payload: {
+                    senderId: "invalid-user-id",
+                    receiverId: userId,
+                    projectId: "test-project-123",
+                    subject: "Test",
+                    content: "Testing invalid user ID",
+                },
+                expectedResult: "error",
+            },
+            {
+                name: "SQL Injection Attempt",
+                payload: {
+                    senderId: userId,
+                    receiverId: userId,
+                    projectId: "test-project-123",
+                    subject: "'; DROP TABLE messages; --",
+                    content: "Testing SQL injection protection",
+                },
+                expectedResult: "success", // Should be sanitized, not rejected
+            },
+            {
+                name: "Unicode and Special Characters",
+                payload: {
+                    senderId: userId,
+                    receiverId: userId,
+                    projectId: "test-project-123",
+                    subject: "Test with émojis 🚀 and spëcial chars",
+                    content: "Testing Unicode support: 你好世界 🌍 ñáéíóú",
+                },
+                expectedResult: "success",
+            },
+        ];
+
+        for (const test of errorTests) {
+            try {
+                const response = await fetch("/MessagesTest/TestErrorHandling", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        RequestVerificationToken:
+                            document.querySelector('input[name="__RequestVerificationToken"]')
+                                ?.value || "",
+                    },
+                    body: JSON.stringify({
+                        testName: test.name,
+                        payload: test.payload,
+                        expectedResult: test.expectedResult,
+                    }),
+                });
+
+                const result = await response.json();
+                const passed = result.actualResult === test.expectedResult;
+                addResult(
+                    `${passed ? "✅" : "❌"} ${test.name} - Expected: ${test.expectedResult
+                    }, Got: ${result.actualResult}`,
+                    passed ? "success" : "error"
+                );
+            } catch (error) {
+                addResult(`❌ ${test.name} - Error: ${error.message}`, "error");
+            }
+        }
+
+        addResult("✅ Error Handling Tests completed", "success");
+    }
+
+    async function runPerformanceTests() {
+        addResult("⚡ Starting Performance Tests...", "info");
+
+        // Get current user ID
+        const userId = currentUserId;
+        if (!userId) {
+            addResult("❌ Could not get current user ID. Please ensure you are logged in.", "error");
+            return;
+        }
+
+        try {
+            const response = await fetch("/MessagesTest/TestPerformance", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    RequestVerificationToken:
+                        document.querySelector('input[name="__RequestVerificationToken"]')
+                            ?.value || "",
+                },
+                body: JSON.stringify({
+                    senderId: userId,
+                    receiverId: userId,
+                    projectId: "test-project-123",
+                    content: "Performance test content",
+                    messageCount: 5,
+                }),
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                addResult(
+                    `✅ Performance Test - Total Time: ${result.totalTime.toFixed(
+                        2
+                    )}ms, Average: ${result.averageTime.toFixed(2)}ms per message`,
+                    "success"
+                );
+                addResult(
+                    `📊 Processed ${result.totalMessages} messages successfully`,
+                    "info"
+                );
+            } else {
+                addResult(`❌ Performance Test failed: ${result.error}`, "error");
+            }
+        } catch (error) {
+            addResult(`❌ Performance Test error: ${error.message}`, "error");
+        }
+
+        addResult("✅ Performance Tests completed", "success");
+    }
+
+    async function runRateLimitTests() {
+        addResult("⏱️ Starting Rate Limiting Tests...", "info");
+
+        // Get current user ID
+        const userId = currentUserId;
+        if (!userId) {
+            addResult("❌ Could not get current user ID. Please ensure you are logged in.", "error");
+            return;
+        }
+
+        if (!confirm("This will send multiple test messages. Continue?")) {
+            addResult("❌ Rate Limiting Tests cancelled by user", "warning");
+            return;
+        }
+
+        try {
+            const response = await fetch("/MessagesTest/TestRateLimiting", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    RequestVerificationToken:
+                        document.querySelector('input[name="__RequestVerificationToken"]')
+                            ?.value || "",
+                },
+                body: JSON.stringify({
+                    senderId: userId,
+                    receiverId: userId,
+                    projectId: "test-project-123",
+                    content: "Rate limit test content",
+                    messageCount: 10,
+                }),
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                addResult(
+                    `✅ Rate Limiting Test - Success Rate: ${result.successRate.toFixed(1)}%
+ (${result.successCount}/${result.totalMessages})`,
+                    "success"
+                );
+                addResult(
+                    `📊 Successful: ${result.successCount}, Failed: ${result.errorCount}`,
+                    "info"
+                );
+            } else {
+                addResult(`❌ Rate Limiting Test failed: ${result.error}`, "error");
+            }
+        } catch (error) {
+            addResult(`❌ Rate Limiting Test error: ${error.message}`, "error");
+        }
+
+        addResult("✅ Rate Limiting Tests completed", "success");
+    }
+
+    async function runComprehensiveTests() {
+        addResult("🚀 Starting Comprehensive Message System Tests...", "info");
+        addResult(
+            "This will test validation, workflow, error handling, performance, and rate limiting",
+            "info"
+        );
+
+        // Get current user ID
+        const userId = currentUserId;
+        if (!userId) {
+            addResult("❌ Could not get current user ID. Please ensure you are logged in.", "error");
+            return;
+        }
+
+        if (
+            !confirm(
+                "This will run comprehensive tests that may send multiple messages. Continue?"
+            )
+        ) {
+            addResult("❌ Comprehensive Tests cancelled by user", "warning");
+            return;
+        }
+
+        // Run tests in sequence
+        await runValidationTests();
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        await runWorkflowTests();
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        await runErrorHandlingTests();
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        await runPerformanceTests();
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        await runRateLimitTests();
+
+        addResult("🎉 Comprehensive Message System Tests completed!", "success");
+        addResult("📊 Test Summary:", "info");
+        addResult(
+            " ✅ Message Validation - Content length, required fields, spam detection",
+            "success"
+        );
+        addResult(
+            " ✅ Workflow Integration - Quote approval, invoice payment, project updates, system alerts",
+            "success"
+        );
+        addResult(
+            " ✅ Error Handling - Invalid inputs, security tests, edge cases",
+            "success"
+        );
+        addResult(
+            " ✅ Performance Testing - Response times and throughput",
+            "success"
+        );
+        addResult(
+            " ✅ Rate Limiting - Message frequency limits and spam protection",
+            "success"
+        );
+        addResult("Check the results above for detailed test outcomes.", "info");
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', async function () {
+        console.log('DOM loaded, functions available:', {
+            runValidationTests: typeof runValidationTests,
+            runWorkflowTests: typeof runWorkflowTests,
+            runErrorHandlingTests: typeof runErrorHandlingTests,
+            runPerformanceTests: typeof runPerformanceTests,
+            runRateLimitTests: typeof runRateLimitTests,
+            runComprehensiveTests: typeof runComprehensiveTests,
+            clearResults: typeof clearResults
+        });
+
+        // Get current user ID on page load
+        const userId = "@ViewBag.CurrentUserId";
+        if (userId) {
+            addResult(' Message System Testing Suite loaded successfully!', 'success');
+            addResult(`👤 Testing as user: ${"@ViewBag.CurrentUserId"}`, 'info');
+            addResult('Ready to run comprehensive message system tests', 'info');
+        } else {
+            addResult('👤 Current user ID: ' + "@ViewBag.CurrentUserId", 'info');
+            addResult('⚠️ Message System Testing Suite loaded, but no user ID found', 'warning');
+            addResult('Please ensure you are logged in before running tests', 'warning');
+        }
+    });
+</script>

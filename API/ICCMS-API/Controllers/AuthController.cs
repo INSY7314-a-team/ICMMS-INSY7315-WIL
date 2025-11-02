@@ -8,79 +8,43 @@ namespace ICCMS_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    // No authorization required - this is for login/authentication
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
         private readonly IFirebaseService _firebaseService;
+        private readonly IAuditLogService _auditLogService;
 
-        public AuthController(IAuthService authService, IFirebaseService firebaseService)
+        public AuthController(
+            IAuthService authService,
+            IFirebaseService firebaseService,
+            IAuditLogService auditLogService
+        )
         {
             _authService = authService;
             _firebaseService = firebaseService;
+            _auditLogService = auditLogService;
         }
 
         [HttpPost("login")]
         public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
         {
-            try
-            {
-                // Authenticate with Firebase using email and password
-                var firebaseUser = await _authService.SignInWithEmailAndPasswordAsync(
-                    request.Email,
-                    request.Password
-                );
+            Console.WriteLine($"[AuthController] LOGIN METHOD CALLED - DEPRECATED");
+            Console.WriteLine(
+                $"[AuthController] This endpoint does not verify passwords and should not be used"
+            );
+            Console.WriteLine(
+                $"[AuthController] Use Firebase Client SDK for authentication instead"
+            );
 
-                if (firebaseUser == null)
+            return BadRequest(
+                new LoginResponse
                 {
-                    return BadRequest(
-                        new LoginResponse { Success = false, Message = "Invalid email or password" }
-                    );
+                    Success = false,
+                    Message =
+                        "This endpoint cannot verify passwords. Please use Firebase Client SDK for authentication.",
                 }
-
-                // Get user data from Firestore
-                var user = await _firebaseService.GetDocumentAsync<Models.User>(
-                    "users",
-                    firebaseUser.Uid
-                );
-
-                if (user == null || !user.IsActive)
-                {
-                    return BadRequest(
-                        new LoginResponse
-                        {
-                            Success = false,
-                            Message = "User not found or account deactivated",
-                        }
-                    );
-                }
-
-                // Generate a Firebase ID token for the user
-                var idToken = await _authService.CreateIdTokenAsync(firebaseUser.Uid);
-
-                return Ok(
-                    new LoginResponse
-                    {
-                        Success = true,
-                        Token = idToken,
-                        Message = "Login successful",
-                        User = new UserInfo
-                        {
-                            UserId = user.UserId,
-                            Email = user.Email,
-                            FullName = user.FullName,
-                            Role = user.Role,
-                        },
-                    }
-                );
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Login error details: {ex}");
-                return StatusCode(
-                    500,
-                    new LoginResponse { Success = false, Message = $"Login error: {ex.Message}" }
-                );
-            }
+            );
         }
 
         [HttpPost("verify-token")]
@@ -88,10 +52,14 @@ namespace ICCMS_API.Controllers
             [FromBody] TokenVerificationRequest request
         )
         {
+            string? userId = null;
+            string? userEmail = null;
+
             try
             {
                 // Verify the Firebase ID token
                 var firebaseToken = await _authService.VerifyTokenAsync(request.IdToken);
+                userId = firebaseToken.Uid;
 
                 // Get user data from Firestore
                 var user = await _firebaseService.GetDocumentAsync<Models.User>(
@@ -101,6 +69,15 @@ namespace ICCMS_API.Controllers
 
                 if (user == null || !user.IsActive)
                 {
+                    var failureReason = user == null ? "Account not found" : "Account deactivated";
+                    await _auditLogService.LogAsync(
+                        "Login Attempt",
+                        "Login Failed",
+                        $"Failed login for {userEmail ?? "unknown user"} - {failureReason}",
+                        userId ?? "unknown",
+                        userId ?? "unknown"
+                    );
+
                     return BadRequest(
                         new TokenVerificationResponse
                         {
@@ -110,6 +87,17 @@ namespace ICCMS_API.Controllers
                     );
                 }
 
+                userEmail = user.Email;
+
+                // Log successful login
+                await _auditLogService.LogAsync(
+                    "Login Attempt",
+                    "Login Successful",
+                    $"Successful login for {user.Email} (Role: {user.Role})",
+                    userId,
+                    userId
+                );
+
                 return Ok(
                     new TokenVerificationResponse
                     {
@@ -117,7 +105,7 @@ namespace ICCMS_API.Controllers
                         Message = "Token verified successfully",
                         User = new UserInfo
                         {
-                            UserId = user.UserId,
+                            UserId = firebaseToken.Uid,
                             Email = user.Email,
                             FullName = user.FullName,
                             Role = user.Role,
@@ -128,6 +116,16 @@ namespace ICCMS_API.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"Token verification error: {ex}");
+
+                // Log failed login attempt
+                await _auditLogService.LogAsync(
+                    "Login Attempt",
+                    "Login Failed",
+                    $"Failed login for {userEmail ?? "unknown user"} - Token verification error: {ex.Message}",
+                    userId ?? "unknown",
+                    userId ?? "unknown"
+                );
+
                 return BadRequest(
                     new TokenVerificationResponse
                     {
@@ -159,7 +157,7 @@ namespace ICCMS_API.Controllers
                 return Ok(
                     new UserInfo
                     {
-                        UserId = user.UserId,
+                        UserId = userId, // Use the userId from HttpContext instead of user.UserId
                         Email = user.Email,
                         FullName = user.FullName,
                         Role = user.Role,

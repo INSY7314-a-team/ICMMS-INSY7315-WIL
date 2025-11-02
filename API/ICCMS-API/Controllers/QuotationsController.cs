@@ -1,21 +1,38 @@
-using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using ICCMS_API.Auth;
+using ICCMS_API.Helpers;
 using ICCMS_API.Models;
 using ICCMS_API.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ICCMS_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize] // all actions require auth; per-action roles below
     public class QuotationsController : ControllerBase
     {
         private readonly IFirebaseService _firebaseService;
+        private readonly IQuoteWorkflowService _quoteWorkflow;
+        private readonly IWorkflowMessageService _workflowMessageService;
+        private readonly IAuditLogService _auditLogService;
 
-        public QuotationsController(IFirebaseService firebaseService)
+        public QuotationsController(
+            IFirebaseService firebaseService,
+            IQuoteWorkflowService quoteWorkflow,
+            IWorkflowMessageService workflowMessageService,
+            IAuditLogService auditLogService
+        )
         {
             _firebaseService = firebaseService;
+            _quoteWorkflow = quoteWorkflow;
+            _workflowMessageService = workflowMessageService;
+            _auditLogService = auditLogService;
         }
 
         [HttpGet]
+        [Authorize(Roles = "Project Manager,Admin,Tester")]
         public async Task<ActionResult<List<Quotation>>> GetQuotations()
         {
             try
@@ -30,11 +47,15 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Roles = "Project Manager,Admin,Tester")]
         public async Task<ActionResult<Quotation>> GetQuotation(string id)
         {
             try
             {
-                var quotation = await _firebaseService.GetDocumentAsync<Quotation>("quotations", id);
+                var quotation = await _firebaseService.GetDocumentAsync<Quotation>(
+                    "quotations",
+                    id
+                );
                 if (quotation == null)
                     return NotFound();
                 return Ok(quotation);
@@ -46,7 +67,8 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpGet("project/{projectId}")]
-        public async Task<ActionResult<List<Quotation>>> GetQuotationsByProject(string projectId)
+        [Authorize(Roles = "Project Manager,Admin,Tester")]
+        public async Task<ActionResult<List<Quotation>>> GetByProject(string projectId)
         {
             try
             {
@@ -61,12 +83,17 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpGet("maintenance/{maintenanceRequestId}")]
-        public async Task<ActionResult<List<Quotation>>> GetQuotationsByMaintenanceRequest(string maintenanceRequestId)
+        [Authorize(Roles = "Project Manager,Admin,Tester")]
+        public async Task<ActionResult<List<Quotation>>> GetQuotationsByMaintenanceRequest(
+            string maintenanceRequestId
+        )
         {
             try
             {
                 var quotations = await _firebaseService.GetCollectionAsync<Quotation>("quotations");
-                var maintenanceQuotations = quotations.Where(q => q.MaintenanceRequestId == maintenanceRequestId).ToList();
+                var maintenanceQuotations = quotations
+                    .Where(q => q.MaintenanceRequestId == maintenanceRequestId)
+                    .ToList();
                 return Ok(maintenanceQuotations);
             }
             catch (Exception ex)
@@ -76,7 +103,8 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpGet("client/{clientId}")]
-        public async Task<ActionResult<List<Quotation>>> GetQuotationsByClient(string clientId)
+        [Authorize(Roles = "Project Manager,Admin,Tester")]
+        public async Task<ActionResult<List<Quotation>>> GetByClient(string clientId)
         {
             try
             {
@@ -90,13 +118,64 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpGet("me")]
+        [Authorize(Roles = "Client,Tester")]
+        public async Task<ActionResult<List<Quotation>>> GetMyQuotations()
+        {
+            try
+            {
+                var myId = User.UserId();
+                if (string.IsNullOrEmpty(myId))
+                    return Forbid();
+
+                var all = await _firebaseService.GetCollectionAsync<Quotation>("quotations");
+                return Ok(all.Where(q => q.ClientId == myId).ToList());
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
         [HttpPost]
+        [Authorize(Roles = "Project Manager,Tester")]
         public async Task<ActionResult<string>> CreateQuotation([FromBody] Quotation quotation)
         {
             try
             {
+                // ✅ Ensure required fields and defaults
+                quotation.Status ??= "Draft";
+
+                // Set timestamps and defaults
                 quotation.CreatedAt = DateTime.UtcNow;
+                quotation.UpdatedAt = DateTime.UtcNow;
+
+                // Validate ValidUntil
+                if (quotation.ValidUntil <= quotation.CreatedAt)
+                    return BadRequest("ValidUntil must be after CreatedAt");
+
+                // ✅ Recalculate totals
+                Pricing.Recalculate(quotation);
+
+                // ✅ Step 1: Add the quotation to Firestore (generates a doc ID)
                 var quotationId = await _firebaseService.AddDocumentAsync("quotations", quotation);
+
+                // ✅ Step 2: Save the generated Firestore ID back into the document
+                quotation.QuotationId = quotationId;
+
+                // ✅ Step 3: Update Firestore with this new field
+                await _firebaseService.UpdateDocumentAsync("quotations", quotationId, quotation);
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Quotation",
+                    "Quotation Created",
+                    $"Quotation {quotationId} created for client {quotation.ClientId}",
+                    userId ?? "system",
+                    quotationId
+                );
+
+                // ✅ Step 4: Return the quotation ID to the caller
                 return Ok(quotationId);
             }
             catch (Exception ex)
@@ -105,11 +184,101 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpPost("from-estimate/{estimateId}")]
+        [Authorize(Roles = "Project Manager,Tester")]
+        public async Task<ActionResult<Quotation>> CreateQuotationFromEstimate(
+            string estimateId,
+            [FromBody] CreateQuotationFromEstimateRequest request
+        )
+        {
+            try
+            {
+                // ===== 1️⃣ Fetch the Estimate =====
+                var estimate = await _firebaseService.GetDocumentAsync<Estimate>(
+                    "estimates",
+                    estimateId
+                );
+                if (estimate == null)
+                    return NotFound(new { error = "Estimate not found" });
+
+                // ===== 2️⃣ Fetch the Project to access ClientId =====
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    estimate.ProjectId
+                );
+                if (project == null)
+                    return NotFound(new { error = "Project not found for estimate" });
+
+                // ===== 3️⃣ Convert Estimate → Quotation Items =====
+                var quotationItems = estimate
+                    .LineItems.Select(item => new QuotationItem
+                    {
+                        Name = item.Name,
+                        Quantity = item.Quantity,
+                        UnitPrice = item.UnitPrice,
+                        TaxRate = 0.15,
+                        LineTotal = item.LineTotal,
+                    })
+                    .ToList();
+
+                // ===== 4️⃣ Create the Quotation =====
+                var quotation = new Quotation
+                {
+                    QuotationId = Guid.NewGuid().ToString(),
+                    EstimateId = estimateId,
+                    ProjectId = estimate.ProjectId,
+                    ClientId = project.ClientId, // ✅ from Project
+                    ContractorId = estimate.ContractorId,
+                    Description = estimate.Description,
+                    Items = quotationItems,
+                    Status = "SentToClient",
+                    ValidUntil = estimate.ValidUntil,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    Currency = estimate.Currency ?? "ZAR",
+                    IsAiGenerated = estimate.IsAiGenerated,
+                };
+
+                // ===== 5️⃣ Calculate totals =====
+                Pricing.Recalculate(quotation);
+
+                // ===== 6️⃣ Save to Firestore =====
+                var quotationId = await _firebaseService.AddDocumentAsync("quotations", quotation);
+
+                // update record to include the Firestore-generated quotationId
+                quotation.QuotationId = quotationId;
+                await _firebaseService.UpdateDocumentAsync("quotations", quotationId, quotation);
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Quotation",
+                    "Quotation Created From Estimate",
+                    $"Quotation {quotationId} created from estimate {estimateId} for client {project.ClientId}",
+                    userId ?? "system",
+                    quotationId
+                );
+
+                // ===== 7️⃣ Return JSON (expected by Web side) =====
+                return Ok(new { quotationId, quotation });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"💥 Exception while creating quotation from estimate {estimateId}: {ex.Message}"
+                );
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
         [HttpPut("{id}")]
+        [Authorize(Roles = "Project Manager,Tester")]
         public async Task<IActionResult> UpdateQuotation(string id, [FromBody] Quotation quotation)
         {
             try
             {
+                // Recalculate pricing
+                Pricing.Recalculate(quotation);
+
                 await _firebaseService.UpdateDocumentAsync("quotations", id, quotation);
                 return NoContent();
             }
@@ -120,6 +289,7 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Project Manager,Tester")]
         public async Task<IActionResult> DeleteQuotation(string id)
         {
             try
@@ -131,6 +301,357 @@ namespace ICCMS_API.Controllers
             {
                 return StatusCode(500, ex.Message);
             }
+        }
+
+        // Draft -> PendingPMApproval
+        [HttpPost("{id}/submit-for-approval")]
+        [Authorize(Roles = "Project Manager,Tester")]
+        public async Task<IActionResult> SubmitForApproval(string id)
+        {
+            try
+            {
+                var quotation = await _quoteWorkflow.SubmitForApprovalAsync(id);
+                if (quotation == null)
+                    return NotFound();
+                return Ok();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        // PendingPMApproval -> SentToClient (also set ApprovedAt/SentAt)
+        [HttpPost("{id}/pm-approve")]
+        [Authorize(Roles = "Project Manager,Tester")]
+        public async Task<IActionResult> PmApprove(string id)
+        {
+            try
+            {
+                var quotation = await _quoteWorkflow.PmApproveAsync(id);
+                if (quotation == null)
+                    return NotFound();
+
+                // Note: No notification needed - PM approval is automatic when sending quotes to clients
+                // Client notifications are handled by the client approval/rejection process
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Quotation",
+                    "Quotation Approved",
+                    $"Quote {id} approved by PM",
+                    userId ?? "system",
+                    id
+                );
+
+                return Ok();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        // PendingPMApproval -> PMRejected
+        [HttpPost("{id}/pm-reject")]
+        [Authorize(Roles = "Project Manager,Tester")]
+        public async Task<IActionResult> PmReject(string id, [FromBody] PmRejectRequest request)
+        {
+            try
+            {
+                var quotation = await _quoteWorkflow.PmRejectAsync(id, request.Reason);
+                if (quotation == null)
+                    return NotFound();
+
+                // Notify Client about rejection
+                if (!string.IsNullOrEmpty(quotation.ClientId))
+                {
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "quotation_workflow",
+                        EntityId = id,
+                        EntityType = "quotation",
+                        Action = "rejected",
+                        ProjectId = quotation.ProjectId,
+                        UserId = quotation.ClientId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "quotationId", id },
+                            {
+                                "projectName",
+                                await ProjectHelper.GetProjectNameAsync(
+                                    _firebaseService,
+                                    quotation.ProjectId
+                                )
+                            },
+                            { "rejectedByName", "Project Manager" },
+                            { "totalAmount", quotation.GrandTotal },
+                            { "projectManagerId", User.UserId() },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
+                }
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Quotation",
+                    "Quotation Rejected",
+                    $"Quote {id} rejected by PM: {request.Reason}",
+                    userId ?? "system",
+                    id
+                );
+
+                return Ok();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        // Optional: ensure SentToClient (idempotent)
+        [HttpPost("{id}/send-to-client")]
+        [Authorize(Roles = "Project Manager,Tester")]
+        public async Task<IActionResult> SendToClient(string id)
+        {
+            try
+            {
+                var quotation = await _quoteWorkflow.SendToClientAsync(id);
+                if (quotation == null)
+                    return NotFound();
+
+                // Log quote sent to client
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Quotation",
+                    "Quote Sent to Client",
+                    $"Quote {quotation.QuotationId} sent to client {quotation.ClientId} for project {quotation.ProjectId}",
+                    userId ?? "system",
+                    quotation.QuotationId
+                );
+
+                // Send workflow notification to client
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(currentUserId))
+                {
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "quotation_workflow",
+                        EntityId = quotation.QuotationId,
+                        EntityType = "quotation",
+                        Action = "sent",
+                        ProjectId = quotation.ProjectId,
+                        UserId = currentUserId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "quotationId", quotation.QuotationId },
+                            {
+                                "projectName",
+                                await ProjectHelper.GetProjectNameAsync(
+                                    _firebaseService,
+                                    quotation.ProjectId
+                                )
+                            },
+                            { "totalAmount", quotation.GrandTotal },
+                            { "clientId", quotation.ClientId },
+                            { "sentById", currentUserId },
+                            { "sentByName", User.Identity.Name ?? "Project Manager" },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
+                }
+
+                return Ok();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        // Client decision — Client only + ownership (ClientId == UserId)
+        [HttpPost("{id}/client-decision")]
+        [Authorize(Roles = "Client,Tester")]
+        public async Task<IActionResult> ClientDecision(
+            string id,
+            [FromBody] ClientDecisionBody body
+        )
+        {
+            try
+            {
+                // First check ownership
+                var quotation = await _firebaseService.GetDocumentAsync<Quotation>(
+                    "quotations",
+                    id
+                );
+                if (quotation == null)
+                    return NotFound();
+
+                var myId = User.UserId();
+
+                // Debug all claims
+                Console.WriteLine($"Client Decision - All Claims:");
+                foreach (var claim in User.Claims)
+                {
+                    Console.WriteLine($"  {claim.Type}: {claim.Value}");
+                }
+
+                Console.WriteLine($"Client Decision - Current User ID: {myId}");
+                Console.WriteLine($"Client Decision - Quotation Client ID: {quotation.ClientId}");
+
+                // Bypass ownership check for tester users during testing
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+                Console.WriteLine($"Client Decision - User Email: {userEmail}");
+                var isTester = !string.IsNullOrEmpty(userEmail) && userEmail.Contains("tester");
+                var isOwner =
+                    !string.IsNullOrEmpty(myId)
+                    && string.Equals(quotation.ClientId, myId, StringComparison.OrdinalIgnoreCase);
+
+                Console.WriteLine($"Client Decision - Is Tester: {isTester}");
+                Console.WriteLine($"Client Decision - Is Owner: {isOwner}");
+
+                if (!isTester && !isOwner)
+                {
+                    Console.WriteLine("Client Decision - Access denied: Not tester and not owner");
+                    return Forbid();
+                }
+
+                Console.WriteLine("Client Decision - Access granted");
+
+                // Use workflow service for the decision
+                var result = await _quoteWorkflow.ClientDecisionAsync(id, body.Accept, body.Note);
+                if (result == null)
+                    return NotFound();
+
+                // Note: Client doesn't need to be notified about their own decision
+                // PM notification is handled by ClientsController.ApproveQuotation/RejectQuotation
+
+                var userId = User.UserId();
+                var decision = body.Accept ? "approved" : "rejected";
+                _auditLogService.LogAsync(
+                    "Quotation",
+                    $"Quotation {char.ToUpper(decision[0]) + decision.Substring(1)}",
+                    $"Quote {id} {decision} by client: {body.Note}",
+                    userId ?? "system",
+                    id
+                );
+
+                return Ok();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpPost("{id}/convert-to-invoice")]
+        [Authorize(Roles = "Project Manager,Tester")]
+        public async Task<ActionResult<string>> ConvertToInvoice(string id)
+        {
+            try
+            {
+                var result = await _quoteWorkflow.ConvertToInvoiceAsync(id);
+                if (result == null)
+                    return NotFound();
+
+                var userId = User.UserId();
+                _auditLogService.LogAsync(
+                    "Quotation",
+                    "Quotation Converted to Invoice",
+                    $"Quote {id} converted to invoice {result.Value.invoiceId}",
+                    userId ?? "system",
+                    id
+                );
+
+                return Ok(result.Value.invoiceId);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        // Remove/retire any old submit-for-admin / admin-approve routes or return 410 Gone
+        [HttpPost("{id}/submit-for-admin")]
+        public IActionResult SubmitForAdminDeprecated(string id)
+        {
+            return StatusCode(
+                410,
+                "This endpoint has been deprecated. Use /submit-for-approval instead."
+            );
+        }
+
+        [HttpPost("{id}/admin-approve")]
+        public IActionResult AdminApproveDeprecated(string id)
+        {
+            return StatusCode(410, "This endpoint has been deprecated. Use /pm-approve instead.");
+        }
+
+        [HttpGet("debug-claims")]
+        [AllowAnonymous]
+        public IActionResult DebugClaims()
+        {
+            return Ok(User.Claims.Select(c => new { c.Type, c.Value }));
+        }
+    }
+
+    public class ClientDecisionBody
+    {
+        public bool Accept { get; set; }
+        public string? Note { get; set; }
+    }
+
+    public class CreateQuotationFromEstimateRequest
+    {
+        public string ClientId { get; set; } = string.Empty;
+    }
+
+    public class PmRejectRequest
+    {
+        public string? Reason { get; set; }
+    }
+}
+
+// Helper method to get project name
+public static class ProjectHelper
+{
+    public static async Task<string> GetProjectNameAsync(
+        IFirebaseService firebaseService,
+        string projectId
+    )
+    {
+        try
+        {
+            var project = await firebaseService.GetDocumentAsync<Project>("projects", projectId);
+            return project?.Name ?? projectId; // Fallback to project ID if name not found
+        }
+        catch
+        {
+            return projectId; // Fallback to project ID on error
         }
     }
 }

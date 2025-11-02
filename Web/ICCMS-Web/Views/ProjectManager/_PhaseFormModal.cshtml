@@ -1,0 +1,258 @@
+<!-- Phase Form Modal -->
+<div class="modal fade" id="phaseFormModal" tabindex="-1" aria-labelledby="phaseFormModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="phaseFormModalLabel">
+                    <i class="fa-solid fa-layer-group me-2"></i><span id="phaseModalTitle">Add Phase</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="phaseForm">
+                <div class="modal-body">
+                    <input type="hidden" id="phaseId" name="PhaseId" />
+                    <input type="hidden" id="projectId" name="ProjectId" value="@Model.Project.ProjectId" />
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label for="phaseName" class="form-label">Phase Name *</label>
+                                <input type="text" class="form-control" id="phaseName" name="Name" required>
+                                <div class="invalid-feedback">Please provide a phase name.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="phaseStatus" name="Status" value="Planning">
+
+                    <div class="mb-3">
+                        <label for="phaseDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="phaseDescription" name="Description" rows="3"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="phaseStartDate" class="form-label">Start Date *</label>
+                                <input type="date" class="form-control" id="phaseStartDate" name="StartDate" required>
+                                <div class="invalid-feedback">Please select a start date.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="phaseEndDate" class="form-label">End Date *</label>
+                                <input type="date" class="form-control" id="phaseEndDate" name="EndDate" required>
+                                <div class="invalid-feedback">Please select an end date.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label for="phaseBudget" class="form-label">Budget</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R</span>
+                                    <input type="number" class="form-control" id="phaseBudget" name="Budget" step="0.01"
+                                        min="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="phaseAssignedTo" name="AssignedTo" value="">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fa-solid fa-times me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="savePhaseBtn">
+                        <i class="fa-solid fa-save me-1"></i><span id="savePhaseBtnText">Save Phase</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const phaseForm = document.getElementById('phaseForm');
+        const phaseModalElement = document.getElementById('phaseFormModal');
+        const phaseModal = new bootstrap.Modal(phaseModalElement);
+        const phaseModalTitle = document.getElementById('phaseModalTitle');
+        const savePhaseBtnText = document.getElementById('savePhaseBtnText');
+        const savePhaseBtn = document.getElementById('savePhaseBtn');
+
+        // Reset form when modal is shown
+        phaseModalElement.addEventListener('show.bs.modal', function () {
+            resetPhaseForm();
+        });
+
+        // Handle form submission
+        phaseForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            if (!validatePhaseForm()) {
+                return;
+            }
+
+            const formData = new FormData(phaseForm);
+            const phaseData = Object.fromEntries(formData);
+
+            // Convert dates to proper format
+            phaseData.StartDate = new Date(phaseData.StartDate).toISOString();
+            phaseData.EndDate = new Date(phaseData.EndDate).toISOString();
+            
+            // Ensure Status is set (defaults to Planning)
+            if (!phaseData.Status) {
+                phaseData.Status = 'Planning';
+            }
+            
+            // Convert budget to number
+            phaseData.Budget = parseFloat(phaseData.Budget) || 0;
+
+            // Show loading state
+            savePhaseBtn.disabled = true;
+            savePhaseBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Saving...';
+
+            // Determine if this is an edit or create
+            const phaseId = document.getElementById('phaseId').value;
+            const isEdit = phaseId && phaseId.trim() !== '';
+
+            const url = isEdit
+                ? `/ProjectManager/UpdatePhase/${phaseId}`
+                : '/ProjectManager/CreatePhase';
+
+            const method = isEdit ? 'PUT' : 'POST';
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(phaseData)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showSuccessMessage(isEdit ? 'Phase updated successfully!' : 'Phase created successfully!');
+                        phaseModal.hide();
+                        // Refresh the page after a short delay to show the success message
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 500);
+                    } else {
+                        showErrorMessage(data.error || 'Failed to save phase');
+                        savePhaseBtn.disabled = false;
+                        savePhaseBtn.innerHTML = `<i class="fa-solid fa-save me-1"></i>${isEdit ? 'Update Phase' : 'Save Phase'}`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error saving phase:', error);
+                    showErrorMessage('An error occurred while saving the phase');
+                    savePhaseBtn.disabled = false;
+                    savePhaseBtn.innerHTML = `<i class="fa-solid fa-save me-1"></i>${isEdit ? 'Update Phase' : 'Save Phase'}`;
+                });
+        });
+
+        function resetPhaseForm() {
+            phaseForm.reset();
+            document.getElementById('phaseId').value = '';
+            document.getElementById('phaseStatus').value = 'Planning'; // Reset hidden status
+            phaseModalTitle.textContent = 'Add Phase';
+            savePhaseBtnText.textContent = 'Save Phase';
+
+            // Set default dates
+            const today = new Date().toISOString().split('T')[0];
+            const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            document.getElementById('phaseStartDate').value = today;
+            document.getElementById('phaseEndDate').value = nextWeek;
+            
+            // Reset budget
+            document.getElementById('phaseBudget').value = '';
+        }
+
+        function validatePhaseForm() {
+            const name = document.getElementById('phaseName').value.trim();
+            const startDate = document.getElementById('phaseStartDate').value;
+            const endDate = document.getElementById('phaseEndDate').value;
+
+            let isValid = true;
+
+            // Validate name
+            if (!name) {
+                document.getElementById('phaseName').classList.add('is-invalid');
+                isValid = false;
+            } else {
+                document.getElementById('phaseName').classList.remove('is-invalid');
+            }
+
+            // Validate dates
+            if (!startDate) {
+                document.getElementById('phaseStartDate').classList.add('is-invalid');
+                isValid = false;
+            } else {
+                document.getElementById('phaseStartDate').classList.remove('is-invalid');
+            }
+
+            if (!endDate) {
+                document.getElementById('phaseEndDate').classList.add('is-invalid');
+                isValid = false;
+            } else {
+                document.getElementById('phaseEndDate').classList.remove('is-invalid');
+            }
+
+            // Validate date logic
+            if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
+                document.getElementById('phaseEndDate').classList.add('is-invalid');
+                document.getElementById('phaseEndDate').setCustomValidity('End date must be after start date');
+                isValid = false;
+            } else {
+                document.getElementById('phaseEndDate').classList.remove('is-invalid');
+                document.getElementById('phaseEndDate').setCustomValidity('');
+            }
+
+            return isValid;
+        }
+
+        // Global function to show phase modal
+        window.showPhaseModal = function () {
+            phaseModal.show();
+        };
+
+        // Global function to edit phase (called from phase management)
+        window.editPhase = function (phaseId) {
+            // This will be implemented in pm-phase-management.js
+            console.log('Edit phase:', phaseId);
+        };
+    });
+
+    function showSuccessMessage(message) {
+        // Create success notification
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-success position-fixed';
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fa-solid fa-check-circle me-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 3000);
+    }
+
+    function showErrorMessage(message) {
+        // Create error notification
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-danger position-fixed';
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fa-solid fa-exclamation-circle me-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 5000);
+    }
+</script>

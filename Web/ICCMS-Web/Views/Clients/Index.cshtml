@@ -1,0 +1,215 @@
+@model ICCMS_Web.Controllers.ClientDashboardViewModel
+@{
+    ViewData["Title"] = "Client Dashboard";
+    Layout = "_Layout";
+}
+
+<div class="pm-dashboard-container">
+    <!-- Header Section -->
+    <div class="dashboard-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="dashboard-title">
+                    <i class="fa-solid fa-user me-3" style="color: #F7EC59;"></i>@User.Identity.Name Dashboard
+                </h1>
+                <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Select a project to view its details.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Summary Cards -->
+    <div class="stats-container">
+        <div class="row g-2 mb-3">
+            <div class="col-lg-4 col-md-4 col-sm-12">
+                <div class="stat-card compact">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.TotalProjects</h4>
+                        <p class="stat-label">Total Projects</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-4 col-sm-12">
+                <div class="stat-card compact">
+                    <div class="stat-icon in-progress">
+                        <i class="fa-solid fa-play"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.ActiveProjects</h4>
+                        <p class="stat-label">Active Projects</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-4 col-sm-12">
+                <div class="stat-card compact">
+                    <div class="stat-icon completed">
+                        <i class="fa-solid fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.CompletedProjects</h4>
+                        <p class="stat-label">Completed</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter Controls -->
+    <div class="search-section">
+        <div class="search-input-group">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search projects by name..." value="">
+            <button type="button" id="searchBtn" class="search-btn">
+                <i class="fa-solid fa-search"></i>
+            </button>
+            <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Enhanced Filters Section -->
+    <div class="filter-section">
+        <div class="d-flex justify-content-center mb-3">
+            <button type="button" class="filter-toggle-btn" onclick="toggleFilters()">
+                <i class="fa-solid fa-sliders-h me-2"></i>
+                <span id="filterToggleText">Show Filters</span>
+                <i class="fa-solid fa-chevron-down ms-2" id="filterToggleIcon"></i>
+            </button>
+        </div>
+    </div>
+    <div class="filters-panel" id="filtersPanel" style="display: none;">
+        <div class="filter-group">
+            <div class="filter-group-header">
+                <h6 class="mb-0">Project Status</h6>
+            </div>
+            <div class="status-filters">
+                @{
+                    var statuses = new[] { "All", "Planning", "Active", "Completed", "Maintenance" };
+                }
+                @foreach (var status in statuses)
+                {
+                    var icon = status == "Planning" ? "fa-project-diagram"
+                    : status == "Active" ? "fa-play"
+                    : status == "Completed" ? "fa-check-circle"
+                    : status == "Maintenance" ? "fa-wrench" : "fa-list";
+                    <a href="#" class="status-filter-btn" data-status="@status">
+                        <i class="fa-solid @icon me-2"></i>
+                        @status
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Main Projects Section -->
+    <div class="section-header">
+        <h3 class="section-title">
+            Projects
+            <span class="badge badge-secondary">@Model.Projects.Count</span>
+        </h3>
+    </div>
+
+    @if (Model.Projects.Any())
+    {
+        <div class="projects-grid" id="projectsGrid">
+            @foreach (var project in Model.Projects)
+            {
+                ViewBag.StatusBadgeClass = Model.GetStatusBadgeClass(project.Status);
+                @await Html.PartialAsync("~/Views/Shared/_ClientProjectCard.cshtml", project)
+            }
+        </div>
+    }
+    else
+    {
+        <div class="no-projects-message">
+            <div class="text-center py-5">
+                <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No projects found</h4>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Include dashboard CSS directly -->
+<link rel="stylesheet" href="~/css/pm-dashboard.css" />
+<link rel="stylesheet" href="~/css/project-cards.css" />
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeDashboard();
+        });
+
+        function initializeDashboard() {
+            setupSearch();
+            setupFilters();
+        }
+
+        function setupSearch() {
+            const searchInput = document.getElementById("searchInput");
+            const searchBtn = document.getElementById("searchBtn");
+            const clearBtn = document.getElementById("clearSearchBtn");
+
+            searchBtn?.addEventListener("click", () => applySearch(searchInput.value));
+            clearBtn?.addEventListener("click", () => {
+                searchInput.value = "";
+                applyFilters();
+            });
+            searchInput?.addEventListener("keyup", (event) => {
+                if (event.key === "Enter") {
+                    applyFilters();
+                }
+            });
+        }
+
+        function setupFilters() {
+            document.querySelectorAll('.status-filter-btn').forEach(btn => {
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelectorAll('.status-filter-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    applyFilters();
+                });
+            });
+        }
+
+        function applyFilters() {
+            const searchQuery = document.getElementById("searchInput").value.toLowerCase();
+            const activeStatusBtn = document.querySelector('.status-filter-btn.active');
+            const statusFilter = activeStatusBtn ? activeStatusBtn.dataset.status : 'All';
+
+            document.querySelectorAll(".projects-grid .project-card-link").forEach(cardLink => {
+                const card = cardLink.querySelector('.project-card');
+                const cardText = card.innerText.toLowerCase();
+                const projectStatus = card.dataset.projectStatus.toLowerCase();
+
+                const searchMatch = cardText.includes(searchQuery);
+                const statusMatch = statusFilter === 'All' || projectStatus === statusFilter.toLowerCase();
+
+                cardLink.style.display = searchMatch && statusMatch ? "" : "none";
+            });
+        }
+
+        function toggleFilters() {
+            const filtersPanel = document.getElementById('filtersPanel');
+            const filterToggleText = document.getElementById('filterToggleText');
+            const filterToggleIcon = document.getElementById('filterToggleIcon');
+
+            if (filtersPanel.style.display === 'none' || filtersPanel.style.display === '') {
+                filtersPanel.style.display = 'block';
+                filterToggleText.textContent = 'Hide Filters';
+                filterToggleIcon.classList.remove('fa-chevron-down');
+                filterToggleIcon.classList.add('fa-chevron-up');
+            } else {
+                filtersPanel.style.display = 'none';
+                filterToggleText.textContent = 'Show Filters';
+                filterToggleIcon.classList.remove('fa-chevron-up');
+                filterToggleIcon.classList.add('fa-chevron-down');
+            }
+        }
+    </script>
+}

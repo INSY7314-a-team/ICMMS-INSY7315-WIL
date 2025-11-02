@@ -13,6 +13,14 @@ namespace ICCMS_Web.Controllers
             {
                 ViewBag.UserEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
                 ViewBag.UserRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+
+                // Redirect clients to their dashboard
+                if (User.IsInRole("Client"))
+                {
+                    // Temporarily disable client redirect to test
+                    // return RedirectToAction("Index", "Clients");
+                    ViewBag.Message = "Client user detected - redirect disabled for debugging";
+                }
             }
 
             return View();

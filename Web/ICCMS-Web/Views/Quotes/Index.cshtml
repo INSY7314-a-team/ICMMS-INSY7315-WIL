@@ -1,0 +1,242 @@
+@model List<ICCMS_Web.Models.QuoteIndexViewModel>
+
+@{
+    ViewData["Title"] = "Quotations Dashboard";
+    Layout = "_Layout";
+}
+
+<style>
+/* Gradient header */
+.bg-gradient-brand {
+    background: linear-gradient(135deg, #FFD54F 0%, #FFEB3B 100%);
+    color: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+}
+
+/* Card style like workflow-step */
+.quote-card {
+    transition: all 0.3s ease;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+.quote-card:hover {
+    border-color: #FFD54F;
+    box-shadow: 0 4px 20px rgba(0,198,255,0.3);
+}
+
+
+/* Status badges */
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.status-draft { background: #fff3cd; color: #856404; }
+.status-pending { background: #cce5ff; color: #004085; }
+.status-approved { background: #d4edda; color: #155724; }
+.status-rejected { background: #f8d7da; color: #721c24; }
+
+/* Buttons */
+.btn-workflow {
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 0.5rem 1.25rem;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #FFB300, #FFD54F); /* GOLD-YELLOW */
+    font-size: 0.85rem;
+}
+.btn-workflow:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
+
+
+.btn-workflow-gold {
+    background: linear-gradient(135deg, #FFB300, #FFD54F);
+    color: white; /* switched to white text */
+    border: none;
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.btn-workflow-gold:hover {
+    box-shadow: 0 8px 25px rgba(255,179,0,0.5);
+    transform: translateY(-2px);
+}
+
+.btn-workflow-dark {
+    background: #333;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.btn-workflow-dark:hover {
+    background: #FFB300;
+    color: #333;
+    box-shadow: 0 0 15px rgba(255,179,0,0.6);
+    transform: translateY(-2px);
+}
+
+
+
+</style>
+
+<div class="container my-5">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 bg-gradient-brand p-3">
+        <div>
+            <h2 class="fw-bold mb-0">Quotations Dashboard</h2>
+            <p class="mb-0">Manage all quotations with project and client details</p>
+        </div>
+        <a href="@Url.Action("CreateDraft", "Quotes")" class="btn btn-light btn-main-style ">
+            <i class="fas fa-plus-circle me-2"></i> New Quotation
+        </a>
+    </div>
+
+    <!-- Filters + Search -->
+    <div class="card shadow-sm rounded-3 mb-4 p-3">
+        <form id="filterForm" class="row g-3">
+            <!-- Search -->
+            <div class="col-md-4">
+                <input type="text" class="form-control" id="searchBox" placeholder="Search quotes (client, project, desc)">
+            </div>
+            
+            <!-- Status Filter -->
+            <div class="col-md-3">
+                <select id="statusFilter" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="Draft">Draft</option>
+                    <option value="PendingPMApproval">Pending PM Approval</option>
+                    <option value="SentToClient">Sent to Client</option>
+                    <option value="ClientAccepted">Client Accepted</option>
+                    <option value="ClientDeclined">Client Declined</option>
+                    <option value="PMRejected">PM Rejected</option>
+                </select>
+            </div>
+
+
+
+
+            <!-- Date Range -->
+            <div class="col-md-4">
+                <input type="date" class="form-control" id="dateFilter">
+            </div>
+
+            <div class="col-md-1 text-end">
+                <button type="button" class="btn btn-dark btn-sm btn-workflow-dark" onclick="applyFilters()">
+                    <i class="fas fa-filter"></i> Apply
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Empty State -->
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info shadow-sm rounded-3">
+            <i class="fas fa-info-circle me-2"></i> No quotations available.
+        </div>
+    }
+    else
+    {
+        <!-- Quote Cards -->
+        <div id="quoteContainer" class="row">
+            @foreach (var q in Model)
+            {
+                var badgeClass = q.Status switch
+                {
+                    "Draft" => "status-badge status-draft",
+                    "PendingPMApproval" => "status-badge status-pending",
+                    "SentToClient" => "status-badge status-pending",
+                    "ClientAccepted" => "status-badge status-approved",
+                    "ClientDeclined" => "status-badge status-rejected",
+                    "PMRejected" => "status-badge status-rejected",
+                    _ => "status-badge"
+                };
+
+                <div class="col-md-6 col-lg-4 quote-item" 
+                     data-status="@q.Status" 
+                     data-client="@q.ClientName.ToLower()" 
+                     data-project="@q.ProjectName.ToLower()" 
+                     data-description="@q.Description.ToLower()" 
+                     data-date="@q.CreatedAt.ToString("yyyy-MM-dd")">
+
+                    <div class="quote-card h-100">
+                        <!-- Header Row -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="fw-bold mb-0">@q.ProjectName</h5>
+                            <span class="@badgeClass">@q.Status</span>
+                        </div>
+
+                        <!-- Description -->
+                        <p class="text-muted small mb-2">
+                            @(string.IsNullOrWhiteSpace(q.Description)
+                                ? "(No description)"
+                                : (q.Description.Length > 60 ? q.Description.Substring(0, 60) + "…" : q.Description))
+                        </p>
+
+                        <!-- Client Info -->
+                        <div class="mb-2">
+                            <i class="fas fa-user text-info me-1"></i>
+                            <strong>@q.ClientName</strong><br />
+                            <small class="text-muted">@q.ClientEmail | @q.ClientPhone</small>
+                        </div>
+
+                        <!-- Totals -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <span class="text-muted small">Created @q.CreatedAt.ToString("yyyy-MM-dd")</span>
+                            <span class="fw-bold text-dark">R @q.GrandTotal.ToString("N2")</span>
+                        </div>
+
+                <!-- Actions -->
+                <div class="d-flex justify-content-between mt-3">
+                    <a href="@Url.Action("Preview", "Quotes", new { id = q.QuotationId })"
+                    class="btn btn-outline-dark btn-sm btn-workflow-dark">
+                        <i class="fas fa-eye"></i> Download PDF
+                    </a>
+
+                    @if (q.Status == "Draft")
+                    {
+                        <!-- Drafts just continue -->
+                        <a href="@Url.Action("Estimate", "Quotes", new { id = q.QuotationId })"
+                        class="btn btn-warning btn-sm btn-workflow">
+                            <i class="fas fa-edit"></i> Continue Draft
+                        </a>
+                    }
+                    else if (q.Status == "SentToClient" || q.Status == "ClientRejected")
+                    {
+                        <!-- Rejected/Sent → new quote -->
+                        <a href="@Url.Action("Duplicate", "Quotes", new { id = q.QuotationId })"
+                        class="btn btn-info btn-sm btn-workflow">
+                            <i class="fas fa-edit"></i> New Quote for this project
+                        </a>
+                    }
+                    else if (q.Status == "ClientAccepted")
+                    {
+                        <!-- Accepted → hide / optional message -->
+                    }
+                </div>
+
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+

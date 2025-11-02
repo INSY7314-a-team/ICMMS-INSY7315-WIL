@@ -1,0 +1,547 @@
+@model ICCMS_Web.Models.PMProjectDetailViewModel
+
+@await Html.PartialAsync("_EstimateEditorModalNew")
+@await Html.PartialAsync("_BlueprintPickerModal")
+@await Html.PartialAsync("_InvoiceEditorModal")
+
+@{
+    ViewData["Title"] = $"Project: {Model.Project.Name}";
+    Layout = "_Layout";
+}
+
+<div class="pm-project-detail-container">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="@Url.Action("Dashboard", "ProjectManager")" class="text-decoration-none">
+                    <i class="fa-solid fa-home"></i> Dashboard
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                <i class="fa-solid fa-project-diagram"></i> @Model.Project.Name
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Project Information Header -->
+    <div class="row mb-4 pm-project-header">
+        <div class="col-md-8">
+            <h4 class="mb-2">@Model.Project.Name</h4>
+            <p class="mb-1">Project ID: <span>@Model.Project.ProjectId</span></p>
+            <p class="mb-0">Description: <span>@Model.Project.Description</span></p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="mb-2">
+                <span class="badge @Model.GetStatusBadgeClass(Model.Project.Status) me-2">@Model.Project.Status</span>
+                <span class="badge pm-badge-secondary">@Model.OverallProgress% Complete</span>
+            </div>
+            <small>
+                <i class="fa-solid fa-calendar me-1"></i>
+                <span>@Model.Project.StartDate.ToString("dd MMM yyyy")</span> -
+                <span>@Model.Project.EndDatePlanned.ToString("dd MMM yyyy")</span>
+            </small>
+        </div>
+    </div>
+
+    <!-- Progress Section -->
+    <div class="row mb-4 pm-progress-section">
+        <div class="col-md-6">
+            <h6 class="mb-2">Project Progress</h6>
+            <div class="progress mb-2 pm-progress">
+                <div class="progress-bar pm-progress-bar" role="progressbar"
+                    style="width: @($"{Model.OverallProgress}%")" aria-valuenow="@Model.OverallProgress"
+                    aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <small>@($"{Model.OverallProgress}%") Complete</small>
+        </div>
+        <div class="col-md-6">
+            <h6 class="mb-2">Task Completion</h6>
+            <div class="progress mb-2 pm-progress">
+                <div class="progress-bar bg-info pm-progress-bar" role="progressbar"
+                    style="width: @(Model.TotalTasks > 0 ? (Model.CompletedTasks * 100 / Model.TotalTasks) : 0)%"></div>
+            </div>
+            <small>@Model.CompletedTasks / @Model.TotalTasks tasks completed</small>
+        </div>
+    </div>
+
+    <!-- Two-Column Middle Section -->
+    <div class="row mb-4 pm-middle-section">
+        <!-- Left Column: Budget Info & Project Statistics -->
+        <div class="col-md-6 mb-4">
+            <!-- Budget Information -->
+            <div class="pm-budget-section mb-4">
+                <h6 class="mb-2">Budget Information</h6>
+                <div class="card pm-budget-card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <small>Planned Budget</small>
+                                <div class="fw-bold">@Model.Project.BudgetPlanned.ToString("C")</div>
+                            </div>
+                            <div class="col-md-4">
+                                <small>Budget Spent</small>
+                                <div class="fw-bold">@Model.Project.BudgetActual.ToString("C")</div>
+                            </div>
+                            <div class="col-md-4">
+                                <small>Variance</small>
+                                <div
+                                    class="fw-bold @(Model.Project.BudgetActual > Model.Project.BudgetPlanned ? "pm-budget-variance-over" : "pm-budget-variance-under")">
+                                    @((Model.Project.BudgetActual - Model.Project.BudgetPlanned).ToString("C"))
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Project Statistics -->
+            <div class="pm-stats-section">
+                <h6 class="mb-2">Project Statistics</h6>
+                <div class="card pm-stats-card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-2">
+                                <small>Total Tasks</small>
+                                <div class="fw-bold">@Model.TotalTasks</div>
+                            </div>
+                            <div class="col-md-2">
+                                <small>Pending</small>
+                                <div class="fw-bold pm-stats-pending">@Model.PendingTasks</div>
+                            </div>
+                            <div class="col-md-2">
+                                <small>In Progress</small>
+                                <div class="fw-bold pm-stats-in-progress">@Model.InProgressTasks</div>
+                            </div>
+                            <div class="col-md-2">
+                                <small>Completed</small>
+                                <div class="fw-bold pm-stats-completed">@Model.CompletedTasks</div>
+                            </div>
+                            <div class="col-md-2">
+                                <small>Overdue</small>
+                                <div class="fw-bold pm-stats-overdue">@Model.OverdueTasks</div>
+                            </div>
+                            <div class="col-md-2">
+                                <small>Phases</small>
+                                <div class="fw-bold">@Model.TotalPhases</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Updates & Approvals -->
+            <div class="pm-updates-approvals-section mt-3">
+                <h6 class="mb-2">Updates & Approvals</h6>
+                <div class="card pm-updates-approvals-card">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="updates-block">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="section-title"><i class="fa-solid fa-chart-line me-2 text-info"></i>Progress Updates</span>
+                                    </div>
+                                    <div class="updates-list" id="progressUpdatesList">
+                                        @if (Model.PendingProgressReports != null && Model.PendingProgressReports.Any())
+                                        {
+                                            foreach (var update in Model.PendingProgressReports.OrderByDescending(u => u.SubmittedAt))
+                                            {
+                                                var task = Model.Tasks.FirstOrDefault(t => t.TaskId == update.TaskId);
+                                                <div class="update-item" data-update-id="@update.ProgressReportId">
+                                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                                        <div class="flex-grow-1">
+                                                            <div class="update-title">Progress update for Task @(task?.Name ?? update.TaskId)</div>
+                                                            <div class="update-content text-muted mt-1">@update.Description</div>
+                                                        </div>
+                                                        <small class="text-muted ms-2">@update.SubmittedAt.ToString("dd MMM yyyy")</small>
+                                                    </div>
+                                                    @if (task != null)
+                                                    {
+                                                        <div class="mt-2">
+                                                            <a href="@Url.Action("TaskDetail", "ProjectManager", new { projectId = Model.Project.ProjectId, taskId = task.TaskId })" 
+                                                               class="btn btn-sm pm-btn-outline-info">
+                                                                <i class="fa-solid fa-eye me-1"></i>View Task Details
+                                                            </a>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div class="empty-state">
+                                                <i class="fa-regular fa-note-sticky"></i>
+                                                <p>No progress updates</p>
+                                                <small>Contractors’ progress updates will appear here</small>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="approvals-block">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="section-title"><i class="fa-solid fa-clipboard-check me-2 text-warning"></i>Task Completion Reports</span>
+                                    </div>
+                                    <div class="approvals-list" id="taskCompletionsList">
+                                        @if (Model.TasksAwaitingCompletion != null && Model.TasksAwaitingCompletion.Any())
+                                        {
+                                            foreach (var comp in Model.TasksAwaitingCompletion)
+                                            {
+                                                var task = Model.Tasks.FirstOrDefault(t => t.TaskId == comp.TaskId);
+                                                <div class="completion-item" data-task-id="@comp.TaskId">
+                                                    <div class="item-main">
+                                                        <div class="title-row d-flex justify-content-between align-items-center">
+                                                            <div class="completion-title">@comp.Name</div>
+                                                            <small class="text-muted">Awaiting approval</small>
+                                                        </div>
+                                                        <div class="meta-row text-muted">
+                                                            @comp.Description
+                                                        </div>
+                                                    </div>
+                                                    <div class="item-actions">
+                                                        @if (task != null)
+                                                        {
+                                                            <a href="@Url.Action("TaskDetail", "ProjectManager", new { projectId = Model.Project.ProjectId, taskId = task.TaskId })" 
+                                                               class="btn btn-sm pm-btn-outline-info me-1">
+                                                                <i class="fa-solid fa-eye me-1"></i>View Task Details
+                                                            </a>
+                                                        }
+                                                        <button type="button" class="btn btn-sm pm-btn-outline-danger reject-completion-btn me-1" data-task-id="@comp.TaskId">
+                                                            <i class="fa-solid fa-xmark me-1"></i>Reject
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm pm-btn-primary approve-completion-btn" data-task-id="@comp.TaskId">
+                                                            <i class="fa-solid fa-check me-1"></i>Approve
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div class="empty-state">
+                                                <i class="fa-regular fa-clipboard"></i>
+                                                <p>No completion reports awaiting approval</p>
+                                                <small>Task completion submissions will appear here</small>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Scrollable Estimates and Invoices -->
+        <div class="col-md-6 mb-4">
+            <!-- Estimates Section -->
+            <div class="pm-estimates-section mb-4">
+                <h6 class="mb-2">Project Estimates</h6>
+                <div class="card pm-estimates-card">
+                    <div class="card-body p-0">
+                        <div class="estimates-container" id="estimatesContainer">
+                            @if (Model.Estimates != null && Model.Estimates.Any())
+                            {
+                                @foreach (var estimate in Model.Estimates.OrderByDescending(e => e.CreatedAt))
+                                {
+                                    <div class="estimate-item"
+                                        onclick="openEstimateEditor('@Model.Project.ProjectId', '@estimate.EstimateId')">
+                                        <div class="estimate-header">
+                                            <span class="estimate-number">Estimate #@estimate.EstimateId</span>
+                                            <span class="estimate-amount">R @estimate.TotalAmount.ToString("N0")</span>
+                                        </div>
+                                        <div class="estimate-status @estimate.Status.ToLower()">
+                                            @estimate.Status
+                                        </div>
+                                        <div class="estimate-date">
+                                            @estimate.CreatedAt.ToString("MMM dd, yyyy")
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="no-estimates-message">
+                                    <i class="fas fa-file-invoice-dollar"></i>
+                                    <p>No estimates found</p>
+                                    <small>Estimates will appear here when created</small>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoices Section -->
+            <div class="pm-invoices-section">
+                <h6 class="mb-2">Project Invoices</h6>
+                <div class="card pm-invoices-card">
+                    <div class="card-body p-0">
+                        <div class="invoices-container" id="invoicesContainer">
+                            @if (Model.Invoices != null && Model.Invoices.Any())
+                            {
+                                @foreach (var invoice in Model.Invoices.OrderByDescending(i => i.CreatedAt))
+                                {
+                                    <div class="invoice-item"
+                                        onclick="openInvoiceEditor('@Model.Project.ProjectId', '@invoice.InvoiceId')">
+                                        <div class="invoice-header">
+                                            <span class="invoice-number">Invoice #@invoice.InvoiceNumber</span>
+                                            <span class="invoice-amount">R @invoice.TotalAmount.ToString("N0")</span>
+                                        </div>
+                                        <div class="invoice-status @invoice.Status.ToLower()">
+                                            @invoice.Status
+                                        </div>
+                                        <div class="invoice-date">
+                                            @invoice.CreatedAt.ToString("MMM dd, yyyy")
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="no-invoices-message">
+                                    <i class="fas fa-file-invoice"></i>
+                                    <p>No invoices found</p>
+                                    <small>Invoices will appear here when created</small>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Phases Section -->
+    <div class="mb-4 pm-phases-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">
+                <i class="fa-solid fa-layer-group me-2"></i>Project Phases
+                <span class="badge pm-badge-secondary">@Model.Phases.Count</span>
+            </h6>
+            <button class="btn btn-sm pm-btn-primary" data-bs-toggle="modal" data-bs-target="#phaseFormModal"
+                id="addPhaseBtn">
+                <i class="fa-solid fa-plus me-1"></i>Add Phase
+            </button>
+        </div>
+
+        <div id="phasesContainer">
+            @foreach (var phase in Model.Phases)
+            {
+                <div class="card mb-3 pm-phase-card" data-phase-id="@phase.PhaseId">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6 class="mb-1">@phase.Name</h6>
+                                <p class="mb-1">@phase.Description</p>
+                                <div class="mb-2">
+                                    <span class="badge @Model.GetStatusBadgeClass(phase.Status) me-2">@phase.Status</span>
+                                    <span class="badge pm-badge-secondary me-2">
+                                        <i class="fa-solid fa-tasks me-1"></i>@Model.GetTasksForPhase(phase.PhaseId).Count
+                                        tasks
+                                    </span>
+                                    <small>
+                                        <i class="fa-solid fa-calendar me-1"></i>
+                                        @phase.StartDate.ToString("dd MMM yyyy") - @phase.EndDate.ToString("dd MMM yyyy")
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="mb-2">
+                                    <a href="@Url.Action("PhaseDetail", "ProjectManager", new { projectId = Model.Project.ProjectId, phaseId = phase.PhaseId })" 
+                                       class="btn btn-sm pm-btn-outline-info me-1">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </a>
+                                    <button class="btn btn-sm pm-btn-outline-danger delete-phase-btn"
+                                        data-phase-id="@phase.PhaseId">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="progress mb-1 pm-progress">
+                                    <div class="progress-bar pm-progress-bar"
+                                        style="width: @(Model.GetPhaseProgress(phase.PhaseId))%"></div>
+                                </div>
+                                <small>@(Model.GetPhaseProgress(phase.PhaseId))% Complete</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Tasks Section -->
+    <div class="mb-4 pm-tasks-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">
+                <i class="fa-solid fa-tasks me-2"></i>Project Tasks
+                <span class="badge pm-badge-secondary">@Model.Tasks.Count</span>
+            </h6>
+            <button class="btn btn-sm pm-btn-primary" data-bs-toggle="modal" data-bs-target="#taskFormModal"
+                id="addTaskBtn">
+                <i class="fa-solid fa-plus me-1"></i>Add Task
+            </button>
+        </div>
+
+        <div id="tasksContainer">
+            @foreach (var task in Model.Tasks)
+            {
+                <div class="card mb-3 pm-task-card @(Model.IsTaskOverdue(task) ? "overdue" : "")"
+                    data-task-id="@task.TaskId" data-phase-id="@task.PhaseId">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6 class="mb-1">@task.Name</h6>
+                                <p class="mb-1">@task.Description</p>
+                                <div class="mb-2">
+                                    <span class="badge @Model.GetTaskStatusBadgeClass(task.Status) me-2">@task.Status</span>
+                                    <span
+                                        class="badge @Model.GetPriorityBadgeClass(task.Priority) me-2">@task.Priority</span>
+                                    <span class="badge pm-badge-secondary me-2">
+                                        <i class="fa-solid fa-layer-group me-1"></i>@(Model.Phases.FirstOrDefault(p =>
+                                        p.PhaseId == task.PhaseId)?.Name ?? "Unknown Phase")
+                                </span>
+                                <small>
+                                    <i class="fa-solid fa-calendar me-1"></i>
+                                    @task.StartDate.ToString("dd MMM yyyy") - @task.DueDate.ToString("dd MMM yyyy")
+                                </small>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small>Assigned To</small>
+                                    <div class="fw-bold">@Model.GetContractorName(task.AssignedTo)</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <small>Estimated Hours</small>
+                                    <div class="fw-bold">@task.EstimatedHours hours</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="mb-2">
+                                <a href="@Url.Action("TaskDetail", "ProjectManager", new { projectId = Model.Project.ProjectId, taskId = task.TaskId })" 
+                                   class="btn btn-sm pm-btn-outline-info me-1">
+                                    <i class="fa-solid fa-eye"></i>
+                                </a>
+                                <button class="btn btn-sm pm-btn-outline-danger delete-task-btn"
+                                    data-task-id="@task.TaskId">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                            <div class="progress mb-1 pm-progress">
+                                <div class="progress-bar pm-progress-bar" style="width: @(task.Progress)%"></div>
+                            </div>
+                            <small>@(task.Progress)% Complete</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                        }
+        </div>
+    </div>
+
+    <!-- Floating Action Button for AI Blueprint Processing -->
+    <button class="blueprint-fab-btn" onclick="openBlueprintProcessing()" title="Bob a Builder - AI Blueprint Checker">
+        <i class="fas fa-hammer"></i>
+        <span class="fab-label">Bob a Builder</span>
+    </button>
+
+</div>
+
+<!-- Include Modals -->
+@await Html.PartialAsync("_PhaseFormModal")
+@await Html.PartialAsync("_TaskFormModal")
+@await Html.PartialAsync("_ProgressReportReviewModal")
+@await Html.PartialAsync("_TaskCompletionReviewModal")
+
+<!-- Document Viewer Modal -->
+<div class="modal fade" id="documentViewerModal" tabindex="-1" aria-labelledby="documentViewerModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="documentViewerModalLabel">
+                    <i class="fa-solid fa-file me-2"></i>Document Viewer
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="documentViewerContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading document...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="downloadDocumentBtn">
+                    <i class="fa-solid fa-download me-1"></i>Download
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include CSS -->
+<link rel="stylesheet" href="~/css/pm-project-detail.css" />
+<link rel="stylesheet" href="~/css/modal-design-system.css" />
+
+<!-- Include JavaScript -->
+<script src="~/js/pm-project-detail.js"></script>
+<script src="~/js/pm-phase-management.js"></script>
+<script src="~/js/pm-task-management.js"></script>
+<script src="~/js/pm-approval-actions.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Approvals: Accept/Reject Task Completion Reports
+        document.addEventListener('click', async function (e) {
+            const approveBtn = e.target.closest('.approve-completion-btn');
+            const rejectBtn = e.target.closest('.reject-completion-btn');
+            if (!approveBtn && !rejectBtn) return;
+
+            const isApprove = !!approveBtn;
+            const button = isApprove ? approveBtn : rejectBtn;
+            const taskId = button.getAttribute('data-task-id');
+            if (!taskId) return;
+
+            button.disabled = true;
+            const originalHtml = button.innerHTML;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>' + (isApprove ? ' Approving...' : ' Rejecting...');
+
+            try {
+                const url = isApprove
+                    ? `/ProjectManager/ApproveTaskCompletion?taskId=${encodeURIComponent(taskId)}`
+                    : `/ProjectManager/RejectTaskCompletion?taskId=${encodeURIComponent(taskId)}`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': (document.querySelector('input[name="__RequestVerificationToken"]') || {}).value || ''
+                    }
+                });
+                const data = await res.json().catch(() => ({ success: false }));
+                if (res.ok && data && data.success !== false) {
+                    const item = button.closest('.completion-item');
+                    if (item) item.remove();
+                } else {
+                    alert(`Failed to ${isApprove ? 'approve' : 'reject'} completion`);
+                    button.disabled = false;
+                    button.innerHTML = originalHtml;
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Network error. Please try again.');
+                button.disabled = false;
+                button.innerHTML = originalHtml;
+            }
+        });
+    });
+</script>

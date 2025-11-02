@@ -1,0 +1,374 @@
+@model ICCMS_Web.Models.ContractorDashboardViewModel
+@{
+    ViewData["Title"] = "Contractor Dashboard";
+    Layout = "_Layout";
+}
+
+@await Html.PartialAsync("_TaskDetailsModal")
+@await Html.PartialAsync("_ProgressReportModal")
+@await Html.PartialAsync("_CompletionRequestModal")
+
+<div class="contractor-dashboard-container">
+    <!-- Header Section -->
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">
+            <i class="fa-solid fa-hard-hat me-2" style="color: #F7EC59;"></i>@User.Identity.Name Dashboard
+        </h1>
+        <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Manage your assigned tasks and track progress
+        </p>
+    </div>
+
+    <!-- Stats Summary Cards -->
+    <div class="stats-container">
+        <div class="row g-2 mb-3" style="justify-content: center; text-align: center;">
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.TotalTasks</h4>
+                        <p class="stat-label">Total Tasks</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.PendingTasks</h4>
+                        <p class="stat-label">Pending</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.InProgressTasks</h4>
+                        <p class="stat-label">In Progress</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.CompletedTasks</h4>
+                        <p class="stat-label">Completed</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.OverdueTasks</h4>
+                        <p class="stat-label">Overdue</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Search and Filter Controls -->
+    <div class="search-section">
+        <div class="search-input-group">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search projects by name..." value="">
+            <button type="button" id="searchBtn" class="search-btn">
+                <i class="fa-solid fa-search"></i>
+            </button>
+            <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Enhanced Filters Section -->
+    <div class="filter-section">
+        <div class="d-flex justify-content-center mb-3">
+            <button type="button" class="filter-toggle-btn" onclick="toggleFilters()">
+                <i class="fa-solid fa-sliders-h me-2"></i>
+                <span id="filterToggleText">Show Filters</span>
+                <i class="fa-solid fa-chevron-down ms-2" id="filterToggleIcon"></i>
+            </button>
+        </div>
+    </div>
+    <div class="filters-panel" id="filtersPanel" style="display: none;">
+        <div class="row g-3">
+            <!-- Task Count Filter -->
+            <div class="col-md-6">
+                <div class="filter-group">
+                    <div class="filter-group-header">
+                        <h6 class="mb-0">Number of Tasks</h6>
+                    </div>
+                    <div class="status-filters">
+                        <a href="#" class="status-filter-btn active" data-filter-type="tasks" data-filter-value="all">
+                            <i class="fa-solid fa-list me-2"></i>
+                            All
+                        </a>
+                        <a href="#" class="status-filter-btn" data-filter-type="tasks" data-filter-value="0">
+                            <i class="fa-solid fa-inbox me-2"></i>
+                            No Tasks
+                        </a>
+                        <a href="#" class="status-filter-btn" data-filter-type="tasks" data-filter-value="1-5">
+                            <i class="fa-solid fa-tasks me-2"></i>
+                            1-5 Tasks
+                        </a>
+                        <a href="#" class="status-filter-btn" data-filter-type="tasks" data-filter-value="6-10">
+                            <i class="fa-solid fa-list-check me-2"></i>
+                            6-10 Tasks
+                        </a>
+                        <a href="#" class="status-filter-btn" data-filter-type="tasks" data-filter-value="11+">
+                            <i class="fa-solid fa-layer-group me-2"></i>
+                            11+ Tasks
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <!-- Overdue Tasks Filter -->
+            <div class="col-md-6">
+                <div class="filter-group">
+                    <div class="filter-group-header">
+                        <h6 class="mb-0">Overdue Tasks</h6>
+                    </div>
+                    <div class="status-filters">
+                        <a href="#" class="status-filter-btn active" data-filter-type="overdue" data-filter-value="all">
+                            <i class="fa-solid fa-list me-2"></i>
+                            All
+                        </a>
+                        <a href="#" class="status-filter-btn" data-filter-type="overdue" data-filter-value="0">
+                            <i class="fa-solid fa-check-circle me-2"></i>
+                            No Overdue
+                        </a>
+                        <a href="#" class="status-filter-btn" data-filter-type="overdue" data-filter-value="1-5">
+                            <i class="fa-solid fa-exclamation-triangle me-2"></i>
+                            1-5 Overdue
+                        </a>
+                        <a href="#" class="status-filter-btn" data-filter-type="overdue" data-filter-value="6+">
+                            <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                            6+ Overdue
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Projects Section -->
+    <div class="section-header">
+        <h3 class="section-title">
+            <i class="fa-solid fa-folder-open me-2"></i>My Projects
+            <span style="color: #F7EC59;">@(Model?.Projects?.Count ?? 0)</span>
+        </h3>
+    </div>
+
+    @if (Model?.Projects?.Any() == true)
+    {
+        <div class="projects-grid" id="projectsGrid">
+            @foreach (var project in Model.Projects)
+            {
+                @await Html.PartialAsync("~/Views/Shared/_ContractorProjectCard.cshtml", project)
+            }
+        </div>
+    }
+    else
+    {
+        <div class="no-projects-message">
+            <div class="text-center py-5">
+                <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No projects assigned</h4>
+                <p class="text-muted">
+                    You don't have any projects assigned yet. Contact your project manager for project assignments.
+                </p>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Include dashboard CSS directly -->
+<link rel="stylesheet" href="~/css/contractor-dashboard.css" />
+<link rel="stylesheet" href="~/css/contractor-task-cards.css" />
+<link rel="stylesheet" href="~/css/contractor-collapsible-tasks.css" />
+<link rel="stylesheet" href="~/css/contractor-project-cards.css" />
+<link rel="stylesheet" href="~/css/project-cards.css" />
+<link rel="stylesheet" href="~/css/pm-dashboard.css" />
+
+<style>
+    /* Font Awesome fallback - show text if icons don't load */
+    .stat-icon i.fa-solid.fa-list-check::before {
+        content: "📋" !important;
+    }
+
+    .stat-icon i.fa-solid.fa-clock::before {
+        content: "⏰" !important;
+    }
+
+    .stat-icon i.fa-solid.fa-play::before {
+        content: "▶️" !important;
+    }
+
+    .stat-icon i.fa-solid.fa-circle-check::before {
+        content: "✅" !important;
+    }
+
+    .stat-icon i.fa-solid.fa-triangle-exclamation::before {
+        content: "⚠️" !important;
+    }
+
+    /* Ensure stat icons are visible */
+    .stat-icon {
+        font-size: 1.5rem !important;
+        min-width: 60px !important;
+        min-height: 60px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    /* Debug: Add border to stat icons to see if they're there */
+    .stat-icon {
+        border: 2px solid rgba(255, 255, 255, 0.3) !important;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeDashboard();
+        });
+
+        function initializeDashboard() {
+            // Check if Font Awesome is loaded
+            checkFontAwesome();
+            setupSearch();
+            setupFilters();
+        }
+
+        function checkFontAwesome() {
+            // Create a test element to check if Font Awesome is working
+            const testIcon = document.createElement('i');
+            testIcon.className = 'fa-solid fa-check';
+            testIcon.style.display = 'none';
+            document.body.appendChild(testIcon);
+
+            // Check if the icon is rendered (Font Awesome converts classes to pseudo-elements)
+            const computedStyle = window.getComputedStyle(testIcon, '::before');
+            const content = computedStyle.content;
+
+            if (content && content !== 'none' && content !== '""') {
+                console.log('✅ Font Awesome is loaded and working');
+            } else {
+                console.warn('❌ Font Awesome is not loading properly. Icons may not appear.');
+                console.log('Computed style content:', content);
+            }
+
+            // Clean up test element
+            document.body.removeChild(testIcon);
+        }
+
+        function setupSearch() {
+            const searchInput = document.getElementById("searchInput");
+            const searchBtn = document.getElementById("searchBtn");
+            const clearBtn = document.getElementById("clearSearchBtn");
+
+            searchBtn?.addEventListener("click", () => {
+                applyFilters();
+            });
+            clearBtn?.addEventListener("click", () => {
+                searchInput.value = "";
+                applyFilters();
+            });
+            searchInput?.addEventListener("keyup", (event) => {
+                if (event.key === "Enter") {
+                    applyFilters();
+                } else {
+                    // Real-time search as user types
+                    applyFilters();
+                }
+            });
+        }
+
+        function setupFilters() {
+            const filterButtons = document.querySelectorAll('.status-filter-btn');
+
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const filterType = this.dataset.filterType;
+
+                    // Remove active from buttons of the same filter type only
+                    document.querySelectorAll(`.status-filter-btn[data-filter-type="${filterType}"]`).forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    applyFilters();
+                });
+            });
+        }
+
+        function applyFilters() {
+            const searchQuery = document.getElementById("searchInput").value.toLowerCase();
+
+            // Get active filter values
+            const activeTasksBtn = document.querySelector('.status-filter-btn[data-filter-type="tasks"].active');
+            const activeOverdueBtn = document.querySelector('.status-filter-btn[data-filter-type="overdue"].active');
+
+            const tasksFilter = activeTasksBtn ? activeTasksBtn.dataset.filterValue : 'all';
+            const overdueFilter = activeOverdueBtn ? activeOverdueBtn.dataset.filterValue : 'all';
+
+            document.querySelectorAll(".projects-grid .project-card-link").forEach(cardLink => {
+                const card = cardLink.querySelector('.project-card');
+                if (!card) return;
+
+                const cardText = card.innerText.toLowerCase();
+                const totalTasks = parseInt(card.dataset.totalTasks) || 0;
+                const overdueTasks = parseInt(card.dataset.overdueTasks) || 0;
+
+                // Check search match
+                const searchMatch = !searchQuery || cardText.includes(searchQuery);
+
+                // Check tasks filter match
+                let tasksMatch = true;
+                if (tasksFilter !== 'all') {
+                    if (tasksFilter === '0') {
+                        tasksMatch = totalTasks === 0;
+                    } else if (tasksFilter === '1-5') {
+                        tasksMatch = totalTasks >= 1 && totalTasks <= 5;
+                    } else if (tasksFilter === '6-10') {
+                        tasksMatch = totalTasks >= 6 && totalTasks <= 10;
+                    } else if (tasksFilter === '11+') {
+                        tasksMatch = totalTasks >= 11;
+                    }
+                }
+
+                // Check overdue filter match
+                let overdueMatch = true;
+                if (overdueFilter !== 'all') {
+                    if (overdueFilter === '0') {
+                        overdueMatch = overdueTasks === 0;
+                    } else if (overdueFilter === '1-5') {
+                        overdueMatch = overdueTasks >= 1 && overdueTasks <= 5;
+                    } else if (overdueFilter === '6+') {
+                        overdueMatch = overdueTasks >= 6;
+                    }
+                }
+
+                // Show/hide card based on all criteria
+                cardLink.style.display = searchMatch && tasksMatch && overdueMatch ? "" : "none";
+            });
+        }
+
+        function toggleFilters() {
+            const filtersPanel = document.getElementById('filtersPanel');
+            const filterToggleText = document.getElementById('filterToggleText');
+            const filterToggleIcon = document.getElementById('filterToggleIcon');
+
+            if (filtersPanel.style.display === 'none' || filtersPanel.style.display === '') {
+                filtersPanel.style.display = 'block';
+                filterToggleText.textContent = 'Hide Filters';
+                filterToggleIcon.classList.remove('fa-chevron-down');
+                filterToggleIcon.classList.add('fa-chevron-up');
+            } else {
+                filtersPanel.style.display = 'none';
+                filterToggleText.textContent = 'Show Filters';
+                filterToggleIcon.classList.remove('fa-chevron-up');
+                filterToggleIcon.classList.add('fa-chevron-down');
+            }
+        }
+    </script>
+    <!-- Removed conflicting JavaScript files that were interfering with project filtering -->
+}

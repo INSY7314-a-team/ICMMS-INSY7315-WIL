@@ -47,7 +47,7 @@ namespace ICCMS_API.Models
         [FirestoreProperty("actualHours")]
         public double ActualHours { get; set; }
 
-        [FirestoreProperty("isActive")]
-        public bool IsActive { get; set; } = true;
+        [FirestoreProperty("budget")]
+        public double Budget { get; set; }
     }
 }

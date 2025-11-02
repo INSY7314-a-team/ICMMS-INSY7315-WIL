@@ -1,0 +1,63 @@
+@model ICCMS_Web.Models.ContractorProjectCardDto
+
+<a href="@Url.Action("ProjectDetail", "Contractor", new { projectId = Model.ProjectId })"
+    class="project-card-link text-decoration-none text-dark">
+    <div id="project-@Model.ProjectId" class="project-card card h-100 construction-border-thin"
+        data-project-id="@Model.ProjectId" data-project-name="@Model.ProjectName" data-total-tasks="@Model.TotalTasks"
+        data-overdue-tasks="@Model.OverdueTasks">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h6 class="card-title mb-1 fw-bold">
+                        @Model.ProjectName
+                    </h6>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body">
+
+            <!-- Task Statistics -->
+            <div class="task-stats-section mb-3">
+                <h6 class="task-stats-title mb-2">
+                    <i class="fa-solid fa-tasks me-2"></i>Task Overview
+                </h6>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="task-stat-item">
+                            <div class="task-stat-number">@Model.TotalTasks</div>
+                            <div class="task-stat-label">Total Tasks</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="task-stat-item">
+                            <div class="task-stat-number">@Model.InProgressTasks</div>
+                            <div class="task-stat-label">Active</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="task-stat-item">
+                            <div class="task-stat-number">@Model.CompletedTasks</div>
+                            <div class="task-stat-label">Completed</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="task-stat-item">
+                            <div class="task-stat-number">@Model.OverdueTasks</div>
+                            <div class="task-stat-label">Overdue</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (Model.OverdueTasks > 0)
+            {
+                <div class="overdue-warning mb-2">
+                    <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                    <small>@Model.OverdueTasks overdue task(s)</small>
+                </div>
+            }
+        </div>
+        <!-- Entire card is clickable via wrapping anchor; no footer button -->
+    </div>
+</a>

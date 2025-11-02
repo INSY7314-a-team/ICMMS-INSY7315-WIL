@@ -1,0 +1,23 @@
+@model List<ICCMS_Web.Models.ContractorProjectCardDto>
+
+<div class="projects-list-container">
+    @if (Model != null && Model.Any())
+    {
+        @foreach (var project in Model)
+        {
+            @await Html.PartialAsync("_ProjectCard", project)
+        }
+    }
+    else
+    {
+        <div class="no-projects-message">
+            <div class="text-center py-5">
+                <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No projects assigned</h4>
+                <p class="text-muted">
+                    You don't have any projects assigned yet. Contact your project manager for project assignments.
+                </p>
+            </div>
+        </div>
+    }
+</div>

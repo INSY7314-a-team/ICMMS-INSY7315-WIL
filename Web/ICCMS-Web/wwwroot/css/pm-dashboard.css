@@ -1,0 +1,1227 @@
+/* Project Manager Dashboard Styles - Following Design System */
+
+:root {
+  --primary-bg: #1a1b25; /* Dark navy - main background */
+  --secondary-bg: #2a2b35; /* Lighter dark - card backgrounds */
+  --accent-yellow: #f7ec59; /* Construction yellow - primary CTA */
+  --accent-red: #ff5964; /* Alert/overdue color */
+  --accent-green: #198754; /* Success/completed color */
+  --accent-cyan: #0dcaf0; /* Info/in-progress color */
+  --text-primary: #ffffff; /* Primary text - always white */
+  --text-secondary: #ffffff; /* Secondary text - white with different font weight */
+  --text-muted: #ffffff; /* Muted text - white with opacity */
+  --text-dark: #1a1b25; /* Text on light backgrounds */
+  --border-primary: rgba(247, 236, 89, 0.2); /* Default borders */
+  --border-active: #f7ec59; /* Active/focus borders */
+}
+
+.pm-dashboard-container {
+    background-color: var(--primary-bg);
+    min-height: 100vh;
+    color: var(--text-primary);
+}
+
+/* ===========================================
+   DASHBOARD HEADER
+   =========================================== */
+
+.dashboard-header {
+    color: var(--text-primary);
+    padding: 30px 40px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.dashboard-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text-primary);
+}
+
+.dashboard-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+/* ===========================================
+   STATS CONTAINER
+   =========================================== */
+
+.stats-container {
+    margin-bottom: 35px;
+    clear: both;
+}
+
+.stat-card {
+    background: var(--secondary-bg);
+    color: var(--text-primary);
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(247, 236, 89, 0.2);
+}
+
+.stat-card:hover {
+    background: rgba(247, 236, 89, 0.1);
+    border-color: #F7EC59;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(247, 236, 89, 0.2);
+}
+
+/* Stat card icons without circular backgrounds */
+.pm-dashboard-container .stat-card .stat-icon,
+.pm-dashboard-container .stat-card.compact .stat-icon {
+    width: auto !important;
+    height: auto !important;
+    border-radius: 0 !important;
+    background: none !important;
+    background-color: transparent !important;
+    color: var(--accent-yellow) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+    border: none !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+}
+
+.pm-dashboard-container .stat-card.compact .stat-icon {
+    font-size: 1.3rem;
+    margin-right: 12px;
+    margin-bottom: 0;
+}
+
+.stat-card .stat-icon.in-progress {
+    color: var(--accent-cyan) !important;
+}
+
+.stat-card .stat-icon.completed {
+    color: #198754 !important;
+}
+
+.stat-card .stat-icon.overdue {
+    color: #FF5964 !important;
+}
+
+.stat-card .stat-content {
+    color: var(--text-primary);
+}
+
+.stat-card .stat-number {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 3px;
+    color: #F7EC59;
+}
+
+.stat-card .stat-label {
+    font-size: 0.8rem;
+    opacity: 0.8;
+    margin: 0;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-card.compact {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+}
+
+.stat-card.compact .stat-number {
+    font-size: 1.6rem;
+    margin-bottom: 2px;
+    color: var(--accent-yellow);
+}
+
+/* ===========================================
+   CONSTRUCTION THEME - DIAGONAL STRIPES
+   =========================================== */
+
+.construction-border {
+    border: 3px solid;
+    border-image: repeating-linear-gradient(
+        45deg,
+        var(--primary-bg),
+        var(--primary-bg) 8px,
+        var(--accent-yellow) 8px,
+        var(--accent-yellow) 16px
+    ) 1;
+}
+
+.construction-border-thin {
+    border: 2px solid;
+    border-image: repeating-linear-gradient(
+        45deg,
+        var(--primary-bg),
+        var(--primary-bg) 6px,
+        var(--accent-yellow) 6px,
+        var(--accent-yellow) 12px
+    ) 1;
+}
+
+/* ===========================================
+   ENHANCED FILTERS STYLING
+   =========================================== */
+
+.filter-toggle-btn {
+    background: var(--accent-yellow);
+    border: none;
+    color: var(--text-dark);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(247, 236, 89, 0.3);
+    margin-bottom: 15px;
+}
+
+.filter-toggle-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(247, 236, 89, 0.4);
+    color: var(--text-dark);
+}
+
+.filters-panel {
+    background: var(--secondary-bg) !important;
+    border-radius: 15px;
+    padding: 25px;
+    margin-top: 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    animation: slideDown 0.3s ease-out;
+    border: 1px solid var(--border-primary);
+    clear: both;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.filters-container {
+    color: var(--text-primary);
+}
+
+.filter-group {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(247, 236, 89, 0.2);
+}
+
+.filter-group:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.filter-group-header {
+    margin-bottom: 15px;
+    color: var(--accent-yellow);
+}
+
+.filter-group-header h6 {
+    font-weight: 600;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+/* Status Filter Buttons */
+.status-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.status-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    text-decoration: none;
+    border-radius: 20px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.status-filter-btn:hover {
+    background: rgba(247, 236, 89, 0.2);
+    border-color: var(--accent-yellow);
+    color: var(--accent-yellow);
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+
+.status-filter-btn.active {
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    border-color: var(--accent-yellow);
+    font-weight: 600;
+}
+
+.status-filter-btn i {
+    font-size: 0.9rem;
+}
+
+.status-count {
+    background: #6BF178;
+    color: #1A1B25;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+/* Advanced Filters Grid */
+.advanced-filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.filter-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-label {
+    color: var(--accent-yellow);
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.filter-input,
+.filter-select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-primary);
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+    outline: none;
+    border-color: var(--accent-yellow);
+    background: rgba(247, 236, 89, 0.1);
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.2);
+}
+
+.filter-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.filter-select option {
+    background: var(--primary-bg);
+    color: var(--text-primary);
+}
+
+/* Budget Range */
+.budget-range {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.budget-range .filter-input {
+    flex: 1;
+}
+
+.range-separator {
+    color: var(--accent-yellow);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* Filter Actions */
+.filter-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(247, 236, 89, 0.2);
+}
+
+.filter-action-btn {
+    padding: 12px 20px;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+}
+
+.filter-action-btn.primary {
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    box-shadow: 0 2px 8px rgba(247, 236, 89, 0.2);
+}
+
+.filter-action-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(247, 236, 89, 0.4);
+}
+
+.filter-action-btn.secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.filter-action-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: var(--text-primary);
+    transform: translateY(-2px);
+}
+
+.filter-action-btn.tertiary {
+    background: rgba(247, 236, 89, 0.1);
+    color: var(--accent-yellow);
+    border: 2px solid var(--accent-yellow);
+}
+
+.filter-action-btn.tertiary:hover {
+    background: rgba(247, 236, 89, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .advanced-filters-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .status-filters {
+        justify-content: center;
+    }
+    
+    .filter-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .filter-action-btn {
+        width: 100%;
+        max-width: 200px;
+        justify-content: center;
+    }
+}
+
+/* Dashboard header styles are already defined above */
+
+.dashboard-controls {
+    background: var(--secondary-bg);
+    padding: 25px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    border: 1px solid var(--border-primary);
+}
+
+.search-section {
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: center;
+    padding: 0 20px;
+}
+
+.ProjectsContainer {
+    background: var(--secondary-bg);
+    padding: 25px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    border: 2px solid var(--accent-yellow);
+}
+
+.search-input-group {
+    position: relative;
+    max-width: 500px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.search-input {
+    width: 100%;
+    padding: 15px 50px 15px 20px;
+    border: 2px solid #e9ecef;
+    border-radius: 25px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: var(--secondary-bg);
+    color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.search-input:focus {
+    border-color: var(--accent-yellow);
+    box-shadow: 0 0 0 0.2rem rgba(247, 236, 89, 0.25);
+    outline: none;
+    background: var(--primary-bg);
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.search-btn, .clear-search-btn {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--accent-yellow);
+    border: none;
+    color: var(--text-dark);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.clear-search-btn {
+    right: 50px;
+    background: var(--accent-red);
+    color: var(--text-primary);
+}
+
+.search-btn:hover, .clear-search-btn:hover {
+    transform: translateY(-50%) scale(1.1);
+}
+
+.create-project-section {
+    margin: 25px 0;
+    clear: both;
+}
+
+.create-project-btn {
+    background: var(--accent-yellow);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text-dark);
+    box-shadow: 0 2px 8px rgba(247, 236, 89, 0.2);
+    transition: all 0.3s ease;
+}
+
+.create-project-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(247, 236, 89, 0.4);
+    color: var(--text-dark);
+}
+
+.filter-section {
+    margin-top: 20px;
+    margin-bottom: 25px;
+    clear: both;
+    text-align: center;
+}
+
+.filters-panel {
+    background: #FFFFFF;
+    padding: 25px;
+    border-radius: 15px;
+    margin-top: 20px;
+    border: 1px solid #e9ecef;
+}
+
+.quick-filters h6, .advanced-filters h6 {
+    color: #1A1B25;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.quick-filters .btn {
+    margin: 2px;
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.quick-filters .btn:hover {
+    transform: translateY(-1px);
+}
+
+.section-header {
+    color: var(--text-primary);
+    padding: 20px 25px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid var(--accent-yellow);
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.badge {
+    color: #F7EC59 !important;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+/* When a single project card is expanded, let it span full grid width to avoid pushing siblings */
+.project-card.expanded {
+    grid-column: 1 / -1;
+}
+
+.project-card {
+    background: var(--secondary-bg);
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-primary);
+    overflow: hidden;
+}
+
+.project-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-color: var(--border-active);
+}
+
+.project-card .card-header {
+    background: linear-gradient(135deg, var(--secondary-bg) 0%, var(--primary-bg) 100%);
+    border-bottom: 1px solid var(--border-primary);
+    padding: 20px;
+}
+
+.project-card .card-title {
+    color: var(--text-primary);
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.project-card .card-subtitle {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.project-card .card-body {
+    background: #0D1821;
+    color: var(--text-primary);
+}
+
+.project-card .card-footer {
+    background: var(--primary-bg);
+    border-top: 1px solid var(--border-primary);
+    padding: 15px 20px;
+}
+
+.collapsible-header {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+.collapsible-header:hover {
+    background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+    transform: translateY(-1px);
+}
+
+.toggle-icon {
+    transition: transform 0.3s ease;
+}
+
+.collapsible-header[data-expanded="true"] .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.no-projects-message {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--secondary-bg) !important;
+    border-radius: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    border: 1px solid var(--border-primary);
+}
+
+.pagination-container {
+    background: var(--secondary-bg);
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    margin-top: 20px;
+    border: 1px solid var(--border-primary);
+}
+
+.pagination {
+    margin-bottom: 15px;
+}
+
+.pagination .page-link {
+    border: none;
+    color: var(--text-primary);
+    padding: 10px 15px;
+    margin: 0 2px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: var(--primary-bg);
+}
+
+.pagination .page-link:hover {
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(247, 236, 89, 0.3);
+}
+
+.pagination .page-item.active .page-link {
+    background: var(--accent-yellow);
+    border-color: var(--accent-yellow);
+    color: var(--text-dark);
+}
+
+.pagination-info {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+/* ==========================
+   Project Creation Wizard
+   Theme alignment with dashboard
+   ========================== */
+#projectCreationWizardModal .modal-content {
+    border: 2px solid var(--accent-yellow);
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+#planEditorModal .modal-content {
+    border: 2px solid var(--accent-yellow);
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+
+#projectCreationWizardModal .modal-header {
+    background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(247, 236, 89, 0.4);
+}
+#planEditorModal .modal-header {
+    background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(247, 236, 89, 0.4);
+}
+
+#projectCreationWizardModal .modal-title i {
+    color: var(--accent-yellow);
+}
+#planEditorModal .modal-title i {
+    color: var(--accent-yellow);
+}
+
+#projectCreationWizardModal .modal-body {
+    background: var(--primary-bg);
+    color: var(--text-primary);
+}
+#planEditorModal .modal-body {
+    background: var(--primary-bg);
+    color: var(--text-primary);
+}
+
+#projectCreationWizardModal .wizard-progress .progress {
+    background: rgba(247, 236, 89, 0.15);
+    height: 10px;
+    border-radius: 8px;
+}
+
+#projectCreationWizardModal .wizard-progress .progress-bar {
+    background: linear-gradient(135deg, var(--accent-yellow) 0%, #E6D547 100%);
+}
+
+#projectCreationWizardModal .wizard-step h6,
+#projectCreationWizardModal .wizard-step .form-label {
+    color: var(--accent-yellow);
+}
+#planEditorModal h6,
+#planEditorModal .form-label {
+    color: var(--accent-yellow);
+}
+
+#projectCreationWizardModal .form-control,
+#projectCreationWizardModal .form-select,
+#projectCreationWizardModal textarea {
+    background: var(--primary-bg);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    color: var(--text-primary);
+    border-radius: 10px;
+}
+#planEditorModal .form-control,
+#planEditorModal .form-select,
+#planEditorModal textarea {
+    background: var(--primary-bg);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    color: var(--text-primary);
+    border-radius: 10px;
+}
+
+#projectCreationWizardModal .form-label {
+    color: #F7EC59 !important;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+#projectCreationWizardModal .form-control,
+#projectCreationWizardModal .form-select,
+#projectCreationWizardModal textarea {
+    background: var(--secondary-bg) !important;
+    border: 2px solid rgba(255, 255, 255, 0.15) !important;
+    color: var(--text-primary) !important;
+    border-radius: 10px !important;
+    padding: 12px 16px !important;
+}
+
+#projectCreationWizardModal .form-control:focus,
+#projectCreationWizardModal .form-select:focus,
+#projectCreationWizardModal textarea:focus {
+    outline: none !important;
+    border-color: #F7EC59 !important;
+    background: var(--primary-bg) !important;
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.15) !important;
+}
+
+#projectCreationWizardModal .card {
+    background: var(--secondary-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(247, 236, 89, 0.2) !important;
+    border-radius: 12px !important;
+}
+
+#projectCreationWizardModal .card-title {
+    color: #F7EC59 !important;
+    font-weight: 600;
+}
+
+#projectCreationWizardModal .input-group-text {
+    background: #F7EC59 !important;
+    color: #1A1B25 !important;
+    border: 2px solid rgba(255, 255, 255, 0.15) !important;
+    border-right: none !important;
+    font-weight: 600 !important;
+    padding: 12px 16px !important;
+}
+
+#projectCreationWizardModal .input-group .form-control {
+    border-left: none !important;
+}
+
+#projectCreationWizardModal .input-group .form-control:focus {
+    border-left: none !important;
+}
+
+#projectCreationWizardModal .card {
+    background: var(--secondary-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(247, 236, 89, 0.2) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+#projectCreationWizardModal .card-body {
+    padding: 20px !important;
+}
+
+#projectCreationWizardModal .btn-outline-danger {
+    background: transparent !important;
+    color: #DC3545 !important;
+    border: 2px solid #DC3545 !important;
+    border-radius: 8px !important;
+    padding: 6px 12px !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+}
+
+#projectCreationWizardModal .btn-outline-danger:hover {
+    background: #DC3545 !important;
+    color: #FFFFFF !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3) !important;
+}
+
+#projectCreationWizardModal .form-select {
+    background: var(--secondary-bg) !important;
+    border: 2px solid rgba(255, 255, 255, 0.15) !important;
+    color: var(--text-primary) !important;
+    border-radius: 10px !important;
+    padding: 12px 16px !important;
+}
+
+#projectCreationWizardModal .form-select:focus {
+    outline: none !important;
+    border-color: #F7EC59 !important;
+    background: var(--primary-bg) !important;
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.15) !important;
+}
+
+#projectCreationWizardModal .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Professional spacing and layout improvements */
+#projectCreationWizardModal .row {
+    margin-bottom: 15px;
+}
+
+#projectCreationWizardModal .row:last-child {
+    margin-bottom: 0;
+}
+
+#projectCreationWizardModal .form-label {
+    margin-bottom: 8px !important;
+    font-size: 0.9rem !important;
+}
+
+#projectCreationWizardModal .card.mb-2 {
+    margin-bottom: 20px !important;
+    transition: all 0.3s ease !important;
+}
+
+#projectCreationWizardModal .card.mb-2:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Enhanced input group styling */
+#projectCreationWizardModal .input-group {
+    border-radius: 10px !important;
+    overflow: hidden !important;
+}
+
+#projectCreationWizardModal .input-group .form-control {
+    border-radius: 0 10px 10px 0 !important;
+}
+
+#projectCreationWizardModal .input-group-text {
+    border-radius: 10px 0 0 10px !important;
+}
+
+/* Professional button styling */
+#projectCreationWizardModal .btn {
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+}
+
+#projectCreationWizardModal .btn-sm {
+    padding: 6px 12px !important;
+    font-size: 0.85rem !important;
+}
+
+/* Save as Draft button styling */
+#projectCreationWizardModal #saveAsDraftBtn {
+    background: #6C757D !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 10px 20px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+}
+
+#projectCreationWizardModal #saveAsDraftBtn:hover {
+    background: #5A6268 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3) !important;
+}
+
+/* Project Edit Wizard Modal Styling */
+#projectEditWizardModal .modal-content {
+    border: 2px solid var(--accent-yellow);
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+#projectEditWizardModal .modal-header {
+    background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(247, 236, 89, 0.4);
+}
+#projectEditWizardModal .modal-title i {
+    color: var(--accent-yellow);
+}
+#projectEditWizardModal .modal-body {
+    background: var(--primary-bg);
+    color: var(--text-primary);
+}
+#projectEditWizardModal .wizard-progress .progress {
+    background: rgba(247, 236, 89, 0.15);
+    height: 10px;
+    border-radius: 8px;
+}
+#projectEditWizardModal .wizard-progress .progress-bar {
+    background: linear-gradient(135deg, var(--accent-yellow) 0%, #E6D547 100%);
+}
+#projectEditWizardModal .wizard-step h6,
+#projectEditWizardModal .wizard-step .form-label {
+    color: var(--accent-yellow);
+}
+#projectEditWizardModal .form-label {
+    color: #F7EC59 !important;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+#projectEditWizardModal .form-control,
+#projectEditWizardModal .form-select,
+#projectEditWizardModal textarea {
+    background: var(--secondary-bg) !important;
+    border: 2px solid rgba(255, 255, 255, 0.15) !important;
+    color: var(--text-primary) !important;
+    border-radius: 10px !important;
+    padding: 12px 16px !important;
+}
+#projectEditWizardModal .form-control:focus,
+#projectEditWizardModal .form-select:focus,
+#projectEditWizardModal textarea:focus {
+    outline: none !important;
+    border-color: #F7EC59 !important;
+    background: var(--primary-bg) !important;
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.15) !important;
+}
+#projectEditWizardModal .card {
+    background: var(--secondary-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(247, 236, 89, 0.2) !important;
+    border-radius: 12px !important;
+}
+#projectEditWizardModal .card-title {
+    color: #F7EC59 !important;
+    font-weight: 600;
+}
+#projectEditWizardModal .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+#projectEditWizardModal .modal-footer {
+    background: var(--primary-bg);
+    border-top: 1px solid rgba(247, 236, 89, 0.2);
+}
+#projectEditWizardModal .input-group-text {
+    background: #F7EC59 !important;
+    color: #1A1B25 !important;
+    border: 2px solid rgba(255, 255, 255, 0.15) !important;
+    border-right: none !important;
+    font-weight: 600 !important;
+    padding: 12px 16px !important;
+    border-radius: 10px 0 0 10px !important;
+}
+#projectEditWizardModal .input-group .form-control {
+    border-left: none !important;
+    border-radius: 0 10px 10px 0 !important;
+}
+#projectEditWizardModal .card.mb-2 {
+    margin-bottom: 20px !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+#projectEditWizardModal .card.mb-2:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+}
+#projectEditWizardModal .btn-outline-danger {
+    background: transparent !important;
+    color: #DC3545 !important;
+    border: 2px solid #DC3545 !important;
+    border-radius: 8px !important;
+    padding: 6px 12px !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+}
+#projectEditWizardModal .btn-outline-danger:hover {
+    background: #DC3545 !important;
+    color: #FFFFFF !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3) !important;
+}
+#projectEditWizardModal #editSaveAsDraftBtn {
+    background: #6C757D !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 10px 20px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+}
+#projectEditWizardModal #editSaveAsDraftBtn:hover {
+    background: #5A6268 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3) !important;
+}
+
+#projectCreationWizardModal #saveAsDraftBtn:active {
+    transform: translateY(0) !important;
+}
+#planEditorModal .form-control:focus,
+#planEditorModal .form-select:focus,
+#planEditorModal textarea:focus {
+    outline: none;
+    border-color: var(--accent-yellow);
+    background: var(--secondary-bg);
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.15);
+}
+
+#projectCreationWizardModal .form-select option {
+    background: var(--primary-bg);
+    color: var(--text-primary);
+}
+#planEditorModal .form-select option {
+    background: var(--primary-bg);
+    color: var(--text-primary);
+}
+
+#projectCreationWizardModal .card {
+    background: var(--secondary-bg);
+    color: var(--text-primary);
+    border: 1px solid rgba(247, 236, 89, 0.2);
+}
+#planEditorModal .card {
+    background: var(--secondary-bg);
+    color: var(--text-primary);
+    border: 1px solid rgba(247, 236, 89, 0.2);
+}
+
+#projectCreationWizardModal .btn-primary {
+    background: linear-gradient(135deg, var(--accent-yellow) 0%, #f4d03f 100%);
+    border: none;
+    color: var(--text-dark);
+    font-weight: 600;
+}
+#planEditorModal .btn-primary {
+    background: linear-gradient(135deg, var(--accent-yellow) 0%, #f4d03f 100%);
+    border: none;
+    color: var(--text-dark);
+    font-weight: 600;
+}
+
+#projectCreationWizardModal .btn-outline-primary {
+    border: 2px solid var(--accent-yellow);
+    color: var(--accent-yellow);
+}
+#planEditorModal .btn-outline-primary {
+    border: 2px solid var(--accent-yellow);
+    color: var(--accent-yellow);
+}
+
+#projectCreationWizardModal .btn-outline-primary:hover {
+    background: rgba(247, 236, 89, 0.15);
+}
+#planEditorModal .btn-outline-primary:hover {
+    background: rgba(247, 236, 89, 0.15);
+}
+
+#projectCreationWizardModal .btn-outline-secondary {
+    border: 2px solid rgba(255,255,255,0.3);
+    color: var(--text-primary);
+}
+#planEditorModal .btn-outline-secondary {
+    border: 2px solid rgba(255,255,255,0.3);
+    color: var(--text-primary);
+}
+
+#projectCreationWizardModal .btn-success {
+    background: var(--accent-green);
+    border: none;
+    color: var(--text-dark);
+    font-weight: 600;
+}
+#planEditorModal .btn-success {
+    background: var(--accent-green);
+    border: none;
+    color: var(--text-dark);
+    font-weight: 600;
+}
+
+#projectCreationWizardModal .modal-footer {
+    background: var(--primary-bg);
+    border-top: 1px solid rgba(247, 236, 89, 0.2);
+}
+#planEditorModal .modal-footer {
+    background: var(--primary-bg);
+    border-top: 1px solid rgba(247, 236, 89, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .dashboard-title {
+        font-size: 2rem;
+    }
+    
+    .projects-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .search-input-group {
+        max-width: 100%;
+    }
+    
+    .quick-filters .btn {
+        margin: 1px;
+        font-size: 0.8rem;
+        padding: 6px 12px;
+    }
+}
+
+@media (max-width: 576px) {
+    .pm-dashboard-container {
+        padding: 10px;
+    }
+    
+    .dashboard-header {
+        padding: 20px;
+    }
+    
+    .dashboard-controls {
+        padding: 15px;
+    }
+    
+    .section-header {
+        padding: 15px;
+    }
+}

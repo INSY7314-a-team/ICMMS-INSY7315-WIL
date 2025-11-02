@@ -42,6 +42,16 @@ project.lock.json
 project.fragment.lock.json
 artifacts/
 
+# NuGet build artifacts
+*.csproj.nuget.dgspec.json
+*.csproj.nuget.g.props
+project.assets.json
+project.nuget.cache
+
+# .NET build output directories (obj/ folders contain PII)
+**/obj/
+**/bin/
+
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
 
@@ -346,3 +356,15 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+node_modules/
+.env
+.env.local
+.env.production
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+.vscode/
+.idea/

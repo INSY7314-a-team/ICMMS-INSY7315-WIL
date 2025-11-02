@@ -1,0 +1,124 @@
+@using System.Security.Claims
+@model ICCMS_Web.Models.UserMessagesViewModel
+@{
+    ViewData["Title"] = "Messages";
+    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+<link href="~/css/messages.css" rel="stylesheet" />
+
+<div class="chat-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-tabs">
+                <button class="tab-button active" id="system-tab">
+                    <i class="fas fa-bell"></i> System Messages
+                </button>
+                <button class="tab-button" id="direct-tab">
+                    <i class="fas fa-paper-plane"></i> Direct Messages
+                </button>
+            </div>
+            <div class="new-message-container">
+                <button class="new-message-button" id="newMessageButton" style="display: none;" data-bs-toggle="modal"
+                    data-bs-target="#sendMessageModal">
+                    <i class="fas fa-pencil-alt"></i> New Message
+                </button>
+            </div>
+        </div>
+        <div class="chat-list" id="threadsList">
+            <!-- Thread items will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Chat Window -->
+    <div class="chat-window">
+        <div id="noThreadSelected" class="no-selection">
+            <div class="no-selection-content">
+                <i class="fas fa-comments"></i>
+                <h4>Select a conversation</h4>
+                <p>Choose a conversation from the list to view messages.</p>
+            </div>
+        </div>
+
+        <div id="threadView" style="display: none;">
+            <div class="chat-header">
+                <h5 id="selectedThreadSubject"></h5>
+                <div class="chat-header-actions">
+                    <button class="icon-button" id="refreshButton" title="Refresh">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="icon-button" id="closeChatButton" title="Close Chat">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="messages" id="messagesContainer">
+                <!-- Messages will be loaded here -->
+            </div>
+            <div class="chat-input-area" id="messageInputArea" style="display: none;">
+                <input type="text" class="chat-input" id="threadMessageInput" placeholder="Type a message...">
+                <button class="send-button" id="sendThreadMessageBtn">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Send Message Modal -->
+<div class="modal fade" id="sendMessageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">New Message</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="sendMessageForm">
+                    <div class="mb-3">
+                        <label for="recipientSelect" class="form-label">To:</label>
+                        <select class="form-select" id="recipientSelect" required>
+                            <option value="" disabled selected>Select a recipient...</option>
+                            @foreach (var user in Model.AvailableUsers)
+                            {
+                                <option value="@user.UserId">@user.FullName (@user.Role)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="projectSelect" class="form-label">Project (Optional):</label>
+                        <select class="form-select" id="projectSelect">
+                            <option value="">Select a project...</option>
+                            @foreach (var project in Model.AvailableProjects)
+                            {
+                                <option value="@project.ProjectId">@project.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="messageSubject" class="form-label">Subject:</label>
+                        <input type="text" class="form-control" id="messageSubject" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="messageContent" class="form-label">Message:</label>
+                        <textarea class="form-control" id="messageContent" rows="4" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="cancelMessageButton" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="sendMessageButton" id="sendMessageBtnModal">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        window.currentUserId = '@currentUserId';
+    </script>
+    <script src="~/js/messages.js"></script>
+}

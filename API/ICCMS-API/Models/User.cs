@@ -25,5 +25,8 @@ namespace ICCMS_API.Models
 
         [FirestoreProperty("isActive")]
         public bool IsActive { get; set; } = true;
+
+        [FirestoreProperty("deviceToken")]
+        public string DeviceToken { get; set; } = string.Empty;
     }
 }

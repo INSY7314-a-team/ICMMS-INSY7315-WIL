@@ -1,0 +1,364 @@
+@model ICCMS_Web.Models.ProjectDto
+
+@{
+    ViewData["Title"] = "Project Details";
+}
+
+<!-- Project Header -->
+<div class="project-header bg-gradient-primary text-white py-4 mb-4">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb breadcrumb-dark mb-0">
+                        <li class="breadcrumb-item">
+                            <a href="@Url.Action("Index", "Clients")" class="text-white-50">
+                                <i class="fas fa-arrow-left me-1"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">Project Details</li>
+                    </ol>
+                </nav>
+                <h1 class="h3 mb-0 mt-2">
+                    <i class="fas fa-building me-3"></i>@Model.Name
+                </h1>
+                <p class="mb-0 opacity-75">@Model.Description</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                @{
+                    var statusClass = Model.Status?.ToLower() switch
+                    {
+                        "active" => "success",
+                        "completed" => "primary",
+                        "on hold" => "warning",
+                        "cancelled" => "danger",
+                        _ => "secondary"
+                    };
+                }
+                <span class="badge bg-@statusClass fs-6 px-3 py-2">@Model.Status</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Alert Messages -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-check-circle me-3 fs-4"></i>
+                <div>
+                    <strong>Success!</strong> @TempData["SuccessMessage"]
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle me-3 fs-4"></i>
+                <div>
+                    <strong>Error!</strong> @TempData["ErrorMessage"]
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Project Information -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2 text-primary"></i>Project Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Project ID</label>
+                            <p class="mb-0 fw-bold">@Model.ProjectId</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Status</label>
+                            <p class="mb-0">
+                                <span class="badge bg-@statusClass">@Model.Status</span>
+                            </p>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label text-muted small">Description</label>
+                            <p class="mb-0">@Model.Description</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Budget Information -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-money-bill-wave me-2 text-success"></i>Budget Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="budget-card bg-light p-3 rounded">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <label class="form-label text-muted small mb-1">Planned Budget</label>
+                                        <h4 class="mb-0 text-primary">R @Model.BudgetPlanned.ToString("N0")</h4>
+                                    </div>
+                                    <div class="budget-icon">
+                                        <i class="fas fa-chart-line text-primary"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="budget-card bg-light p-3 rounded">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <label class="form-label text-muted small mb-1">Budget Spent</Span></label>
+                                        <h4 class="mb-0 text-success">R @Model.BudgetActual.ToString("N0")</h4>
+                                    </div>
+                                    <div class="budget-icon">
+                                        <i class="fas fa-chart-bar text-success"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @if (Model.BudgetActual > 0)
+                        {
+                            <div class="col-12">
+                                @{
+                                    var variance = Model.BudgetActual - Model.BudgetPlanned;
+                                    var varianceClass = variance >= 0 ? "danger" : "success";
+                                    var varianceIcon = variance >= 0 ? "arrow-up" : "arrow-down";
+                                }
+                                <div class="budget-variance p-3 rounded bg-@varianceClass bg-opacity-10">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <label class="form-label text-muted small mb-1">Budget Variance</label>
+                                            <h5 class="mb-0 text-@varianceClass">
+                                                <i class="fas fa-@varianceIcon me-1"></i>
+                                                R @Math.Abs(variance).ToString("N0")
+                                            </h5>
+                                        </div>
+                                        <div>
+                                            <span class="badge bg-@varianceClass">
+                                                @(variance >= 0 ? "Over Budget" : "Under Budget")
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Project Timeline -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-alt me-2 text-info"></i>Project Timeline
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Project Start</h6>
+                                <p class="text-muted mb-0">@Model.StartDate.ToString("MMM dd, yyyy")</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-warning"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Planned End</h6>
+                                <p class="text-muted mb-0">@Model.EndDatePlanned.ToString("MMM dd, yyyy")</p>
+                            </div>
+                        </div>
+                        @if (Model.EndDateActual.HasValue)
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-marker bg-success"></div>
+                                <div class="timeline-content">
+                                    <h6 class="mb-1">Actual End</h6>
+                                    <p class="text-muted mb-0">@Model.EndDateActual.Value.ToString("MMM dd, yyyy")</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    @{
+                        var daysRemaining = (Model.EndDatePlanned - DateTime.Now).Days;
+                        var progressPercentage = 0.0;
+                        var totalDays = (Model.EndDatePlanned - Model.StartDate).Days;
+                        var elapsedDays = (DateTime.Now - Model.StartDate).Days;
+                        
+                        if (totalDays > 0)
+                        {
+                            progressPercentage = Math.Min(100, Math.Max(0, (double)elapsedDays / totalDays * 100));
+                        }
+                    }
+
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Progress</span>
+                            <span class="text-muted small">@progressPercentage.ToString("F1")%</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-primary" role="progressbar" 
+                                 style="width: @progressPercentage%" 
+                                 aria-valuenow="@progressPercentage" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100"></div>
+                        </div>
+                        
+                        @if (daysRemaining > 0)
+                        {
+                            <p class="text-muted small mt-2 mb-0">
+                                <i class="fas fa-clock me-1"></i>
+                                @daysRemaining days remaining
+                            </p>
+                        }
+                        else if (daysRemaining < 0)
+                        {
+                            <p class="text-danger small mt-2 mb-0">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                @Math.Abs(daysRemaining) days overdue
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="text-warning small mt-2 mb-0">
+                                <i class="fas fa-calendar-check me-1"></i>
+                                Due today
+                            </p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2 text-warning"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="@Url.Action("Index", "Clients")" class="btn btn-outline-primary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                        <button class="btn btn-outline-info" onclick="window.print()">
+                            <i class="fas fa-print me-2"></i>Print Details
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="downloadProjectDetails()">
+                            <i class="fas fa-download me-2"></i>Download PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .project-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .breadcrumb-dark .breadcrumb-item a {
+        text-decoration: none;
+    }
+    
+    .breadcrumb-dark .breadcrumb-item a:hover {
+        text-decoration: underline;
+    }
+    
+    .budget-card {
+        transition: transform 0.2s;
+    }
+    
+    .budget-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .budget-icon {
+        font-size: 1.5rem;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: #e9ecef;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: -22px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 2px #e9ecef;
+    }
+    
+    .timeline-content h6 {
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    
+    .timeline-content p {
+        font-size: 0.8rem;
+    }
+    
+    @@media print {
+        .project-header {
+            background: #667eea !important;
+            -webkit-print-color-adjust: exact;
+        }
+        
+        .card {
+            border: 1px solid #dee2e6 !important;
+        }
+        
+        .btn {
+            display: none !important;
+        }
+    }
+</style>
+
+<script>
+    function downloadProjectDetails() {
+        // This would typically call an API endpoint to generate and download a PDF
+        alert('PDF download functionality would be implemented here.');
+    }
+</script>

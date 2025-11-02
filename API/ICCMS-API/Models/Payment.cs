@@ -37,8 +37,5 @@ namespace ICCMS_API.Models
 
         [FirestoreProperty("notes")]
         public string Notes { get; set; } = string.Empty;
-
-        [FirestoreProperty("isActive")]
-        public bool IsActive { get; set; } = true;
     }
 }

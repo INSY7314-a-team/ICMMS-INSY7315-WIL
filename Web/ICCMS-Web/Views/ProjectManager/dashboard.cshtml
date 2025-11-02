@@ -1,0 +1,664 @@
+@using System.Linq
+@using System.Linq
+@model ICCMS_Web.Models.DashboardViewModel
+@{
+    ViewData["Title"] = "Project Manager Dashboard";
+    Layout = "_Layout";
+}
+
+@await Html.PartialAsync("_QuoteBuilder")
+@await Html.PartialAsync("_BlueprintPickerModal")
+@await Html.PartialAsync("_EstimateEditorModal")
+@await Html.PartialAsync("_ProjectEstimatesModal")
+@await Html.PartialAsync("_ProjectCreationWizard", Model)
+@await Html.PartialAsync("_ProjectEditWizard")
+@await Html.PartialAsync("_PlanEditorModal")
+
+<div class="pm-dashboard-container">
+    <!-- Header Section -->
+    <div class="dashboard-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="dashboard-title">
+                    <i class="fa-solid fa-user-tie me-3" style="color: #F7EC59;"></i>@User.Identity.Name Dashboard
+                </h1>
+                <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Manage your projects and quotations</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Summary Cards -->
+    <div class="stats-container">
+        <div class="row g-2 mb-3">
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.TotalProjects</h4>
+                        <p class="stat-label">Total Projects</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon pending">
+                        <i class="fa-solid fa-file-lines"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.DraftProjects.Count</h4>
+                        <p class="stat-label">Draft Projects</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon in-progress">
+                        <i class="fa-solid fa-play"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.ActiveProjects.Count</h4>
+                        <p class="stat-label">Active Projects</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon completed">
+                        <i class="fa-solid fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.OtherProjects.Count</h4>
+                        <p class="stat-label">Completed</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.TotalClients</h4>
+                        <p class="stat-label">Total Clients</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="stat-card compact">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4 class="stat-number">@Model.TotalQuotes</h4>
+                        <p class="stat-label">Total Quotes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter Controls -->
+    <div class="search-section">
+        <div class="search-input-group">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search projects by name..." value="">
+            <button type="button" id="searchBtn" class="search-btn">
+                <i class="fa-solid fa-search"></i>
+            </button>
+            <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Enhanced Filters Section -->
+    <div class="filter-section">
+        <div class="d-flex justify-content-center mb-3">
+            <button type="button" class="filter-toggle-btn" onclick="toggleFilters()">
+                <i class="fa-solid fa-sliders-h me-2"></i>
+                <span id="filterToggleText">Show Filters</span>
+                <i class="fa-solid fa-chevron-down ms-2" id="filterToggleIcon"></i>
+            </button>
+        </div>
+    </div>
+    <div class="filters-panel" id="filtersPanel" style="display: none;">
+        <div class="filter-group">
+            <div class="filter-group-header">
+                <h6 class="mb-0">Project Status</h6>
+            </div>
+            <div class="status-filters">
+                @{
+                    var statuses = (Model.AvailableStatuses ?? new List<string>());
+                }
+                @{
+                    if (!statuses.Contains("Planning"))
+                    {
+                        statuses = statuses.Concat(new[] { "Planning" }).ToList();
+                    }
+                }
+                @foreach (var status in statuses)
+                {
+                    var icon = status == "Draft" ? "fa-file-lines"
+                    : status == "Planning" ? "fa-project-diagram"
+                    : status == "Active" ? "fa-play"
+                    : status == "Completed" ? "fa-check-circle"
+                    : status == "Maintenance" ? "fa-wrench" : "fa-list";
+                    <a href="#" class="status-filter-btn" data-status="@status">
+                        <i class="fa-solid @icon me-2"></i>
+                        @status
+                    </a>
+                }
+            </div>
+        </div>
+        <div class="filter-group">
+            <div class="filter-group-header">
+                <h6 class="mb-0">Client</h6>
+            </div>
+            <div class="status-filters">
+                <a href="#" class="status-filter-btn active" data-client="">All Clients</a>
+                @foreach (var client in Model.Clients)
+                {
+                    <a href="#" class="status-filter-btn" data-client="@client.UserId">@client.FullName</a>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Project Button -->
+    <div class="create-project-section text-center">
+        <button type="button" class="btn btn-warning btn-lg create-project-btn" onclick="openCreateProjectWizard()">
+            <i class="fa-solid fa-plus me-2"></i>Create New Project
+        </button>
+    </div>
+    <!-- Draft Projects Section (Collapsible) -->
+    @if (Model.DraftProjects.Any())
+    {
+        <div id="draftSection" class="draft-projects-section">
+            <div class="section-header collapsible-header" data-target="draftProjects">
+                <h3 class="section-title">
+                    Draft Projects
+                    <span class="badge badge-secondary">@Model.DraftProjects.Count</span>
+                </h3>
+                <i class="fa-solid fa-chevron-up toggle-icon"></i>
+            </div>
+            <div class="draft-projects-content" id="draftProjects" style="display: block;">
+                <div class="projects-grid" id="draftProjectsGrid">
+                    @foreach (var project in Model.DraftProjects)
+                    {
+                        // Get pre-processed data from ViewModel
+                        var projectDetails = Model.ProjectDetails.ContainsKey(project.ProjectId)
+                        ? Model.ProjectDetails[project.ProjectId]
+                        : new ICCMS_Web.Models.ProjectDetails();
+
+                        ViewBag.Phases = projectDetails.Phases;
+                        ViewBag.Tasks = projectDetails.Tasks;
+                        ViewBag.Estimate = projectDetails.Estimate;
+                        ViewBag.Progress = projectDetails.Progress;
+                        ViewBag.StatusBadgeClass = projectDetails.StatusBadgeClass;
+
+                        // Get client name
+                        var client = Model.Clients?.FirstOrDefault(c => c.UserId == project.ClientId);
+                        ViewBag.ClientName = client?.FullName ?? project.ClientId;
+
+                        @await Html.PartialAsync("_ProjectCard", project)
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Main Projects Section -->
+    <div class="section-header">
+        <h3 class="section-title">
+            Projects
+            <span class="badge badge-secondary">@Model.FilteredProjects.Count</span>
+        </h3>
+    </div>
+
+    @if (Model.FilteredProjects.Any())
+    {
+        <div class="projects-grid" id="projectsGrid">
+            @foreach (var project in Model.FilteredProjects)
+            {
+                // Get pre-processed data from ViewModel
+                var projectDetails = Model.ProjectDetails.ContainsKey(project.ProjectId)
+                ? Model.ProjectDetails[project.ProjectId]
+                : new ICCMS_Web.Models.ProjectDetails();
+
+                ViewBag.Phases = projectDetails.Phases;
+                ViewBag.Tasks = projectDetails.Tasks;
+                ViewBag.Estimate = projectDetails.Estimate;
+                ViewBag.Progress = projectDetails.Progress;
+                ViewBag.StatusBadgeClass = projectDetails.StatusBadgeClass;
+
+                // Get client name
+                var client = Model.Clients?.FirstOrDefault(c => c.UserId == project.ClientId);
+                ViewBag.ClientName = client?.FullName ?? project.ClientId;
+
+                @await Html.PartialAsync("_ProjectCard", project)
+            }
+        </div>
+
+        <!-- Pagination -->
+        @if (Model.TotalPages > 1)
+        {
+            <div class="pagination-container">
+                <nav aria-label="Project pagination">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                            <a class="page-link" href="@Url.Action("Dashboard", new { page = Model.CurrentPage - 1 })">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </a>
+                        </li>
+
+                        @for (int i = Math.Max(1, Model.CurrentPage - 2); i <= Math.Min(Model.TotalPages,
+                                        Model.CurrentPage + 2); i++)
+                        {
+                            <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                <a class="page-link" href="@Url.Action("Dashboard", new { page = i })">@i</a>
+                            </li>
+                        }
+
+                        <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                            <a class="page-link" href="@Url.Action("Dashboard", new { page = Model.CurrentPage + 1 })">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                <div class="pagination-info">
+                    Showing @((Model.CurrentPage - 1) * Model.PageSize + 1) to @(Math.Min(Model.CurrentPage *
+                    Model.PageSize, Model.TotalProjects)) of @Model.TotalProjects projects
+            </div>
+        </div>
+        }
+    }
+    else
+    {
+        <div class="no-projects-message">
+            <div class="text-center py-5">
+                <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No projects found</h4>
+                <p class="text-muted">
+                    <span>No projects available.</span>
+                </p>
+                @if (false)
+                {
+                    <button type="button" class="btn btn-outline-primary" onclick="clearSearch()">
+                        <i class="fa-solid fa-times"></i> Clear Search
+                    </button>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Include dashboard CSS directly -->
+<link rel="stylesheet" href="~/css/pm-dashboard.css" />
+<link rel="stylesheet" href="~/css/project-cards.css" />
+
+@section Scripts {
+    <script src="~/js/quote-builder.js"></script>
+    <script src="~/js/project-creation-wizard.js"></script>
+    <script src="~/js/project-edit-wizard.js"></script>
+    <script src="~/js/pm-dashboard.js"></script>
+    <script src="~/js/plan-editor.js"></script>
+
+    <script>
+        // Make clients data available to JavaScript with proper mapping
+        @{
+                var clientsData = new List<object>();
+                if (Model.Clients != null)
+                {
+                                                                foreach (var client in Model.Clients)
+                    {
+                                                                                    clientsData.Add(new { userId = client.UserId, fullName = client.FullName });
+                    }
+                }
+            }
+            window.dashboardClients = @Html.Raw(Json.Serialize(clientsData));
+
+        // Create a client ID to name mapping for easy lookup
+        window.clientIdToNameMap = {};
+        if (window.dashboardClients) {
+            window.dashboardClients.forEach(client => {
+                window.clientIdToNameMap[client.userId] = client.fullName;
+            });
+        }
+        console.log('Client ID to Name Map:', window.clientIdToNameMap);
+    </script>
+
+    <script>
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeDashboard();
+            initializeDraftProjectsToggle();
+
+            // Resolve client names for initial load
+            resolveClientNames();
+        });
+
+        // Initialize draft projects toggle functionality
+        function initializeDraftProjectsToggle() {
+            console.log('Initializing draft projects toggle...');
+            const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+            console.log('Found collapsible headers:', collapsibleHeaders.length);
+
+            collapsibleHeaders.forEach((header, index) => {
+                console.log(`Setting up header ${index}:`, header);
+                header.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    console.log('Draft section clicked!');
+                    const targetId = this.getAttribute('data-target');
+                    const targetElement = document.getElementById(targetId);
+                    const toggleIcon = this.querySelector('.toggle-icon');
+
+                    console.log('Target ID:', targetId);
+                    console.log('Target Element:', targetElement);
+                    console.log('Toggle Icon:', toggleIcon);
+
+                    if (targetElement) {
+                        const isExpanded = targetElement.style.display !== 'none';
+                        console.log('Is expanded:', isExpanded);
+
+                        if (isExpanded) {
+                            targetElement.style.display = 'none';
+                            if (toggleIcon) {
+                                toggleIcon.classList.remove('fa-chevron-up');
+                                toggleIcon.classList.add('fa-chevron-down');
+                            }
+                            this.setAttribute('data-expanded', 'false');
+                            console.log('Collapsed');
+                        } else {
+                            targetElement.style.display = 'block';
+                            if (toggleIcon) {
+                                toggleIcon.classList.remove('fa-chevron-down');
+                                toggleIcon.classList.add('fa-chevron-up');
+                            }
+                            this.setAttribute('data-expanded', 'true');
+                            console.log('Expanded');
+                        }
+                    } else {
+                        console.error('Target element not found:', targetId);
+                    }
+                });
+            });
+        }
+
+        // Inject project data into Quote Builder modal
+        document.getElementById("quoteBuilderModal")?.addEventListener("show.bs.modal", function (event) {
+            const btn = event.relatedTarget;
+            if (!btn) return;
+            document.getElementById("qb-projectId").value = btn.dataset.projectId || "";
+            document.getElementById("qb-clientId").value = btn.dataset.clientId || "";
+            document.getElementById("qb-contractorId").value = btn.dataset.contractorId || "";
+            console.log("🟢 Opening Quote Builder for:", btn.dataset.projectName);
+        });
+
+        // DEV-ONLY: simulate client approval
+        async function simulateClientApproval(quoteId) {
+            if (!quoteId) return alert("No quote ID found.");
+            if (!confirm("Simulate client approval for this quote?")) return;
+
+            try {
+                const res = await fetch(`/Quotes/simulate-client-approval/${quoteId}`, { method: "POST" });
+                if (!res.ok) throw new Error(`API error ${res.status}`);
+                showToast("✅ Simulated client approval successfully!");
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (err) {
+                console.error("🔥 Simulate approval failed:", err);
+                showToast("❌ Failed to simulate approval.");
+            }
+        }
+
+        function showAllDraftProjects() {
+            // Toggle to show all draft projects
+            window.location.href = '@Url.Action("Dashboard")';
+        }
+
+        function clearSearch() {
+            window.location.href = '@Url.Action("Dashboard")';
+        }
+
+        // Handle filter clicks (both status and client)
+        document.addEventListener('click', function (e) {
+            console.log('=== FILTER CLICK START ===');
+            console.log('Click target:', e.target);
+            console.log('Click target closest:', e.target.closest('.status-filter-btn'));
+
+            if (e.target.closest('.status-filter-btn')) {
+                e.preventDefault();
+                const btn = e.target.closest('.status-filter-btn');
+                console.log('Button element:', btn);
+                console.log('Button classes:', btn.className);
+                console.log('Button has data-status:', btn.hasAttribute('data-status'));
+                console.log('Button has data-client:', btn.hasAttribute('data-client'));
+
+                // Check if it's a status filter
+                if (btn.hasAttribute('data-status')) {
+                    const status = btn.getAttribute('data-status');
+
+                    // Remove active class from all status buttons
+                    document.querySelectorAll('.status-filter-btn[data-status]').forEach(b => b.classList.remove('active'));
+                    // Add active class to clicked button
+                    btn.classList.add('active');
+
+                    console.log('Status filter clicked:', status);
+                    console.log('Button after adding active class:', btn.className);
+                }
+
+                // Check if it's a client filter
+                if (btn.hasAttribute('data-client')) {
+                    const clientId = btn.getAttribute('data-client');
+
+                    console.log('CLIENT FILTER DEBUG:');
+                    console.log('- Button element:', btn);
+                    console.log('- Button text:', btn.textContent);
+                    console.log('- Client ID from data-client:', clientId);
+                    console.log('- Client ID type:', typeof clientId);
+                    console.log('- Client ID length:', clientId?.length);
+                    console.log('- Is empty string:', clientId === '');
+
+                    // Remove active class from all client buttons
+                    document.querySelectorAll('.status-filter-btn[data-client]').forEach(b => b.classList.remove('active'));
+                    // Add active class to clicked button
+                    btn.classList.add('active');
+
+                    console.log('Client filter clicked:', clientId);
+                    console.log('Button after adding active class:', btn.className);
+                    console.log('Button element:', btn);
+                }
+
+                console.log('About to call applyFilters()');
+                // Apply the filter
+                applyFilters();
+                console.log('=== FILTER CLICK END ===');
+            }
+        });
+
+        // Function to resolve client names in project cards
+        function resolveClientNames() {
+            console.log('=== RESOLVE CLIENT NAMES START ===');
+            console.log('Client ID to Name Map:', window.clientIdToNameMap);
+            console.log('Client ID to Name Map keys:', Object.keys(window.clientIdToNameMap));
+            console.log('Client ID to Name Map values:', Object.values(window.clientIdToNameMap));
+
+            // Get all project cards
+            const projectCards = document.querySelectorAll('.project-card');
+            console.log('Found project cards:', projectCards.length);
+
+            projectCards.forEach((card, index) => {
+                console.log(`--- Processing card ${index + 1} ---`);
+                const clientElement = card.querySelector('.client-name');
+                console.log('Client element:', clientElement);
+
+                if (clientElement) {
+                    const clientId = clientElement.textContent.trim();
+                    console.log('Client ID from element:', clientId);
+                    console.log('Client ID length:', clientId.length);
+                    console.log('Client ID includes dash:', clientId.includes('-'));
+
+                    // Check if it's a client ID (Firebase IDs are long alphanumeric strings without dashes)
+                    if (clientId && clientId.length > 20 && /^[a-zA-Z0-9]+$/.test(clientId)) {
+                        console.log('Looking up client ID:', clientId);
+                        console.log('Available client IDs in map:', Object.keys(window.clientIdToNameMap));
+                        console.log('Exact match found:', window.clientIdToNameMap.hasOwnProperty(clientId));
+
+                        // Use the mapping to get client name
+                        const clientName = window.clientIdToNameMap[clientId];
+                        console.log('Found client name:', clientName);
+
+                        if (clientName) {
+                            console.log('Updating client name from', clientId, 'to', clientName);
+                            clientElement.textContent = clientName;
+                            console.log('Updated client name to:', clientName);
+                        } else {
+                            console.log('No client name found for ID:', clientId);
+                            console.log('Available client IDs:', Object.keys(window.clientIdToNameMap));
+                        }
+                    } else {
+                        console.log('Already a client name, no resolution needed:', clientId);
+                    }
+                } else {
+                    console.log('No client element found in card');
+                }
+            });
+            console.log('=== RESOLVE CLIENT NAMES END ===');
+        }
+
+        async function applyFilters() {
+            console.log('=== APPLY FILTERS START ===');
+            try {
+                // Get selected status
+                const activeStatusBtn = document.querySelector('.status-filter-btn[data-status].active');
+                const status = activeStatusBtn ? activeStatusBtn.getAttribute('data-status') : '';
+                console.log('Active status button:', activeStatusBtn);
+                console.log('Status from button:', status);
+
+                // Get selected client
+                const activeClientBtn = document.querySelector('.status-filter-btn[data-client].active');
+                const clientId = activeClientBtn ? activeClientBtn.getAttribute('data-client') : '';
+
+                console.log('Active client button:', activeClientBtn);
+                console.log('Client ID from button:', clientId);
+                console.log('Client ID type:', typeof clientId);
+                console.log('Client ID length:', clientId?.length);
+                console.log('Applying filters - Status:', status, 'Client:', clientId);
+
+                const params = new URLSearchParams();
+                if (clientId) {
+                    console.log('Adding clientId to params:', clientId);
+                    params.set('clientId', clientId);
+                } else {
+                    console.log('No clientId - not adding to params');
+                }
+                if (status && status !== 'All') {
+                    console.log('Adding status to params:', status);
+                    params.set('status', status);
+                } else {
+                    console.log('No status or status is All - not adding to params');
+                }
+
+                console.log('Filter URL:', `/ProjectManager/SearchProjects?${params.toString()}`);
+
+                const res = await fetch(`/ProjectManager/SearchProjects?${params.toString()}`);
+                console.log('Fetch response status:', res.status);
+                console.log('Fetch response ok:', res.ok);
+
+                if (!res.ok) throw new Error('Filter failed');
+                const data = await res.json();
+
+                console.log('Filter response:', data);
+                console.log('Projects HTML length:', data.projectsHtml?.length);
+                console.log('Drafts HTML length:', data.draftsHtml?.length);
+
+                // If a specific status (non-draft) is applied, hide drafts; otherwise update both
+                if (status && status.toLowerCase() !== 'draft' && status !== 'All') {
+                    console.log('Hiding drafts section and updating projects grid');
+                    document.getElementById('draftSection')?.style && (document.getElementById('draftSection').style.display = 'none');
+                    document.getElementById('projectsGrid').innerHTML = data.projectsHtml;
+                } else {
+                    console.log('Showing drafts section and updating both grids');
+                    document.getElementById('draftSection')?.style && (document.getElementById('draftSection').style.display = 'block');
+                    document.getElementById('projectsGrid').innerHTML = data.projectsHtml;
+                    const draftsGrid = document.getElementById('draftProjectsGrid');
+                    if (draftsGrid) draftsGrid.innerHTML = data.draftsHtml;
+                }
+
+                console.log('About to call resolveClientNames()');
+                // Resolve client names in the updated HTML
+                resolveClientNames();
+
+                // Add a small delay to ensure DOM updates are visible
+                setTimeout(() => {
+                    console.log('DOM update completed - client names should now be visible');
+                }, 100);
+
+                console.log('=== APPLY FILTERS END ===');
+            } catch (e) {
+                console.error('Filter error:', e);
+                console.log('=== APPLY FILTERS ERROR ===');
+            }
+        }
+
+        function toggleFilters() {
+            const filtersPanel = document.getElementById('filtersPanel');
+            const filterToggleText = document.getElementById('filterToggleText');
+            const filterToggleIcon = document.getElementById('filterToggleIcon');
+
+            if (filtersPanel.style.display === 'none' || filtersPanel.style.display === '') {
+                filtersPanel.style.display = 'block';
+                filterToggleText.textContent = 'Hide Filters';
+                filterToggleIcon.classList.remove('fa-chevron-down');
+                filterToggleIcon.classList.add('fa-chevron-up');
+            } else {
+                filtersPanel.style.display = 'none';
+                filterToggleText.textContent = 'Show Filters';
+                filterToggleIcon.classList.remove('fa-chevron-up');
+                filterToggleIcon.classList.add('fa-chevron-down');
+            }
+        }
+
+        function openCreateProjectWizard(draftProjectId = null) {
+            const modal = document.getElementById('projectCreationWizardModal');
+            if (modal) {
+                // Set the draft project ID if provided
+                if (draftProjectId) {
+                    modal.setAttribute('data-draft-project-id', draftProjectId);
+                } else {
+                    modal.removeAttribute('data-draft-project-id');
+                }
+
+                // Show the modal
+                const bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
+
+                // Manually trigger our initialization since Bootstrap events might not fire
+                setTimeout(() => {
+                    if (window.__pcwInstance) {
+                        window.__pcwInstance.initializeWizard();
+                    }
+                }, 100);
+            }
+        }
+
+        function editDraftProject(projectId) {
+            openEditProjectWizard(projectId);
+        }
+
+        function openEditProjectWizard(projectId) {
+            const modal = document.getElementById('projectEditWizardModal');
+            if (modal) {
+                // Set the project ID for editing
+                modal.setAttribute('data-project-id', projectId);
+
+                // Show the modal
+                const bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
+            }
+        }
+    </script>
+}

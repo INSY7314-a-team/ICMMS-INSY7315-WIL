@@ -1,0 +1,16 @@
+@model List<ICCMS_Web.Models.ProjectDto>
+
+@foreach (var project in Model)
+{
+    // Provide safe fallbacks for ViewBag-dependent data inside _ProjectCard
+    ViewBag.Phases = new List<ICCMS_Web.Models.PhaseDto>();
+    ViewBag.Tasks = new List<ICCMS_Web.Models.ProjectTaskDto>();
+    ViewBag.Estimate = null;
+    ViewBag.Progress = 0;
+    ViewBag.StatusBadgeClass = "badge-light";
+    
+    // Set client name to ClientId as fallback (will be resolved by frontend if needed)
+    ViewBag.ClientName = project.ClientId;
+
+    @await Html.PartialAsync("_ProjectCard", project)
+}

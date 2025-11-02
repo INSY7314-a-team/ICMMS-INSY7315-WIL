@@ -1,0 +1,468 @@
+@model ICCMS_Web.Models.QuotationDto
+
+@{
+    ViewData["Title"] = "Quotation Details";
+    var daysUntilExpiry = (Model.ValidUntil - DateTime.Now).Days;
+    var isExpired = daysUntilExpiry < 0;
+}
+
+<!-- Quotation Header -->
+<div class="quotation-header bg-gradient-success text-white py-4 mb-4">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb breadcrumb-dark mb-0">
+                        <li class="breadcrumb-item">
+                            <a href="@Url.Action("Index", "Clients")" class="text-white-50">
+                                <i class="fas fa-arrow-left me-1"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">Quotation Details</li>
+                    </ol>
+                </nav>
+                <h1 class="h3 mb-0 mt-2">
+                    <i class="fas fa-file-invoice-dollar me-3"></i>Quotation Details
+                </h1>
+                <p class="mb-0 opacity-75">@Model.Description</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                @{
+                    var statusClass = Model.Status?.ToLower() switch
+                    {
+                        "pending" => "warning",
+                        "approved" => "success",
+                        "rejected" => "danger",
+                        "expired" => "secondary",
+                        _ => "info"
+                    };
+                }
+                <span class="badge bg-@statusClass fs-6 px-3 py-2">@Model.Status</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Alert Messages -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-check-circle me-3 fs-4"></i>
+                <div>
+                    <strong>Success!</strong> @TempData["SuccessMessage"]
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle me-3 fs-4"></i>
+                <div>
+                    <strong>Error!</strong> @TempData["ErrorMessage"]
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Quotation Information -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2 text-primary"></i>Quotation Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Quotation ID</label>
+                            <p class="mb-0 fw-bold">@Model.QuotationId</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Status</label>
+                            <p class="mb-0">
+                                <span class="badge bg-@statusClass">@Model.Status</span>
+                            </p>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label text-muted small">Description</label>
+                            <p class="mb-0">@Model.Description</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Project ID</label>
+                            <p class="mb-0">@Model.ProjectId</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Maintenance Request ID</label>
+                            <p class="mb-0">@Model.MaintenanceRequestId</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- NEW: Line Items Section -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2 text-primary"></i>Line Items
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.Items != null && Model.Items.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Description</th>
+                                        <th>Category</th>
+                                        <th>Unit</th>
+                                        <th>Qty</th>
+                                        <th>Unit Price</th>
+                                        <th>Tax %</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.Items)
+                                    {
+                                        <tr>
+                                            <td>@item.Name</td>
+                                            <td>@item.Description</td>
+                                            <td>@item.Category</td>
+                                            <td>@item.Unit</td>
+                                            <td>@item.Quantity</td>
+                                            <td>R @item.UnitPrice.ToString("N2")</td>
+                                            <td>@item.TaxRate.ToString("N2")%</td>
+                                            <td class="fw-bold text-success">R @item.LineTotal.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="fas fa-box-open fa-2x text-muted mb-2"></i>
+                            <p class="text-muted mb-0">No line items found for this quotation.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+
+            <!-- Financial Information -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-money-bill-wave me-2 text-success"></i>Financial Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="financial-card bg-light p-3 rounded">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <label class="form-label text-muted small mb-1">Total Amount</label>
+                                        <h3 class="mb-0 text-success">R @Model.GrandTotal.ToString("N2")</h3>
+
+                                    </div>
+                                    <div class="financial-icon">
+                                        <i class="fas fa-dollar-sign text-success"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="financial-card bg-light p-3 rounded">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <label class="form-label text-muted small mb-1">Valid Until</label>
+                                        <h4 class="mb-0 text-warning">@Model.ValidUntil.ToString("MMM dd, yyyy")</h4>
+                                    </div>
+                                    <div class="financial-icon">
+                                        <i class="fas fa-calendar-alt text-warning"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @{
+                        var isExpiringSoon = daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
+                    }
+
+                    @if (isExpired)
+                    {
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Expired:</strong> This quotation expired @Math.Abs(daysUntilExpiry) days ago.
+                        </div>
+                    }
+                    else if (isExpiringSoon)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fas fa-clock me-2"></i>
+                            <strong>Expiring Soon:</strong> This quotation expires in @daysUntilExpiry days.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline and Actions -->
+        <div class="col-lg-4">
+            <!-- Quotation Timeline -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2 text-info"></i>Quotation Timeline
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Created</h6>
+                                <p class="text-muted mb-0">@Model.CreatedAt.ToString("MMM dd, yyyy")</p>
+                            </div>
+                        </div>
+                        @if (Model.SentAt.HasValue)
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-marker bg-info"></div>
+                                <div class="timeline-content">
+                                    <h6 class="mb-1">Sent to Client</h6>
+                                    <p class="text-muted mb-0">@Model.SentAt.Value.ToString("MMM dd, yyyy")</p>
+                                </div>
+                            </div>
+                        }
+                        @if (Model.ApprovedAt.HasValue)
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-marker bg-success"></div>
+                                <div class="timeline-content">
+                                    <h6 class="mb-1">Approved</h6>
+                                    <p class="text-muted mb-0">@Model.ApprovedAt.Value.ToString("MMM dd, yyyy")</p>
+                                </div>
+                            </div>
+                        }
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-warning"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Valid Until</h6>
+                                <p class="text-muted mb-0">@Model.ValidUntil.ToString("MMM dd, yyyy")</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Client Actions -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-check me-2 text-warning"></i>Client Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if ((Model.Status ?? "").Trim().Equals("SentToClient", StringComparison.OrdinalIgnoreCase) && !isExpired)
+                    {
+                        <div class="d-grid gap-2">
+                            <form method="post" action="@Url.Action("ApproveQuotation", "Clients")">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="quotationId" value="@Model.QuotationId" />
+                                <button type="submit" class="btn btn-success btn-lg" 
+                                        onclick="return confirm('Are you sure you want to approve this quotation? This action cannot be undone.')">
+                                    <i class="fas fa-check me-2"></i>Approve Quotation
+                                </button>
+                            </form>
+                            
+                            <form method="post" action="@Url.Action("RejectQuotation", "Clients")">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="quotationId" value="@Model.QuotationId" />
+                                <button type="submit" class="btn btn-danger btn-lg" 
+                                        onclick="return confirm('Are you sure you want to reject this quotation? This action cannot be undone.')">
+                                    <i class="fas fa-times me-2"></i>Reject Quotation
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Note:</strong> Once you approve or reject this quotation, the action cannot be changed.
+                        </div>
+                    }
+                    else if (Model.Status?.ToLower() == "approved")
+                    {
+                        <div class="text-center">
+                            <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+                            <h5 class="text-success">Quotation Approved</h5>
+                            <p class="text-muted">This quotation has been approved and is being processed.</p>
+                        </div>
+                    }
+                    else if (Model.Status?.ToLower() == "rejected")
+                    {
+                        <div class="text-center">
+                            <i class="fas fa-times-circle text-danger fa-3x mb-3"></i>
+                            <h5 class="text-danger">Quotation Rejected</h5>
+                            <p class="text-muted">This quotation has been rejected.</p>
+                        </div>
+                    }
+                    else if (isExpired)
+                    {
+                        <div class="text-center">
+                            <i class="fas fa-calendar-times text-secondary fa-3x mb-3"></i>
+                            <h5 class="text-secondary">Quotation Expired</h5>
+                            <p class="text-muted">This quotation has expired and can no longer be approved.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+            <p class="text-danger small">
+                DEBUG → Status: <b>@Model.Status</b>, 
+                isExpired: <b>@isExpired</b>
+            </p>
+
+
+            <!-- Quick Actions -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2 text-warning"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="@Url.Action("Index", "Clients")" class="btn btn-outline-primary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                    <button class="btn btn-outline-secondary" onclick="downloadQuotation('@Model.QuotationId')">
+                        <i class="fas fa-download me-2"></i>Download PDF
+                    </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .quotation-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    }
+    
+    .breadcrumb-dark .breadcrumb-item a {
+        text-decoration: none;
+    }
+    
+    .breadcrumb-dark .breadcrumb-item a:hover {
+        text-decoration: underline;
+    }
+    
+    .financial-card {
+        transition: transform 0.2s;
+    }
+    
+    .financial-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .financial-icon {
+        font-size: 1.5rem;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: #e9ecef;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: -22px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 2px #e9ecef;
+    }
+    
+    .timeline-content h6 {
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    
+    .timeline-content p {
+        font-size: 0.8rem;
+    }
+    
+    @@media print {
+        .quotation-header {
+            background: #28a745 !important;
+            -webkit-print-color-adjust: exact;
+        }
+        
+        .card {
+            border: 1px solid #dee2e6 !important;
+        }
+        
+        .btn {
+            display: none !important;
+        }
+    }
+</style>
+
+<script>
+    console.log("🧾 [Init] downloadQuotation script loaded");
+
+    function downloadQuotation(id) {
+        console.log("🧩 [downloadQuotation] Function triggered");
+        console.log("📦 [Param] Quotation ID received:", id);
+
+        if (!id) {
+            console.warn("⚠️ [downloadQuotation] No quotation ID provided");
+            alert("Quotation ID missing");
+            return;
+        }
+
+        const url = `/Clients/DownloadQuotation/${id}`;
+        console.log("🌐 [downloadQuotation] Navigating to:", url);
+
+        try {
+            window.location.href = url;
+            console.log("🚀 [downloadQuotation] Redirect initiated successfully");
+        } catch (err) {
+            console.error("🔥 [downloadQuotation] Redirect failed:", err);
+            alert("Failed to start download. See console for details.");
+        }
+    }
+</script>

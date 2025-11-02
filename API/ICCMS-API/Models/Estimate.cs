@@ -29,7 +29,26 @@ namespace ICCMS_API.Models
         [FirestoreProperty("createdAt")]
         public DateTime CreatedAt { get; set; }
 
-        [FirestoreProperty("isActive")]
-        public bool IsActive { get; set; } = true;
+        // New fields for AI-generated line items
+        [FirestoreProperty("lineItems")]
+        public List<EstimateLineItem> LineItems { get; set; } = new List<EstimateLineItem>();
+
+        [FirestoreProperty("subtotal")]
+        public double Subtotal { get; set; }
+
+        [FirestoreProperty("taxTotal")]
+        public double TaxTotal { get; set; }
+
+        [FirestoreProperty("currency")]
+        public string Currency { get; set; } = "ZAR";
+
+        [FirestoreProperty("isAiGenerated")]
+        public bool IsAiGenerated { get; set; } = false;
+
+        [FirestoreProperty("blueprintUrl")]
+        public string? BlueprintUrl { get; set; }
+
+        [FirestoreProperty("aiProcessingNotes")]
+        public string? AiProcessingNotes { get; set; }
     }
 }
