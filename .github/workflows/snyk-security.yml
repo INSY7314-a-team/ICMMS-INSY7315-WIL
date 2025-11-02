@@ -27,13 +27,16 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-      # 🔹 Scan both Web and API projects for vulnerable packages
+      # 🔹 Scan both Web and API projects for vulnerable packages and output valid SARIF
       - name: Snyk Open Source dependency scan
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
-          snyk test --file=Web/ICCMS-Web.sln --sarif > snyk-results.sarif || true
-          snyk test --file=Api/ICCMS-API.sln --sarif >> snyk-results.sarif || true
+          snyk test --file=Web/ICCMS-Web.sln --sarif-file-output=snyk-web.sarif || true
+          snyk test --file=Api/ICCMS-API.sln --sarif-file-output=snyk-api.sarif || true
+          # Merge both SARIF files into one for upload
+          sudo apt-get update && sudo apt-get install -y jq
+          jq -s '{ "version": "2.1.0", "runs": (.[0].runs + .[1].runs) }' snyk-web.sarif snyk-api.sarif > snyk-results.sarif
 
       # 🔹 Upload results to GitHub Security tab
       - name: Upload results to GitHub Code Scanning
