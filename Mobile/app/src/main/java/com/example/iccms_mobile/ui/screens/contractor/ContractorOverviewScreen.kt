@@ -20,6 +20,9 @@ import androidx.compose.ui.unit.sp
 import com.example.iccms_mobile.data.models.UserInfo
 import com.example.iccms_mobile.ui.viewmodel.ContractorDashboardViewModel
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -245,8 +248,8 @@ fun ContractorOverviewScreen(
                                 uiState.documents.take(3).forEach { doc ->
                                     RecentItemRow(
                                         title = doc.FileName,
-                                        subtitle = "Status: ${doc.Status}",
-                                        status = doc.Status
+                                        subtitle = "Uploaded ${formatDate(doc.UploadedAt)}",//"Status: ${doc.Status}",
+                                        status = doc.FileType
                                     )
                                 }
                             }
@@ -707,3 +710,14 @@ fun OverviewStatCard(
     }
 }
 */
+
+private fun formatDate(dateString: String): String {
+    return try {
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        val outputFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+        val date = inputFormat.parse(dateString)
+        outputFormat.format(date ?: Date())
+    } catch (e: Exception) {
+        dateString
+    }
+}

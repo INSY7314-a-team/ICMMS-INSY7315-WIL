@@ -79,18 +79,23 @@ fun ContractorDocumentsScreen(
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
+                    /*
                     DocumentStatCard(
                         title = "Pending",
                         value = uiState.documents.count { it.Status.lowercase() == "pending" }.toString(),
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f)
                     )
+                    */
+
+                    /*
                     DocumentStatCard(
                         title = "Approved",
                         value = uiState.documents.count { it.Status.lowercase() == "approved" }.toString(),
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.weight(1f)
                     )
+                     */
                 }
             }
             
@@ -194,7 +199,7 @@ fun DocumentCard(
                         )
                     }
                 }
-                DocumentStatusChip(status = document.Status)
+                DocumentStatusChip(status = document.FileType)
             }
             
             Spacer(modifier = Modifier.height(12.dp))
