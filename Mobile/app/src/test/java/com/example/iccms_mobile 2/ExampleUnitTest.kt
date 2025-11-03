@@ -1,4 +1,4 @@
-package com.example.icmms
+package com.example.iccms_mobile
 
 import org.junit.Test
 

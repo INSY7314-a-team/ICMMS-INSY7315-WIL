@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "692392039968",
+    "project_id": "icmms-ecba6",
+    "storage_bucket": "icmms-ecba6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:692392039968:android:cf7a72e643c4fe8e2c8e45",
+        "android_client_info": {
+          "package_name": "com.example.iccms_mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "692392039968-5idvukg7cqne4di3jq3b66p74jll9pj9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgKfkgApqMMi6usOzO7MWtkxqUyus0Lv4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "692392039968-5idvukg7cqne4di3jq3b66p74jll9pj9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
