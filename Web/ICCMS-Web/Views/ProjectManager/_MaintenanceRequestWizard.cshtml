@@ -1,0 +1,83 @@
+<!-- Maintenance Request Approval Wizard Modal -->
+<link rel="stylesheet" href="~/css/maintenance-request-wizard.css" />
+<div class="modal fade" id="maintenanceRequestWizardModal" tabindex="-1" aria-labelledby="maintenanceRequestWizardModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="d-flex align-items-center gap-2">
+                    <h5 class="modal-title mb-0" id="maintenanceRequestWizardModalLabel">
+                        <i class="fa-solid fa-check-circle me-2"></i>Approve Maintenance Request
+                    </h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Wizard Progress Indicator -->
+                <div class="wizard-progress mb-4">
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 0%;" id="mrwWizardProgress"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-3">
+                        <small>Step <span id="mrwCurrentStep">1</span> of 2</small>
+                        <small id="mrwStepTitle">Phases</small>
+                    </div>
+                </div>
+
+                <!-- Hidden inputs for maintenance request and project IDs -->
+                <input type="hidden" id="mrwRequestId" />
+                <input type="hidden" id="mrwProjectId" />
+
+                <!-- Wizard Steps -->
+                <form id="maintenanceRequestWizardForm">
+                    <!-- Step 1: Phases -->
+                    <div class="wizard-step" id="mrwStep1">
+                        <div class="d-flex align-items-center mb-4 wizard-step-header">
+                            <i class="fa-solid fa-layer-group me-3"></i>
+                            <h6 class="mb-0">Phases</h6>
+                        </div>
+                        <p class="text-muted mb-3">Create phases for the maintenance work. You can add tasks to these phases in the next step.</p>
+                        <div id="mrwPhasesContainer" class="mb-3"></div>
+                        <button type="button" class="btn" id="mrwAddPhaseBtn">
+                            <i class="fa-solid fa-plus me-1"></i>Add Phase
+                        </button>
+                    </div>
+
+                    <!-- Step 2: Tasks & Contractors -->
+                    <div class="wizard-step d-none" id="mrwStep2">
+                        <div class="d-flex align-items-center mb-4 wizard-step-header">
+                            <i class="fa-solid fa-tasks me-3"></i>
+                            <h6 class="mb-0">Tasks & Contractors</h6>
+                        </div>
+                        <p class="text-muted mb-3">Create tasks and assign them to contractors. Select the phase for each task.</p>
+                        <div id="mrwTasksContainer" class="mb-3"></div>
+                        <button type="button" class="btn" id="mrwAddTaskBtn">
+                            <i class="fa-solid fa-plus me-1"></i>Add Task
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn" id="mrwPrevStepBtn" style="display: none;">
+                    <i class="fa-solid fa-arrow-left me-1"></i>Previous
+                </button>
+                <button type="button" class="btn" id="mrwNextStepBtn">
+                    Next <i class="fa-solid fa-arrow-right ms-1"></i>
+                </button>
+                <button type="button" class="btn" id="mrwApproveBtn" style="display: none;">
+                    <i class="fa-solid fa-check me-1"></i>Approve & Create
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="mrwWizardLoadingOverlay" style="display: none;">
+    <div class="spinner-border" role="status" style="color: #F7EC59;">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Processing maintenance request...</p>
+</div>
+

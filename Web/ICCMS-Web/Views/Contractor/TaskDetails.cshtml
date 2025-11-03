@@ -274,6 +274,10 @@
                                 <div class="budget-item"><span class="budget-label">Remaining</span><span
                                         class="budget-value">@(Model.Task.EstimatedHours - Model.Task.ActualHours) hours</span>
                                 </div>
+                                <div class="budget-item"><span class="budget-label">Task Budget</span><span
+                                        class="budget-value">R @Model.Task.Budget.ToString("N0")</span></div>
+                                <div class="budget-item"><span class="budget-label">Spent Amount</span><span
+                                        class="budget-value">R @Model.Task.SpentAmount.ToString("N0")</span></div>
                             </div>
                         </div>
                     </div>

@@ -522,6 +522,49 @@ namespace ICCMS_Web.Controllers
                     return Json(new { success = false, message = "User not authenticated" });
                 }
 
+                // Check if this is a workflow message (workflow messages use WorkflowMessageId as threadId)
+                // Try to fetch it as a workflow message first
+                try
+                {
+                    var workflowMessages = await _apiClient.GetAsync<List<WorkflowMessageDto>>(
+                        $"/api/messages/user/{currentUserId}/workflow",
+                        User
+                    );
+
+                    var workflowMessage = workflowMessages?.FirstOrDefault(wm => wm.WorkflowMessageId == threadId);
+                    
+                    if (workflowMessage != null)
+                    {
+                        // This is a workflow message - convert it to MessageDto format
+                        var message = new MessageDto
+                        {
+                            MessageId = workflowMessage.WorkflowMessageId,
+                            SenderId = "system",
+                            SenderName = "System",
+                            ReceiverId = currentUserId,
+                            Subject = workflowMessage.Subject,
+                            Content = workflowMessage.Content,
+                            IsRead = true, // Workflow messages are always considered read
+                            SentAt = workflowMessage.CreatedAt,
+                            ThreadId = workflowMessage.WorkflowMessageId,
+                            MessageType = "workflow"
+                        };
+                        
+                        _logger.LogInformation(
+                            "Returning workflow message {WorkflowMessageId} with content length {ContentLength}",
+                            workflowMessage.WorkflowMessageId,
+                            workflowMessage.Content?.Length ?? 0
+                        );
+                        
+                        return Json(new { success = true, messages = new List<MessageDto> { message } });
+                    }
+                }
+                catch (Exception workflowEx)
+                {
+                    _logger.LogWarning(workflowEx, "Could not fetch as workflow message, trying as regular thread");
+                }
+
+                // Not a workflow message, fetch as regular thread
                 var messages = await _messagingService.GetThreadMessagesAsync(
                     threadId,
                     currentUserId
@@ -581,7 +624,7 @@ namespace ICCMS_Web.Controllers
                     var workflowThreads = workflowMessages
                         .Select(wm => new ThreadDto
                         {
-                            ThreadId = string.Empty, // Workflow messages are not threads
+                            ThreadId = wm.WorkflowMessageId, // Use WorkflowMessageId as ThreadId for workflow messages
                             Subject = wm.Subject,
                             ProjectId = wm.ProjectId,
                             ProjectName = "", // Will be populated from project data if needed

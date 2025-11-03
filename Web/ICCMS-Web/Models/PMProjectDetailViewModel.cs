@@ -69,6 +69,10 @@ namespace ICCMS_Web.Models
         [JsonPropertyName("invoices")]
         public List<InvoiceDto> Invoices { get; set; } = new();
 
+        // Maintenance requests
+        [JsonPropertyName("maintenanceRequests")]
+        public List<MaintenanceRequestDto> MaintenanceRequests { get; set; } = new();
+
         // Helper methods for UI
         public string GetStatusBadgeClass(string status)
         {
@@ -141,6 +145,19 @@ namespace ICCMS_Web.Models
             return ContractorMap.TryGetValue(contractorId, out var contractor)
                 ? contractor.FullName
                 : "Unknown";
+        }
+
+        public string GetMaintenanceRequestStatusBadgeClass(string status)
+        {
+            return status?.ToLowerInvariant() switch
+            {
+                "pending" or "submitted" => "badge-warning",
+                "assigned" => "badge-info",
+                "in progress" or "inprogress" => "badge-primary",
+                "completed" or "resolved" => "badge-success",
+                "rejected" or "cancelled" => "badge-danger",
+                _ => "badge-secondary",
+            };
         }
     }
 }

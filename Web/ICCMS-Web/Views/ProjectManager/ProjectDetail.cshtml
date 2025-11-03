@@ -3,6 +3,7 @@
 @await Html.PartialAsync("_EstimateEditorModalNew")
 @await Html.PartialAsync("_BlueprintPickerModal")
 @await Html.PartialAsync("_InvoiceEditorModal")
+@await Html.PartialAsync("_MaintenanceRequestWizard")
 
 @{
     ViewData["Title"] = $"Project: {Model.Project.Name}";
@@ -276,7 +277,7 @@
             </div>
 
             <!-- Invoices Section -->
-            <div class="pm-invoices-section">
+            <div class="pm-invoices-section mb-4">
                 <h6 class="mb-2">Project Invoices</h6>
                 <div class="card pm-invoices-card">
                     <div class="card-body p-0">
@@ -306,6 +307,78 @@
                                     <i class="fas fa-file-invoice"></i>
                                     <p>No invoices found</p>
                                     <small>Invoices will appear here when created</small>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Maintenance Requests Section -->
+            <div class="pm-maintenance-requests-section">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0">Maintenance Requests</h6>
+                    <span class="badge pm-badge-secondary">@Model.MaintenanceRequests.Count</span>
+                </div>
+                <div class="card pm-maintenance-requests-card">
+                    <div class="card-body p-0">
+                        <div class="maintenance-requests-container" id="maintenanceRequestsContainer" style="max-height: 400px; overflow-y: auto;">
+                            @if (Model.MaintenanceRequests != null && Model.MaintenanceRequests.Any())
+                            {
+                                @foreach (var request in Model.MaintenanceRequests.OrderByDescending(r => r.CreatedAt))
+                                {
+                                    <div class="maintenance-request-item border-bottom p-3" data-request-id="@request.MaintenanceRequestId">
+                                        <div class="request-header d-flex justify-content-between align-items-center mb-2">
+                                            <div class="request-info">
+                                                <span class="request-id fw-bold">Request #@request.MaintenanceRequestId.Substring(0, Math.Min(8, request.MaintenanceRequestId.Length))</span>
+                                                <span class="badge @Model.GetMaintenanceRequestStatusBadgeClass(request.Status) ms-2">@request.Status</span>
+                                                <span class="badge @Model.GetPriorityBadgeClass(request.Priority) ms-2">@request.Priority</span>
+                                            </div>
+                                            <small class="text-muted">@request.CreatedAt.ToString("MMM dd, yyyy")</small>
+                                        </div>
+                                        
+                                        <div class="request-description mb-2">
+                                            <p class="mb-0 text-muted small">@(request.Description.Length > 100 ? request.Description.Substring(0, 100) + "..." : request.Description)</p>
+                                        </div>
+                                        
+                                        @if (!string.IsNullOrWhiteSpace(request.AssignedTo))
+                                        {
+                                            <div class="request-meta mb-2">
+                                                <small class="text-muted">Assigned to: @Model.GetContractorName(request.AssignedTo)</small>
+                                            </div>
+                                        }
+                                        
+                                        <div class="request-actions">
+                                            @if (request.Status == "Pending" || request.Status == "Submitted")
+                                            {
+                                                <button class="btn btn-sm btn-success approve-request-btn me-1" 
+                                                        data-request-id="@request.MaintenanceRequestId"
+                                                        data-project-id="@Model.Project.ProjectId"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#maintenanceRequestWizardModal">
+                                                    <i class="fa-solid fa-check me-1"></i>Approve
+                                                </button>
+                                                <button class="btn btn-sm btn-danger reject-request-btn me-1" 
+                                                        data-request-id="@request.MaintenanceRequestId"
+                                                        data-project-id="@Model.Project.ProjectId">
+                                                    <i class="fa-solid fa-times me-1"></i>Reject
+                                                </button>
+                                            }
+                                            
+                                            <a href="@Url.Action("MaintenanceRequestDetail", "ProjectManager", new { id = request.MaintenanceRequestId })" 
+                                               class="btn btn-sm btn-outline-info">
+                                                <i class="fa-solid fa-eye me-1"></i>Details
+                                            </a>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="no-maintenance-requests-message text-center py-4">
+                                    <i class="fas fa-wrench fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted mb-0">No maintenance requests</p>
+                                    <small class="text-muted">Requests will appear here when clients submit them</small>
                                 </div>
                             }
                         </div>
@@ -458,6 +531,54 @@
 @await Html.PartialAsync("_ProgressReportReviewModal")
 @await Html.PartialAsync("_TaskCompletionReviewModal")
 
+<!-- Assign Contractor Modal -->
+<div class="modal fade" id="assignContractorModal" tabindex="-1" aria-labelledby="assignContractorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignContractorModalLabel">
+                    <i class="fa-solid fa-user-plus me-2"></i>Assign Contractor
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="assignContractorRequestId" />
+                <div class="mb-3">
+                    <label for="contractorSelect" class="form-label">Select Contractor</label>
+                    <select class="form-select" id="contractorSelect">
+                        <option value="">-- Select Contractor --</option>
+                        @foreach (var contractor in Model.ContractorMap.Values)
+                        {
+                            <option value="@contractor.UserId">@contractor.FullName</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmAssignContractorBtn">
+                    <i class="fa-solid fa-check me-1"></i>Assign
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image Viewer Modal -->
+<div class="modal fade" id="maintenanceImageModal" tabindex="-1" aria-labelledby="maintenanceImageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="maintenanceImageModalLabel">Request Image</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="maintenanceImageFull" src="" alt="Maintenance Request Image" class="img-fluid" />
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Document Viewer Modal -->
 <div class="modal fade" id="documentViewerModal" tabindex="-1" aria-labelledby="documentViewerModalLabel"
     aria-hidden="true">
@@ -498,6 +619,8 @@
 <script src="~/js/pm-phase-management.js"></script>
 <script src="~/js/pm-task-management.js"></script>
 <script src="~/js/pm-approval-actions.js"></script>
+<script src="~/js/pm-maintenance-requests.js"></script>
+<script src="~/js/maintenance-request-wizard.js"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -507,10 +630,21 @@
             const rejectBtn = e.target.closest('.reject-completion-btn');
             if (!approveBtn && !rejectBtn) return;
 
+            // Stop event propagation to prevent pm-approval-actions.js from handling it
+            e.stopPropagation();
+            e.preventDefault();
+
             const isApprove = !!approveBtn;
             const button = isApprove ? approveBtn : rejectBtn;
             const taskId = button.getAttribute('data-task-id');
             if (!taskId) return;
+
+            // For reject, ask for confirmation first
+            if (!isApprove) {
+                if (!confirm('Are you sure you want to reject this task completion? The task will be set back to "In Progress" status.')) {
+                    return;
+                }
+            }
 
             button.disabled = true;
             const originalHtml = button.innerHTML;
@@ -530,9 +664,18 @@
                 const data = await res.json().catch(() => ({ success: false }));
                 if (res.ok && data && data.success !== false) {
                     const item = button.closest('.completion-item');
-                    if (item) item.remove();
+                    if (item) {
+                        item.style.transition = 'opacity 0.3s';
+                        item.style.opacity = '0';
+                        setTimeout(() => item.remove(), 300);
+                    }
+                    // Show success message
+                    if (typeof showSuccessMessage === 'function') {
+                        showSuccessMessage(`Task completion ${isApprove ? 'approved' : 'rejected'} successfully`);
+                    }
                 } else {
-                    alert(`Failed to ${isApprove ? 'approve' : 'reject'} completion`);
+                    const errorMsg = data.message || data.error || `Failed to ${isApprove ? 'approve' : 'reject'} completion`;
+                    alert(errorMsg);
                     button.disabled = false;
                     button.innerHTML = originalHtml;
                 }
@@ -542,6 +685,6 @@
                 button.disabled = false;
                 button.innerHTML = originalHtml;
             }
-        });
+        }, true); // Use capture phase to handle before pm-approval-actions.js
     });
 </script>

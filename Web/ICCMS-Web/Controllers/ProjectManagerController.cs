@@ -74,19 +74,23 @@ namespace ICCMS_Web.Controllers
                 var userId = User.Identity?.Name ?? "anonymous";
                 _projectIndexService.BuildOrUpdateIndex(userId, allProjects);
 
-                // Create simple view model
-                // Enrich projects with client names for UI convenience
-                var clients =
+                // Get all clients and filter to only those that have projects for this PM
+                var allClients =
                     await _apiClient.GetAsync<List<UserDto>>("/api/users/clients", User) ?? new();
+                
+                // Get unique ClientIds from PM's projects
+                var pmClientIds = allProjects
+                    .Where(p => !string.IsNullOrEmpty(p.ClientId))
+                    .Select(p => p.ClientId)
+                    .Distinct()
+                    .ToHashSet();
+                
+                // Filter clients to only those that have projects for this PM
+                var clients = allClients
+                    .Where(c => pmClientIds.Contains(c.UserId))
+                    .ToList();
+                
                 var clientMap = clients.ToDictionary(c => c.UserId, c => c.FullName);
-                foreach (var p in allProjects)
-                {
-                    if (clientMap.TryGetValue(p.ClientId ?? string.Empty, out var fullName))
-                    {
-                        // Store on a dynamic bag via ViewBag mapping at render time
-                        // or rely on ViewBag.ClientName when rendering each card
-                    }
-                }
 
                 // Load estimates efficiently - only for non-draft projects
                 var projectDetails = new Dictionary<string, ProjectDetails>();
@@ -135,11 +139,31 @@ namespace ICCMS_Web.Controllers
                     };
                 }
 
+                // Calculate ActiveProjects and OtherProjects
+                var activeProjects = allProjects.Where(p => p.Status == "Active").ToList();
+                var otherProjects = allProjects.Where(p => p.Status != "Draft" && p.Status != "Active").ToList();
+
+                // Calculate TotalClients - count unique clients from PM's projects
+                var uniqueClientIds = allProjects
+                    .Where(p => !string.IsNullOrEmpty(p.ClientId))
+                    .Select(p => p.ClientId)
+                    .Distinct()
+                    .Count();
+
+                // Calculate TotalQuotes - get all quotations and filter to PM's projects
+                var allQuotes = await _apiClient.GetAsync<List<QuotationDto>>("/api/quotations", User) ?? new List<QuotationDto>();
+                var pmProjectIds = allProjects.Select(p => p.ProjectId).ToHashSet();
+                var totalQuotes = allQuotes.Count(q => !string.IsNullOrEmpty(q.ProjectId) && pmProjectIds.Contains(q.ProjectId));
+
                 var vm = new DashboardViewModel
                 {
                     DraftProjects = allProjects.Where(p => p.Status == "Draft").ToList(),
+                    ActiveProjects = activeProjects,
+                    OtherProjects = otherProjects,
                     FilteredProjects = allProjects.Where(p => p.Status != "Draft").ToList(),
                     TotalProjects = allProjects.Count,
+                    TotalClients = uniqueClientIds,
+                    TotalQuotes = totalQuotes,
                     Clients = clients,
                     ProjectDetails = projectDetails,
                 };
@@ -154,7 +178,7 @@ namespace ICCMS_Web.Controllers
                     }
                 }
 
-                _logger.LogInformation("✅ Dashboard ready with {Total} projects", vm.TotalProjects);
+                _logger.LogInformation("✅ Dashboard ready with {Total} projects, {Clients} clients, {Quotes} quotes", vm.TotalProjects, vm.TotalClients, vm.TotalQuotes);
                 return View(vm);
             }
             catch (Exception ex)
@@ -257,6 +281,19 @@ namespace ICCMS_Web.Controllers
                     User
                 ) ?? new List<InvoiceDto>();
 
+                // Get project maintenance requests
+                _logger.LogInformation("Fetching maintenance requests for project {ProjectId}", projectId);
+                var maintenanceRequests = await _apiClient.GetAsync<List<MaintenanceRequestDto>>(
+                    $"/api/projectmanager/project/{projectId}/maintenance-requests",
+                    User
+                ) ?? new List<MaintenanceRequestDto>();
+
+                _logger.LogInformation(
+                    "Found {Count} maintenance requests for project {ProjectId}",
+                    maintenanceRequests.Count,
+                    projectId
+                );
+
                 // Get pending progress reports
                 _logger.LogInformation("Fetching pending progress reports");
                 var pendingReports =
@@ -327,6 +364,7 @@ namespace ICCMS_Web.Controllers
                     Tasks = tasks,
                     Estimates = estimates,
                     Invoices = invoices,
+                    MaintenanceRequests = maintenanceRequests,
                     PendingProgressReports = projectPendingReports,
                     TasksAwaitingCompletion = tasksAwaitingCompletion,
                     ContractorMap = contractorMap,
@@ -591,6 +629,7 @@ namespace ICCMS_Web.Controllers
                             User
                         ) ?? new();
                     _projectIndexService.BuildOrUpdateIndex(userId, allProjects);
+                    index = _projectIndexService.GetIndex(userId);
                 }
 
                 var normalized = (status ?? string.Empty).Trim();
@@ -599,7 +638,55 @@ namespace ICCMS_Web.Controllers
                     normalized = string.Empty; // treat All as no status filter
                 }
 
-                var results = _projectIndexService.Search(userId, q, normalized, clientId).ToList();
+                // Normalize clientId - trim whitespace and treat empty string as null
+                var normalizedClientId = string.IsNullOrWhiteSpace(clientId) ? null : clientId.Trim();
+                
+                _logger.LogInformation(
+                    "SearchProjects - Query: '{Query}', Status: '{Status}', ClientId: '{ClientId}' (normalized: '{NormalizedClientId}')",
+                    q ?? "(null)",
+                    normalized ?? "(empty)",
+                    clientId ?? "(null)",
+                    normalizedClientId ?? "(null)"
+                );
+
+                // Debug: Log index contents when filtering by clientId
+                if (!string.IsNullOrEmpty(normalizedClientId) && index != null)
+                {
+                    var allProjectsInIndex = index.ById.Values.ToList();
+                    var uniqueClientIds = allProjectsInIndex
+                        .Where(p => !string.IsNullOrEmpty(p.ClientId))
+                        .Select(p => p.ClientId)
+                        .Distinct()
+                        .ToList();
+                    
+                    var byClientIdKeys = index.ByClientId.Keys.Where(k => !string.IsNullOrEmpty(k)).ToList();
+                    
+                    _logger.LogWarning(
+                        "SearchProjects DEBUG - Index has {TotalProjects} projects. ClientIds in projects: [{ClientIds}]. ByClientId keys: [{Keys}]. Searching for: '{SearchClientId}'",
+                        allProjectsInIndex.Count,
+                        string.Join(", ", uniqueClientIds),
+                        string.Join(", ", byClientIdKeys),
+                        normalizedClientId
+                    );
+                    
+                    // Log each project's ClientId for debugging
+                    foreach (var project in allProjectsInIndex)
+                    {
+                        _logger.LogWarning(
+                            "SearchProjects DEBUG - Project {ProjectId} has ClientId: '{ClientId}'",
+                            project.ProjectId,
+                            project.ClientId ?? "(null)"
+                        );
+                    }
+                }
+
+                var results = _projectIndexService.Search(userId, q, normalized, normalizedClientId).ToList();
+                
+                _logger.LogInformation(
+                    "SearchProjects - Found {Count} projects after filtering by clientId '{ClientId}'",
+                    results.Count,
+                    normalizedClientId ?? "(none)"
+                );
 
                 var drafts = results
                     .Where(p =>
@@ -611,6 +698,13 @@ namespace ICCMS_Web.Controllers
                         !string.Equals(p.Status, "Draft", StringComparison.OrdinalIgnoreCase)
                     )
                     .ToList();
+
+                // Fetch clients to map client IDs to names
+                var clients = await _apiClient.GetAsync<List<UserDto>>("/api/users/clients", User) ?? new List<UserDto>();
+                var clientMap = clients.ToDictionary(c => c.UserId, c => c.FullName);
+                
+                // Store client map in ViewData so _ProjectsCards can use it
+                ViewData["ClientMap"] = clientMap;
 
                 // Render server-side HTML using existing partial so the UI exactly matches initial render
                 string projectsHtml = await this.RenderViewAsync(
@@ -2736,5 +2830,391 @@ namespace ICCMS_Web.Controllers
                 return Json(new { success = false, message = "Error rejecting task completion" });
             }
         }
+
+        /// <summary>
+        /// Assign a contractor to a maintenance request
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> AssignMaintenanceContractor([FromBody] AssignContractorRequest request)
+        {
+            _logger.LogInformation(
+                "Assigning contractor {ContractorId} to maintenance request {RequestId}",
+                request.ContractorId,
+                request.RequestId
+            );
+
+            try
+            {
+                var maintenanceRequest = await _apiClient.GetAsync<MaintenanceRequestDto>(
+                    $"/api/clients/maintenanceRequest/{request.RequestId}",
+                    User
+                );
+
+                if (maintenanceRequest == null)
+                {
+                    return Json(new { success = false, error = "Maintenance request not found" });
+                }
+
+                maintenanceRequest.AssignedTo = request.ContractorId;
+                maintenanceRequest.Status = "Assigned";
+
+                var updated = await _apiClient.PutAsync<MaintenanceRequestDto>(
+                    $"/api/clients/update/maintenanceRequest/{request.RequestId}",
+                    maintenanceRequest,
+                    User
+                );
+
+                if (updated != null)
+                {
+                    _logger.LogInformation(
+                        "✅ Contractor {ContractorId} assigned to maintenance request {RequestId}",
+                        request.ContractorId,
+                        request.RequestId
+                    );
+                    return Json(new { success = true });
+                }
+                else
+                {
+                    return Json(new { success = false, error = "Failed to assign contractor" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error assigning contractor to maintenance request {RequestId}", request.RequestId);
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Approve a maintenance request and create phases/tasks
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> ApproveMaintenanceRequest([FromBody] ApproveRequestRequest request)
+        {
+            _logger.LogInformation("Approving maintenance request {RequestId}", request.RequestId);
+
+            try
+            {
+                var result = await _apiClient.PutAsync<object>(
+                    $"/api/projectmanager/maintenance-request/{request.RequestId}/approve",
+                    new
+                    {
+                        requestId = request.RequestId,
+                        projectId = request.ProjectId,
+                        phases = request.Phases,
+                        tasks = request.Tasks
+                    },
+                    User
+                );
+
+                if (result != null)
+                {
+                    _logger.LogInformation("✅ Maintenance request {RequestId} approved", request.RequestId);
+                    return Json(new { success = true });
+                }
+                else
+                {
+                    return Json(new { success = false, error = "Failed to approve request" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving maintenance request {RequestId}", request.RequestId);
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Reject a maintenance request
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> RejectMaintenanceRequest([FromBody] RejectRequestRequest request)
+        {
+            _logger.LogInformation("Rejecting maintenance request {RequestId}", request.RequestId);
+
+            try
+            {
+                // Call API reject endpoint which handles status update and workflow message
+                var result = await _apiClient.PutAsync<object>(
+                    $"/api/projectmanager/maintenance-request/{request.RequestId}/reject",
+                    null,
+                    User
+                );
+
+                if (result != null)
+                {
+                    _logger.LogInformation("✅ Maintenance request {RequestId} rejected", request.RequestId);
+                    return Json(new { success = true });
+                }
+                else
+                {
+                    return Json(new { success = false, error = "Failed to reject request" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rejecting maintenance request {RequestId}", request.RequestId);
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get maintenance request details full view for PM
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> MaintenanceRequestDetail(string id)
+        {
+            _logger.LogInformation(
+                "🟡 [ProjectManagerController] Entered MaintenanceRequestDetail() with ID: {Id}",
+                id
+            );
+
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                _logger.LogWarning(
+                    "⚠️ [ProjectManagerController] No ID provided to MaintenanceRequestDetail()"
+                );
+                TempData["ErrorMessage"] = "Missing request ID";
+                return RedirectToAction("Dashboard");
+            }
+
+            try
+            {
+                _logger.LogInformation(
+                    "📡 [ProjectManagerController] Calling API endpoint for maintenance request..."
+                );
+                // Use PM endpoint instead of client endpoint
+                var endpoint = $"/api/projectmanager/maintenance-request/{id}";
+                _logger.LogInformation(
+                    "➡️ [ProjectManagerController] Full API path: {Endpoint}",
+                    endpoint
+                );
+
+                var request = await _apiClient.GetAsync<MaintenanceRequestDto>(endpoint, User);
+                _logger.LogInformation(
+                    "🧾 [ProjectManagerController] Retrieved model: {@Request}",
+                    request
+                );
+
+                if (request == null)
+                {
+                    _logger.LogWarning("❌ [ProjectManagerController] API returned NULL for ID: {Id}", id);
+                    TempData["ErrorMessage"] = $"Maintenance request not found for ID {id}";
+                    return RedirectToAction("Dashboard");
+                }
+
+                // Get the project to show project name in breadcrumb
+                var project = await _apiClient.GetAsync<ProjectDto>(
+                    $"/api/projectmanager/project/{request.ProjectId}",
+                    User
+                );
+
+                if (project == null)
+                {
+                    _logger.LogWarning("❌ [ProjectManagerController] Project not found for ID: {ProjectId}", request.ProjectId);
+                    TempData["ErrorMessage"] = "Project not found";
+                    return RedirectToAction("Dashboard");
+                }
+
+                _logger.LogInformation(
+                    "✅ [ProjectManagerController] Maintenance request retrieved successfully for ID: {Id}",
+                    id
+                );
+                ViewBag.Project = project;
+                return View("MaintenanceRequestDetail", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "🔥 [ProjectManagerController] Exception in MaintenanceRequestDetail() for ID: {Id}",
+                    id
+                );
+                TempData["ErrorMessage"] = "Error fetching maintenance details";
+                return RedirectToAction("Dashboard");
+            }
+        }
+
+        /// <summary>
+        /// Get maintenance request details partial view for PM (kept for backward compatibility)
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> MaintenanceRequestDetailsPartial(string id)
+        {
+            _logger.LogInformation(
+                "🟡 [ProjectManagerController] Entered MaintenanceRequestDetailsPartial() with ID: {Id}",
+                id
+            );
+
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                _logger.LogWarning(
+                    "⚠️ [ProjectManagerController] No ID provided to MaintenanceRequestDetailsPartial()"
+                );
+                return BadRequest("Missing request ID");
+            }
+
+            try
+            {
+                _logger.LogInformation(
+                    "📡 [ProjectManagerController] Calling API endpoint for maintenance request..."
+                );
+                // Use PM endpoint instead of client endpoint
+                var endpoint = $"/api/projectmanager/maintenance-request/{id}";
+                _logger.LogInformation(
+                    "➡️ [ProjectManagerController] Full API path: {Endpoint}",
+                    endpoint
+                );
+
+                var request = await _apiClient.GetAsync<MaintenanceRequestDto>(endpoint, User);
+                _logger.LogInformation(
+                    "🧾 [ProjectManagerController] Retrieved model: {@Request}",
+                    request
+                );
+
+                if (request == null)
+                {
+                    _logger.LogWarning("❌ [ProjectManagerController] API returned NULL for ID: {Id}", id);
+                    return NotFound($"Maintenance request not found for ID {id}");
+                }
+
+                _logger.LogInformation(
+                    "✅ [ProjectManagerController] Maintenance request retrieved successfully for ID: {Id}",
+                    id
+                );
+                // Use the same partial view as ClientsController
+                return PartialView("../Clients/MaintenanceRequestDetails", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "🔥 [ProjectManagerController] Exception in MaintenanceRequestDetailsPartial() for ID: {Id}",
+                    id
+                );
+                return StatusCode(500, "Error fetching maintenance details");
+            }
+        }
+
+        /// <summary>
+        /// Start work on a maintenance request (change status to In Progress)
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> StartMaintenanceWork([FromBody] StartWorkRequest request)
+        {
+            _logger.LogInformation("Starting work on maintenance request {RequestId}", request.RequestId);
+
+            try
+            {
+                var maintenanceRequest = await _apiClient.GetAsync<MaintenanceRequestDto>(
+                    $"/api/clients/maintenanceRequest/{request.RequestId}",
+                    User
+                );
+
+                if (maintenanceRequest == null)
+                {
+                    return Json(new { success = false, error = "Maintenance request not found" });
+                }
+
+                maintenanceRequest.Status = "In Progress";
+
+                var updated = await _apiClient.PutAsync<MaintenanceRequestDto>(
+                    $"/api/clients/update/maintenanceRequest/{request.RequestId}",
+                    maintenanceRequest,
+                    User
+                );
+
+                if (updated != null)
+                {
+                    _logger.LogInformation("✅ Work started on maintenance request {RequestId}", request.RequestId);
+                    return Json(new { success = true });
+                }
+                else
+                {
+                    return Json(new { success = false, error = "Failed to start work" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error starting work on maintenance request {RequestId}", request.RequestId);
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Mark a maintenance request as resolved
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> MarkMaintenanceResolved([FromBody] MarkResolvedRequest request)
+        {
+            _logger.LogInformation("Marking maintenance request {RequestId} as resolved", request.RequestId);
+
+            try
+            {
+                var maintenanceRequest = await _apiClient.GetAsync<MaintenanceRequestDto>(
+                    $"/api/clients/maintenanceRequest/{request.RequestId}",
+                    User
+                );
+
+                if (maintenanceRequest == null)
+                {
+                    return Json(new { success = false, error = "Maintenance request not found" });
+                }
+
+                maintenanceRequest.Status = "Completed";
+                maintenanceRequest.ResolvedAt = DateTime.UtcNow;
+
+                var updated = await _apiClient.PutAsync<MaintenanceRequestDto>(
+                    $"/api/clients/update/maintenanceRequest/{request.RequestId}",
+                    maintenanceRequest,
+                    User
+                );
+
+                if (updated != null)
+                {
+                    _logger.LogInformation("✅ Maintenance request {RequestId} marked as resolved", request.RequestId);
+                    return Json(new { success = true });
+                }
+                else
+                {
+                    return Json(new { success = false, error = "Failed to mark as resolved" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking maintenance request {RequestId} as resolved", request.RequestId);
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+    }
+
+    // Request DTOs for maintenance request actions
+    public class AssignContractorRequest
+    {
+        public string RequestId { get; set; } = string.Empty;
+        public string ContractorId { get; set; } = string.Empty;
+    }
+
+    public class ApproveRequestRequest
+    {
+        public string RequestId { get; set; } = string.Empty;
+        public string ProjectId { get; set; } = string.Empty;
+        public List<PhaseDto> Phases { get; set; } = new();
+        public List<ProjectTaskDto> Tasks { get; set; } = new();
+    }
+
+    public class RejectRequestRequest
+    {
+        public string RequestId { get; set; } = string.Empty;
+    }
+
+    public class StartWorkRequest
+    {
+        public string RequestId { get; set; } = string.Empty;
+    }
+
+    public class MarkResolvedRequest
+    {
+        public string RequestId { get; set; } = string.Empty;
     }
 }

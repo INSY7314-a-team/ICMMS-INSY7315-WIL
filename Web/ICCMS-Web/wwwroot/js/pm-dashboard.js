@@ -118,13 +118,16 @@ function performSearch() {
 }
 
 function initializeFilters() {
-  // Status filter buttons (All, Draft, Active, Completed, Maintenance)
-  const statusBtns = document.querySelectorAll(".status-filter-btn");
+  // Status filter buttons ONLY (not client filters - those are handled in dashboard.cshtml inline script)
+  // IMPORTANT: Only select buttons that have data-status AND do NOT have data-client
+  const statusBtns = document.querySelectorAll(".status-filter-btn[data-status]:not([data-client])");
+  
   statusBtns.forEach((btn) => {
     btn.addEventListener("click", function (e) {
       e.preventDefault();
+      // Don't stop propagation - let inline script handle coordination
       const status = this.getAttribute("data-status") || "";
-      // mark active state for Apply Filters to read
+      // mark active state
       statusBtns.forEach((b) => b.classList.remove("active"));
       this.classList.add("active");
       const params = new URLSearchParams();
@@ -135,10 +138,6 @@ function initializeFilters() {
       })
         .then((r) => (r.ok ? r.json() : Promise.reject("Status filter failed")))
         .then((data) => {
-          // Behavior:
-          // - All: show both sections with their respective results
-          // - Draft: show only drafts and hide projects list
-          // - Others: hide drafts and show matching projects
           const normalized = (status || "All").toLowerCase();
           if (normalized === "all") {
             showDraftsSection();
@@ -147,7 +146,6 @@ function initializeFilters() {
           } else if (normalized === "draft") {
             showDraftsSection();
             replaceGridHtml("draftProjectsGrid", data.draftsHtml);
-            // Clear projects grid to avoid mixing
             replaceGridHtml("projectsGrid", "");
           } else {
             hideDraftsSection();
@@ -157,8 +155,6 @@ function initializeFilters() {
         .catch((e) => console.error(e));
     });
   });
-
-  // Filter toggle functionality is handled in the dashboard.cshtml
 }
 
 // Toggle filters panel with enhanced UI feedback

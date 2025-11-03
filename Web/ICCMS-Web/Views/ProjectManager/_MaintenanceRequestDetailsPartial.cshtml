@@ -1,0 +1,139 @@
+@model ICCMS_Web.Models.MaintenanceRequestDto
+
+<!-- Maintenance Request Details (PM-styled Modal) -->
+<div class="container-fluid py-3">
+
+    <!-- Header Card -->
+    <div class="card border-0 shadow-sm mb-4 rounded-3" 
+         style="background: var(--primary-bg); color: var(--accent-yellow);">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="fw-bold mb-1">
+                    <i class="fa-solid fa-wrench me-2"></i> Maintenance Request
+                </h5>
+                <p class="text-light small mb-0">Request ID: 
+                    <span class="text-warning">@Model.MaintenanceRequestId</span>
+                </p>
+            </div>
+            <span class="badge bg-gradient rounded-pill px-3 py-2" 
+                  style="background: var(--accent-yellow); color: #000;">
+                @Model.Priority
+            </span>
+        </div>
+    </div>
+
+    <!-- Request Information -->
+    <div class="card border-0 shadow-sm mb-4 rounded-3" 
+         style="background: var(--secondary-bg); color: var(--text-light);">
+        <div class="card-header bg-transparent border-0 py-2">
+            <h6 class="fw-bold mb-0 text-gradient">
+                <i class="fa-solid fa-circle-info me-2 text-warning"></i>Request Information
+            </h6>
+        </div>
+        <div class="card-body small">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="text-muted small">Project</label>
+                    <p class="fw-semibold mb-0">@Model.ProjectId</p>
+                </div>
+                <div class="col-md-6">
+                    <label class="text-muted small">Requested By</label>
+                    <p class="fw-semibold mb-0">@Model.RequestedBy</p>
+                </div>
+                <div class="col-md-12">
+                    <label class="text-muted small">Description</label>
+                    <p class="fw-normal mb-0">@Model.Description</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attached Photo -->
+    <div class="card border-0 shadow-sm mb-4 rounded-3" 
+         style="background: var(--secondary-bg); color: var(--text-light);">
+        <div class="card-header bg-transparent border-0 py-2">
+            <h6 class="fw-bold mb-0 text-gradient">
+                <i class="fa-solid fa-camera me-2 text-primary"></i>Attached Photo
+            </h6>
+        </div>
+        <div class="card-body text-center">
+            @if (!string.IsNullOrWhiteSpace(Model.MediaUrl))
+            {
+                <img src="@Model.MediaUrl"
+                     alt="Attached Media"
+                     class="img-fluid rounded shadow-sm mb-2"
+                     style="max-height:300px;object-fit:contain;cursor:pointer;"
+                     onclick="showImageModal('@Model.MediaUrl')" />
+                <p class="text-muted small mb-0">Click to view full size</p>
+            }
+            else
+            {
+                <div class="text-center py-3">
+                    <i class="fa-solid fa-image fa-2x text-muted mb-2"></i>
+                    <p class="text-muted small mb-0">No image attached</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="card border-0 shadow-sm rounded-3"
+         style="background: var(--secondary-bg); color: var(--text-light);">
+        <div class="card-header bg-transparent border-0 py-2">
+            <h6 class="fw-bold mb-0 text-gradient">
+                <i class="fa-solid fa-clock me-2 text-info"></i>Timeline
+            </h6>
+        </div>
+        <div class="card-body small">
+            <ul class="list-group list-group-flush bg-transparent">
+                <li class="list-group-item bg-transparent border-0 px-0 py-1">
+                    <strong>Created:</strong> 
+                    <span class="text-light">@Model.CreatedAt.ToString("dd MMM yyyy")</span>
+                </li>
+                @if (Model.ResolvedAt.HasValue)
+                {
+                    <li class="list-group-item bg-transparent border-0 px-0 py-1">
+                        <strong>Resolved:</strong> 
+                        <span class="text-success">@Model.ResolvedAt.Value.ToString("dd MMM yyyy")</span>
+                    </li>
+                }
+                else
+                {
+                    <li class="list-group-item bg-transparent border-0 px-0 py-1">
+                        <strong>Status:</strong> 
+                        <span class="badge bg-warning text-dark">@Model.Status</span>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Modal text visibility fix -->
+<style>
+    #maintenanceDetailsModal .modal-body {
+        color: var(--text-light);
+        background: var(--secondary-bg);
+    }
+
+    .text-gradient {
+        background: linear-gradient(90deg, var(--accent-yellow), #fff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+        /* Fix text color inside the Timeline list only */
+    #maintenanceDetailsModal .list-group-item {
+        color: #f1f1f1 !important;       /* lighter text */
+        background-color: transparent !important;
+    }
+
+    #maintenanceDetailsModal .list-group-item strong {
+        color: var(--accent-yellow) !important; /* highlight labels */
+    }
+
+    #maintenanceDetailsModal .list-group-item span {
+        color: #ffffff !important; /* ensure date/status is visible */
+    }
+</style>
+

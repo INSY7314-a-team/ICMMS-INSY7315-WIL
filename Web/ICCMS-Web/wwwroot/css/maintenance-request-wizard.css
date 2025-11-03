@@ -1,0 +1,368 @@
+/* Maintenance Request Wizard Styling - Improved Visibility & UX */
+
+#maintenanceRequestWizardModal .modal-content {
+    background: var(--primary-bg);
+    border: 2px solid var(--accent-yellow);
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    color: var(--text-primary);
+}
+
+#maintenanceRequestWizardModal .modal-header {
+    background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--accent-yellow);
+    padding: 1.25rem 1.5rem;
+}
+
+#maintenanceRequestWizardModal .modal-title {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.3rem;
+}
+
+#maintenanceRequestWizardModal .modal-title i {
+    color: var(--accent-yellow);
+    font-size: 1.3rem;
+}
+
+#maintenanceRequestWizardModal .btn-close {
+    filter: invert(1) grayscale(100%) brightness(2);
+    opacity: 0.9;
+    transition: all 0.3s ease;
+    background: transparent;
+    border: none;
+}
+
+#maintenanceRequestWizardModal .btn-close:hover {
+    opacity: 1;
+    transform: scale(1.1);
+    filter: invert(1) grayscale(100%) brightness(2.5);
+}
+
+#maintenanceRequestWizardModal .modal-body {
+    background: var(--primary-bg);
+    color: var(--text-primary);
+    padding: 2rem;
+}
+
+/* Progress Indicator - Improved Visibility */
+#maintenanceRequestWizardModal .wizard-progress {
+    margin-bottom: 2rem;
+}
+
+#maintenanceRequestWizardModal .wizard-progress .progress {
+    height: 10px;
+    border-radius: 10px;
+    background: rgba(247, 236, 89, 0.2);
+    border: 1px solid rgba(247, 236, 89, 0.3);
+}
+
+#maintenanceRequestWizardModal .wizard-progress .progress-bar {
+    background: linear-gradient(135deg, #F7EC59 0%, #E6D547 100%);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(247, 236, 89, 0.4);
+}
+
+#maintenanceRequestWizardModal .wizard-progress small {
+    color: var(--text-primary) !important;
+    font-weight: 600;
+    font-size: 0.95rem;
+    opacity: 1;
+}
+
+#maintenanceRequestWizardModal .wizard-progress small:first-child {
+    color: var(--accent-yellow) !important;
+}
+
+/* Step Headers - Better Contrast */
+#maintenanceRequestWizardModal .wizard-step-header {
+    border-bottom: 2px solid var(--accent-yellow);
+    padding-bottom: 10px;
+}
+
+#maintenanceRequestWizardModal .wizard-step h6 {
+    color: var(--accent-yellow) !important;
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-bottom: 0;
+}
+
+#maintenanceRequestWizardModal .wizard-step i {
+    color: var(--accent-yellow) !important;
+    font-size: 1.4rem;
+}
+
+/* Instruction Text - Much Better Contrast */
+#maintenanceRequestWizardModal .wizard-step p.text-muted {
+    color: rgba(255, 255, 255, 0.85) !important;
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    font-weight: 400;
+}
+
+/* Form Labels - High Contrast */
+#maintenanceRequestWizardModal .form-label {
+    color: var(--accent-yellow) !important;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+/* Form Controls - Better Visibility */
+#maintenanceRequestWizardModal .form-control,
+#maintenanceRequestWizardModal .form-select {
+    background: var(--secondary-bg) !important;
+    border: 2px solid rgba(255, 255, 255, 0.2) !important;
+    color: var(--text-primary) !important;
+    border-radius: 8px !important;
+    padding: 0.75rem 1rem !important;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+#maintenanceRequestWizardModal .form-control:focus,
+#maintenanceRequestWizardModal .form-select:focus {
+    outline: none !important;
+    border-color: var(--accent-yellow) !important;
+    background: var(--primary-bg) !important;
+    box-shadow: 0 0 0 3px rgba(247, 236, 89, 0.25) !important;
+    color: var(--text-primary) !important;
+}
+
+#maintenanceRequestWizardModal .form-control::placeholder {
+    color: rgba(255, 255, 255, 0.5) !important;
+    opacity: 1;
+}
+
+/* Input Group - Better Styling */
+#maintenanceRequestWizardModal .input-group-text {
+    background: var(--accent-yellow) !important;
+    color: var(--text-dark) !important;
+    border: 2px solid var(--accent-yellow) !important;
+    border-right: none !important;
+    font-weight: 700 !important;
+    padding: 0.75rem 1rem !important;
+    font-size: 0.95rem;
+}
+
+#maintenanceRequestWizardModal .input-group .form-control {
+    border-left: none !important;
+}
+
+#maintenanceRequestWizardModal .input-group .form-control:focus {
+    border-left: none !important;
+}
+
+/* Cards (Phase/Task Items) - Better Visibility */
+#maintenanceRequestWizardModal .card {
+    background: var(--secondary-bg) !important;
+    color: var(--text-primary) !important;
+    border: 2px solid rgba(247, 236, 89, 0.3) !important;
+    border-radius: 12px !important;
+    margin-bottom: 1rem !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+#maintenanceRequestWizardModal .card:hover {
+    border-color: rgba(247, 236, 89, 0.5) !important;
+    box-shadow: 0 6px 16px rgba(247, 236, 89, 0.2);
+    transform: translateY(-2px);
+}
+
+#maintenanceRequestWizardModal .card-body {
+    padding: 1.25rem !important;
+}
+
+/* Buttons - High Contrast */
+#maintenanceRequestWizardModal #mrwAddPhaseBtn,
+#maintenanceRequestWizardModal #mrwAddTaskBtn {
+    background: var(--accent-yellow) !important;
+    color: var(--text-dark) !important;
+    border: 2px solid var(--accent-yellow) !important;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    margin-top: 0.5rem;
+}
+
+#maintenanceRequestWizardModal #mrwAddPhaseBtn:hover,
+#maintenanceRequestWizardModal #mrwAddTaskBtn:hover {
+    background: var(--text-primary) !important;
+    color: var(--text-dark) !important;
+    box-shadow: 0 4px 15px rgba(247, 236, 89, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Remove Buttons */
+#maintenanceRequestWizardModal .remove-phase,
+#maintenanceRequestWizardModal .remove-task {
+    background: transparent !important;
+    color: #ff5964 !important;
+    border: 2px solid #ff5964 !important;
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all 0.3s ease;
+}
+
+#maintenanceRequestWizardModal .remove-phase:hover,
+#maintenanceRequestWizardModal .remove-task:hover {
+    background: #ff5964 !important;
+    color: var(--text-primary) !important;
+    box-shadow: 0 4px 12px rgba(255, 89, 100, 0.3);
+}
+
+/* Modal Footer Buttons - High Contrast */
+#maintenanceRequestWizardModal .modal-footer {
+    background: var(--secondary-bg);
+    border-top: 2px solid rgba(247, 236, 89, 0.3);
+    padding: 1.25rem 1.5rem;
+}
+
+#maintenanceRequestWizardModal .modal-footer .btn {
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    margin-left: 0.5rem;
+}
+
+/* Cancel Button - Much Better Contrast */
+#maintenanceRequestWizardModal .modal-footer button[data-bs-dismiss="modal"] {
+    background: var(--secondary-bg) !important;
+    color: var(--text-primary) !important;
+    border: 2px solid rgba(255, 255, 255, 0.4) !important;
+}
+
+#maintenanceRequestWizardModal .modal-footer button[data-bs-dismiss="modal"]:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.6) !important;
+    color: var(--text-primary) !important;
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+}
+
+/* Previous Button */
+#maintenanceRequestWizardModal #mrwPrevStepBtn {
+    background: #6C757D !important;
+    color: var(--text-primary) !important;
+    border: 2px solid #6C757D !important;
+}
+
+#maintenanceRequestWizardModal #mrwPrevStepBtn:hover {
+    background: #5a6268 !important;
+    border-color: #5a6268 !important;
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+/* Next Button */
+#maintenanceRequestWizardModal #mrwNextStepBtn {
+    background: var(--accent-yellow) !important;
+    color: var(--text-dark) !important;
+    border: 2px solid var(--accent-yellow) !important;
+}
+
+#maintenanceRequestWizardModal #mrwNextStepBtn:hover {
+    background: var(--text-primary) !important;
+    color: var(--text-dark) !important;
+    box-shadow: 0 4px 15px rgba(247, 236, 89, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Approve Button */
+#maintenanceRequestWizardModal #mrwApproveBtn {
+    background: #28A745 !important;
+    color: var(--text-primary) !important;
+    border: 2px solid #28A745 !important;
+}
+
+#maintenanceRequestWizardModal #mrwApproveBtn:hover {
+    background: #218838 !important;
+    border-color: #218838 !important;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    transform: translateY(-2px);
+}
+
+/* Loading Overlay */
+#mrwWizardLoadingOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(26, 27, 37, 0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    color: var(--text-primary);
+}
+
+#mrwWizardLoadingOverlay .spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.3rem;
+}
+
+#mrwWizardLoadingOverlay p {
+    margin-top: 1rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--accent-yellow);
+}
+
+/* Date Inputs - Better Styling */
+#maintenanceRequestWizardModal input[type="date"] {
+    color-scheme: dark;
+}
+
+#maintenanceRequestWizardModal input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+#maintenanceRequestWizardModal input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+/* Number Inputs */
+#maintenanceRequestWizardModal input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+#maintenanceRequestWizardModal input[type="number"]::-webkit-outer-spin-button,
+#maintenanceRequestWizardModal input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Responsive Improvements */
+@media (max-width: 768px) {
+    #maintenanceRequestWizardModal .modal-body {
+        padding: 1.5rem;
+    }
+    
+    #maintenanceRequestWizardModal .card-body {
+        padding: 1rem !important;
+    }
+    
+    #maintenanceRequestWizardModal .modal-footer {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    #maintenanceRequestWizardModal .modal-footer .btn {
+        width: 100%;
+        margin-left: 0;
+    }
+}
+
