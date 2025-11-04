@@ -73,6 +73,33 @@
     z-index: 1;
 }
 
+.dashboard-header {
+    color: var(--text-primary);
+    padding: 25px 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: var(--text-primary);
+    position: relative;
+    z-index: 1;
+}
+
+.dashboard-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+}
+
 .system-status-indicator {
     position: absolute;
     top: 20px;

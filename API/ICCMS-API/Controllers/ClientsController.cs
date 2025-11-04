@@ -732,10 +732,29 @@ namespace ICCMS_API.Controllers
                 {
                     return NotFound(new { error = "Maintenance request not found" });
                 }
-                if (
-                    existingMaintenanceRequest.ClientId
-                    != User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                )
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+                // Allow Client who owns the request, or PM who manages the project
+                bool isAuthorized = false;
+                if (existingMaintenanceRequest.ClientId == currentUserId)
+                {
+                    isAuthorized = true;
+                }
+                else if (userRole == "Project Manager" || userRole == "Tester")
+                {
+                    // Check if PM manages the project
+                    var project = await _firebaseService.GetDocumentAsync<Project>(
+                        "projects",
+                        existingMaintenanceRequest.ProjectId
+                    );
+                    if (project != null && project.ProjectManagerId == currentUserId)
+                    {
+                        isAuthorized = true;
+                    }
+                }
+
+                if (!isAuthorized)
                 {
                     return BadRequest(
                         new { error = "You are not authorized to update this maintenance request" }

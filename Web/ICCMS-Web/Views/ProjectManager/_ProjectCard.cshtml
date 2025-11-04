@@ -383,22 +383,7 @@
         });
     }
 
-    // Handle project card clicks
-    document.addEventListener('DOMContentLoaded', function () {
-        const projectCard = document.getElementById('project-@Model.ProjectId');
-        if (projectCard) {
-            // Add click handler to card header and body
-            const clickableElements = projectCard.querySelectorAll('.card-header, .card-body');
-            clickableElements.forEach(element => {
-                element.addEventListener('click', function (e) {
-                    // Don't trigger if clicking on buttons or interactive elements
-                    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.dropdown')) {
-                        return;
-                    }
-                    // Navigate to project details
-                    viewProjectDetails('@Model.ProjectId');
-                });
-            });
-        }
-    });
+    // NOTE: Project card click handling is now done via event delegation
+    // in pm-dashboard.js to ensure cards work after filtering/replacing HTML.
+    // This inline handler is no longer needed.
 </script>

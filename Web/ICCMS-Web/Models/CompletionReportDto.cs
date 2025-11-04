@@ -28,8 +28,8 @@ namespace ICCMS_Web.Models
         [JsonPropertyName("completionSummary")]
         public string CompletionSummary { get; set; } = string.Empty;
 
-        [JsonPropertyName("amountSpent")]
-        public decimal AmountSpent { get; set; }
+        [JsonPropertyName("spentAmount")]
+        public double SpentAmount { get; set; }
 
         [JsonPropertyName("qualityCheck")]
         public string QualityCheck { get; set; } = string.Empty;

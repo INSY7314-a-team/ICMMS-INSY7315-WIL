@@ -11,8 +11,12 @@ function initializeDashboard() {
   // Initialize search functionality
   initializeSearch();
 
-  // Initialize filters
-  initializeFilters();
+  // NOTE: Filters are handled in dashboard.cshtml inline script to coordinate
+  // both status and client filters together. initializeFilters() is disabled.
+  // initializeFilters();
+
+  // Initialize project card click handlers using event delegation
+  initializeProjectCardClicks();
 }
 
 function initializeCollapsibleSections() {
@@ -105,6 +109,10 @@ function performSearch() {
     .then((data) => {
       hideDraftsSection();
       replaceGridHtml("projectsGrid", data.projectsHtml);
+      // Resolve client names after updating grid
+      if (typeof resolveClientNames === "function") {
+        resolveClientNames();
+      }
       try {
         showToast(`Results updated`, "success");
       } catch {}
@@ -118,13 +126,16 @@ function performSearch() {
 }
 
 function initializeFilters() {
-  // Status filter buttons (All, Draft, Active, Completed, Maintenance)
-  const statusBtns = document.querySelectorAll(".status-filter-btn");
+  // Status filter buttons ONLY (not client filters - those are handled in dashboard.cshtml inline script)
+  // IMPORTANT: Only select buttons that have data-status AND do NOT have data-client
+  const statusBtns = document.querySelectorAll(".status-filter-btn[data-status]:not([data-client])");
+  
   statusBtns.forEach((btn) => {
     btn.addEventListener("click", function (e) {
       e.preventDefault();
+      // Don't stop propagation - let inline script handle coordination
       const status = this.getAttribute("data-status") || "";
-      // mark active state for Apply Filters to read
+      // mark active state
       statusBtns.forEach((b) => b.classList.remove("active"));
       this.classList.add("active");
       const params = new URLSearchParams();
@@ -135,10 +146,6 @@ function initializeFilters() {
       })
         .then((r) => (r.ok ? r.json() : Promise.reject("Status filter failed")))
         .then((data) => {
-          // Behavior:
-          // - All: show both sections with their respective results
-          // - Draft: show only drafts and hide projects list
-          // - Others: hide drafts and show matching projects
           const normalized = (status || "All").toLowerCase();
           if (normalized === "all") {
             showDraftsSection();
@@ -147,7 +154,6 @@ function initializeFilters() {
           } else if (normalized === "draft") {
             showDraftsSection();
             replaceGridHtml("draftProjectsGrid", data.draftsHtml);
-            // Clear projects grid to avoid mixing
             replaceGridHtml("projectsGrid", "");
           } else {
             hideDraftsSection();
@@ -157,8 +163,6 @@ function initializeFilters() {
         .catch((e) => console.error(e));
     });
   });
-
-  // Filter toggle functionality is handled in the dashboard.cshtml
 }
 
 // Toggle filters panel with enhanced UI feedback
@@ -365,4 +369,33 @@ function hideDraftsSection() {
 function showDraftsSection() {
   const section = document.getElementById("draftSection");
   if (section) section.style.display = "block";
+}
+
+// Initialize project card click handlers using event delegation
+// This ensures cards remain clickable after HTML is replaced via filtering
+function initializeProjectCardClicks() {
+  // Use event delegation on document to handle clicks on dynamically loaded cards
+  document.addEventListener("click", function (e) {
+    // Find the closest project card
+    const projectCard = e.target.closest(".project-card");
+    if (!projectCard) return;
+
+    // Don't trigger navigation if clicking on buttons, links, or interactive elements
+    if (
+      e.target.closest("button") ||
+      e.target.closest("a") ||
+      e.target.closest(".dropdown") ||
+      e.target.closest(".continue-btn") ||
+      e.target.closest(".btn")
+    ) {
+      return;
+    }
+
+    // Get project ID from data attribute
+    const projectId = projectCard.getAttribute("data-project-id");
+    if (!projectId) return;
+
+    // Navigate to project details
+    viewProjectDetails(projectId);
+  });
 }

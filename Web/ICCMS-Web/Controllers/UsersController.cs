@@ -100,6 +100,7 @@ namespace ICCMS_Web.Controllers
                     Password = model.Password,
                     FullName = model.FullName,
                     Role = model.Role,
+                    Phone = model.Phone ?? string.Empty,
                 };
 
                 var response = await _httpClient.PostAsJsonAsync(

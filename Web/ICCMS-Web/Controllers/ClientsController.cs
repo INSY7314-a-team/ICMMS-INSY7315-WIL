@@ -1,12 +1,11 @@
 using System.IO;
-using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using System.Threading.Tasks;
 using DinkToPdf;
 using DinkToPdf.Contracts;
@@ -238,6 +237,39 @@ namespace ICCMS_Web.Controllers
                     overallProgress = (int)tasks.Average(t => t.Progress);
                 }
 
+                // Check which tasks have been rated by the current client
+                var clientId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var ratedTasks = new Dictionary<string, bool>();
+
+                if (!string.IsNullOrEmpty(clientId))
+                {
+                    var completedTasksWithContractors = tasks
+                        .Where(t => t.Status == "Completed" && !string.IsNullOrEmpty(t.AssignedTo))
+                        .ToList();
+
+                    foreach (var task in completedTasksWithContractors)
+                    {
+                        try
+                        {
+                            var hasRated = await _apiClient.GetAsync<bool>(
+                                $"/api/contractorrating/task/{task.TaskId}/contractor/{task.AssignedTo}",
+                                User
+                            );
+                            ratedTasks[task.TaskId] = hasRated;
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(
+                                ex,
+                                "Failed to check rating status for task {TaskId}",
+                                task.TaskId
+                            );
+                            // Default to false if check fails
+                            ratedTasks[task.TaskId] = false;
+                        }
+                    }
+                }
+
                 var viewModel = new ClientProjectDetailViewModel
                 {
                     Project = project,
@@ -249,6 +281,7 @@ namespace ICCMS_Web.Controllers
                     Invoices = invoices,
                     Contractors = contractors,
                     OverallProgress = overallProgress,
+                    RatedTasks = ratedTasks,
                 };
 
                 return View(viewModel);
@@ -485,23 +518,118 @@ namespace ICCMS_Web.Controllers
 
             QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
-            var quote = await _apiClient.GetAsync<QuotationDto>(
+            // Get quotation with line items - the API returns { quotation, items }
+            var quotationResponse = await _apiClient.GetAsync<object>(
                 $"/api/clients/quotation/{id}",
                 User
             );
-            if (quote == null)
+            
+            if (quotationResponse == null)
                 return NotFound("Quotation not found");
 
+            // Parse the response to extract quotation and items
+            QuotationDto quote;
+            List<QuotationItemDto> quoteItems = new List<QuotationItemDto>();
+            
+            // Configure JSON options to respect JsonPropertyName attributes
+            var jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            
+            try
+            {
+                // Convert to JSON to parse
+                var json = JsonSerializer.Serialize(quotationResponse, jsonOptions);
+                var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                // Extract quotation object
+                if (root.TryGetProperty("quotation", out var quotationElement))
+                {
+                    quote = JsonSerializer.Deserialize<QuotationDto>(
+                        quotationElement.GetRawText(),
+                        jsonOptions
+                    );
+                }
+                else
+                {
+                    // Fallback: try to deserialize the whole object as quotation
+                    quote = JsonSerializer.Deserialize<QuotationDto>(json, jsonOptions);
+                }
+
+                if (quote == null)
+                    return NotFound("Quotation not found");
+
+                // Extract items array
+                if (root.TryGetProperty("items", out var itemsElement) && itemsElement.ValueKind == JsonValueKind.Array)
+                {
+                    quoteItems = JsonSerializer.Deserialize<List<QuotationItemDto>>(
+                        itemsElement.GetRawText(),
+                        jsonOptions
+                    ) ?? new List<QuotationItemDto>();
+                }
+                
+                // If no items in response, try to use quotation.Items if available
+                if (!quoteItems.Any() && quote.Items != null && quote.Items.Any())
+                {
+                    quoteItems = quote.Items;
+                }
+                
+                // Assign items back to quote object for PDF generation
+                quote.Items = quoteItems;
+                
+                // Recalculate totals if they're missing or zero (shouldn't happen, but safety check)
+                if (quote.GrandTotal == 0 && quoteItems.Any())
+                {
+                    quote.Subtotal = quoteItems.Sum(item => item.LineTotal);
+                    quote.TaxTotal = quoteItems.Sum(item => item.LineTotal * (item.TaxRate / 100));
+                    quote.GrandTotal = quote.Subtotal + quote.TaxTotal;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error parsing quotation response for {QuotationId}", id);
+                // Fallback: try direct deserialization
+                quote = JsonSerializer.Deserialize<QuotationDto>(
+                    JsonSerializer.Serialize(quotationResponse, jsonOptions),
+                    jsonOptions
+                );
+                if (quote == null)
+                    return NotFound("Quotation not found");
+            }
+
+            // Try to get project, but don't fail if not found (for maintenance quotations or deleted projects)
             var project = await _apiClient.GetAsync<ProjectDto>(
                 $"/api/clients/project/{quote.ProjectId}",
                 User
             );
-            if (project == null)
-                return NotFound("Associated project not found");
 
-            var client =
-                await _apiClient.GetAsync<UserDto>($"/api/users/{project.ClientId}", User)
-                ?? new UserDto { FullName = "Unknown Client" };
+            // Get client - prefer from project if available, otherwise from quotation
+            UserDto client;
+            if (project != null && !string.IsNullOrEmpty(project.ClientId))
+            {
+                client = await _apiClient.GetAsync<UserDto>($"/api/users/{project.ClientId}", User)
+                    ?? new UserDto { FullName = "Unknown Client" };
+            }
+            else if (!string.IsNullOrEmpty(quote.ClientId))
+            {
+                client = await _apiClient.GetAsync<UserDto>($"/api/users/{quote.ClientId}", User)
+                    ?? new UserDto { FullName = "Unknown Client" };
+            }
+            else
+            {
+                client = new UserDto { FullName = "Unknown Client" };
+            }
+
+            // Use fallback values if project is not found
+            var projectName = project?.Name 
+                ?? (!string.IsNullOrEmpty(quote.ProjectId) 
+                    ? $"Project {quote.ProjectId.Substring(0, Math.Min(8, quote.ProjectId.Length))}" 
+                    : "Unknown Project");
+            var projectDescription = project?.Description ?? quote.Description ?? "Project information not available";
+            var projectBudget = project?.BudgetPlanned ?? 0;
 
             var fileBytes = Document
                 .Create(container =>
@@ -576,11 +704,11 @@ namespace ICCMS_Web.Controllers
                                             .Text($"Client: {client.FullName}")
                                             .FontColor("#111");
                                         info.Item()
-                                            .Text($"Project: {project.Name}")
+                                            .Text($"Project: {projectName}")
                                             .FontColor("#111");
-                                        if (!string.IsNullOrWhiteSpace(project.Description))
+                                        if (!string.IsNullOrWhiteSpace(projectDescription))
                                             info.Item()
-                                                .Text($"Project Description: {project.Description}")
+                                                .Text($"Project Description: {projectDescription}")
                                                 .FontSize(10)
                                                 .FontColor("#444");
                                         info.Item()
@@ -589,10 +717,11 @@ namespace ICCMS_Web.Controllers
                                         info.Item()
                                             .Text($"Valid Until: {quote.ValidUntil:dd MMM yyyy}")
                                             .FontColor("#333");
-                                        info.Item()
-                                            .Text($"Planned Budget: R {project.BudgetPlanned:N2}")
-                                            .FontColor("#000")
-                                            .Bold();
+                                        if (projectBudget > 0)
+                                            info.Item()
+                                                .Text($"Planned Budget: R {projectBudget:N2}")
+                                                .FontColor("#000")
+                                                .Bold();
                                     });
 
                                 // --- Line Items Table ---
@@ -688,7 +817,7 @@ namespace ICCMS_Web.Controllers
                                             .FontSize(10)
                                             .FontColor("#333");
                                         bank.Item()
-                                            .Text($"Reference: {project.Name}")
+                                            .Text($"Reference: {projectName}")
                                             .FontSize(10)
                                             .FontColor("#333");
                                         bank.Item()
@@ -739,10 +868,11 @@ namespace ICCMS_Web.Controllers
                 "✅ [Client-DownloadQuotation] PDF generated for quotation {Id}",
                 id
             );
+            var fileName = $"Quotation_{projectName.Replace(" ", "_").Replace("/", "_")}_{quote.QuotationId.Substring(0, Math.Min(8, quote.QuotationId.Length))}.pdf";
             return File(
                 fileBytes,
                 "application/pdf",
-                $"Quotation_{project.Name.Replace(" ", "_")}.pdf"
+                fileName
             );
         }
 
@@ -1126,6 +1256,7 @@ namespace ICCMS_Web.Controllers
 
                 // 🧩 Fill required fields
                 request.MaintenanceRequestId = Guid.NewGuid().ToString("N");
+                request.ClientId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
                 request.Status = "Pending";
                 request.CreatedAt = DateTime.UtcNow;
                 request.RequestedBy = User.Identity?.Name ?? "Unknown Client";
@@ -1212,10 +1343,22 @@ namespace ICCMS_Web.Controllers
             content.Add(new StringContent(projectId ?? ""), "projectId");
             content.Add(new StringContent(description ?? ""), "description");
 
-            var apiUrl = $"{_apiBaseUrl}/api/Documents/upload";
+            var apiUrl = $"{_apiBaseUrl}/api/documents/upload";
             _logger.LogInformation("📤 Forwarding document upload to {ApiUrl}", apiUrl);
 
             using var client = _httpClientFactory.CreateClient();
+            
+            // Add authentication token
+            var token = User.FindFirst("FirebaseToken")?.Value;
+            if (!string.IsNullOrEmpty(token))
+            {
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+            else
+            {
+                _logger.LogWarning("⚠️ No FirebaseToken found in user claims for document upload");
+            }
+
             var response = await client.PostAsync(apiUrl, content);
 
             var body = await response.Content.ReadAsStringAsync();
@@ -1401,7 +1544,9 @@ namespace ICCMS_Web.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> SubmitContractorRating([FromBody] SubmitRatingRequest request)
+        public async Task<IActionResult> SubmitContractorRating(
+            [FromBody] SubmitRatingRequest request
+        )
         {
             _logger.LogInformation(
                 "⭐ [SubmitContractorRating] Submitting rating for contractor {ContractorId}",
@@ -1415,7 +1560,9 @@ namespace ICCMS_Web.Controllers
 
             if (request.RatingValue < 1 || request.RatingValue > 5)
             {
-                return Json(new { success = false, error = "Rating value must be between 1 and 5" });
+                return Json(
+                    new { success = false, error = "Rating value must be between 1 and 5" }
+                );
             }
 
             try
@@ -1449,6 +1596,127 @@ namespace ICCMS_Web.Controllers
                 return Json(new { success = false, error = ex.Message });
             }
         }
+
+
+
+
+        // ============================
+        // Payment Options Page
+        // ============================
+       [HttpGet("Clients/PaymentOptions")]
+        public IActionResult PaymentOptions(string projectId, string invoiceId, double amount)
+        {
+            if (string.IsNullOrEmpty(projectId))
+            {
+                TempData["ErrorMessage"] = "Invalid project ID.";
+                return RedirectToAction("Index");
+            }
+
+            var model = new PaymentViewModel
+            {
+                ProjectId = projectId,
+                InvoiceId = invoiceId,
+                AmountPayable = amount
+            };
+
+            return View(model);
+        }
+
+        /* Old code: Remove code:
+         [HttpGet("Clients/PaymentOptions/{projectId}")]
+         public IActionResult PaymentOptions(string projectId)
+         {
+             if (string.IsNullOrEmpty(projectId))
+             {
+                 TempData["ErrorMessage"] = "Invalid project ID.";
+                 return RedirectToAction("Index");
+             }
+
+             return View("PaymentOptions", projectId);
+         }
+         */
+
+
+
+        // PayFast Payment Gateway
+        [HttpGet("Clients/PayFastGateway")]
+        public IActionResult PayFastGateway(string projectId, string invoiceId, double amount)
+        {
+            if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(invoiceId))
+            {
+                TempData["ErrorMessage"] = "Invalid project or invoice ID.";
+                return RedirectToAction("Index");
+            }
+
+            var model = new PaymentViewModel
+            {
+                ProjectId = projectId,
+                InvoiceId = invoiceId,
+                AmountPayable = amount
+            };
+
+            return View(model);
+        }
+
+        // PayPal Payment Gateway
+        [HttpGet("Clients/PayPalGateway")]
+        public IActionResult PayPalGateway(string projectId, string invoiceId, double amount)
+        {
+            if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(invoiceId))
+            {
+                TempData["ErrorMessage"] = "Invalid project or invoice ID.";
+                return RedirectToAction("Index");
+            }
+
+            var model = new PaymentViewModel
+            {
+                ProjectId = projectId,
+                InvoiceId = invoiceId,
+                AmountPayable = amount
+            };
+
+            return View(model);
+        }
+
+        // EFT Payment Gateway
+        [HttpGet("Clients/EFTGateway")]
+        public IActionResult EFTGateway(string projectId, string invoiceId, double amount)
+        {
+            if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(invoiceId))
+            {
+                TempData["ErrorMessage"] = "Invalid project or invoice ID.";
+                return RedirectToAction("Index");
+            }
+
+            var model = new PaymentViewModel
+            {
+                ProjectId = projectId,
+                InvoiceId = invoiceId,
+                AmountPayable = amount
+            };
+
+            return View(model);
+        }
+
+
+
+       /* Old code: Remove code:
+       [HttpGet("Clients/PayFastGateway/{projectId}")]
+        public IActionResult PayFastGateway(string projectId)
+        {
+            if (string.IsNullOrEmpty(projectId))
+            {
+                TempData["ErrorMessage"] = "Invalid project ID.";
+                return RedirectToAction("Index");
+            }
+
+            return View("PayFastGateway", projectId);
+        }
+        */
+
+
+
+
     }
 
     public class ClientDashboardViewModel

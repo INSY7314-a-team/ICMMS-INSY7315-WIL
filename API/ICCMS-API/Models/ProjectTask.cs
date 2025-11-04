@@ -49,5 +49,8 @@ namespace ICCMS_API.Models
 
         [FirestoreProperty("budget")]
         public double Budget { get; set; }
+
+        [FirestoreProperty("spentAmount")]
+        public double SpentAmount { get; set; } = 0;
     }
 }

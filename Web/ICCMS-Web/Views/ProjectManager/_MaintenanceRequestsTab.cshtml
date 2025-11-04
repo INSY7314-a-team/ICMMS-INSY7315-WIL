@@ -1,0 +1,123 @@
+@model ICCMS_Web.Models.PMProjectDetailViewModel
+
+<div class="tab-pane fade" id="maintenance-requests-tab-pane" role="tabpanel" aria-labelledby="maintenance-requests-tab" tabindex="0">
+    <div class="d-flex justify-content-between align-items-center mb-3" style="margin-top:1rem;">
+        <h6 class="mb-0" style="font-weight: 600; font-size: 1.1rem;">
+            <i class="fa-solid fa-wrench me-2"></i>Maintenance Requests
+            <span class="badge pm-badge-secondary">@Model.MaintenanceRequests.Count</span>
+        </h6>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="maintenance-requests-container" id="maintenanceRequestsContainer">
+                @if (Model.MaintenanceRequests != null && Model.MaintenanceRequests.Any())
+                {
+                    @foreach (var request in Model.MaintenanceRequests.OrderByDescending(r => r.CreatedAt))
+                    {
+                        <div class="maintenance-request-item" data-request-id="@request.MaintenanceRequestId">
+                            <div class="request-header d-flex justify-content-between align-items-center mb-2">
+                                <div class="request-info">
+                                    <span class="request-id fw-bold">Request #@request.MaintenanceRequestId.Substring(0, Math.Min(8, request.MaintenanceRequestId.Length))</span>
+                                    <span class="badge @Model.GetMaintenanceRequestStatusBadgeClass(request.Status) ms-2">@request.Status</span>
+                                    <span class="badge @Model.GetPriorityBadgeClass(request.Priority) ms-2">@request.Priority</span>
+                                </div>
+                                <small class="text-muted">@request.CreatedAt.ToString("MMM dd, yyyy")</small>
+                            </div>
+                            
+                            <div class="request-description mb-2">
+                                <p class="mb-0 text-muted">@request.Description</p>
+                            </div>
+                            
+                            @if (!string.IsNullOrWhiteSpace(request.MediaUrl))
+                            {
+                                <div class="request-media mb-2">
+                                    <img src="@request.MediaUrl" alt="Request Image" 
+                                         class="img-thumbnail" style="max-height: 100px; cursor: pointer;"
+                                         onclick="showMaintenanceImageModal('@request.MediaUrl')" />
+                                </div>
+                            }
+                            
+                            <div class="request-meta d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <small class="text-muted">Requested by: @request.RequestedBy</small>
+                                    @if (!string.IsNullOrWhiteSpace(request.AssignedTo))
+                                    {
+                                        <small class="text-muted ms-2">| Assigned to: @Model.GetContractorName(request.AssignedTo)</small>
+                                    }
+                                </div>
+                            </div>
+                            
+                            <div class="request-actions">
+                                @if (request.Status == "Pending" || request.Status == "Submitted")
+                                {
+                                    <button class="btn btn-sm btn-primary assign-contractor-btn me-1" 
+                                            data-request-id="@request.MaintenanceRequestId"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#assignContractorModal">
+                                        <i class="fa-solid fa-user-plus me-1"></i>Assign Contractor
+                                    </button>
+                                    <button class="btn btn-sm btn-danger reject-request-btn" 
+                                            data-request-id="@request.MaintenanceRequestId">
+                                        <i class="fa-solid fa-times me-1"></i>Reject
+                                    </button>
+                                }
+                                else if (request.Status == "Assigned" && !string.IsNullOrWhiteSpace(request.AssignedTo))
+                                {
+                                    <button class="btn btn-sm btn-info start-work-btn me-1" 
+                                            data-request-id="@request.MaintenanceRequestId">
+                                        <i class="fa-solid fa-play me-1"></i>Start Work
+                                    </button>
+                                    <button class="btn btn-sm btn-danger reject-request-btn" 
+                                            data-request-id="@request.MaintenanceRequestId">
+                                        <i class="fa-solid fa-times me-1"></i>Reject
+                                    </button>
+                                }
+                                else if (request.Status == "In Progress")
+                                {
+                                    <button class="btn btn-sm btn-success mark-resolved-btn" 
+                                            data-request-id="@request.MaintenanceRequestId">
+                                        <i class="fa-solid fa-check me-1"></i>Mark Resolved
+                                    </button>
+                                }
+                                else if (request.Status == "Completed" || request.Status == "Resolved")
+                                {
+                                    @if (!request.ResolvedAt.HasValue)
+                                    {
+                                        <button class="btn btn-sm btn-success confirm-resolution-btn" 
+                                                data-request-id="@request.MaintenanceRequestId">
+                                            <i class="fa-solid fa-check-double me-1"></i>Confirm Resolution
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-success">
+                                            <i class="fa-solid fa-check-circle me-1"></i>
+                                            Resolved on @request.ResolvedAt.Value.ToString("MMM dd, yyyy")
+                                        </small>
+                                    }
+                                }
+                                
+                                <button class="btn btn-sm btn-outline-info view-details-btn ms-2" 
+                                        data-request-id="@request.MaintenanceRequestId"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#maintenanceRequestDetailsModal">
+                                    <i class="fa-solid fa-eye me-1"></i>View Details
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="no-maintenance-requests-message">
+                        <i class="fas fa-wrench"></i>
+                        <p>No maintenance requests found</p>
+                        <small>Maintenance requests will appear here when clients submit them</small>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+

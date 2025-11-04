@@ -534,13 +534,17 @@ function loadCompletionReports(taskId) {
                                 </span>
                             </div>
                             <div class="row mb-2">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <small class="text-muted">Final Hours:</small>
                                     <div class="fw-bold">${
                                       report.finalHours
                                     } hours</div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
+                                    <small class="text-muted">Spent Amount:</small>
+                                    <div class="fw-bold">R ${(report.spentAmount || 0).toLocaleString('en-ZA', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>
+                                </div>
+                                <div class="col-md-4">
                                     <small class="text-muted">Submitted:</small>
                                     <div class="fw-bold">${new Date(
                                       report.submittedAt

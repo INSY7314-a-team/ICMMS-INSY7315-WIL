@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" 
           crossorigin="anonymous" />
 
+@RenderSection("Styles", required: false)
     <style>
         /* === BASIC LAYOUT === */
         body {
@@ -264,43 +265,44 @@
                         </a>
                     </li>
                     
-                    if (User.IsInRole("Project Manager") || User.IsInRole("Tester"))
+                    <!-- Admin Dashboard Options (Admin and Tester) -->
+                    if (User.IsInRole("Admin") || User.IsInRole("Tester"))
                     {
-                        <li><a asp-controller="ProjectManager" asp-action="Dashboard"><i
-                                    class="fa-solid fa-gauge"></i><span>Dashboard</span></a></li>
+                        <li><a asp-controller="SystemOverview" asp-action="Index"><i class="fa-solid fa-tachometer-alt"></i><span>Dashboard</span></a></li>
+                        <li><a asp-controller="Users" asp-action="Index"><i class="fa-solid fa-users"></i><span>Users Overview</span></a></li>
+                        <li><a asp-controller="AuditLogs" asp-action="Index"><i class="fa-solid fa-clipboard-list"></i><span>Audit Logs Overview</span></a></li>
+                        <li><a asp-controller="MessageDashboard" asp-action="Dashboard"><i class="fa-solid fa-envelope-open"></i><span>Messages Overview</span></a></li>
+                        <li><a asp-controller="Documents" asp-action="Index"><i class="fa-solid fa-file-alt"></i><span>Documents Overview</span></a></li>
                     }
-                    if (User.IsInRole("Contractor") || User.IsInRole("Tester"))
+                    
+                    <!-- Project Manager Dashboard -->
+                    if (User.IsInRole("Project Manager"))
+                    {
+                        <li><a asp-controller="ProjectManager" asp-action="Dashboard"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a></li>
+                    }
+                    
+                    <!-- Contractor Dashboard -->
+                    if (User.IsInRole("Contractor"))
                     {
                         <li>
-                            <a asp-controller="Contractor"
-                               asp-action="Dashboard"
-                               aria-label="My Tasks">
+                            <a asp-controller="Contractor" asp-action="Dashboard" aria-label="My Tasks">
                                 <i class="fa-solid fa-helmet-safety" aria-hidden="true"></i>
                                 <span>My Tasks</span>
                             </a>
                         </li>
-                    }                                         if (User.IsInRole("Admin"))
-                     {
-                         <li><a asp-controller="SystemOverview" asp-action="Index"><i class="fa-solid fa-tachometer-alt"></i><span>System Overview</span></a>
-                         </li>
-                         <li><a asp-controller="Users" asp-action="Index"><i class="fa-solid fa-users"></i><span>Users Overview</span></a>
-                         </li>
-                         <li><a asp-controller="AuditLogs" asp-action="Index"><i class="fa-solid fa-clipboard-list"></i><span>Audit Logs Overview</span></a>
-                         </li>
-
-                         <li><a asp-controller="MessageDashboard" asp-action="Dashboard"><i class="fa-solid fa-envelope"></i><span>Messages Overview</span></a>
-                         </li>
-
-                         <li><a asp-controller="Documents" asp-action="Index"><i class="fa-solid fa-file-alt"></i><span>Documents Overview</span></a>
-                         </li>
+                    }
                     
-                     }
+                    <!-- Client Dashboard -->
+                    if (User.IsInRole("Client"))
+                    {
+                        <li><a asp-controller="Clients" asp-action="Index"><i class="fa-solid fa-user"></i><span>Dashboard</span></a></li>
+                    }
+                    
+                    <!-- Tester-specific options -->
                     if (User.IsInRole("Tester"))
                     {
-                        <li><a asp-controller="Testing" asp-action="Index"><i class="fa-solid fa-flask"></i><span>Testing</span></a>
-                        </li>
-                        <li><a asp-controller="MessagesTest" asp-action="Index"><i class="fa-solid fa-comments"></i><span>Message
-                                    Test</span></a></li>
+                        <li><a asp-controller="Testing" asp-action="Index"><i class="fa-solid fa-flask"></i><span>Testing</span></a></li>
+                        <li><a asp-controller="MessagesTest" asp-action="Index"><i class="fa-solid fa-comments"></i><span>Message Test</span></a></li>
                     }
                 }
             </ul>

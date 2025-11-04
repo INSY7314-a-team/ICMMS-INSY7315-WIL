@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", function () {
   let currentInvoiceId = null;
   let currentTaskId = null;
   let currentPhaseId = null;
+  
 
   // Handle showing the rejection modal
   document.body.addEventListener("click", function (e) {
@@ -218,6 +219,9 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function loadQuotationDetails(quotationId) {
+    // Store quotation ID globally for download button
+    window.currentQuotationId = quotationId;
+    
     const content = document.getElementById("quoteDetailsContent");
     const modal = new bootstrap.Modal(
       document.getElementById("quoteDetailsModal")
@@ -319,6 +323,23 @@ document.addEventListener("DOMContentLoaded", function () {
       };
     }
   }
+
+
+  // Pay invoice function:
+  function payInvoice(invoiceId, callback) {
+    fetch(`/Clients/PayInvoice/${invoiceId}`, {
+        method: "POST"
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (callback) callback(data.success);
+    })
+    .catch(err => {
+        console.error(err);
+        if (callback) callback(false);
+    });
+}
+
 
   function generateTaskDetailsContent(task) {
     const startDate = new Date(task.startDate).toLocaleDateString("en-US", {
@@ -997,4 +1018,6 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
   };
+
+  
 });

@@ -69,5 +69,9 @@ namespace ICCMS_Web.Models
         // 💰 Task budget
         [JsonPropertyName("budget")]
         public double Budget { get; set; } = 0.0;
+
+        // 💵 Task spent amount
+        [JsonPropertyName("spentAmount")]
+        public double SpentAmount { get; set; } = 0.0;
     }
 }
