@@ -23,7 +23,8 @@ import java.util.*
 @Composable
 fun ContractorTasksScreen(
     viewModel: ContractorDashboardViewModel,
-    onNavigateToTaskDetails: (String) -> Unit = {}
+    onNavigateToTaskDetails: (String) -> Unit = {},
+    onNavigateToAddProgressReport: () -> Unit = {} // default empty lambda
 ) {
     val uiState by viewModel.uiState.collectAsState()
     
@@ -115,7 +116,8 @@ fun ContractorTasksScreen(
                         onClick = { onNavigateToTaskDetails(task.taskId) },
                         onUpdateProgress = { progress, status ->
                             viewModel.updateTaskProgress(task.taskId, progress, status)
-                        }
+                        },
+                        onNavigateToAddProgressReport = onNavigateToAddProgressReport
                     )
                 }
             }
@@ -137,7 +139,8 @@ fun ContractorTasksScreen(
 fun TaskCard(
     task: ProjectTask,
     onClick: () -> Unit,
-    onUpdateProgress: (Int, String) -> Unit
+    onUpdateProgress: (Int, String) -> Unit,
+    onNavigateToAddProgressReport: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -268,7 +271,7 @@ fun TaskCard(
                         }
                     } else if (task.status.lowercase() == "in progress") {
                         Button(
-                            onClick = { onUpdateProgress(100, "Completed") },
+                            onClick = { onNavigateToAddProgressReport() },//{ onUpdateProgress(100, "Completed") },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.tertiary

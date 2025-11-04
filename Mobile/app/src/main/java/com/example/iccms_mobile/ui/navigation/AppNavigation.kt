@@ -13,8 +13,10 @@ import com.example.iccms_mobile.ui.screens.ClientDashboardScreen
 import com.example.iccms_mobile.ui.screens.ContractorDashboardScreen
 import com.example.iccms_mobile.ui.screens.LoginScreen
 import com.example.iccms_mobile.ui.screens.client.CreateMaintenanceRequestScreen
+import com.example.iccms_mobile.ui.screens.contractor.AddProgressReportScreen
 import com.example.iccms_mobile.ui.viewmodel.AuthViewModel
 import com.example.iccms_mobile.ui.viewmodel.ClientDashboardViewModel
+import com.example.iccms_mobile.ui.viewmodel.ContractorDashboardViewModel
 
 @Composable
 fun AppNavigation(
@@ -80,7 +82,8 @@ fun AppNavigation(
                 }
             )
         }
-        
+
+
         composable("client_dashboard") {
             val authState by authViewModel.uiState.collectAsState()
             
@@ -140,13 +143,51 @@ fun AppNavigation(
                         navController.navigate("login") {
                             popUpTo("contractor_dashboard") { inclusive = true }
                         }
+                    },
+                    onNavigateToAddProgressReport = {
+                        navController.navigate("add_progress_report")
                     }
                 )
+
+                /* Remove code
+                ContractorDashboardScreen(
+                    user = user,
+                    onLogout = {
+                        authViewModel.logout()
+                        navController.navigate("login") {
+                            popUpTo("contractor_dashboard") { inclusive = true }
+                        }
+                    }
+                )*/
+
             } ?: run {
                 navController.navigate("login") {
                     popUpTo("contractor_dashboard") { inclusive = true }
                 }
             }
         }
+
+        composable("add_progress_report") {
+            val authState by authViewModel.uiState.collectAsState()
+
+            authState.user?.let { user ->
+                val contractorDashboardViewModel: ContractorDashboardViewModel = viewModel()
+
+                AddProgressReportScreen(
+                    viewModel = contractorDashboardViewModel,
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onRequestCreated = {
+                        navController.popBackStack()
+                    }
+                )
+            } ?: run {
+                navController.navigate("login") {
+                    popUpTo("add_progress_report") { inclusive = true }
+                }
+            }
+        }
+
     }
 }

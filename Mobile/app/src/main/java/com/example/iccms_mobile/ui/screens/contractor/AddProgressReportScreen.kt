@@ -1,65 +1,28 @@
 package com.example.iccms_mobile.ui.screens.contractor
 
+import android.media.MediaRecorder
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.example.iccms_mobile.data.models.MaintenanceRequest
-import com.example.iccms_mobile.data.models.Project
 import com.example.iccms_mobile.ui.viewmodel.ContractorDashboardViewModel
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,41 +34,35 @@ fun AddProgressReportScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     // Form state
-    var selectedProject by remember { mutableStateOf<Project?>(null) }
     var description by remember { mutableStateOf("") }
-    var priority by remember { mutableStateOf("Medium") }
-    var mediaUrl by remember { mutableStateOf("") }
-    var requestedBy by remember { mutableStateOf("") }
+    var hoursWorked by remember { mutableStateOf("") }
+    var progressPercentage by remember { mutableStateOf("") }
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Priority options
-    val priorityOptions = listOf("Low", "Medium", "High")
+    // Voice memo state
+    var audioFilePath by remember { mutableStateOf<String?>(null) }
+    var isRecording by remember { mutableStateOf(false) }
+    var mediaRecorder: MediaRecorder? by remember { mutableStateOf(null) }
 
-    // Load dashboard data when screen is first displayed
-    LaunchedEffect(Unit) {
-        viewModel.loadDashboardData()
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        imageUri = uri
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        "Create Maintenance Request",
-                        style = MaterialTheme.typography.headlineMedium
-                    )
-                },
+                title = { Text("Add Progress Report", style = MaterialTheme.typography.headlineMedium) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
         }
     ) { paddingValues ->
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -115,150 +72,76 @@ fun AddProgressReportScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
 
-
-
-            /*
-            // Project Selection
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(4.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFFFFFFF6)) //Color.White)
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(
-                        text = "Select Project",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    if (uiState.projects.isEmpty()) {
-                        Text(
-                            text = "No projects available",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        // Only show completed projects
-                        uiState.projects
-                            .filter { it.status.equals("completed", ignoreCase = true) }
-                            .forEach { project ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .selectable(
-                                            selected = selectedProject?.projectId == project.projectId,
-                                            onClick = { selectedProject = project },
-                                            role = Role.RadioButton
-                                        )
-                                        .padding(vertical = 10.dp, horizontal = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(
-                                        selected = selectedProject?.projectId == project.projectId,
-                                        onClick = { selectedProject = project }
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column {
-                                        Text(
-                                            text = project.name,
-                                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
-                                        )
-                                        Text(
-                                            text = project.description,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(vertical = 4.dp)
-                                        )
-                                        Text(
-                                            text = "Status: ${project.status}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = Color(0xFF006400) // MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                }
-                            }
-                    }
-                }
-            }
-            */
-
             // Description
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(4.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFFFFFFF6))
+                shape = RoundedCornerShape(20.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = "Description",
+                        text = "Progress Update Description",
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
                         value = description,
                         onValueChange = { description = it },
-                        placeholder = { Text("Describe the maintenance issue...") },
+                        placeholder = { Text("Describe your progress...") },
                         modifier = Modifier.fillMaxWidth(),
-                        minLines = 3,
-                        maxLines = 5
+                        minLines = 4,
+                        maxLines = 6
                     )
                 }
             }
 
-            // Priority Selection
+            // Hours Worked
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(4.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFFFFFFF6))
+                shape = RoundedCornerShape(20.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = "Priority",
+                        text = "Hours Worked",
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier.selectableGroup(),
-                        horizontalArrangement = Arrangement.spacedBy(20.dp)
-                    ) {
-                        priorityOptions.forEach { option ->
-                            Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .selectable(
-                                        selected = priority == option,
-                                        onClick = { priority = option },
-                                        role = Role.RadioButton
-                                    )
-                                    .padding(4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = priority == option,
-                                    onClick = { priority = option }
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = option,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        }
-                    }
+                    OutlinedTextField(
+                        value = hoursWorked,
+                        onValueChange = { hoursWorked = it.filter { char -> char.isDigit() } },
+                        placeholder = { Text("Enter hours worked") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 
-            // Image Upload
+            // Progress Percentage
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(4.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFFFFFFF6))
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text(
+                        text = "Progress Percentage (%)",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = progressPercentage,
+                        onValueChange = { progressPercentage = it.filter { char -> char.isDigit() } },
+                        placeholder = { Text("Enter progress percentage") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            // Image Upload (Optional)
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(4.dp),
+                shape = RoundedCornerShape(20.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
@@ -270,14 +153,6 @@ fun AddProgressReportScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    var imageUri by remember { mutableStateOf<Uri?>(null) }
-                    val context = LocalContext.current
-                    val launcher = rememberLauncherForActivityResult(
-                        contract = ActivityResultContracts.GetContent()
-                    ) { uri: Uri? ->
-                        imageUri = uri
-                    }
-
                     if (imageUri != null) {
                         AsyncImage(
                             model = imageUri,
@@ -285,11 +160,7 @@ fun AddProgressReportScreen(
                             modifier = Modifier
                                 .size(200.dp)
                                 .clip(RoundedCornerShape(16.dp))
-                                .border(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.outline,
-                                    RoundedCornerShape(16.dp)
-                                ),
+                                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp)),
                             contentScale = ContentScale.Crop
                         )
                         Spacer(modifier = Modifier.height(12.dp))
@@ -304,71 +175,91 @@ fun AddProgressReportScreen(
                                 .fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            //Icon(Icons.Default.CloudUpload, contentDescription = null)
-                            //Spacer(modifier = Modifier.width(8.dp))
                             Text("Choose Image")
                         }
                     }
                 }
             }
 
-
-            // Requested By
+            // Voice Memo
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(4.dp),
                 shape = RoundedCornerShape(20.dp)
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        text = "Requested By",
+                        text = "Voice Memo (Optional)",
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = requestedBy,
-                        onValueChange = { requestedBy = it },
-                        placeholder = { Text("Your name or contact person...") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+
+                    Button(
+                        onClick = {
+                            if (!isRecording) {
+                                // Start recording
+                                val audioFile = File(
+                                    context.cacheDir,
+                                    "progress_${System.currentTimeMillis()}.mp3"
+                                )
+                                audioFilePath = audioFile.absolutePath
+                                mediaRecorder = MediaRecorder().apply {
+                                    setAudioSource(MediaRecorder.AudioSource.MIC)
+                                    setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                                    setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                                    setOutputFile(audioFilePath)
+                                    prepare()
+                                    start()
+                                }
+                                isRecording = true
+                            } else {
+                                // Stop recording
+                                mediaRecorder?.apply {
+                                    stop()
+                                    release()
+                                }
+                                mediaRecorder = null
+                                isRecording = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(if (isRecording) "Stop Recording" else "Start Recording")
+                    }
+
+                    audioFilePath?.let {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Recorded file: ${it.substringAfterLast("/")}") // Show just filename
+                    }
                 }
             }
 
+            //Spacer(modifier = Modifier.height(16.dp))
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // Submit Button
             Button(
                 onClick = {
-                    if (selectedProject != null && description.isNotBlank()) {
-                        val currentDate =
-                            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(
-                                Date()
-                            )
-
-                        val newRequest = MaintenanceRequest(
-                            maintenanceRequestId = "",
-                            clientId = selectedProject!!.clientId,
-                            projectId = selectedProject!!.projectId,
-                            description = description,
-                            priority = priority,
-                            status = "Pending",
-                            mediaUrl = mediaUrl,
-                            requestedBy = requestedBy,
-                            assignedTo = "",
-                            createdAt = currentDate,
-                            resolvedAt = null
-                        )
-
-                        // viewModel.addProgressReport(newProgressReport})
-                        onRequestCreated()
-                    }
+                    /* Commented out logic
+                    viewModel.addProgressReport(
+                        description = description,
+                        hoursWorked = hoursWorked.toIntOrNull() ?: 0,
+                        progressPercentage = progressPercentage.toIntOrNull() ?: 0,
+                        imageUri = imageUri
+                    )
+                    */
+                    onRequestCreated()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(55.dp),
                 shape = RoundedCornerShape(16.dp),
-                enabled = selectedProject != null && description.isNotBlank() && !uiState.isLoading
+                enabled = description.isNotBlank()
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
@@ -378,45 +269,9 @@ fun AddProgressReportScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                 }
                 Text(
-                    "Create Request",
+                    "Submit Progress Report",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
                 )
-            }
-
-            // Error Message
-            uiState.errorMessage?.let { errorMessage ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Text(
-                        text = errorMessage,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-            }
-
-            // Success Message
-            uiState.successMessage?.let { successMessage ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Text(
-                        text = successMessage,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
             }
         }
     }
