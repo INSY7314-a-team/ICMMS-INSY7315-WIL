@@ -36,6 +36,9 @@ namespace ICCMS_Web.Models
         [JsonPropertyName("budget")]
         public double Budget { get; set; } = 0.0;
 
+        [JsonPropertyName("spentAmount")]
+        public double SpentAmount { get; set; } = 0.0;
+
         [JsonPropertyName("assignedTo")]
         public string AssignedTo { get; set; } = string.Empty;
     }

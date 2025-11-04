@@ -77,57 +77,62 @@ namespace ICCMS_Web.Controllers
                 // Get all clients and filter to only those that have projects for this PM
                 var allClients =
                     await _apiClient.GetAsync<List<UserDto>>("/api/users/clients", User) ?? new();
-                
+
                 // Get unique ClientIds from PM's projects
                 var pmClientIds = allProjects
                     .Where(p => !string.IsNullOrEmpty(p.ClientId))
                     .Select(p => p.ClientId)
                     .Distinct()
                     .ToHashSet();
-                
+
                 // Filter clients to only those that have projects for this PM
-                var clients = allClients
-                    .Where(c => pmClientIds.Contains(c.UserId))
-                    .ToList();
-                
+                var clients = allClients.Where(c => pmClientIds.Contains(c.UserId)).ToList();
+
                 var clientMap = clients.ToDictionary(c => c.UserId, c => c.FullName);
 
                 // Load estimates efficiently - only for non-draft projects
                 var projectDetails = new Dictionary<string, ProjectDetails>();
                 var nonDraftProjects = allProjects.Where(p => p.Status != "Draft").ToList();
-                
+
                 // Load estimates for non-draft projects only (much fewer API calls)
                 foreach (var project in nonDraftProjects)
                 {
                     try
                     {
                         // Get latest estimate for this project
-                        var estimates = await _apiClient.GetAsync<List<EstimateDto>>(
-                            $"/api/estimates/project/{project.ProjectId}",
-                            User
-                        ) ?? new List<EstimateDto>();
-                        
-                        var latestEstimate = estimates.OrderByDescending(e => e.CreatedAt).FirstOrDefault();
-                        
+                        var estimates =
+                            await _apiClient.GetAsync<List<EstimateDto>>(
+                                $"/api/estimates/project/{project.ProjectId}",
+                                User
+                            ) ?? new List<EstimateDto>();
+
+                        var latestEstimate = estimates
+                            .OrderByDescending(e => e.CreatedAt)
+                            .FirstOrDefault();
+
                         projectDetails[project.ProjectId] = new ProjectDetails
                         {
                             Estimate = latestEstimate,
                             Progress = 0, // Will be calculated below
-                            StatusBadgeClass = "badge-light" // Will be set below
+                            StatusBadgeClass = "badge-light", // Will be set below
                         };
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed to load estimates for project {ProjectId}", project.ProjectId);
+                        _logger.LogWarning(
+                            ex,
+                            "Failed to load estimates for project {ProjectId}",
+                            project.ProjectId
+                        );
                         projectDetails[project.ProjectId] = new ProjectDetails
                         {
                             Estimate = null,
                             Progress = 0,
-                            StatusBadgeClass = "badge-light"
+                            StatusBadgeClass = "badge-light",
                         };
                     }
                 }
-                
+
                 // Initialize draft projects without estimates (they don't need them)
                 foreach (var project in allProjects.Where(p => p.Status == "Draft"))
                 {
@@ -135,13 +140,15 @@ namespace ICCMS_Web.Controllers
                     {
                         Estimate = null, // Draft projects don't have estimates
                         Progress = 0,
-                        StatusBadgeClass = "badge-light"
+                        StatusBadgeClass = "badge-light",
                     };
                 }
 
                 // Calculate ActiveProjects and OtherProjects
                 var activeProjects = allProjects.Where(p => p.Status == "Active").ToList();
-                var otherProjects = allProjects.Where(p => p.Status != "Draft" && p.Status != "Active").ToList();
+                var otherProjects = allProjects
+                    .Where(p => p.Status != "Draft" && p.Status != "Active")
+                    .ToList();
 
                 // Calculate TotalClients - count unique clients from PM's projects
                 var uniqueClientIds = allProjects
@@ -151,9 +158,13 @@ namespace ICCMS_Web.Controllers
                     .Count();
 
                 // Calculate TotalQuotes - get all quotations and filter to PM's projects
-                var allQuotes = await _apiClient.GetAsync<List<QuotationDto>>("/api/quotations", User) ?? new List<QuotationDto>();
+                var allQuotes =
+                    await _apiClient.GetAsync<List<QuotationDto>>("/api/quotations", User)
+                    ?? new List<QuotationDto>();
                 var pmProjectIds = allProjects.Select(p => p.ProjectId).ToHashSet();
-                var totalQuotes = allQuotes.Count(q => !string.IsNullOrEmpty(q.ProjectId) && pmProjectIds.Contains(q.ProjectId));
+                var totalQuotes = allQuotes.Count(q =>
+                    !string.IsNullOrEmpty(q.ProjectId) && pmProjectIds.Contains(q.ProjectId)
+                );
 
                 var vm = new DashboardViewModel
                 {
@@ -174,11 +185,18 @@ namespace ICCMS_Web.Controllers
                     if (projectDetails.ContainsKey(project.ProjectId))
                     {
                         projectDetails[project.ProjectId].Progress = vm.GetProjectProgress(project);
-                        projectDetails[project.ProjectId].StatusBadgeClass = vm.GetStatusBadgeClass(project.Status);
+                        projectDetails[project.ProjectId].StatusBadgeClass = vm.GetStatusBadgeClass(
+                            project.Status
+                        );
                     }
                 }
 
-                _logger.LogInformation("✅ Dashboard ready with {Total} projects, {Clients} clients, {Quotes} quotes", vm.TotalProjects, vm.TotalClients, vm.TotalQuotes);
+                _logger.LogInformation(
+                    "✅ Dashboard ready with {Total} projects, {Clients} clients, {Quotes} quotes",
+                    vm.TotalProjects,
+                    vm.TotalClients,
+                    vm.TotalQuotes
+                );
                 return View(vm);
             }
             catch (Exception ex)
@@ -269,24 +287,30 @@ namespace ICCMS_Web.Controllers
 
                 // Get project estimates
                 _logger.LogInformation("Fetching estimates for project {ProjectId}", projectId);
-                var estimates = await _apiClient.GetAsync<List<EstimateDto>>(
-                    $"/api/estimates/project/{projectId}",
-                    User
-                ) ?? new List<EstimateDto>();
+                var estimates =
+                    await _apiClient.GetAsync<List<EstimateDto>>(
+                        $"/api/estimates/project/{projectId}",
+                        User
+                    ) ?? new List<EstimateDto>();
 
                 // Get project invoices
                 _logger.LogInformation("Fetching invoices for project {ProjectId}", projectId);
-                var invoices = await _apiClient.GetAsync<List<InvoiceDto>>(
-                    $"/api/invoices/project/{projectId}",
-                    User
-                ) ?? new List<InvoiceDto>();
+                var invoices =
+                    await _apiClient.GetAsync<List<InvoiceDto>>(
+                        $"/api/invoices/project/{projectId}",
+                        User
+                    ) ?? new List<InvoiceDto>();
 
                 // Get project maintenance requests
-                _logger.LogInformation("Fetching maintenance requests for project {ProjectId}", projectId);
-                var maintenanceRequests = await _apiClient.GetAsync<List<MaintenanceRequestDto>>(
-                    $"/api/projectmanager/project/{projectId}/maintenance-requests",
-                    User
-                ) ?? new List<MaintenanceRequestDto>();
+                _logger.LogInformation(
+                    "Fetching maintenance requests for project {ProjectId}",
+                    projectId
+                );
+                var maintenanceRequests =
+                    await _apiClient.GetAsync<List<MaintenanceRequestDto>>(
+                        $"/api/projectmanager/project/{projectId}/maintenance-requests",
+                        User
+                    ) ?? new List<MaintenanceRequestDto>();
 
                 _logger.LogInformation(
                     "Found {Count} maintenance requests for project {ProjectId}",
@@ -308,10 +332,11 @@ namespace ICCMS_Web.Controllers
                     .ToList();
 
                 // Get completion reports to check which tasks actually have completion requests
-                var completionReports = await _apiClient.GetAsync<List<CompletionReportDto>>(
-                    "/api/projectmanager/completion-reports",
-                    User
-                ) ?? new List<CompletionReportDto>();
+                var completionReports =
+                    await _apiClient.GetAsync<List<CompletionReportDto>>(
+                        "/api/projectmanager/completion-reports",
+                        User
+                    ) ?? new List<CompletionReportDto>();
 
                 // Get tasks awaiting completion (tasks with status "Awaiting Approval" AND have completion reports)
                 var tasksWithCompletionReports = completionReports
@@ -320,7 +345,10 @@ namespace ICCMS_Web.Controllers
                     .ToHashSet();
 
                 var tasksAwaitingCompletion = tasks
-                    .Where(t => t.Status == "Awaiting Approval" && tasksWithCompletionReports.Contains(t.TaskId))
+                    .Where(t =>
+                        t.Status == "Awaiting Approval"
+                        && tasksWithCompletionReports.Contains(t.TaskId)
+                    )
                     .ToList();
 
                 _logger.LogInformation(
@@ -398,6 +426,328 @@ namespace ICCMS_Web.Controllers
         }
 
         /// <summary>
+        /// Get comprehensive project analytics with KPIs, charts, and financial tracking
+        /// </summary>
+        [HttpGet]
+        [Route("ProjectManager/ProjectAnalytics")]
+        public async Task<IActionResult> ProjectAnalytics([FromQuery] string projectId)
+        {
+            _logger.LogInformation(
+                "=== [ProjectAnalytics] Loading analytics for project {ProjectId} ===",
+                projectId
+            );
+
+            try
+            {
+                if (string.IsNullOrEmpty(projectId))
+                {
+                    _logger.LogWarning("Missing projectId parameter");
+                    TempData["ErrorMessage"] = "Project ID is required.";
+                    return RedirectToAction("Dashboard");
+                }
+
+                // Get project details
+                var project = await _apiClient.GetAsync<ProjectDto>(
+                    $"/api/projectmanager/project/{projectId}",
+                    User
+                );
+
+                if (project == null)
+                {
+                    TempData["ErrorMessage"] = $"Project {projectId} not found.";
+                    return RedirectToAction("Dashboard");
+                }
+
+                // Get phases
+                var phases =
+                    await _apiClient.GetAsync<List<PhaseDto>>(
+                        $"/api/projectmanager/project/{projectId}/phases",
+                        User
+                    ) ?? new List<PhaseDto>();
+
+                // Get tasks
+                var tasks =
+                    await _apiClient.GetAsync<List<ProjectTaskDto>>(
+                        $"/api/projectmanager/project/{projectId}/tasks",
+                        User
+                    ) ?? new List<ProjectTaskDto>();
+
+                // Get estimates (for budget history)
+                var estimates =
+                    await _apiClient.GetAsync<List<EstimateDto>>(
+                        $"/api/estimates/project/{projectId}",
+                        User
+                    ) ?? new List<EstimateDto>();
+
+                // Get invoices
+                var invoices =
+                    await _apiClient.GetAsync<List<InvoiceDto>>(
+                        $"/api/invoices/project/{projectId}",
+                        User
+                    ) ?? new List<InvoiceDto>();
+
+                // Get quotations
+                var quotations =
+                    await _apiClient.GetAsync<List<QuotationDto>>(
+                        $"/api/quotations/project/{projectId}",
+                        User
+                    ) ?? new List<QuotationDto>();
+
+                // Get contractors for ratings
+                var contractors =
+                    await _apiClient.GetAsync<List<UserDto>>("/api/users/contractors", User)
+                    ?? new List<UserDto>();
+
+                var contractorMap = contractors.ToDictionary(c => c.UserId, c => c);
+
+                // Get contractor ratings for contractors assigned to project tasks
+                var contractorIds = tasks
+                    .Where(t => !string.IsNullOrEmpty(t.AssignedTo))
+                    .Select(t => t.AssignedTo)
+                    .Distinct()
+                    .ToList();
+
+                var contractorRatings = new List<ContractorRatingSummary>();
+                foreach (var contractorId in contractorIds)
+                {
+                    try
+                    {
+                        var rating = await _apiClient.GetAsync<ContractorRatingDto>(
+                            $"/api/contractorrating/{contractorId}",
+                            User
+                        );
+                        if (rating != null && contractorMap.ContainsKey(contractorId))
+                        {
+                            contractorRatings.Add(
+                                new ContractorRatingSummary
+                                {
+                                    ContractorId = contractorId,
+                                    ContractorName = contractorMap[contractorId].FullName,
+                                    AverageRating = rating.AverageRating,
+                                    TotalRatings = rating.TotalRatings,
+                                }
+                            );
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(
+                            ex,
+                            "Failed to fetch rating for contractor {ContractorId}",
+                            contractorId
+                        );
+                    }
+                }
+
+                // Calculate budget metrics
+                var budgetPlanned = (decimal)project.BudgetPlanned;
+                var budgetActual = (decimal)project.BudgetActual;
+                var budgetVariance = budgetActual - budgetPlanned;
+                var budgetUtilizationPercentage =
+                    budgetPlanned > 0 ? (budgetActual / budgetPlanned) * 100 : 0;
+
+                // Build budget history (from estimates over time)
+                var budgetHistory = new List<BudgetHistoryPoint>();
+                if (estimates.Any())
+                {
+                    var sortedEstimates = estimates.OrderBy(e => e.CreatedAt).ToList();
+                    foreach (var estimate in sortedEstimates)
+                    {
+                        budgetHistory.Add(
+                            new BudgetHistoryPoint
+                            {
+                                Date = estimate.CreatedAt,
+                                Planned = budgetPlanned,
+                                Actual = (decimal)estimate.TotalAmount,
+                            }
+                        );
+                    }
+                }
+                else
+                {
+                    // Add at least one point for the current budget
+                    budgetHistory.Add(
+                        new BudgetHistoryPoint
+                        {
+                            Date = project.StartDate,
+                            Planned = budgetPlanned,
+                            Actual = budgetActual,
+                        }
+                    );
+                }
+
+                // Calculate task statistics
+                var totalTasks = tasks.Count;
+                var completedTasks = tasks.Count(t => t.Status == "Completed");
+                var inProgressTasks = tasks.Count(t => t.Status == "In Progress");
+                var pendingTasks = tasks.Count(t => t.Status == "Pending");
+                var overdueTasks = tasks.Count(t =>
+                    t.DueDate < DateTime.UtcNow && t.Status != "Completed"
+                );
+                var overallProgress = totalTasks > 0 ? (int)tasks.Average(t => t.Progress) : 0;
+
+                // Task status breakdown for pie chart
+                var taskStatusBreakdown = new Dictionary<string, int>
+                {
+                    { "Pending", pendingTasks },
+                    { "In Progress", inProgressTasks },
+                    { "Completed", completedTasks },
+                    { "Overdue", overdueTasks },
+                };
+
+                // Calculate phase statistics
+                var totalPhases = phases.Count;
+                var completedPhases = phases.Count(p => p.Status == "Completed");
+
+                // Build Gantt chart data
+                var ganttData = new List<GanttTask>();
+                foreach (var phase in phases)
+                {
+                    ganttData.Add(
+                        new GanttTask
+                        {
+                            Id = $"phase-{phase.PhaseId}",
+                            Name = phase.Name,
+                            Start = phase.StartDate,
+                            End = phase.EndDate,
+                            Progress = GetPhaseProgress(phases, tasks, phase.PhaseId),
+                            Type = "phase",
+                        }
+                    );
+
+                    // Add tasks for this phase
+                    var phaseTasks = tasks.Where(t => t.PhaseId == phase.PhaseId).ToList();
+                    foreach (var task in phaseTasks)
+                    {
+                        ganttData.Add(
+                            new GanttTask
+                            {
+                                Id = $"task-{task.TaskId}",
+                                Name = task.Name,
+                                Start = task.StartDate,
+                                End = task.DueDate,
+                                Progress = task.Progress,
+                                Type = "task",
+                                ParentId = $"phase-{phase.PhaseId}",
+                            }
+                        );
+                    }
+                }
+
+                // Budget by phase - use actual phase budget and spentAmount from database
+                var budgetByPhase = new List<PhaseBudgetData>();
+                foreach (var phase in phases)
+                {
+                    budgetByPhase.Add(
+                        new PhaseBudgetData
+                        {
+                            PhaseId = phase.PhaseId,
+                            PhaseName = phase.Name,
+                            PlannedBudget = (decimal)phase.Budget,
+                            ActualBudget = (decimal)phase.SpentAmount,
+                        }
+                    );
+                }
+
+                // Calculate quote statistics
+                var pendingQuotesCount = quotations.Count(q =>
+                    q.Status == "PendingPMApproval" || q.Status == "Draft"
+                );
+                var approvedQuotesCount = quotations.Count(q =>
+                    q.Status == "SentToClient" || q.Status == "Approved"
+                );
+                var rejectedQuotesCount = quotations.Count(q =>
+                    q.Status == "PMRejected" || q.Status == "Rejected" || q.Status == "Declined"
+                );
+
+                // Calculate invoice statistics
+                var unpaidInvoicesCount = invoices.Count(i =>
+                    i.Status == "Sent" || i.Status == "Draft"
+                );
+                var paidInvoicesCount = invoices.Count(i => i.Status == "Paid");
+                var overdueInvoicesCount = invoices.Count(i =>
+                    i.Status == "Sent" && i.DueDate < DateTime.UtcNow
+                );
+
+                // Calculate average contractor rating
+                var averageContractorRating = contractorRatings.Any()
+                    ? contractorRatings.Average(r => r.AverageRating)
+                    : 0.0;
+
+                // Create view model
+                var viewModel = new ProjectAnalyticsViewModel
+                {
+                    Project = project,
+                    BudgetPlanned = budgetPlanned,
+                    BudgetActual = budgetActual,
+                    BudgetVariance = budgetVariance,
+                    BudgetUtilizationPercentage = budgetUtilizationPercentage,
+                    BudgetHistory = budgetHistory,
+                    OverallProgress = overallProgress,
+                    TotalTasks = totalTasks,
+                    CompletedTasks = completedTasks,
+                    InProgressTasks = inProgressTasks,
+                    PendingTasks = pendingTasks,
+                    OverdueTasks = overdueTasks,
+                    TotalPhases = totalPhases,
+                    CompletedPhases = completedPhases,
+                    TaskStatusBreakdown = taskStatusBreakdown,
+                    ContractorRatings = contractorRatings,
+                    AverageContractorRating = averageContractorRating,
+                    Phases = phases,
+                    Tasks = tasks,
+                    GanttData = ganttData,
+                    BudgetByPhase = budgetByPhase,
+                    Quotations = quotations,
+                    PendingQuotesCount = pendingQuotesCount,
+                    ApprovedQuotesCount = approvedQuotesCount,
+                    RejectedQuotesCount = rejectedQuotesCount,
+                    Invoices = invoices,
+                    UnpaidInvoicesCount = unpaidInvoicesCount,
+                    PaidInvoicesCount = paidInvoicesCount,
+                    OverdueInvoicesCount = overdueInvoicesCount,
+                };
+
+                _logger.LogInformation(
+                    "✅ Project analytics loaded for {ProjectName}",
+                    project.Name
+                );
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading project analytics for {ProjectId}", projectId);
+                TempData["ErrorMessage"] =
+                    "Failed to load project analytics. Please try again later.";
+                return RedirectToAction("ProjectDetail", new { projectId });
+            }
+        }
+
+        /// <summary>
+        /// Helper method to calculate phase progress
+        /// </summary>
+        private int GetPhaseProgress(
+            List<PhaseDto> phases,
+            List<ProjectTaskDto> tasks,
+            string phaseId
+        )
+        {
+            var phaseTasks = tasks.Where(t => t.PhaseId == phaseId).ToList();
+            if (!phaseTasks.Any())
+                return 0;
+
+            var allTasksCompleted = phaseTasks.All(t =>
+                t.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase)
+            );
+
+            if (allTasksCompleted)
+                return 100;
+
+            return (int)phaseTasks.Average(t => t.Progress);
+        }
+
+        /// <summary>
         /// Get detailed view of a specific phase
         /// </summary>
         [HttpGet]
@@ -424,10 +774,11 @@ namespace ICCMS_Web.Controllers
                 }
 
                 // Get phase
-                var phases = await _apiClient.GetAsync<List<PhaseDto>>(
-                    $"/api/projectmanager/project/{projectId}/phases",
-                    User
-                ) ?? new List<PhaseDto>();
+                var phases =
+                    await _apiClient.GetAsync<List<PhaseDto>>(
+                        $"/api/projectmanager/project/{projectId}/phases",
+                        User
+                    ) ?? new List<PhaseDto>();
 
                 var phase = phases.FirstOrDefault(p => p.PhaseId == phaseId);
                 if (phase == null)
@@ -437,25 +788,23 @@ namespace ICCMS_Web.Controllers
                 }
 
                 // Get tasks for this phase
-                var allTasks = await _apiClient.GetAsync<List<ProjectTaskDto>>(
-                    $"/api/projectmanager/project/{projectId}/tasks",
-                    User
-                ) ?? new List<ProjectTaskDto>();
+                var allTasks =
+                    await _apiClient.GetAsync<List<ProjectTaskDto>>(
+                        $"/api/projectmanager/project/{projectId}/tasks",
+                        User
+                    ) ?? new List<ProjectTaskDto>();
 
                 var phaseTasks = allTasks.Where(t => t.PhaseId == phaseId).ToList();
 
                 // Get contractors for display names
-                var contractors = await _apiClient.GetAsync<List<UserDto>>(
-                    "/api/users/contractors",
-                    User
-                ) ?? new List<UserDto>();
+                var contractors =
+                    await _apiClient.GetAsync<List<UserDto>>("/api/users/contractors", User)
+                    ?? new List<UserDto>();
 
                 var contractorMap = contractors.ToDictionary(c => c.UserId, c => c);
 
                 // Calculate phase progress
-                var progress = phaseTasks.Any()
-                    ? (int)phaseTasks.Average(t => t.Progress)
-                    : 0;
+                var progress = phaseTasks.Any() ? (int)phaseTasks.Average(t => t.Progress) : 0;
 
                 if (phaseTasks.All(t => t.Status == "Completed"))
                 {
@@ -470,7 +819,7 @@ namespace ICCMS_Web.Controllers
                     ContractorMap = contractorMap,
                     Progress = progress,
                     TotalTasks = phaseTasks.Count,
-                    CompletedTasks = phaseTasks.Count(t => t.Status == "Completed")
+                    CompletedTasks = phaseTasks.Count(t => t.Status == "Completed"),
                 };
 
                 return View(viewModel);
@@ -510,10 +859,11 @@ namespace ICCMS_Web.Controllers
                 }
 
                 // Get task
-                var tasks = await _apiClient.GetAsync<List<ProjectTaskDto>>(
-                    $"/api/projectmanager/project/{projectId}/tasks",
-                    User
-                ) ?? new List<ProjectTaskDto>();
+                var tasks =
+                    await _apiClient.GetAsync<List<ProjectTaskDto>>(
+                        $"/api/projectmanager/project/{projectId}/tasks",
+                        User
+                    ) ?? new List<ProjectTaskDto>();
 
                 var task = tasks.FirstOrDefault(t => t.TaskId == taskId);
                 if (task == null)
@@ -526,10 +876,11 @@ namespace ICCMS_Web.Controllers
                 PhaseDto? phase = null;
                 if (!string.IsNullOrEmpty(task.PhaseId))
                 {
-                    var phases = await _apiClient.GetAsync<List<PhaseDto>>(
-                        $"/api/projectmanager/project/{projectId}/phases",
-                        User
-                    ) ?? new List<PhaseDto>();
+                    var phases =
+                        await _apiClient.GetAsync<List<PhaseDto>>(
+                            $"/api/projectmanager/project/{projectId}/phases",
+                            User
+                        ) ?? new List<PhaseDto>();
 
                     phase = phases.FirstOrDefault(p => p.PhaseId == task.PhaseId);
                 }
@@ -551,10 +902,11 @@ namespace ICCMS_Web.Controllers
                 // and filter. Actually, let's just get all progress reports for the project.
                 // We'll use an empty list for now and fetch individual reports if needed,
                 // or fetch all and filter. Let's get all from pending first and expand if needed.
-                var allPendingReports = await _apiClient.GetAsync<List<ProgressReportDto>>(
-                    $"/api/projectmanager/progress-reports/pending",
-                    User
-                ) ?? new List<ProgressReportDto>();
+                var allPendingReports =
+                    await _apiClient.GetAsync<List<ProgressReportDto>>(
+                        $"/api/projectmanager/progress-reports/pending",
+                        User
+                    ) ?? new List<ProgressReportDto>();
 
                 // Get all progress reports (not just approved) - we'll filter by taskId
                 // Since the API only exposes pending, we'll work with what's available
@@ -565,10 +917,11 @@ namespace ICCMS_Web.Controllers
                     .ToList();
 
                 // Get completion reports for this task
-                var allCompletionReports = await _apiClient.GetAsync<List<CompletionReportDto>>(
-                    "/api/projectmanager/completion-reports",
-                    User
-                ) ?? new List<CompletionReportDto>();
+                var allCompletionReports =
+                    await _apiClient.GetAsync<List<CompletionReportDto>>(
+                        "/api/projectmanager/completion-reports",
+                        User
+                    ) ?? new List<CompletionReportDto>();
 
                 var taskCompletionReports = allCompletionReports
                     .Where(cr => cr.TaskId == taskId && cr.ProjectId == projectId)
@@ -576,10 +929,9 @@ namespace ICCMS_Web.Controllers
                     .ToList();
 
                 // Get contractors map for display names
-                var contractors = await _apiClient.GetAsync<List<UserDto>>(
-                    "/api/users/contractors",
-                    User
-                ) ?? new List<UserDto>();
+                var contractors =
+                    await _apiClient.GetAsync<List<UserDto>>("/api/users/contractors", User)
+                    ?? new List<UserDto>();
 
                 var contractorMap = contractors.ToDictionary(c => c.UserId, c => c);
 
@@ -591,7 +943,7 @@ namespace ICCMS_Web.Controllers
                     Contractor = contractor,
                     ProgressReports = taskProgressReports,
                     CompletionReports = taskCompletionReports,
-                    ContractorMap = contractorMap
+                    ContractorMap = contractorMap,
                 };
 
                 return View(viewModel);
@@ -639,8 +991,10 @@ namespace ICCMS_Web.Controllers
                 }
 
                 // Normalize clientId - trim whitespace and treat empty string as null
-                var normalizedClientId = string.IsNullOrWhiteSpace(clientId) ? null : clientId.Trim();
-                
+                var normalizedClientId = string.IsNullOrWhiteSpace(clientId)
+                    ? null
+                    : clientId.Trim();
+
                 _logger.LogInformation(
                     "SearchProjects - Query: '{Query}', Status: '{Status}', ClientId: '{ClientId}' (normalized: '{NormalizedClientId}')",
                     q ?? "(null)",
@@ -658,9 +1012,11 @@ namespace ICCMS_Web.Controllers
                         .Select(p => p.ClientId)
                         .Distinct()
                         .ToList();
-                    
-                    var byClientIdKeys = index.ByClientId.Keys.Where(k => !string.IsNullOrEmpty(k)).ToList();
-                    
+
+                    var byClientIdKeys = index
+                        .ByClientId.Keys.Where(k => !string.IsNullOrEmpty(k))
+                        .ToList();
+
                     _logger.LogWarning(
                         "SearchProjects DEBUG - Index has {TotalProjects} projects. ClientIds in projects: [{ClientIds}]. ByClientId keys: [{Keys}]. Searching for: '{SearchClientId}'",
                         allProjectsInIndex.Count,
@@ -668,7 +1024,7 @@ namespace ICCMS_Web.Controllers
                         string.Join(", ", byClientIdKeys),
                         normalizedClientId
                     );
-                    
+
                     // Log each project's ClientId for debugging
                     foreach (var project in allProjectsInIndex)
                     {
@@ -680,8 +1036,10 @@ namespace ICCMS_Web.Controllers
                     }
                 }
 
-                var results = _projectIndexService.Search(userId, q, normalized, normalizedClientId).ToList();
-                
+                var results = _projectIndexService
+                    .Search(userId, q, normalized, normalizedClientId)
+                    .ToList();
+
                 _logger.LogInformation(
                     "SearchProjects - Found {Count} projects after filtering by clientId '{ClientId}'",
                     results.Count,
@@ -700,9 +1058,11 @@ namespace ICCMS_Web.Controllers
                     .ToList();
 
                 // Fetch clients to map client IDs to names
-                var clients = await _apiClient.GetAsync<List<UserDto>>("/api/users/clients", User) ?? new List<UserDto>();
+                var clients =
+                    await _apiClient.GetAsync<List<UserDto>>("/api/users/clients", User)
+                    ?? new List<UserDto>();
                 var clientMap = clients.ToDictionary(c => c.UserId, c => c.FullName);
-                
+
                 // Store client map in ViewData so _ProjectsCards can use it
                 ViewData["ClientMap"] = clientMap;
 
@@ -1208,7 +1568,11 @@ namespace ICCMS_Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error fetching latest estimate for project {ProjectId}", projectId);
+                _logger.LogError(
+                    ex,
+                    "Error fetching latest estimate for project {ProjectId}",
+                    projectId
+                );
                 return Json(null);
             }
         }
@@ -1646,7 +2010,7 @@ namespace ICCMS_Web.Controllers
 
             // 4. Validate required fields and set status
             bool isComplete = ValidateRequiredFields(request.Project);
-            
+
             // Respect explicit Draft status from frontend, otherwise use validation logic
             if (request.Project.Status?.Equals("Draft", StringComparison.OrdinalIgnoreCase) == true)
             {
@@ -1951,12 +2315,12 @@ namespace ICCMS_Web.Controllers
                     $"/api/projectmanager/project/{id}",
                     User
                 );
-                
+
                 if (project == null)
                 {
                     return Json(new { success = false, error = "Project not found" });
                 }
-                
+
                 return Json(project);
             }
             catch (Exception ex)
@@ -2125,7 +2489,7 @@ namespace ICCMS_Web.Controllers
                 };
 
                 await SendProgressUpdate("Connecting to GenKit microservice...", 10);
-                
+
                 // Start the actual processing with real log capture
                 var processingTask = ProcessBlueprintWithRealLogs(request);
 
@@ -2164,7 +2528,9 @@ namespace ICCMS_Web.Controllers
         /// <summary>
         /// Process blueprint with real GenKit microservice logs
         /// </summary>
-        private async Task<EstimateDto?> ProcessBlueprintWithRealLogs(ProcessBlueprintRequest request)
+        private async Task<EstimateDto?> ProcessBlueprintWithRealLogs(
+            ProcessBlueprintRequest request
+        )
         {
             try
             {
@@ -2181,14 +2547,14 @@ namespace ICCMS_Web.Controllers
                 await Task.Delay(600);
 
                 await SendProgressUpdate("Sending to GenKit microservice...", 55);
-                
+
                 // Call the GenKit microservice directly to capture real logs
                 var genkitResponse = await CallGenKitMicroserviceWithLogs(request);
-                
+
                 if (genkitResponse != null)
                 {
                     await SendProgressUpdate("GenKit processing completed!", 90);
-                    
+
                     // Process the response and create estimate
                     var result = await _estimatesService.ProcessBlueprintAsync(request, User);
                     return result;
@@ -2216,81 +2582,112 @@ namespace ICCMS_Web.Controllers
             {
                 await SendProgressUpdate("🔍 [PHASE 1] Starting text extraction", 60);
                 await Task.Delay(500);
-                
+
                 await SendProgressUpdate("✅ [PHASE 1] Text extraction completed", 62);
                 await Task.Delay(300);
-                
+
                 await SendProgressUpdate("🔍 [PHASE 2] Starting blueprint analysis", 64);
                 await Task.Delay(400);
-                
+
                 await SendProgressUpdate("🔍 DEBUG: Text content type: string", 66);
                 await Task.Delay(200);
-                
+
                 await SendProgressUpdate("🔍 DEBUG: Text content length: 7863", 68);
                 await Task.Delay(300);
-                
+
                 await SendProgressUpdate("🔍 [PHASE 2] Raw analysis response length: 383", 70);
                 await Task.Delay(400);
-                
+
                 await SendProgressUpdate("🔍 [PHASE 3] Starting line item extraction", 72);
                 await Task.Delay(500);
-                
+
                 await SendProgressUpdate("🔍 [PHASE 3] Raw extraction response length: 6433", 74);
                 await Task.Delay(300);
-                
+
                 await SendProgressUpdate("✅ [PHASE 3] Extracted JSON array from markdown", 76);
                 await Task.Delay(200);
-                
-                await SendProgressUpdate("✅ [PHASE 3] Line items parsed successfully - count: 24", 78);
+
+                await SendProgressUpdate(
+                    "✅ [PHASE 3] Line items parsed successfully - count: 24",
+                    78
+                );
                 await Task.Delay(400);
-                
+
                 await SendProgressUpdate("🔍 [PHASE 3] Processing line items, count: 24", 80);
                 await Task.Delay(500);
-                
+
                 await SendProgressUpdate("🔍 [PHASE 4] Starting material quantity calculation", 82);
                 await Task.Delay(400);
-                
-                await SendProgressUpdate("🔍 [PHASE 4] Analyzing blueprint for dimensions and scale", 84);
+
+                await SendProgressUpdate(
+                    "🔍 [PHASE 4] Analyzing blueprint for dimensions and scale",
+                    84
+                );
                 await Task.Delay(600);
-                
-                await SendProgressUpdate("📐 [PHASE 4] Extracted dimensions: scale: '1:100', totalArea: '100'", 86);
+
+                await SendProgressUpdate(
+                    "📐 [PHASE 4] Extracted dimensions: scale: '1:100', totalArea: '100'",
+                    86
+                );
                 await Task.Delay(500);
-                
-                await SendProgressUpdate("🔍 [PHASE 4] Calculating quantity for brick (masonry)", 88);
+
+                await SendProgressUpdate(
+                    "🔍 [PHASE 4] Calculating quantity for brick (masonry)",
+                    88
+                );
                 await Task.Delay(400);
-                
-                await SendProgressUpdate("📏 [PHASE 4] Using spec for brick: { width: 0.22, height: 0.07, depth: 0.11, unit: 'm' }", 90);
+
+                await SendProgressUpdate(
+                    "📏 [PHASE 4] Using spec for brick: { width: 0.22, height: 0.07, depth: 0.11, unit: 'm' }",
+                    90
+                );
                 await Task.Delay(300);
-                
-                await SendProgressUpdate("📊 [PHASE 4] brick calculation details: Wall External Wall 1: 10m × 2.4m = 24m²", 92);
+
+                await SendProgressUpdate(
+                    "📊 [PHASE 4] brick calculation details: Wall External Wall 1: 10m × 2.4m = 24m²",
+                    92
+                );
                 await Task.Delay(400);
-                
-                await SendProgressUpdate("📊 [PHASE 4] Total wall area: 96m² ÷ brick area: 0.0154m² = 6234 bricks", 94);
+
+                await SendProgressUpdate(
+                    "📊 [PHASE 4] Total wall area: 96m² ÷ brick area: 0.0154m² = 6234 bricks",
+                    94
+                );
                 await Task.Delay(500);
-                
+
                 await SendProgressUpdate("✅ [PHASE 4] brick final quantity: 6234 bricks", 96);
                 await Task.Delay(300);
-                
+
                 await SendProgressUpdate("🔢 [PHASE 4] Brick: 0 → 6234 bricks", 98);
                 await Task.Delay(200);
-                
+
                 // Simulate the actual GenKit microservice call
                 var httpClient = new HttpClient();
                 var genkitRequest = new
                 {
                     blueprintUrl = request.BlueprintUrl,
-                    projectId = request.ProjectId
+                    projectId = request.ProjectId,
                 };
-                
+
                 var json = System.Text.Json.JsonSerializer.Serialize(genkitRequest);
-                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-                
-                var response = await httpClient.PostAsync("http://localhost:3001/api/ai/extract-line-items", content);
-                
+                var content = new StringContent(
+                    json,
+                    System.Text.Encoding.UTF8,
+                    "application/json"
+                );
+
+                var response = await httpClient.PostAsync(
+                    "http://localhost:3001/api/ai/extract-line-items",
+                    content
+                );
+
                 if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
-                    await SendProgressUpdate("✅ [COMPLETE] Blueprint processing completed: 27 line items generated", 100);
+                    await SendProgressUpdate(
+                        "✅ [COMPLETE] Blueprint processing completed: 27 line items generated",
+                        100
+                    );
                     return new { success = true, data = responseContent };
                 }
                 else
@@ -2690,7 +3087,9 @@ namespace ICCMS_Web.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting phase {PhaseId}", id);
-                return Json(new { success = false, message = $"Error deleting phase: {ex.Message}" });
+                return Json(
+                    new { success = false, message = $"Error deleting phase: {ex.Message}" }
+                );
             }
         }
 
@@ -2728,7 +3127,9 @@ namespace ICCMS_Web.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting task {TaskId}", id);
-                return Json(new { success = false, message = $"Error deleting task: {ex.Message}" });
+                return Json(
+                    new { success = false, message = $"Error deleting task: {ex.Message}" }
+                );
             }
         }
 
@@ -2775,8 +3176,11 @@ namespace ICCMS_Web.Controllers
         {
             try
             {
-                _logger.LogInformation("Attempting to approve task completion for task {TaskId}", taskId);
-                
+                _logger.LogInformation(
+                    "Attempting to approve task completion for task {TaskId}",
+                    taskId
+                );
+
                 var result = await _apiClient.PutAsync<object>(
                     $"/api/projectmanager/task/{taskId}/approve-completion",
                     null,
@@ -2785,19 +3189,39 @@ namespace ICCMS_Web.Controllers
 
                 if (result != null)
                 {
-                    _logger.LogInformation("Successfully approved task completion for task {TaskId}", taskId);
-                    return Json(new { success = true, message = "Task completion approved successfully" });
+                    _logger.LogInformation(
+                        "Successfully approved task completion for task {TaskId}",
+                        taskId
+                    );
+                    return Json(
+                        new { success = true, message = "Task completion approved successfully" }
+                    );
                 }
                 else
                 {
-                    _logger.LogWarning("Failed to approve task completion for task {TaskId} - API returned null", taskId);
-                    return Json(new { success = false, message = "No completion request found for this task" });
+                    _logger.LogWarning(
+                        "Failed to approve task completion for task {TaskId} - API returned null",
+                        taskId
+                    );
+                    return Json(
+                        new
+                        {
+                            success = false,
+                            message = "No completion request found for this task",
+                        }
+                    );
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error approving task completion for task {TaskId}", taskId);
-                return Json(new { success = false, message = $"Error approving task completion: {ex.Message}" });
+                return Json(
+                    new
+                    {
+                        success = false,
+                        message = $"Error approving task completion: {ex.Message}",
+                    }
+                );
             }
         }
 
@@ -2817,11 +3241,15 @@ namespace ICCMS_Web.Controllers
 
                 if (result != null)
                 {
-                    return Json(new { success = true, message = "Task completion rejected successfully" });
+                    return Json(
+                        new { success = true, message = "Task completion rejected successfully" }
+                    );
                 }
                 else
                 {
-                    return Json(new { success = false, message = "Failed to reject task completion" });
+                    return Json(
+                        new { success = false, message = "Failed to reject task completion" }
+                    );
                 }
             }
             catch (Exception ex)
@@ -2835,7 +3263,9 @@ namespace ICCMS_Web.Controllers
         /// Assign a contractor to a maintenance request
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> AssignMaintenanceContractor([FromBody] AssignContractorRequest request)
+        public async Task<IActionResult> AssignMaintenanceContractor(
+            [FromBody] AssignContractorRequest request
+        )
         {
             _logger.LogInformation(
                 "Assigning contractor {ContractorId} to maintenance request {RequestId}",
@@ -2880,7 +3310,11 @@ namespace ICCMS_Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error assigning contractor to maintenance request {RequestId}", request.RequestId);
+                _logger.LogError(
+                    ex,
+                    "Error assigning contractor to maintenance request {RequestId}",
+                    request.RequestId
+                );
                 return Json(new { success = false, error = ex.Message });
             }
         }
@@ -2889,7 +3323,9 @@ namespace ICCMS_Web.Controllers
         /// Approve a maintenance request and create phases/tasks
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> ApproveMaintenanceRequest([FromBody] ApproveRequestRequest request)
+        public async Task<IActionResult> ApproveMaintenanceRequest(
+            [FromBody] ApproveRequestRequest request
+        )
         {
             _logger.LogInformation("Approving maintenance request {RequestId}", request.RequestId);
 
@@ -2902,14 +3338,17 @@ namespace ICCMS_Web.Controllers
                         requestId = request.RequestId,
                         projectId = request.ProjectId,
                         phases = request.Phases,
-                        tasks = request.Tasks
+                        tasks = request.Tasks,
                     },
                     User
                 );
 
                 if (result != null)
                 {
-                    _logger.LogInformation("✅ Maintenance request {RequestId} approved", request.RequestId);
+                    _logger.LogInformation(
+                        "✅ Maintenance request {RequestId} approved",
+                        request.RequestId
+                    );
                     return Json(new { success = true });
                 }
                 else
@@ -2919,7 +3358,11 @@ namespace ICCMS_Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error approving maintenance request {RequestId}", request.RequestId);
+                _logger.LogError(
+                    ex,
+                    "Error approving maintenance request {RequestId}",
+                    request.RequestId
+                );
                 return Json(new { success = false, error = ex.Message });
             }
         }
@@ -2928,7 +3371,9 @@ namespace ICCMS_Web.Controllers
         /// Reject a maintenance request
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> RejectMaintenanceRequest([FromBody] RejectRequestRequest request)
+        public async Task<IActionResult> RejectMaintenanceRequest(
+            [FromBody] RejectRequestRequest request
+        )
         {
             _logger.LogInformation("Rejecting maintenance request {RequestId}", request.RequestId);
 
@@ -2943,7 +3388,10 @@ namespace ICCMS_Web.Controllers
 
                 if (result != null)
                 {
-                    _logger.LogInformation("✅ Maintenance request {RequestId} rejected", request.RequestId);
+                    _logger.LogInformation(
+                        "✅ Maintenance request {RequestId} rejected",
+                        request.RequestId
+                    );
                     return Json(new { success = true });
                 }
                 else
@@ -2953,7 +3401,11 @@ namespace ICCMS_Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error rejecting maintenance request {RequestId}", request.RequestId);
+                _logger.LogError(
+                    ex,
+                    "Error rejecting maintenance request {RequestId}",
+                    request.RequestId
+                );
                 return Json(new { success = false, error = ex.Message });
             }
         }
@@ -2998,7 +3450,10 @@ namespace ICCMS_Web.Controllers
 
                 if (request == null)
                 {
-                    _logger.LogWarning("❌ [ProjectManagerController] API returned NULL for ID: {Id}", id);
+                    _logger.LogWarning(
+                        "❌ [ProjectManagerController] API returned NULL for ID: {Id}",
+                        id
+                    );
                     TempData["ErrorMessage"] = $"Maintenance request not found for ID {id}";
                     return RedirectToAction("Dashboard");
                 }
@@ -3011,7 +3466,10 @@ namespace ICCMS_Web.Controllers
 
                 if (project == null)
                 {
-                    _logger.LogWarning("❌ [ProjectManagerController] Project not found for ID: {ProjectId}", request.ProjectId);
+                    _logger.LogWarning(
+                        "❌ [ProjectManagerController] Project not found for ID: {ProjectId}",
+                        request.ProjectId
+                    );
                     TempData["ErrorMessage"] = "Project not found";
                     return RedirectToAction("Dashboard");
                 }
@@ -3074,7 +3532,10 @@ namespace ICCMS_Web.Controllers
 
                 if (request == null)
                 {
-                    _logger.LogWarning("❌ [ProjectManagerController] API returned NULL for ID: {Id}", id);
+                    _logger.LogWarning(
+                        "❌ [ProjectManagerController] API returned NULL for ID: {Id}",
+                        id
+                    );
                     return NotFound($"Maintenance request not found for ID {id}");
                 }
 
@@ -3102,7 +3563,10 @@ namespace ICCMS_Web.Controllers
         [HttpPost]
         public async Task<IActionResult> StartMaintenanceWork([FromBody] StartWorkRequest request)
         {
-            _logger.LogInformation("Starting work on maintenance request {RequestId}", request.RequestId);
+            _logger.LogInformation(
+                "Starting work on maintenance request {RequestId}",
+                request.RequestId
+            );
 
             try
             {
@@ -3126,7 +3590,10 @@ namespace ICCMS_Web.Controllers
 
                 if (updated != null)
                 {
-                    _logger.LogInformation("✅ Work started on maintenance request {RequestId}", request.RequestId);
+                    _logger.LogInformation(
+                        "✅ Work started on maintenance request {RequestId}",
+                        request.RequestId
+                    );
                     return Json(new { success = true });
                 }
                 else
@@ -3136,7 +3603,11 @@ namespace ICCMS_Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error starting work on maintenance request {RequestId}", request.RequestId);
+                _logger.LogError(
+                    ex,
+                    "Error starting work on maintenance request {RequestId}",
+                    request.RequestId
+                );
                 return Json(new { success = false, error = ex.Message });
             }
         }
@@ -3145,9 +3616,14 @@ namespace ICCMS_Web.Controllers
         /// Mark a maintenance request as resolved
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> MarkMaintenanceResolved([FromBody] MarkResolvedRequest request)
+        public async Task<IActionResult> MarkMaintenanceResolved(
+            [FromBody] MarkResolvedRequest request
+        )
         {
-            _logger.LogInformation("Marking maintenance request {RequestId} as resolved", request.RequestId);
+            _logger.LogInformation(
+                "Marking maintenance request {RequestId} as resolved",
+                request.RequestId
+            );
 
             try
             {
@@ -3172,7 +3648,10 @@ namespace ICCMS_Web.Controllers
 
                 if (updated != null)
                 {
-                    _logger.LogInformation("✅ Maintenance request {RequestId} marked as resolved", request.RequestId);
+                    _logger.LogInformation(
+                        "✅ Maintenance request {RequestId} marked as resolved",
+                        request.RequestId
+                    );
                     return Json(new { success = true });
                 }
                 else
@@ -3182,7 +3661,11 @@ namespace ICCMS_Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error marking maintenance request {RequestId} as resolved", request.RequestId);
+                _logger.LogError(
+                    ex,
+                    "Error marking maintenance request {RequestId} as resolved",
+                    request.RequestId
+                );
                 return Json(new { success = false, error = ex.Message });
             }
         }

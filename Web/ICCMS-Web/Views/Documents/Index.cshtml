@@ -7,18 +7,14 @@
 
 <div class="documents-container">
     <!-- Dashboard Header -->
-    <div class="documents-dashboard-header">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h1 class="documents-dashboard-title">
-                    <i class="fas fa-folder-open"></i>
-                    Documents Management
-                </h1>
-                <p class="documents-dashboard-subtitle">
-                    Comprehensive document management system for all project files and assets
-                </p>
-            </div>
-        </div>
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">
+            <i class="fas fa-folder-open me-2" style="color: #F7EC59;"></i>
+            Documents Management
+        </h1>
+        <p class="dashboard-subtitle">
+            Comprehensive document management system for all project files and assets
+        </p>
     </div>
 
     <!-- Statistics Cards -->
@@ -146,11 +142,11 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <div>
-                                        <div style="font-weight: 600; color: #FFFFFF; margin-bottom: 5px;">@document.FileName</div>
+                                    <div class="document-name-cell">
+                                        <div class="document-name-text">@document.FileName</div>
                                         @if (!string.IsNullOrEmpty(document.Description))
                                         {
-                                            <div style="font-size: 0.85rem; color: #B0B0B0;">@document.Description</div>
+                                            <div class="document-description">@document.Description</div>
                                         }
                                     </div>
                                 </td>

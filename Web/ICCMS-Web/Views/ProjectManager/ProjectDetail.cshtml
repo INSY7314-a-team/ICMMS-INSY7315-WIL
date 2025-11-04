@@ -72,7 +72,13 @@
         <div class="col-md-6 mb-4">
             <!-- Budget Information -->
             <div class="pm-budget-section mb-4">
-                <h6 class="mb-2">Budget Information</h6>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0">Budget Information</h6>
+                    <a href="@Url.Action("ProjectAnalytics", "ProjectManager", new { projectId = Model.Project.ProjectId })" 
+                       class="btn btn-sm pm-btn-primary">
+                        <i class="fa-solid fa-chart-line me-1"></i>View Analytics
+                    </a>
+                </div>
                 <div class="card pm-budget-card">
                     <div class="card-body">
                         <div class="row">

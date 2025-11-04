@@ -11,15 +11,26 @@ namespace ICCMS_Web.Controllers
         {
             if (User.Identity.IsAuthenticated)
             {
-                ViewBag.UserEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
-                ViewBag.UserRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
-
-                // Redirect clients to their dashboard
-                if (User.IsInRole("Client"))
+                // Redirect authenticated users to their role-specific dashboard
+                if (User.IsInRole("Admin"))
                 {
-                    // Temporarily disable client redirect to test
-                    // return RedirectToAction("Index", "Clients");
-                    ViewBag.Message = "Client user detected - redirect disabled for debugging";
+                    return RedirectToAction("Index", "SystemOverview");
+                }
+                else if (User.IsInRole("Project Manager"))
+                {
+                    return RedirectToAction("Dashboard", "ProjectManager");
+                }
+                else if (User.IsInRole("Contractor"))
+                {
+                    return RedirectToAction("Dashboard", "Contractor");
+                }
+                else if (User.IsInRole("Client"))
+                {
+                    return RedirectToAction("Index", "Clients");
+                }
+                else if (User.IsInRole("Tester"))
+                {
+                    return RedirectToAction("Index", "SystemOverview");
                 }
             }
 
