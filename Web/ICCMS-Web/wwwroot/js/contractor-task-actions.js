@@ -547,6 +547,7 @@ async function submitCompletionRequest() {
       notes: notes,
       completionDate: formData.get("completionDate"),
       finalHours: parseFloat(formData.get("finalHours")) || 0,
+      spentAmount: parseFloat(formData.get("spentAmount")) || 0,
       qualityStandards: qualityStandards,
       safetyCompliance: safetyCompliance,
       clientSatisfaction: clientSatisfaction,

@@ -101,6 +101,10 @@ curl -X POST "{BASE}/api/auth/login" \
 - GET `project/{id}/phases` → get phases
 - GET `project/{id}/tasks` → get tasks
 - GET `project/{id}/documents` → get documents
+- GET `project/{id}/maintenance-requests` → get project maintenance requests
+- GET `maintenance-request/{id}` → get maintenance request by id
+- PUT `maintenance-request/{id}` → update maintenance request
+  - Body: `MaintenanceRequest`
 
 - POST `create/project` → create project
   - Body: `Project`

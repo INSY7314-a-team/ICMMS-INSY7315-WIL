@@ -269,7 +269,10 @@ namespace ICCMS_Web.Services
                     return default;
                 }
 
-                var payload = JsonSerializer.Serialize(data);
+                // Handle null data - send empty object instead of null
+                var payload = data != null 
+                    ? JsonSerializer.Serialize(data) 
+                    : "{}";
                 _logger.LogDebug("PUT Payload:\n{Payload}", payload);
 
                 var request = new HttpRequestMessage(HttpMethod.Put, $"{_baseUrl}{endpoint}")
@@ -288,12 +291,15 @@ namespace ICCMS_Web.Services
 
                 if (!response.IsSuccessStatusCode)
                 {
+                    var errorBody = await response.Content.ReadAsStringAsync();
                     _logger.LogError(
                         "PUT {Endpoint} failed ({Code}) {Reason}\n{Body}",
                         endpoint,
                         response.StatusCode,
-                        response.ReasonPhrase
+                        response.ReasonPhrase,
+                        errorBody
                     );
+                    RecordFailure(endpoint);
                     return default;
                 }
 

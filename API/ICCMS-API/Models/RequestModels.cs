@@ -20,6 +20,7 @@ namespace ICCMS_API.Models
     public class SubmitRatingRequest
     {
         public string ContractorId { get; set; } = string.Empty;
+        public string TaskId { get; set; } = string.Empty;
         public int RatingValue { get; set; }
     }
 }

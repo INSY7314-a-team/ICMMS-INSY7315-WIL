@@ -31,6 +31,14 @@ namespace ICCMS_Web.Models
         [JsonPropertyName("contractors")]
         public List<UserDto> Contractors { get; set; } = new();
 
+        [JsonPropertyName("ratedTasks")]
+        public Dictionary<string, bool> RatedTasks { get; set; } = new();
+
+        public bool IsTaskRated(string taskId)
+        {
+            return RatedTasks.ContainsKey(taskId) && RatedTasks[taskId];
+        }
+
         public string GetContractorName(string assignedTo)
         {
             if (string.IsNullOrEmpty(assignedTo))

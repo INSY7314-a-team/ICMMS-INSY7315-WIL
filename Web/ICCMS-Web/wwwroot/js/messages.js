@@ -168,13 +168,28 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Render system messages differently
         if (isSystem) {
+          // Escape HTML in content to prevent XSS, but preserve line breaks
+          const escapedContent = (msg.content || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;")
+            .replace(/\n/g, "<br>");
+          
+          const formattedDate = new Date(msg.sentAt).toLocaleString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+          });
+          
           return `
                 <div class="message-item ${messageClass}">
                     <div class="message-content">
-                        <div class="message-text">${msg.content}</div>
-                        <div class="message-time"> - System at ${new Date(
-                          msg.sentAt
-                        ).toLocaleTimeString()}</div>
+                        <div class="message-text">${escapedContent}</div>
+                        <div class="message-time">System • ${formattedDate}</div>
                     </div>
                 </div>
             `;

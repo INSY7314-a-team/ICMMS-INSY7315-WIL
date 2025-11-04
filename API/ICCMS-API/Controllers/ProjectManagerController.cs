@@ -716,6 +716,348 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpGet("project/{id}/maintenance-requests")]
+        public async Task<ActionResult<List<MaintenanceRequest>>> GetProjectMaintenanceRequests(string id)
+        {
+            try
+            {
+                var project = await _firebaseService.GetDocumentAsync<Project>("projects", id);
+                if (project == null)
+                {
+                    return NotFound(new { error = "Project not found" });
+                }
+
+                var currentPmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (project.ProjectManagerId != currentPmId)
+                {
+                    return Unauthorized(new { error = "You are not authorized to access this project" });
+                }
+
+                var requests = await _firebaseService.GetCollectionAsync<MaintenanceRequest>(
+                    "maintenanceRequests"
+                );
+                var projectRequests = requests.Where(r => r.ProjectId == id).ToList();
+                return Ok(projectRequests);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("maintenance-request/{id}")]
+        public async Task<ActionResult<MaintenanceRequest>> GetMaintenanceRequest(string id)
+        {
+            try
+            {
+                var currentPmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(currentPmId))
+                {
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
+                var maintenanceRequest = await _firebaseService.GetDocumentAsync<MaintenanceRequest>(
+                    "maintenanceRequests",
+                    id
+                );
+                if (maintenanceRequest == null)
+                {
+                    return NotFound(new { error = "Maintenance request not found" });
+                }
+
+                // Verify PM owns the project
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    maintenanceRequest.ProjectId
+                );
+                if (project == null)
+                {
+                    return NotFound(new { error = "Project not found" });
+                }
+                if (project.ProjectManagerId != currentPmId)
+                {
+                    return Unauthorized(
+                        new { error = "You are not authorized to access this maintenance request" }
+                    );
+                }
+
+                return Ok(maintenanceRequest);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting maintenance request: {ex.Message}");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("maintenance-request/{id}/approve")]
+        public async Task<ActionResult> ApproveMaintenanceRequest(
+            string id,
+            [FromBody] ApproveMaintenanceRequestRequest request
+        )
+        {
+            try
+            {
+                var currentPmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(currentPmId))
+                {
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
+                // Get maintenance request
+                var maintenanceRequest = await _firebaseService.GetDocumentAsync<MaintenanceRequest>(
+                    "maintenanceRequests",
+                    id
+                );
+                if (maintenanceRequest == null)
+                {
+                    return NotFound(new { error = "Maintenance request not found" });
+                }
+
+                // Verify PM owns the project
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    maintenanceRequest.ProjectId
+                );
+                if (project == null)
+                {
+                    return NotFound(new { error = "Project not found" });
+                }
+                if (project.ProjectManagerId != currentPmId)
+                {
+                    return Unauthorized(
+                        new { error = "You are not authorized to approve this maintenance request" }
+                    );
+                }
+
+                // Update maintenance request status
+                maintenanceRequest.Status = "Approved";
+                await _firebaseService.UpdateDocumentAsync(
+                    "maintenanceRequests",
+                    id,
+                    maintenanceRequest
+                );
+
+                // Create phases if provided
+                if (request.Phases != null && request.Phases.Any())
+                {
+                    foreach (var phase in request.Phases)
+                    {
+                        phase.ProjectId = maintenanceRequest.ProjectId;
+                        if (string.IsNullOrWhiteSpace(phase.PhaseId))
+                        {
+                            phase.PhaseId = Guid.NewGuid().ToString();
+                        }
+                        phase.Status = "Pending";
+                        phase.Progress = 0;
+
+                        await _firebaseService.AddDocumentWithIdAsync(
+                            "phases",
+                            phase.PhaseId,
+                            phase
+                        );
+                    }
+                }
+
+                // Create tasks if provided
+                if (request.Tasks != null && request.Tasks.Any())
+                {
+                    foreach (var task in request.Tasks)
+                    {
+                        task.ProjectId = maintenanceRequest.ProjectId;
+                        if (string.IsNullOrWhiteSpace(task.TaskId))
+                        {
+                            task.TaskId = Guid.NewGuid().ToString();
+                        }
+
+                        var normalizedTask = new ProjectTask
+                        {
+                            TaskId = task.TaskId,
+                            ProjectId = task.ProjectId,
+                            PhaseId = task.PhaseId,
+                            Name = task.Name,
+                            Description = task.Description,
+                            AssignedTo = task.AssignedTo,
+                            Priority = task.Priority,
+                            Status = task.Status,
+                            Progress = task.Progress,
+                            EstimatedHours = task.EstimatedHours,
+                            ActualHours = task.ActualHours,
+                            StartDate = NormalizeDateTime(task.StartDate, DateTime.UtcNow),
+                            DueDate = NormalizeDateTime(task.DueDate, DateTime.UtcNow.AddDays(7)),
+                            CompletedDate = task.CompletedDate.HasValue
+                                    && task.CompletedDate.Value.Year > 1900
+                                ? NormalizeDateTime(task.CompletedDate.Value, null)
+                                : null,
+                        };
+
+                        await _firebaseService.AddDocumentWithIdAsync(
+                            "tasks",
+                            task.TaskId,
+                            normalizedTask
+                        );
+                    }
+                }
+
+                // Ensure project status is Maintenance
+                if (project.Status != "Maintenance")
+                {
+                    project.Status = "Maintenance";
+                    await _firebaseService.UpdateDocumentAsync(
+                        "projects",
+                        maintenanceRequest.ProjectId,
+                        project
+                    );
+                }
+
+                // Send workflow message to client
+                if (!string.IsNullOrEmpty(project.ClientId))
+                {
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "maintenance_request",
+                        EntityId = maintenanceRequest.MaintenanceRequestId,
+                        EntityType = "maintenance_request",
+                        Action = "approved",
+                        ProjectId = maintenanceRequest.ProjectId,
+                        UserId = project.ClientId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "requestId", maintenanceRequest.MaintenanceRequestId },
+                            { "projectId", maintenanceRequest.ProjectId },
+                            { "projectName", project.Name },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
+                }
+
+                return Ok(new { message = "Maintenance request approved successfully" });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error approving maintenance request: {ex.Message}");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("maintenance-request/{id}/reject")]
+        public async Task<ActionResult> RejectMaintenanceRequest(string id)
+        {
+            try
+            {
+                var currentPmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(currentPmId))
+                {
+                    return Unauthorized(new { error = "Project Manager ID not found" });
+                }
+
+                // Get maintenance request
+                var maintenanceRequest = await _firebaseService.GetDocumentAsync<MaintenanceRequest>(
+                    "maintenanceRequests",
+                    id
+                );
+                if (maintenanceRequest == null)
+                {
+                    return NotFound(new { error = "Maintenance request not found" });
+                }
+
+                // Verify PM owns the project
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    maintenanceRequest.ProjectId
+                );
+                if (project == null)
+                {
+                    return NotFound(new { error = "Project not found" });
+                }
+                if (project.ProjectManagerId != currentPmId)
+                {
+                    return Unauthorized(
+                        new { error = "You are not authorized to reject this maintenance request" }
+                    );
+                }
+
+                // Update maintenance request status
+                maintenanceRequest.Status = "Rejected";
+                await _firebaseService.UpdateDocumentAsync(
+                    "maintenanceRequests",
+                    id,
+                    maintenanceRequest
+                );
+
+                // Send workflow message to client
+                if (!string.IsNullOrEmpty(project.ClientId))
+                {
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = "maintenance_request",
+                        EntityId = maintenanceRequest.MaintenanceRequestId,
+                        EntityType = "maintenance_request",
+                        Action = "rejected",
+                        ProjectId = maintenanceRequest.ProjectId,
+                        UserId = project.ClientId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "requestId", maintenanceRequest.MaintenanceRequestId },
+                            { "projectId", maintenanceRequest.ProjectId },
+                            { "projectName", project.Name },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
+                }
+
+                // Check if all maintenance requests for this project are rejected and nothing is open
+                // If so, move project back to "Completed"
+                if (project.Status == "Maintenance")
+                {
+                    var allMaintenanceRequests = await _firebaseService.GetCollectionAsync<MaintenanceRequest>(
+                        "maintenanceRequests"
+                    );
+                    var projectMaintenanceRequests = allMaintenanceRequests
+                        .Where(mr => mr.ProjectId == maintenanceRequest.ProjectId)
+                        .ToList();
+
+                    // Check if there are any open maintenance requests (not rejected, not completed)
+                    var openRequests = projectMaintenanceRequests
+                        .Where(mr => mr.Status != "Rejected" && mr.Status != "Completed" && mr.Status != "Resolved")
+                        .ToList();
+
+                    // If no open requests, move project back to Completed
+                    if (!openRequests.Any())
+                    {
+                        project.Status = "Completed";
+                        if (project.EndDateActual == null)
+                        {
+                            project.EndDateActual = DateTime.UtcNow;
+                        }
+                        await _firebaseService.UpdateDocumentAsync(
+                            "projects",
+                            maintenanceRequest.ProjectId,
+                            project
+                        );
+                        Console.WriteLine(
+                            $"✅ All maintenance requests rejected/completed. Project {maintenanceRequest.ProjectId} moved back to 'Completed'"
+                        );
+                    }
+                }
+
+                return Ok(new { message = "Maintenance request rejected successfully" });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error rejecting maintenance request: {ex.Message}");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        public class ApproveMaintenanceRequestRequest
+        {
+            public string RequestId { get; set; } = string.Empty;
+            public string ProjectId { get; set; } = string.Empty;
+            public List<Phase>? Phases { get; set; }
+            public List<ProjectTask>? Tasks { get; set; }
+        }
+
         [HttpPost("save-project")]
         public async Task<ActionResult<SaveProjectResponse>> SaveProject(
             [FromBody] SaveProjectRequest request
@@ -1910,12 +2252,13 @@ namespace ICCMS_API.Controllers
                 task.Status = "Completed";
                 task.CompletedDate = DateTime.UtcNow;
                 
-                // Update task actual hours from completion report final hours
+                // Update task actual hours and spent amount from completion report
                 if (completionReport != null)
                 {
                     task.ActualHours = completionReport.FinalHours;
+                    task.SpentAmount = completionReport.SpentAmount;
                     Console.WriteLine(
-                        $"[ApproveTaskCompletion] Updated task {taskId} actual hours to {completionReport.FinalHours} from completion report"
+                        $"[ApproveTaskCompletion] Updated task {taskId} actual hours to {completionReport.FinalHours} and spent amount to {completionReport.SpentAmount} from completion report"
                     );
                 }
 
@@ -1927,6 +2270,13 @@ namespace ICCMS_API.Controllers
                 // Update task progress to 100% and phase progress
                 await UpdateTaskProgressToComplete(taskId);
                 await UpdatePhaseProgress(task.PhaseId);
+                
+                // Update phase and project spent amounts
+                await UpdatePhaseSpentAmount(task.PhaseId);
+                await UpdateProjectBudgetActual(task.ProjectId);
+
+                // Check project completion (will check if all tasks/phases are done and update project status)
+                await CheckProjectCompletion(task.ProjectId);
 
                 // Notify client of task completion
                 if (project != null && !string.IsNullOrEmpty(project.ClientId))
@@ -1969,7 +2319,7 @@ namespace ICCMS_API.Controllers
         [HttpPut("task/{taskId}/reject-completion")]
         public async Task<ActionResult<ProjectTask>> RejectTaskCompletion(
             string taskId,
-            [FromBody] object rejectionData
+            [FromBody] object? rejectionData = null
         )
         {
             try
@@ -2419,12 +2769,203 @@ namespace ICCMS_API.Controllers
                     Console.WriteLine(
                         $"[UpdatePhaseProgress] Updated phase {phaseId} progress to {progressPercentage}%"
                     );
+
+                    // Check if project completion should be updated (checks all projects when phases complete)
+                    if (phase.Status == "Completed")
+                    {
+                        await CheckProjectCompletion(phase.ProjectId);
+                    }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine(
                     $"[UpdatePhaseProgress] Error updating phase progress: {ex.Message}"
+                );
+            }
+        }
+
+        // Helper method to calculate and update phase spent amount from tasks
+        private async Task UpdatePhaseSpentAmount(string phaseId)
+        {
+            try
+            {
+                // Get all tasks for this phase
+                var allTasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var phaseTasks = allTasks.Where(t => t.PhaseId == phaseId).ToList();
+
+                if (phaseTasks.Count == 0)
+                {
+                    Console.WriteLine($"[UpdatePhaseSpentAmount] No tasks found for phase {phaseId}");
+                    return;
+                }
+
+                // Calculate total spent amount: sum of all task spent amounts
+                var totalSpentAmount = phaseTasks.Sum(t => t.SpentAmount);
+
+                Console.WriteLine(
+                    $"[UpdatePhaseSpentAmount] Phase {phaseId}: Total spent amount = {totalSpentAmount}"
+                );
+
+                // Update phase spent amount
+                var phase = await _firebaseService.GetDocumentAsync<Phase>("phases", phaseId);
+                if (phase != null)
+                {
+                    phase.SpentAmount = totalSpentAmount;
+                    await _firebaseService.UpdateDocumentAsync("phases", phaseId, phase);
+                    Console.WriteLine(
+                        $"[UpdatePhaseSpentAmount] Updated phase {phaseId} spent amount to {totalSpentAmount}"
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"[UpdatePhaseSpentAmount] Error updating phase spent amount: {ex.Message}"
+                );
+            }
+        }
+
+        // Helper method to calculate and update project budget actual from phases/tasks
+        private async Task UpdateProjectBudgetActual(string projectId)
+        {
+            try
+            {
+                var project = await _firebaseService.GetDocumentAsync<Project>("projects", projectId);
+                if (project == null)
+                {
+                    Console.WriteLine($"[UpdateProjectBudgetActual] Project {projectId} not found");
+                    return;
+                }
+
+                // Get all phases for this project
+                var allPhases = await _firebaseService.GetCollectionAsync<Phase>("phases");
+                var projectPhases = allPhases.Where(p => p.ProjectId == projectId).ToList();
+
+                // Calculate total spent amount: sum of all phase spent amounts
+                var totalSpentAmount = projectPhases.Sum(p => p.SpentAmount);
+
+                Console.WriteLine(
+                    $"[UpdateProjectBudgetActual] Project {projectId}: Total spent amount = {totalSpentAmount} from {projectPhases.Count} phases"
+                );
+
+                // Update project budget actual
+                project.BudgetActual = totalSpentAmount;
+                await _firebaseService.UpdateDocumentAsync("projects", projectId, project);
+                Console.WriteLine(
+                    $"[UpdateProjectBudgetActual] Updated project {projectId} budget actual to {totalSpentAmount}"
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"[UpdateProjectBudgetActual] Error updating project budget actual: {ex.Message}"
+                );
+            }
+        }
+
+        // Helper method to check if all tasks/phases are complete and update project status to Completed
+        // Works for all project types (Active, Maintenance, etc.), but skips projects already marked as Completed
+        private async Task CheckProjectCompletion(string projectId)
+        {
+            try
+            {
+                var project = await _firebaseService.GetDocumentAsync<Project>("projects", projectId);
+                if (project == null)
+                {
+                    Console.WriteLine($"[CheckProjectCompletion] Project {projectId} not found");
+                    return;
+                }
+
+                // Skip if project is already completed or cancelled
+                if (project.Status == "Completed" || project.Status == "Cancelled")
+                {
+                    Console.WriteLine($"[CheckProjectCompletion] Project {projectId} already in final state: {project.Status}");
+                    return;
+                }
+
+                // Store original status for workflow message type determination
+                var originalStatus = project.Status;
+                var isMaintenanceProject = originalStatus == "Maintenance";
+
+                // Get all phases for this project
+                var allPhases = await _firebaseService.GetCollectionAsync<Phase>("phases");
+                var projectPhases = allPhases.Where(p => p.ProjectId == projectId).ToList();
+
+                if (projectPhases.Count == 0)
+                {
+                    Console.WriteLine($"[CheckProjectCompletion] No phases found for project {projectId}");
+                    return;
+                }
+
+                // Check if all phases are completed
+                var allPhasesComplete = projectPhases.All(p => p.Status == "Completed");
+                if (!allPhasesComplete)
+                {
+                    Console.WriteLine(
+                        $"[CheckProjectCompletion] Not all phases complete for project {projectId}. Completed: {projectPhases.Count(p => p.Status == "Completed")}/{projectPhases.Count}"
+                    );
+                    return;
+                }
+
+                // Get all tasks for this project
+                var allTasks = await _firebaseService.GetCollectionAsync<ProjectTask>("tasks");
+                var projectTasks = allTasks.Where(t => t.ProjectId == projectId).ToList();
+
+                if (projectTasks.Count == 0)
+                {
+                    Console.WriteLine($"[CheckProjectCompletion] No tasks found for project {projectId}");
+                    return;
+                }
+
+                // Check if all tasks are completed
+                var allTasksComplete = projectTasks.All(t => t.Status == "Completed");
+                if (!allTasksComplete)
+                {
+                    Console.WriteLine(
+                        $"[CheckProjectCompletion] Not all tasks complete for project {projectId}. Completed: {projectTasks.Count(t => t.Status == "Completed")}/{projectTasks.Count}"
+                    );
+                    return;
+                }
+
+                // All phases and tasks are complete - update project status to Completed
+                project.Status = "Completed";
+                project.EndDateActual = DateTime.UtcNow;
+                await _firebaseService.UpdateDocumentAsync("projects", projectId, project);
+
+                Console.WriteLine(
+                    $"[CheckProjectCompletion] Project {projectId} ({project.Name}) marked as Completed - all {projectPhases.Count} phases and {projectTasks.Count} tasks are complete"
+                );
+
+                // Send workflow message to client
+                if (!string.IsNullOrEmpty(project.ClientId))
+                {
+                    // For maintenance projects, send maintenance_request completion message
+                    // For other projects, send project_update completion message
+                    var systemEvent = new SystemEvent
+                    {
+                        EventType = isMaintenanceProject ? "maintenance_request" : "project_update",
+                        EntityId = projectId,
+                        EntityType = isMaintenanceProject ? "maintenance_request" : "project",
+                        Action = "completed",
+                        ProjectId = projectId,
+                        UserId = project.ClientId,
+                        Data = new Dictionary<string, object>
+                        {
+                            { "projectId", projectId },
+                            { "projectName", project.Name },
+                        },
+                    };
+                    await _workflowMessageService.CreateWorkflowMessageAsync(systemEvent);
+                    Console.WriteLine(
+                        $"[CheckProjectCompletion] Sent completion notification to client {project.ClientId} (project type: {originalStatus})"
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"[CheckProjectCompletion] Error checking project completion: {ex.Message}"
                 );
             }
         }

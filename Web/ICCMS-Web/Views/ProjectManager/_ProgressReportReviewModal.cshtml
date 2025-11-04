@@ -183,9 +183,32 @@
             // Fetch the actual progress report details
             fetch(`/ProjectManager/GetProgressReport?reportId=${reportId}`)
                 .then(response => response.json())
-                .then(data => {
+                .then(async (data) => {
                     if (data.success && data.data) {
                         const report = data.data;
+                        
+                        // Load photos from attached documents
+                        let photosHtml = '';
+                        if (report.attachedDocumentIds && report.attachedDocumentIds.length > 0) {
+                            const photos = await loadPhotosFromDocuments(report.attachedDocumentIds);
+                            if (photos.length > 0) {
+                                photosHtml = photos.map((photo, index) => {
+                                    const safeUrl = photo.url.replace(/'/g, "\\'");
+                                    const safeFileName = (photo.fileName || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                                    return `
+                                    <div class="col-md-4 col-sm-6">
+                                        <div class="photo-thumbnail-container" style="position: relative; cursor: pointer;" data-photo-url="${safeUrl}" data-photo-name="${safeFileName}">
+                                            <img src="${safeUrl}" alt="${safeFileName}" class="img-fluid rounded shadow-sm" style="width: 100%; height: 200px; object-fit: cover;" />
+                                            <div class="photo-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; border-radius: 0.25rem;">
+                                                <i class="fa-solid fa-expand text-white fa-2x"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                                }).join('');
+                            }
+                        }
+                        
                         progressReportContent.innerHTML = `
                         <div class="progress-report-details">
                             <div class="row mb-3">
@@ -237,8 +260,32 @@
                                     }
                                 </div>
                             </div>
+                            
+                            ${photosHtml ? `
+                            <div class="mb-3">
+                                <h6><i class="fa-solid fa-camera me-2"></i>Photos</h6>
+                                <div class="row g-2">
+                                    ${photosHtml}
+                                </div>
+                            </div>
+                            ` : ''}
                         </div>
                         `;
+                        
+                        // Add photo overlay hover effect and click handler
+                        document.querySelectorAll('.photo-thumbnail-container').forEach(container => {
+                            container.addEventListener('mouseenter', function() {
+                                this.querySelector('.photo-overlay').style.opacity = '1';
+                            });
+                            container.addEventListener('mouseleave', function() {
+                                this.querySelector('.photo-overlay').style.opacity = '0';
+                            });
+                            container.addEventListener('click', function() {
+                                const url = this.getAttribute('data-photo-url');
+                                const fileName = this.getAttribute('data-photo-name');
+                                showPhotoModal(url, fileName);
+                            });
+                        });
                     } else {
                         progressReportContent.innerHTML = `
                         <div class="alert alert-warning">
@@ -286,5 +333,60 @@
     `;
         document.body.appendChild(notification);
         setTimeout(() => notification.remove(), 5000);
+    }
+    
+    // Function to load photos from document IDs
+    async function loadPhotosFromDocuments(documentIds) {
+        const photos = [];
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+        
+        for (const docId of documentIds) {
+            try {
+                const response = await fetch(`/api/documents/metadata?projectId=`);
+                const allDocs = await response.json();
+                const doc = Array.isArray(allDocs) ? allDocs.find(d => d.documentId === docId) : null;
+                
+                if (doc && doc.fileUrl) {
+                    const fileExt = doc.fileName ? doc.fileName.toLowerCase().substring(doc.fileName.lastIndexOf('.')) : '';
+                    if (imageExtensions.includes(fileExt)) {
+                        photos.push({
+                            url: doc.fileUrl,
+                            fileName: doc.fileName || docId,
+                            documentId: docId
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error(`Error loading document ${docId}:`, error);
+            }
+        }
+        
+        return photos;
+    }
+    
+    // Photo viewer modal
+    function showPhotoModal(imageUrl, fileName) {
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.id = 'photoViewerModal';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-xl modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="fa-solid fa-image me-2"></i>${fileName || 'Photo'}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center p-0">
+                        <img src="${imageUrl}" alt="${fileName}" class="img-fluid" style="max-height: 80vh; width: auto;" />
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+        modal.addEventListener('hidden.bs.modal', function() {
+            document.body.removeChild(modal);
+        });
     }
 </script>

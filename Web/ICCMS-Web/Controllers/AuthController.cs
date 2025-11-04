@@ -204,7 +204,7 @@ namespace ICCMS_Web.Controllers
         {
             await HttpContext.SignOutAsync("Cookies");
             _logger.LogInformation("User logged out.");
-            TempData["SuccessMessage"] = "You have been logged out successfully.";
+            TempData["SuccessMessage"] = "You have been logged in successfully.";
             return RedirectToAction("Login");
         }
 

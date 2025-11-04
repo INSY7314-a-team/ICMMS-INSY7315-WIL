@@ -1,5 +1,10 @@
 @model List<ICCMS_Web.Models.ProjectDto>
 
+@{
+    // Get client map from ViewData if available
+    var clientMap = ViewData["ClientMap"] as Dictionary<string, string> ?? new Dictionary<string, string>();
+}
+
 @foreach (var project in Model)
 {
     // Provide safe fallbacks for ViewBag-dependent data inside _ProjectCard
@@ -9,8 +14,11 @@
     ViewBag.Progress = 0;
     ViewBag.StatusBadgeClass = "badge-light";
     
-    // Set client name to ClientId as fallback (will be resolved by frontend if needed)
-    ViewBag.ClientName = project.ClientId;
+    // Map client ID to client name, fallback to ClientId if not found
+    var clientName = !string.IsNullOrEmpty(project.ClientId) && clientMap.ContainsKey(project.ClientId)
+        ? clientMap[project.ClientId]
+        : project.ClientId;
+    ViewBag.ClientName = clientName;
 
     @await Html.PartialAsync("_ProjectCard", project)
 }

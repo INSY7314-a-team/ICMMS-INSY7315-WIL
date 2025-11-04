@@ -29,8 +29,10 @@ namespace ICCMS_Web.Models
         [JsonPropertyName("contractorId")]
         public string ContractorId { get; set; } = string.Empty;
 
+        [JsonPropertyName("taskId")]
+        public string TaskId { get; set; } = string.Empty;
+
         [JsonPropertyName("ratingValue")]
         public int RatingValue { get; set; }
     }
 }
-

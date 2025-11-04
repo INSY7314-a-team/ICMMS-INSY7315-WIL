@@ -925,7 +925,7 @@ namespace ICCMS_Web.Controllers
                     ProjectId = viewModel.ProjectId,
                     CompletionSummary = viewModel.CompletionSummary,
                     FinalHours = viewModel.FinalHours,
-                    AmountSpent = viewModel.AmountSpent,
+                    SpentAmount = (double)viewModel.AmountSpent,
                     QualityCheck = viewModel.QualityCheck,
                     SubmittedBy = userId,
                     SubmittedAt = DateTime.UtcNow,

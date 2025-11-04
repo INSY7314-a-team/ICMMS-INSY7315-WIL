@@ -49,21 +49,70 @@ namespace ICCMS_Web.Services
             if (idx == null)
                 return Enumerable.Empty<ProjectDto>();
 
-            IEnumerable<ProjectDto> seq = string.IsNullOrWhiteSpace(query)
-                ? idx.ById.Values
-                : idx.Search(query);
-
+            // Start with the appropriate base set
+            IEnumerable<ProjectDto> seq;
+            
+            // If filtering by clientId, use the optimized ByClientId lookup
+            if (!string.IsNullOrEmpty(clientId))
+            {
+                // Try exact match first (fastest)
+                if (idx.ByClientId.TryGetValue(clientId, out var clientProjects))
+                {
+                    seq = clientProjects;
+                }
+                else
+                {
+                    // Try case-insensitive lookup
+                    var matchingClientKey = idx.ByClientId.Keys
+                        .FirstOrDefault(k => string.Equals(k, clientId, StringComparison.OrdinalIgnoreCase));
+                    
+                    if (matchingClientKey != null && idx.ByClientId.TryGetValue(matchingClientKey, out clientProjects))
+                    {
+                        seq = clientProjects;
+                    }
+                    else
+                    {
+                        // Fallback: search through all projects (in case ClientId is stored differently)
+                        var allProjects = idx.ById.Values.ToList();
+                        var allClientIds = allProjects
+                            .Where(p => !string.IsNullOrEmpty(p.ClientId))
+                            .Select(p => p.ClientId)
+                            .Distinct()
+                            .ToList();
+                        
+                        var filtered = allProjects.Where(p => 
+                        {
+                            if (string.IsNullOrEmpty(p.ClientId))
+                                return false;
+                            var matches = string.Equals(p.ClientId, clientId, StringComparison.OrdinalIgnoreCase);
+                            return matches;
+                        }).ToList();
+                        
+                        if (filtered.Any())
+                        {
+                            seq = filtered;
+                        }
+                        else
+                        {
+                            // No projects found for this clientId
+                            return Enumerable.Empty<ProjectDto>();
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // No client filter - use all projects or search results
+                seq = string.IsNullOrWhiteSpace(query)
+                    ? idx.ById.Values
+                    : idx.Search(query);
+            }
+            
+            // Apply status filter if provided
             if (!string.IsNullOrEmpty(status))
             {
                 seq = seq.Where(p =>
                     string.Equals(p.Status, status, StringComparison.OrdinalIgnoreCase)
-                );
-            }
-
-            if (!string.IsNullOrEmpty(clientId))
-            {
-                seq = seq.Where(p =>
-                    string.Equals(p.ClientId, clientId, StringComparison.OrdinalIgnoreCase)
                 );
             }
 

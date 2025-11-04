@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Security.Claims;
 using ICCMS_API.Auth;
 using ICCMS_API.Models;
@@ -119,6 +120,11 @@ namespace ICCMS_API.Controllers
                     return BadRequest(new { error = "Contractor ID is required" });
                 }
 
+                if (string.IsNullOrEmpty(request.TaskId))
+                {
+                    return BadRequest(new { error = "Task ID is required" });
+                }
+
                 if (request.RatingValue < 1 || request.RatingValue > 5)
                 {
                     return BadRequest(new { error = "Rating value must be between 1 and 5" });
@@ -130,7 +136,55 @@ namespace ICCMS_API.Controllers
                     return Unauthorized(new { error = "Client ID not found" });
                 }
 
-                // Get existing rating or create new one
+                // Check if rating already exists for this task-contractor-client combination
+                var submissionId = $"{request.TaskId}_{request.ContractorId}_{clientId}";
+                var existingSubmission = await _firebaseService.GetDocumentAsync<RatingSubmission>(
+                    "ratingSubmissions",
+                    submissionId
+                );
+
+                if (existingSubmission != null)
+                {
+                    return BadRequest(
+                        new { error = "You have already rated this contractor for this task." }
+                    );
+                }
+
+                // Get all existing submissions for this contractor to recalculate average
+                var allSubmissions = await _firebaseService.GetCollectionAsync<RatingSubmission>(
+                    "ratingSubmissions"
+                );
+                var contractorSubmissions = allSubmissions
+                    .Where(s => s.ContractorId == request.ContractorId)
+                    .ToList();
+
+                // Create new rating submission
+                var newSubmission = new RatingSubmission
+                {
+                    RatingSubmissionId = submissionId,
+                    ContractorId = request.ContractorId,
+                    TaskId = request.TaskId,
+                    RatedBy = clientId,
+                    RatingValue = request.RatingValue,
+                    CreatedAt = DateTime.UtcNow,
+                };
+
+                await _firebaseService.AddDocumentWithIdAsync(
+                    "ratingSubmissions",
+                    submissionId,
+                    newSubmission
+                );
+
+                // Recalculate average rating from all submissions
+                var allRatingsForContractor = contractorSubmissions
+                    .Select(s => s.RatingValue)
+                    .ToList();
+                allRatingsForContractor.Add(request.RatingValue);
+
+                var newAverage = allRatingsForContractor.Average();
+                var newTotal = allRatingsForContractor.Count;
+
+                // Update or create aggregate rating
                 var existingRating = await _firebaseService.GetDocumentAsync<ContractorRating>(
                     "contractorRatings",
                     request.ContractorId
@@ -140,38 +194,15 @@ namespace ICCMS_API.Controllers
 
                 if (existingRating == null)
                 {
-                    // Create new rating
                     rating = new ContractorRating
                     {
                         ContractorRatingId = request.ContractorId,
                         ContractorId = request.ContractorId,
-                        AverageRating = request.RatingValue,
-                        TotalRatings = 1,
+                        AverageRating = newAverage,
+                        TotalRatings = newTotal,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow,
                     };
-                }
-                else
-                {
-                    // Update existing rating using incremental calculation
-                    var oldAverage = existingRating.AverageRating;
-                    var oldCount = existingRating.TotalRatings;
-                    var newAverage = (oldAverage * oldCount + request.RatingValue) / (oldCount + 1);
-
-                    rating = new ContractorRating
-                    {
-                        ContractorRatingId = request.ContractorId, // Match document ID
-                        ContractorId = request.ContractorId,
-                        AverageRating = newAverage,
-                        TotalRatings = oldCount + 1,
-                        CreatedAt = existingRating.CreatedAt,
-                        UpdatedAt = DateTime.UtcNow,
-                    };
-                }
-
-                // Save to Firestore using contractorId as document ID
-                if (existingRating == null)
-                {
                     await _firebaseService.AddDocumentWithIdAsync(
                         "contractorRatings",
                         request.ContractorId,
@@ -180,6 +211,15 @@ namespace ICCMS_API.Controllers
                 }
                 else
                 {
+                    rating = new ContractorRating
+                    {
+                        ContractorRatingId = request.ContractorId,
+                        ContractorId = request.ContractorId,
+                        AverageRating = newAverage,
+                        TotalRatings = newTotal,
+                        CreatedAt = existingRating.CreatedAt,
+                        UpdatedAt = DateTime.UtcNow,
+                    };
                     await _firebaseService.UpdateDocumentAsync(
                         "contractorRatings",
                         request.ContractorId,
@@ -192,12 +232,38 @@ namespace ICCMS_API.Controllers
                 _auditLogService.LogAsync(
                     "Contractor Rating",
                     "Rating Submitted",
-                    $"Rating {request.RatingValue} submitted for contractor {request.ContractorId}",
+                    $"Rating {request.RatingValue} submitted for contractor {request.ContractorId} on task {request.TaskId}",
                     userId ?? "system",
                     request.ContractorId
                 );
 
                 return Ok(rating);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("task/{taskId}/contractor/{contractorId}")]
+        [Authorize(Roles = "Client,Tester")]
+        public async Task<ActionResult<bool>> HasRatedTask(string taskId, string contractorId)
+        {
+            try
+            {
+                var clientId = User.UserId();
+                if (string.IsNullOrEmpty(clientId))
+                {
+                    return Unauthorized(new { error = "Client ID not found" });
+                }
+
+                var submissionId = $"{taskId}_{contractorId}_{clientId}";
+                var existingSubmission = await _firebaseService.GetDocumentAsync<RatingSubmission>(
+                    "ratingSubmissions",
+                    submissionId
+                );
+
+                return Ok(existingSubmission != null);
             }
             catch (Exception ex)
             {

@@ -802,6 +802,43 @@ namespace ICCMS_API.Services
                         "A milestone has been reached for project {projectName}. Great progress!",
                     Priority = "normal",
                 },
+                // Maintenance request workflow templates
+                new WorkflowMessageTemplate
+                {
+                    WorkflowType = "maintenance_request",
+                    Action = "approved",
+                    SubjectTemplate = "✅ Maintenance Request Approved - {projectName}",
+                    ContentTemplate =
+                        "Your maintenance request for project {projectName} has been approved.\n\n"
+                        + "The project manager will now proceed with the maintenance work. You will be notified when the work is completed.\n\n"
+                        + "Request ID: {requestId}\n"
+                        + "Project: {projectName}",
+                    Priority = "normal",
+                },
+                new WorkflowMessageTemplate
+                {
+                    WorkflowType = "maintenance_request",
+                    Action = "rejected",
+                    SubjectTemplate = "❌ Maintenance Request Rejected - {projectName}",
+                    ContentTemplate =
+                        "We regret to inform you that your maintenance request for project {projectName} has been rejected.\n\n"
+                        + "Request ID: {requestId}\n"
+                        + "Project: {projectName}\n\n"
+                        + "If you have any questions or concerns, please contact your project manager.",
+                    Priority = "normal",
+                },
+                new WorkflowMessageTemplate
+                {
+                    WorkflowType = "maintenance_request",
+                    Action = "completed",
+                    SubjectTemplate = "🎉 Maintenance Work Completed - {projectName}",
+                    ContentTemplate =
+                        "Great news! All maintenance work for project {projectName} has been completed.\n\n"
+                        + "All phases and tasks have been finished. The project status has been updated to Completed.\n\n"
+                        + "Project: {projectName}\n"
+                        + "Thank you for your patience.",
+                    Priority = "high",
+                },
                 // System templates
                 new WorkflowMessageTemplate
                 {

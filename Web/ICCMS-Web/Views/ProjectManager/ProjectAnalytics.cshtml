@@ -1,0 +1,302 @@
+@model ICCMS_Web.Models.ProjectAnalyticsViewModel
+
+@{
+    ViewData["Title"] = $"Analytics: {Model.Project.Name}";
+    Layout = "_Layout";
+}
+
+<div class="pm-analytics-container">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="@Url.Action("Dashboard", "ProjectManager")" class="text-decoration-none">
+                    <i class="fa-solid fa-home"></i> Dashboard
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="@Url.Action("ProjectDetail", "ProjectManager", new { projectId = Model.Project.ProjectId })" class="text-decoration-none">
+                    <i class="fa-solid fa-project-diagram"></i> @Model.Project.Name
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                <i class="fa-solid fa-chart-line"></i> Analytics
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="row mb-3">
+        <div class="col-md-8">
+            <h5 class="mb-1">
+                <i class="fa-solid fa-chart-line me-2" style="color: #F7EC59;"></i>Project Analytics
+            </h5>
+            <p class="mb-0 small">Comprehensive insights for @Model.Project.Name</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <span class="badge @Model.GetStatusBadgeClass(Model.Project.Status) me-2">@Model.Project.Status</span>
+            <span class="badge pm-badge-secondary">@Model.OverallProgress% Complete</span>
+        </div>
+    </div>
+
+    <!-- KPI Cards Section -->
+    <div class="row g-2 mb-3" style="justify-content: center; text-align: center;">
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 col-6">
+            <div class="stat-card compact">
+                <div class="stat-content">
+                    <h4 class="stat-number">@Model.OverallProgress%</h4>
+                    <p class="stat-label">Progress</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 col-6">
+            <div class="stat-card compact">
+                <div class="stat-content">
+                    <h4 class="stat-number">@Model.BudgetUtilizationPercentage.ToString("F1")%</h4>
+                    <p class="stat-label">Budget Used</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 col-6">
+            <div class="stat-card compact">
+                <div class="stat-content">
+                    <h4 class="stat-number">@Model.BudgetVariance.ToString("C")</h4>
+                    <p class="stat-label">Variance</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 col-6">
+            <div class="stat-card compact">
+                <div class="stat-content">
+                    <h4 class="stat-number">@Model.AverageContractorRating.ToString("F1")</h4>
+                    <p class="stat-label">Avg Rating</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 col-6">
+            <div class="stat-card compact">
+                <div class="stat-content">
+                    <h4 class="stat-number">@Model.PendingQuotesCount</h4>
+                    <p class="stat-label">Pending Quotes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 col-6">
+            <div class="stat-card compact">
+                <div class="stat-content">
+                    <h4 class="stat-number">@Model.UnpaidInvoicesCount</h4>
+                    <p class="stat-label">Unpaid Invoices</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row g-3 mb-3">
+        <!-- Pie Chart: Task Status Breakdown -->
+        <div class="col-12">
+            <div class="chart-card">
+                <div class="chart-header" data-bs-toggle="collapse" data-bs-target="#chartPieCollapse" aria-expanded="true" aria-controls="chartPieCollapse" style="cursor: pointer;">
+                    <h6 class="mb-0">
+                        <i class="fa-solid fa-chart-pie"></i>Task Status Breakdown
+                    </h6>
+                    <i class="fa-solid fa-chevron-down collapse-icon"></i>
+                </div>
+                <div class="chart-body collapse show" id="chartPieCollapse">
+                    <canvas id="taskStatusPieChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bar Chart: Budget by Phase -->
+        <div class="col-12">
+            <div class="chart-card">
+                <div class="chart-header" data-bs-toggle="collapse" data-bs-target="#chartBarCollapse" aria-expanded="true" aria-controls="chartBarCollapse" style="cursor: pointer;">
+                    <h6 class="mb-0">
+                        <i class="fa-solid fa-chart-bar"></i>Budget by Phase
+                    </h6>
+                    <i class="fa-solid fa-chevron-down collapse-icon"></i>
+                </div>
+                <div class="chart-body collapse show" id="chartBarCollapse">
+                    <canvas id="budgetByPhaseBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Line Chart: Budget Tracking Over Time -->
+        <div class="col-12">
+            <div class="chart-card">
+                <div class="chart-header" data-bs-toggle="collapse" data-bs-target="#chartLineCollapse" aria-expanded="true" aria-controls="chartLineCollapse" style="cursor: pointer;">
+                    <h6 class="mb-0">
+                        <i class="fa-solid fa-chart-line"></i>Budget Tracking Over Time
+                    </h6>
+                    <i class="fa-solid fa-chevron-down collapse-icon"></i>
+                </div>
+                <div class="chart-body collapse show" id="chartLineCollapse">
+                    <canvas id="budgetHistoryLineChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gantt Chart: Project Timeline -->
+        <div class="col-12">
+            <div class="chart-card">
+                <div class="chart-header" data-bs-toggle="collapse" data-bs-target="#chartGanttCollapse" aria-expanded="true" aria-controls="chartGanttCollapse" style="cursor: pointer;">
+                    <h6 class="mb-0">
+                        <i class="fa-solid fa-calendar-timeline"></i>Project Timeline
+                    </h6>
+                    <i class="fa-solid fa-chevron-down collapse-icon"></i>
+                </div>
+                <div class="chart-body collapse show" id="chartGanttCollapse">
+                    <div id="ganttChartContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quote Approval Tracking Section -->
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="tracking-card">
+                <div class="tracking-header" data-bs-toggle="collapse" data-bs-target="#quotesTrackingCollapse" aria-expanded="true" aria-controls="quotesTrackingCollapse" style="cursor: pointer;">
+                    <h6 class="mb-0">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>Quote Approval Tracking
+                    </h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-chevron-down collapse-icon"></i>
+                    </div>
+                </div>
+                <div class="tracking-body collapse show" id="quotesTrackingCollapse">
+                    <div class="table-responsive">
+                        <table class="table table-hover tracking-table">
+                            <thead>
+                                <tr>
+                                    <th>Quote ID</th>
+                                    <th>Description</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quotesTableBody">
+                                @foreach (var quote in Model.Quotations.OrderByDescending(q => q.CreatedAt))
+                                {
+                                    <tr data-status="@quote.Status.ToLowerInvariant()">
+                                        <td>@quote.QuotationId.Substring(0, Math.Min(8, quote.QuotationId.Length))</td>
+                                        <td>@(quote.Description.Length > 50 ? quote.Description.Substring(0, 50) + "..." : quote.Description)</td>
+                                        <td>R @quote.GrandTotal.ToString("N2")</td>
+                                        <td>
+                                            <span class="badge @Model.GetQuoteStatusBadgeClass(quote.Status)">@quote.Status</span>
+                                        </td>
+                                        <td>@quote.CreatedAt.ToString("dd MMM yyyy")</td>
+                                    </tr>
+                                }
+                                @if (!Model.Quotations.Any())
+                                {
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">
+                                            <i class="fa-solid fa-inbox fa-2x mb-2"></i>
+                                            <p class="mb-0">No quotations found</p>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Tracking Section -->
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="tracking-card">
+                <div class="tracking-header" data-bs-toggle="collapse" data-bs-target="#invoicesTrackingCollapse" aria-expanded="true" aria-controls="invoicesTrackingCollapse" style="cursor: pointer;">
+                    <h6 class="mb-0">
+                        <i class="fa-solid fa-file-invoice"></i>Invoice Tracking
+                    </h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-chevron-down collapse-icon"></i>
+                    </div>
+                </div>
+                <div class="tracking-body collapse show" id="invoicesTrackingCollapse">
+                    <div class="table-responsive">
+                        <table class="table table-hover tracking-table">
+                            <thead>
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Description</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Due Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoicesTableBody">
+                                @foreach (var invoice in Model.Invoices.OrderByDescending(i => i.CreatedAt))
+                                {
+                                    var isOverdue = invoice.Status == "Sent" && invoice.DueDate < DateTime.UtcNow;
+                                    var invoiceStatus = isOverdue ? "Overdue" : invoice.Status;
+                                    <tr data-status="@invoice.Status.ToLowerInvariant()" data-overdue="@isOverdue.ToString().ToLowerInvariant()">
+                                        <td>@invoice.InvoiceNumber</td>
+                                        <td>@(invoice.Description.Length > 50 ? invoice.Description.Substring(0, 50) + "..." : invoice.Description)</td>
+                                        <td>R @invoice.TotalAmount.ToString("N2")</td>
+                                        <td>
+                                            <span class="badge @Model.GetInvoiceStatusBadgeClass(invoiceStatus)">@invoiceStatus</span>
+                                        </td>
+                                        <td class="@(isOverdue ? "text-danger" : "")">@invoice.DueDate.ToString("dd MMM yyyy")</td>
+                                    </tr>
+                                }
+                                @if (!Model.Invoices.Any())
+                                {
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">
+                                            <i class="fa-solid fa-inbox fa-2x mb-2"></i>
+                                            <p class="mb-0">No invoices found</p>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include CSS -->
+<link rel="stylesheet" href="~/css/pm-project-analytics.css" />
+
+<!-- Include Chart Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js"></script>
+
+<!-- Include JavaScript -->
+<script src="~/js/pm-project-analytics.js"></script>
+
+<script>
+    // Pass data to JavaScript
+    const analyticsData = {
+        taskStatusBreakdown: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TaskStatusBreakdown)),
+        budgetByPhase: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.BudgetByPhase)),
+        budgetHistory: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.BudgetHistory)),
+        ganttData: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.GanttData))
+    };
+
+    // Initialize collapse icons rotation
+    document.addEventListener('DOMContentLoaded', function() {
+        const collapseElements = document.querySelectorAll('.collapse');
+        collapseElements.forEach(function(element) {
+            element.addEventListener('shown.bs.collapse', function() {
+                const icon = this.previousElementSibling?.querySelector('.collapse-icon');
+                if (icon) icon.style.transform = 'rotate(0deg)';
+            });
+            element.addEventListener('hidden.bs.collapse', function() {
+                const icon = this.previousElementSibling?.querySelector('.collapse-icon');
+                if (icon) icon.style.transform = 'rotate(-90deg)';
+            });
+        });
+    });
+</script>
+

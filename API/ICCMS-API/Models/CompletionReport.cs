@@ -26,6 +26,9 @@ namespace ICCMS_API.Models
         [FirestoreProperty("finalHours")]
         public double FinalHours { get; set; }
 
+        [FirestoreProperty("spentAmount")]
+        public double SpentAmount { get; set; }
+
         [FirestoreProperty("completionSummary")]
         public string CompletionSummary { get; set; } = string.Empty;
 

@@ -17,14 +17,10 @@
 <div class="pm-dashboard-container">
     <!-- Header Section -->
     <div class="dashboard-header">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h1 class="dashboard-title">
-                    <i class="fa-solid fa-user-tie me-3" style="color: #F7EC59;"></i>@User.Identity.Name Dashboard
-                </h1>
-                <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Manage your projects and quotations</p>
-            </div>
-        </div>
+        <h1 class="dashboard-title">
+            <i class="fa-solid fa-user-tie me-2" style="color: #F7EC59;"></i>@User.Identity.Name Dashboard
+        </h1>
+        <p class="dashboard-subtitle">Welcome back, @User.Identity.Name! Manage your projects and quotations</p>
     </div>
 
     <!-- Stats Summary Cards -->
@@ -423,184 +419,122 @@
             window.location.href = '@Url.Action("Dashboard")';
         }
 
-        // Handle filter clicks (both status and client)
+        // Handle filter clicks (both status and client) using event delegation
+        // This ensures filters work even after HTML replacement
         document.addEventListener('click', function (e) {
-            console.log('=== FILTER CLICK START ===');
-            console.log('Click target:', e.target);
-            console.log('Click target closest:', e.target.closest('.status-filter-btn'));
+            const btn = e.target.closest('.status-filter-btn');
+            if (!btn) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
 
-            if (e.target.closest('.status-filter-btn')) {
-                e.preventDefault();
-                const btn = e.target.closest('.status-filter-btn');
-                console.log('Button element:', btn);
-                console.log('Button classes:', btn.className);
-                console.log('Button has data-status:', btn.hasAttribute('data-status'));
-                console.log('Button has data-client:', btn.hasAttribute('data-client'));
-
-                // Check if it's a status filter
-                if (btn.hasAttribute('data-status')) {
-                    const status = btn.getAttribute('data-status');
-
-                    // Remove active class from all status buttons
-                    document.querySelectorAll('.status-filter-btn[data-status]').forEach(b => b.classList.remove('active'));
-                    // Add active class to clicked button
-                    btn.classList.add('active');
-
-                    console.log('Status filter clicked:', status);
-                    console.log('Button after adding active class:', btn.className);
-                }
-
-                // Check if it's a client filter
-                if (btn.hasAttribute('data-client')) {
-                    const clientId = btn.getAttribute('data-client');
-
-                    console.log('CLIENT FILTER DEBUG:');
-                    console.log('- Button element:', btn);
-                    console.log('- Button text:', btn.textContent);
-                    console.log('- Client ID from data-client:', clientId);
-                    console.log('- Client ID type:', typeof clientId);
-                    console.log('- Client ID length:', clientId?.length);
-                    console.log('- Is empty string:', clientId === '');
-
-                    // Remove active class from all client buttons
-                    document.querySelectorAll('.status-filter-btn[data-client]').forEach(b => b.classList.remove('active'));
-                    // Add active class to clicked button
-                    btn.classList.add('active');
-
-                    console.log('Client filter clicked:', clientId);
-                    console.log('Button after adding active class:', btn.className);
-                    console.log('Button element:', btn);
-                }
-
-                console.log('About to call applyFilters()');
-                // Apply the filter
-                applyFilters();
-                console.log('=== FILTER CLICK END ===');
+            // Handle status filter
+            if (btn.hasAttribute('data-status')) {
+                const status = btn.getAttribute('data-status');
+                // Remove active class from all status buttons (but not client buttons)
+                document.querySelectorAll('.status-filter-btn[data-status]:not([data-client])').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
             }
+
+            // Handle client filter
+            if (btn.hasAttribute('data-client')) {
+                const clientId = btn.getAttribute('data-client');
+                // Remove active class from all client buttons
+                document.querySelectorAll('.status-filter-btn[data-client]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+
+            // Apply the combined filters
+            applyFilters();
         });
 
         // Function to resolve client names in project cards
         function resolveClientNames() {
-            console.log('=== RESOLVE CLIENT NAMES START ===');
-            console.log('Client ID to Name Map:', window.clientIdToNameMap);
-            console.log('Client ID to Name Map keys:', Object.keys(window.clientIdToNameMap));
-            console.log('Client ID to Name Map values:', Object.values(window.clientIdToNameMap));
+            if (!window.clientIdToNameMap) return;
 
-            // Get all project cards
             const projectCards = document.querySelectorAll('.project-card');
-            console.log('Found project cards:', projectCards.length);
-
-            projectCards.forEach((card, index) => {
-                console.log(`--- Processing card ${index + 1} ---`);
+            projectCards.forEach((card) => {
                 const clientElement = card.querySelector('.client-name');
-                console.log('Client element:', clientElement);
+                if (!clientElement) return;
 
-                if (clientElement) {
-                    const clientId = clientElement.textContent.trim();
-                    console.log('Client ID from element:', clientId);
-                    console.log('Client ID length:', clientId.length);
-                    console.log('Client ID includes dash:', clientId.includes('-'));
-
-                    // Check if it's a client ID (Firebase IDs are long alphanumeric strings without dashes)
-                    if (clientId && clientId.length > 20 && /^[a-zA-Z0-9]+$/.test(clientId)) {
-                        console.log('Looking up client ID:', clientId);
-                        console.log('Available client IDs in map:', Object.keys(window.clientIdToNameMap));
-                        console.log('Exact match found:', window.clientIdToNameMap.hasOwnProperty(clientId));
-
-                        // Use the mapping to get client name
-                        const clientName = window.clientIdToNameMap[clientId];
-                        console.log('Found client name:', clientName);
-
-                        if (clientName) {
-                            console.log('Updating client name from', clientId, 'to', clientName);
-                            clientElement.textContent = clientName;
-                            console.log('Updated client name to:', clientName);
-                        } else {
-                            console.log('No client name found for ID:', clientId);
-                            console.log('Available client IDs:', Object.keys(window.clientIdToNameMap));
-                        }
-                    } else {
-                        console.log('Already a client name, no resolution needed:', clientId);
+                const clientText = clientElement.textContent.trim();
+                // Check if it's a client ID (Firebase IDs are long alphanumeric strings)
+                if (clientText && clientText.length > 20 && /^[a-zA-Z0-9]+$/.test(clientText)) {
+                    const clientName = window.clientIdToNameMap[clientText];
+                    if (clientName) {
+                        clientElement.textContent = clientName;
                     }
-                } else {
-                    console.log('No client element found in card');
                 }
             });
-            console.log('=== RESOLVE CLIENT NAMES END ===');
         }
 
         async function applyFilters() {
-            console.log('=== APPLY FILTERS START ===');
             try {
-                // Get selected status
-                const activeStatusBtn = document.querySelector('.status-filter-btn[data-status].active');
+                // Get selected status (only buttons with data-status but NOT data-client)
+                const activeStatusBtn = document.querySelector('.status-filter-btn[data-status]:not([data-client]).active');
                 const status = activeStatusBtn ? activeStatusBtn.getAttribute('data-status') : '';
-                console.log('Active status button:', activeStatusBtn);
-                console.log('Status from button:', status);
 
                 // Get selected client
                 const activeClientBtn = document.querySelector('.status-filter-btn[data-client].active');
-                const clientId = activeClientBtn ? activeClientBtn.getAttribute('data-client') : '';
-
-                console.log('Active client button:', activeClientBtn);
-                console.log('Client ID from button:', clientId);
-                console.log('Client ID type:', typeof clientId);
-                console.log('Client ID length:', clientId?.length);
-                console.log('Applying filters - Status:', status, 'Client:', clientId);
+                const clientId = activeClientBtn ? activeClientBtn.getAttribute('data-client').trim() : '';
 
                 const params = new URLSearchParams();
-                if (clientId) {
-                    console.log('Adding clientId to params:', clientId);
+                if (clientId && clientId.length > 0) {
                     params.set('clientId', clientId);
-                } else {
-                    console.log('No clientId - not adding to params');
                 }
                 if (status && status !== 'All') {
-                    console.log('Adding status to params:', status);
                     params.set('status', status);
-                } else {
-                    console.log('No status or status is All - not adding to params');
                 }
 
-                console.log('Filter URL:', `/ProjectManager/SearchProjects?${params.toString()}`);
-
                 const res = await fetch(`/ProjectManager/SearchProjects?${params.toString()}`);
-                console.log('Fetch response status:', res.status);
-                console.log('Fetch response ok:', res.ok);
-
                 if (!res.ok) throw new Error('Filter failed');
                 const data = await res.json();
 
-                console.log('Filter response:', data);
-                console.log('Projects HTML length:', data.projectsHtml?.length);
-                console.log('Drafts HTML length:', data.draftsHtml?.length);
+                const projectsGrid = document.getElementById('projectsGrid');
+                const draftsGrid = document.getElementById('draftProjectsGrid');
+                const draftSection = document.getElementById('draftSection');
 
-                // If a specific status (non-draft) is applied, hide drafts; otherwise update both
+                const projectsHtmlTrimmed = data.projectsHtml ? data.projectsHtml.trim() : '';
+                const draftsHtmlTrimmed = data.draftsHtml ? data.draftsHtml.trim() : '';
+                const hasProjects = data.total > 0 && projectsHtmlTrimmed.length > 10;
+                const hasDrafts = data.total > 0 && draftsHtmlTrimmed.length > 10;
+                
+                // Clear grids
+                if (projectsGrid) projectsGrid.innerHTML = '';
+
+                // Handle status-based display logic
                 if (status && status.toLowerCase() !== 'draft' && status !== 'All') {
-                    console.log('Hiding drafts section and updating projects grid');
-                    document.getElementById('draftSection')?.style && (document.getElementById('draftSection').style.display = 'none');
-                    document.getElementById('projectsGrid').innerHTML = data.projectsHtml;
+                    // Non-draft status: hide drafts, show only matching projects
+                    if (draftSection) draftSection.style.display = 'none';
+                    
+                    if (hasProjects && projectsGrid) {
+                        projectsGrid.innerHTML = data.projectsHtml;
+                    } else if (projectsGrid) {
+                        projectsGrid.innerHTML = '<div class="no-projects-message"><div class="text-center py-5"><i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i><h4 class="text-muted">No projects found</h4><p class="text-muted">No projects match the selected filters.</p></div></div>';
+                    }
                 } else {
-                    console.log('Showing drafts section and updating both grids');
-                    document.getElementById('draftSection')?.style && (document.getElementById('draftSection').style.display = 'block');
-                    document.getElementById('projectsGrid').innerHTML = data.projectsHtml;
-                    const draftsGrid = document.getElementById('draftProjectsGrid');
-                    if (draftsGrid) draftsGrid.innerHTML = data.draftsHtml;
+                    // All or Draft: show both sections if applicable
+                    if (draftSection) {
+                        if (hasDrafts) {
+                            draftSection.style.display = 'block';
+                            if (draftsGrid) draftsGrid.innerHTML = data.draftsHtml;
+                        } else {
+                            draftSection.style.display = 'none';
+                        }
+                    }
+                    
+                    if (hasProjects && projectsGrid) {
+                        projectsGrid.innerHTML = data.projectsHtml;
+                    } else if (projectsGrid) {
+                        projectsGrid.innerHTML = '<div class="no-projects-message"><div class="text-center py-5"><i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i><h4 class="text-muted">No projects found</h4><p class="text-muted">No projects match the selected filters.</p></div></div>';
+                    }
                 }
 
-                console.log('About to call resolveClientNames()');
-                // Resolve client names in the updated HTML
+                // Resolve client names after HTML update
                 resolveClientNames();
-
-                // Add a small delay to ensure DOM updates are visible
-                setTimeout(() => {
-                    console.log('DOM update completed - client names should now be visible');
-                }, 100);
-
-                console.log('=== APPLY FILTERS END ===');
+                
             } catch (e) {
                 console.error('Filter error:', e);
-                console.log('=== APPLY FILTERS ERROR ===');
             }
         }
 

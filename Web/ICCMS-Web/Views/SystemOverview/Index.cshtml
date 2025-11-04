@@ -8,21 +8,20 @@
 
 <div class="system-overview-container">
     <!-- Dashboard Header -->
-    <div class="system-dashboard-header">
-        <div class="system-status-indicator"></div>
-        <h1 class="system-dashboard-title">
-            <i class="fas fa-tachometer-alt"></i>
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">
+            <i class="fas fa-tachometer-alt me-2" style="color: #F7EC59;"></i>
             System Overview Dashboard
         </h1>
-        <p class="system-dashboard-subtitle">
+        <p class="dashboard-subtitle">
             Real-time system health, performance metrics, and operational insights
         </p>
-        <div class="d-flex justify-content-between align-items-center mt-3">
+        <div class="text-center mt-3">
             <!-- Test Session Expired Modal Button (Remove in production) -->
             <button type="button" class="btn btn-warning btn-sm" onclick="testSessionExpired()">
                 <i class="fa-solid fa-clock"></i> Test Session Expired
             </button>
-            <small class="text-muted">
+            <small class="text-muted d-block mt-2">
                 <i class="fas fa-clock"></i> Last updated: @Model.LastUpdated.ToString("MMM dd, yyyy 'at' HH:mm:ss UTC")
             </small>
         </div>

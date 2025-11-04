@@ -218,6 +218,9 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function loadQuotationDetails(quotationId) {
+    // Store quotation ID globally for download button
+    window.currentQuotationId = quotationId;
+    
     const content = document.getElementById("quoteDetailsContent");
     const modal = new bootstrap.Modal(
       document.getElementById("quoteDetailsModal")

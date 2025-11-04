@@ -47,10 +47,10 @@
                 <i class="fa-solid fa-circle-info"></i> Project Details
             </button>
         </li>
-        @if (Model.Project.Status == "Completed")
+        @if (Model.Project.Status == "Completed" || Model.Project.Status == "Maintenance")
         {
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="maintenance-tab" data-bs-toggle="tab" data-bs-target="#maintenance-tab-pane"
+                <button class="tab-button" id="maintenance-tab" data-bs-toggle="tab" data-bs-target="#maintenance-tab-pane"
                     type="button" role="tab" aria-controls="maintenance-tab-pane" aria-selected="false">
                     <i class="fa-solid fa-wrench"></i> Maintenance
                 </button>
@@ -343,14 +343,15 @@
                                                     <i class="fa-solid fa-eye"></i>
                                                 </button>
                                                 
-                                                <!-- Rate Contractor Button (only for completed tasks with assigned contractor) -->
-                                                @if (task.Status == "Completed" && !string.IsNullOrEmpty(task.AssignedTo))
+                                                <!-- Rate Contractor Button (only for completed tasks with assigned contractor that haven't been rated) -->
+                                                @if (task.Status == "Completed" && !string.IsNullOrEmpty(task.AssignedTo) && !Model.IsTaskRated(task.TaskId))
                                                 {
                                                     <button class="btn btn-sm btn-warning text-dark"
                                                         data-bs-toggle="modal"
                                                         data-bs-target="#rateContractorModal"
                                                         data-contractor-id="@task.AssignedTo"
                                                         data-contractor-name="@Model.GetContractorName(task.AssignedTo)"
+                                                        data-task-id="@task.TaskId"
                                                         title="Rate Contractor">
                                                         <i class="fa-solid fa-star"></i>
                                                     </button>
@@ -367,15 +368,15 @@
         </div>
 
         <!-- Maintenance Tab -->
-        @if (Model.Project.Status == "Completed")
+        @if (Model.Project.Status == "Completed" || Model.Project.Status == "Maintenance")
         {
             <div class="tab-pane fade" id="maintenance-tab-pane" role="tabpanel" aria-labelledby="maintenance-tab" tabindex="0">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">
+                <div class="d-flex justify-content-between align-items-center mb-3" style="margin-top: 1rem;">
+                    <h6 class="mb-0" style="font-weight: 600; font-size: 1.1rem;">
                         <i class="fa-solid fa-wrench me-2"></i>Maintenance Requests
                     </h6>
-                    <button class="btn btn-sm pm-btn-primary" data-bs-toggle="modal" data-bs-target="#createMaintenanceModal">
-                        <i class="fa-solid fa-plus me-1"></i>New Maintenance Request
+                    <button type="button" class="user-btn user-btn-success" data-bs-toggle="modal" data-bs-target="#createMaintenanceModal">
+                        <i class="fas fa-plus" style="padding-right: 10px;"></i>New Maintenance Request
                     </button>
                 </div>
 
@@ -575,10 +576,13 @@
                         <button type="button" class="user-btn user-btn-success me-2" id="approveQuoteBtn">
                             <i class="fas fa-check" style="padding-right: 10px;"></i>Approve
                         </button>
-                        <button type="button" class="user-btn user-btn-danger" id="rejectQuoteBtn">
+                        <button type="button" class="user-btn user-btn-danger me-2" id="rejectQuoteBtn">
                             <i class="fas fa-times" style="padding-right: 10px;"></i>Reject
                         </button>
-                    </div> 
+                    </div>
+                    <button type="button" class="user-btn user-btn-success me-2" id="downloadQuoteBtn" onclick="downloadQuotationFromModal()">
+                        <i class="fas fa-download" style="padding-right: 10px;"></i>Download PDF
+                    </button>
                      <button type="button" class="user-btn user-btn-secondary" data-bs-dismiss="modal" style="margin-left: 10px;">
                         <i class="fas fa-times" style="padding-right: 10px;"></i>Close
                     </button>
@@ -628,6 +632,64 @@
     </div>
 </div>
 
+<!-- Create Maintenance Request Modal -->
+<div class="modal fade" id="createMaintenanceModal" tabindex="-1" aria-labelledby="createMaintenanceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createMaintenanceModalLabel">
+                    <i class="fa-solid fa-wrench me-2" style="color: #f7ec59;"></i>New Maintenance Request
+                </h5>
+                <button type="button" class="user-btn user-btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times" style="padding-right: 10px;"></i>Close
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="createMaintenanceRequestForm">
+                    <input type="hidden" id="maintenanceRequestProjectId" name="projectId" value="@Model.Project.ProjectId" />
+                    
+                    <div class="mb-3">
+                        <label for="maintenanceRequestDescription" class="form-label">
+                            <i class="fa-solid fa-align-left me-1"></i>Description <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control" id="maintenanceRequestDescription" name="description" rows="4" 
+                                  placeholder="Please describe the maintenance issue..." required></textarea>
+                        <small class="text-muted">Maximum 500 characters</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="maintenanceRequestPriority" class="form-label">
+                            <i class="fa-solid fa-exclamation-triangle me-1"></i>Priority
+                        </label>
+                        <select class="form-select" id="maintenanceRequestPriority" name="priority">
+                            <option value="Low">Low</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="maintenanceRequestImage" class="form-label">
+                            <i class="fa-solid fa-image me-1"></i>Attach Image (Optional)
+                        </label>
+                        <input type="file" class="form-control" id="maintenanceRequestImage" name="image" 
+                               accept="image/*" />
+                        <small class="text-muted">Upload an image of the maintenance issue</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="user-btn user-btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times" style="padding-right: 10px;"></i>Cancel
+                </button>
+                <button type="button" class="user-btn user-btn-success" id="submitMaintenanceRequestBtn">
+                    <i class="fas fa-check" style="padding-right: 10px;"></i>Submit Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Include Rating Modal -->
 @await Html.PartialAsync("_RateContractorModal")
 
@@ -647,4 +709,137 @@
         contractors: @Html.Raw(Json.Serialize(Model.Contractors))
     };
     
+    // Function to download quotation from modal header
+    function downloadQuotationFromModal() {
+        const quotationId = window.currentQuotationId;
+        if (!quotationId) {
+            alert("Quotation ID not available. Please wait for the quotation to load.");
+            return;
+        }
+        downloadQuotation(quotationId);
+    }
+    
+    // Function to download quotation (from existing implementation)
+    function downloadQuotation(id) {
+        if (!id) {
+            alert("Quotation ID missing");
+            return;
+        }
+        const url = `/Clients/DownloadQuotation/${id}`;
+        console.log("📄 Downloading quotation:", url);
+        window.location.href = url;
+    }
+    
+    // Handle maintenance request form submission
+    document.addEventListener("DOMContentLoaded", function () {
+        const submitBtn = document.getElementById("submitMaintenanceRequestBtn");
+        const form = document.getElementById("createMaintenanceRequestForm");
+        
+        if (submitBtn && form) {
+            submitBtn.addEventListener("click", async function () {
+                const description = document.getElementById("maintenanceRequestDescription").value.trim();
+                const priority = document.getElementById("maintenanceRequestPriority").value;
+                const projectId = document.getElementById("maintenanceRequestProjectId").value;
+                const fileInput = document.getElementById("maintenanceRequestImage");
+                
+                if (!description) {
+                    alert("Please provide a description for the maintenance request.");
+                    return;
+                }
+                
+                if (description.length > 500) {
+                    alert("Description is too long. Maximum 500 characters allowed.");
+                    return;
+                }
+                
+                const originalText = submitBtn.innerHTML;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Submitting...';
+                
+                try {
+                    let mediaUrl = "";
+                    
+                    // Upload image if one is selected
+                    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+                        const file = fileInput.files[0];
+                        console.log(`📎 Uploading image: ${file.name}`);
+                        
+                        const uploadFormData = new FormData();
+                        uploadFormData.append("file", file);
+                        uploadFormData.append("projectId", projectId);
+                        uploadFormData.append("description", `Maintenance request image: ${file.name}`);
+                        
+                        try {
+                            const uploadResponse = await fetch("/Clients/UploadDocument", {
+                                method: "POST",
+                                credentials: "same-origin",
+                                body: uploadFormData
+                            });
+                            
+                            if (uploadResponse.ok) {
+                                const responseText = await uploadResponse.text();
+                                let document;
+                                try {
+                                    document = JSON.parse(responseText);
+                                } catch (e) {
+                                    console.error("Failed to parse upload response:", responseText);
+                                    throw new Error("Invalid response from server");
+                                }
+                                mediaUrl = document.fileUrl || "";
+                                console.log(`✅ Image uploaded successfully: ${mediaUrl}`);
+                            } else {
+                                console.error(`❌ Failed to upload image: ${file.name}`);
+                                const errorText = await uploadResponse.text();
+                                throw new Error(`Failed to upload image: ${errorText}`);
+                            }
+                        } catch (uploadError) {
+                            console.error("Error uploading image:", uploadError);
+                            alert("Failed to upload image. Please try again or submit without an image.");
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalText;
+                            return;
+                        }
+                    }
+                    
+                    // Create maintenance request with uploaded image URL
+                    const requestData = {
+                        projectId: projectId,
+                        description: description,
+                        priority: priority,
+                        status: "Pending",
+                        mediaUrl: mediaUrl
+                    };
+                    
+                    const response = await fetch("/Clients/CreateMaintenanceRequest", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(requestData)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        alert("Maintenance request created successfully!");
+                        const modal = bootstrap.Modal.getInstance(document.getElementById("createMaintenanceModal"));
+                        if (modal) {
+                            modal.hide();
+                        }
+                        form.reset();
+                        location.reload();
+                    } else {
+                        alert("Failed to create maintenance request: " + (result.error || "Unknown error"));
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    }
+                } catch (error) {
+                    console.error("Error creating maintenance request:", error);
+                    alert("An error occurred. Please try again.");
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            });
+        }
+    });
 </script>

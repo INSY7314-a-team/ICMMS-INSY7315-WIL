@@ -34,14 +34,19 @@
 
                     <!-- Completion Request Form -->
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label for="completionDate" class="form-label">Completion Date *</label>
                             <input type="date" class="form-control" id="completionDate" name="completionDate" required>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label for="finalHours" class="form-label">Final Hours Worked *</label>
                             <input type="number" class="form-control" id="finalHours" name="finalHours" step="0.1"
                                 min="0.1" placeholder="0.0" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="spentAmount" class="form-label">Spent Amount (R) *</label>
+                            <input type="number" class="form-control" id="spentAmount" name="spentAmount" step="0.01"
+                                min="0" placeholder="0.00" required>
                         </div>
                     </div>
 
