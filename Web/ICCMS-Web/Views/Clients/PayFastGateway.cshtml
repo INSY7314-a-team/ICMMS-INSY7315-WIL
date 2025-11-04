@@ -1,0 +1,252 @@
+@model PaymentViewModel
+
+@{
+    ViewData["Title"] = "PayFast Payment";
+    Layout = "_Layout";
+}
+
+<div class="container py-5">
+    <div class="card bg-dark text-light shadow-lg p-4 mx-auto" style="max-width: 600px; border-radius: 15px;">
+        
+        <div class="text-center mb-4">
+        <img src="@Url.Content("~/images/payfast-logo.png")" alt="PayFast Logo" style="max-height: 60px;">
+    </div>
+
+        <h2 class="text-center mb-4">Gateway</h2>
+
+        <div class="text-center mb-4">
+            <p class="fs-5">Amount Owing:</p>
+            <h3 class="fw-bold text-success">R @Model.AmountPayable.ToString("N2")</h3>
+        </div>
+
+        <form id="payFastForm" method="post" asp-action="ConfirmPayFastPayment" asp-controller="Clients">
+            <input type="hidden" name="projectId" value="@Model.ProjectId" />
+            <input type="hidden" name="invoiceId" value="@Model.InvoiceId" />
+            <input type="hidden" name="amount" value="@Model.AmountPayable" />
+
+            <!-- ✅ Cardholder Name -->
+            <div class="mb-3">
+                <label class="form-label">Cardholder Name</label>
+                <input
+                    id="cardholderName"
+                    type="text"
+                    class="form-control bg-dark text-light border-secondary"
+                    placeholder="Enter name on card"
+                    required
+                />
+            </div>
+
+            <!-- ✅ Card Number -->
+            <div class="mb-3">
+                <label class="form-label">Card Number</label>
+                <input
+                    id="cardNumber"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="19"
+                    class="form-control bg-dark text-light border-secondary"
+                    placeholder="1234 5678 9012 3456"
+                    required
+                />
+            </div>
+
+            <!-- ✅ Expiry Date & CVV -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Expiry Date</label>
+                    <input
+                        id="expiryDate"
+                        type="text"
+                        maxlength="5"
+                        class="form-control bg-dark text-light border-secondary"
+                        placeholder="MM/YY"
+                        required
+                    />
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">CVV</label>
+                    <input
+                        id="cvv"
+                        type="password"
+                        inputmode="numeric"
+                        maxlength="3"
+                        class="form-control bg-dark text-light border-secondary"
+                        placeholder="123"
+                        required
+                    />
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <button type="submit"
+        class="btn user-btn user-btn-success w-100 py-3"
+        style="background-color: #198754 !important; color: #fff; border: none;">
+    <i class="fas fa-lock me-2"></i>Pay Securely
+</button>
+
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+
+<!-- ✅ Include SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- ✅ Include client project detail JS if needed -->
+<script src="/js/client-project-detail.js"></script>
+
+<script>
+/* -------------------------------
+   GLOBAL: Pay Invoice Function
+--------------------------------*/
+window.payInvoice = async function (invoiceId, callback) {
+    if (!invoiceId) {
+        console.error("❌ No invoice ID provided");
+        alert("Invoice ID missing — cannot process payment.");
+        if (callback) callback(false);
+        return;
+    }
+
+    console.log("💳 Starting payment processing for invoice:", invoiceId);
+
+    try {
+        const response = await fetch("/Clients/PayInvoice", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            body: JSON.stringify({
+                InvoiceId: invoiceId,
+                PaymentMethod: "Online",
+                Notes: "Payment made via PayFast gateway",
+            }),
+        });
+
+        const result = await response.json();
+        console.log("🔍 PayInvoice response:", result);
+
+        if (result.success) {
+            console.log("✅ Invoice marked as paid");
+            if (callback) callback(true);
+        } else {
+            console.error("❌ Payment failed:", result.error);
+            if (callback) callback(false);
+        }
+    } catch (err) {
+        console.error("🔥 Error processing payment:", err);
+        if (callback) callback(false);
+    }
+};
+
+/* -------------------------------
+   FORM HANDLER
+--------------------------------*/
+document.addEventListener("DOMContentLoaded", function () {
+    console.log("[DEBUG] DOM loaded");
+
+    /* ---------- Input Validation ---------- */
+    const nameInput = document.getElementById("cardholderName");
+    const cardInput = document.getElementById("cardNumber");
+    const expiryInput = document.getElementById("expiryDate");
+    const cvvInput = document.getElementById("cvv");
+
+    // Cardholder Name: Only letters and spaces
+    nameInput.addEventListener("input", function (e) {
+        e.target.value = e.target.value.replace(/[^A-Za-z\s]/g, "");
+    });
+
+ // Card Number: Auto-format as "1234 5678 9012 3456"
+// Card Number: Auto-format as "1234 5678 9012 3456"
+cardInput.addEventListener("input", function (e) {
+    // Remove all non-digits
+    let digits = e.target.value.replace(/\D/g, ""); 
+
+    // Limit to 16 digits
+    if (digits.length > 16) digits = digits.slice(0, 16);
+
+    // Format with spaces every 4 digits
+    let formatted = digits.replace(/(.{4})/g, "$1 ").trim();
+
+    e.target.value = formatted;
+});
+
+
+    // CVV: Only digits, max 3
+    cvvInput.addEventListener("input", function (e) {
+        e.target.value = e.target.value.replace(/\D/g, "").slice(0, 3);
+    });
+
+    // Expiry Date: Auto-format MM/YY
+    expiryInput.addEventListener("input", function (e) {
+        let value = e.target.value.replace(/\D/g, "");
+        if (value.length > 4) value = value.slice(0, 4);
+        if (value.length >= 3) value = value.slice(0, 2) + "/" + value.slice(2);
+        e.target.value = value;
+    });
+
+    /* ---------- Payment Handling ---------- */
+    const payFastForm = document.getElementById("payFastForm");
+    if (!payFastForm) {
+        console.error("[ERROR] payFastForm element not found!");
+        return;
+    }
+
+    console.log("[DEBUG] payFastForm found, adding submit listener...");
+
+    payFastForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        console.log("[DEBUG] payFastForm submit triggered");
+
+        const form = e.target;
+        const formData = new FormData(form);
+        const invoiceId = formData.get("invoiceId");
+        const projectId = formData.get("projectId");
+
+        console.log("[DEBUG] Extracted form data:", { invoiceId, projectId });
+
+        if (!invoiceId) {
+            console.error("[ERROR] invoiceId not found in form data");
+            return;
+        }
+
+        if (!confirm("Are you sure you want to make this invoice payment?")) {
+            console.log("[DEBUG] Payment cancelled by user");
+            return;
+        }
+
+        if (typeof window.payInvoice !== "function") {
+            console.error("[ERROR] payInvoice function is not defined or not accessible!");
+            return;
+        }
+
+        console.log("[DEBUG] Calling payInvoice(", invoiceId, ")...");
+
+        window.payInvoice(invoiceId, function (success) {
+            console.log("[DEBUG] payInvoice callback received:", success);
+
+            if (success) {
+                Swal.fire({
+                    icon: "success",
+                    title: "Payment Successful",
+                    text: "Your payment was processed successfully!",
+                    confirmButtonColor: "#198754",
+                    confirmButtonText: "OK"
+                }).then(() => {
+                    window.location.href = "/Clients/ProjectDetail/" + projectId;
+                });
+            } else {
+                Swal.fire({
+                    icon: "error",
+                    title: "Payment Failed",
+                    text: "Something went wrong. Please try again."
+                });
+            }
+        });
+    });
+});
+</script>
+}

@@ -1,0 +1,217 @@
+@model PaymentViewModel
+
+@{
+    ViewData["Title"] = "EFT Payment";
+    Layout = "_Layout";
+}
+
+<div class="container py-5">
+    <div class="card bg-dark text-light shadow-lg p-4 mx-auto" style="max-width: 600px; border-radius: 15px;">
+
+        <!-- Ozow / EFT Logo -->
+        <div class="text-center mb-4">
+            <img src="@Url.Content("~/images/ozow-logo.png")" alt="Ozow Logo" style="max-height: 40px;">
+        </div>
+
+        <!-- Header -->
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">EFT Payment Gateway</h2>
+        </div>
+
+        <!-- Amount -->
+        <div class="text-center mb-4">
+            <p class="fs-5">Amount Owing:</p>
+            <h3 class="fw-bold text-success">R @Model.AmountPayable.ToString("N2")</h3>
+        </div>
+
+        <form id="eftPaymentForm" method="post" asp-action="ConfirmEFTPayment" asp-controller="Clients">
+            <input type="hidden" name="projectId" value="@Model.ProjectId" />
+            <input type="hidden" name="invoiceId" value="@Model.InvoiceId" />
+            <input type="hidden" name="amount" value="@Model.AmountPayable" />
+
+            <!-- Bank Selector -->
+            <div class="mb-3">
+                <label class="form-label">Select Your Bank</label>
+                <select id="bankSelect" class="form-select bg-dark text-light border-secondary" required>
+                    <option value="" disabled selected>Select Bank</option>
+                    <option value="ABSA">ABSA</option>
+                    <option value="FNB">FNB</option>
+                    <option value="Nedbank">Nedbank</option>
+                    <option value="Capitec">Capitec</option>
+                    <option value="Standard Bank">Standard Bank</option>
+                    <option value="Investec">Investec</option>
+                    <option value="TymeBank">TymeBank</option>
+                    <option value="African Bank">African Bank</option>
+                </select>
+            </div>
+
+            <!-- EFT Username -->
+            <div class="mb-3">
+                <label class="form-label">Online Banking Username</label>
+                <input
+                    id="eftUsername"
+                    type="text"
+                    class="form-control bg-dark text-light border-secondary"
+                    placeholder="Enter your online banking username"
+                    required
+                />
+            </div>
+
+            <!-- EFT Password -->
+            <div class="mb-3">
+                <label class="form-label">Online Banking Password</label>
+                <input
+                    id="eftPassword"
+                    type="password"
+                    class="form-control bg-dark text-light border-secondary"
+                    placeholder="Enter your online banking password"
+                    required
+                />
+            </div>
+
+            <!-- Pay Button -->
+            <div class="text-center mt-4">
+                <button type="submit"
+                        class="btn user-btn user-btn-success w-100 py-4"
+                        style="background-color: #198754 !important; color: #fff; border: none;">
+                    <i class="fas fa-lock me-2"></i>Pay via EFT
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+
+<!-- Include SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+/* -------------------------------
+   GLOBAL: Pay Invoice Function
+--------------------------------*/
+window.payInvoice = async function (invoiceId, callback) {
+    if (!invoiceId) {
+        console.error("❌ No invoice ID provided");
+        Swal.fire("Error", "Invoice ID missing — cannot process payment.", "error");
+        if (callback) callback(false);
+        return;
+    }
+
+    console.log("💳 Processing payment for invoice:", invoiceId);
+
+    try {
+        const response = await fetch("/Clients/PayInvoice", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: JSON.stringify({
+                InvoiceId: invoiceId,
+                PaymentMethod: "EFT",
+                Notes: "Payment made via simulated EFT gateway"
+            })
+        });
+
+        const result = await response.json();
+        console.log("🔍 PayInvoice response:", result);
+
+        if (result.success) {
+            console.log("✅ Invoice marked as paid");
+            if (callback) callback(true);
+        } else {
+            console.error("❌ Payment failed:", result.error);
+            if (callback) callback(false);
+        }
+    } catch (err) {
+        console.error("🔥 Error processing payment:", err);
+        if (callback) callback(false);
+    }
+};
+
+/* -------------------------------
+   EFT FORM HANDLER
+--------------------------------*/
+document.addEventListener("DOMContentLoaded", function () {
+    const eftForm = document.getElementById("eftPaymentForm");
+
+    if (!eftForm) {
+        console.error("[ERROR] EFT form not found!");
+        return;
+    }
+
+    eftForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const bank = document.getElementById("bankSelect").value;
+        const username = document.getElementById("eftUsername").value.trim();
+        const password = document.getElementById("eftPassword").value.trim();
+
+        const formData = new FormData(e.target);
+        const invoiceId = formData.get("invoiceId");
+        const projectId = formData.get("projectId");
+
+        if (!bank || !username || !password) {
+            Swal.fire({
+                icon: "error",
+                title: "Missing Information",
+                text: "Please fill in all required fields before continuing."
+            });
+            return;
+        }
+
+        if (!invoiceId || !projectId) {
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "Invalid project or invoice ID."
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: "Processing EFT Payment...",
+            text: `Connecting to ${bank}...`,
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        // Simulate a real EFT process delay
+        setTimeout(() => {
+            Swal.close();
+
+           /* // Confirm simulated payment
+            Swal.fire({
+                icon: "success",
+                title: "EFT Payment Successful",
+                text: `Your EFT payment through ${bank} has been completed successfully.`,
+                confirmButtonColor: "#198754",
+                confirmButtonText: "OK"
+            }).then(() => {*/
+                // Call payInvoice function to update status
+                window.payInvoice(invoiceId, function (success) {
+                    if (success) {
+                        Swal.fire({
+                            icon: "success",
+                            title: "EFT Payment Successful",
+                            text: `Your EFT payment through ${bank} has been completed successfully.`,
+                            confirmButtonColor: "#198754",
+                            confirmButtonText: "OK"
+                        }).then(() => {
+                            window.location.href = "/Clients/ProjectDetail/" + projectId;
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: "error",
+                            title: "Payment Update Failed",
+                            text: "Payment was successful but the system could not update the invoice status."
+                        });
+                    }
+                });
+           // });
+        }, 1500);
+    });
+});
+</script>
+}

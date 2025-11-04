@@ -1,0 +1,100 @@
+@model PaymentViewModel
+
+@{
+    ViewData["Title"] = "Payment Options";
+    Layout = "_Layout";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/payment-options.css" asp-append-version="true" />
+}
+
+<div class="pm-project-detail-container">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="@Url.Action("Index", "Clients")" class="text-decoration-none">
+                    <i class="fa-solid fa-home"></i> Dashboard
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="@Url.Action("Details", "Clients", new { id = Model })" class="text-decoration-none">
+                    <i class="fa-solid fa-project-diagram"></i> Project Details
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                <i class="fa-solid fa-credit-card"></i> Payment Options
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Page Heading -->
+    <div class="text-center mb-5">
+        <h3 class="fw-bold mb-2 text-white">Payment Options</h3>
+        <p class="text-muted">Select your preferred payment method below</p>
+    </div>
+
+    <!-- Payment Options -->
+    <div class="row justify-content-center g-4">
+        <!-- Mock EFT -->
+        <div class="col-md-3">
+            <div class="payment-card text-center shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+            <img src="@Url.Content("~/images/ozow-logo.png")" alt="Ozow Logo" style="max-height: 40px;">
+        </div>
+                    <h5 class="fw-bold mb-3">EFT Payment</h5>
+                    <p class="text-muted small mb-3">Pay securely via mock Electronic Funds Transfer.</p>
+                    <a href="@Url.Action("EFTGateway", "Clients", new { 
+                        projectId = Model.ProjectId, 
+                        invoiceId = Model.InvoiceId, 
+                        amount = Model.AmountPayable 
+                    })" class="btn payment-btn w-100">
+                        Pay Now
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- PayFast -->
+        <div class="col-md-3">
+            <div class="payment-card text-center shadow-sm h-100">
+                <div class="card-body">
+                      <div class="text-center mb-4">
+        <img src="@Url.Content("~/images/payfast-logo.png")" alt="PayFast Logo" style="max-height: 40px;">
+    </div>
+                    <h5 class="fw-bold mb-3">PayFast Gateway</h5>
+                    <p class="text-muted small mb-3">Simulate a PayFast payment gateway transaction.</p>
+                    <a href="@Url.Action("PayFastGateway", "Clients", new { 
+                        projectId = Model.ProjectId, 
+                        invoiceId = Model.InvoiceId, 
+                        amount = Model.AmountPayable 
+                    })" class="btn payment-btn w-100">
+                        Pay Now
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- PayPal -->
+        <div class="col-md-3">
+            <div class="payment-card text-center shadow-sm h-100">
+                <div class="card-body">
+                     <div class="text-center mb-4">
+            <img src="@Url.Content("~/images/paypal-logo.png")" alt="PayPal Logo" style="max-height: 40px;">
+        </div>
+                    <h5 class="fw-bold mb-3">PayPal Gateway</h5>
+                    <p class="text-muted small mb-3">Simulate a PayPal payment gateway transaction.</p>
+                    <a href="@Url.Action("PayPalGateway", "Clients", new { 
+                        projectId = Model.ProjectId, 
+                        invoiceId = Model.InvoiceId, 
+                        amount = Model.AmountPayable 
+                    })" class="btn payment-btn w-100">
+                        Pay Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
