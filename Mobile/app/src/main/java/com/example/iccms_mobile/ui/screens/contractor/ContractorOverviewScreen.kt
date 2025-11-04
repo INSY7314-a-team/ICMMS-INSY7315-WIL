@@ -143,17 +143,9 @@ fun ContractorOverviewScreen(
                 ) {
                     Column(
                         modifier = Modifier
-                            .background(
-                                Brush.linearGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
-                                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.05f)
-                                    ),
-                                    start = Offset(0f, 0f),
-                                    end = Offset.Infinite
-                                )
-                            )
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f))
                             .padding(24.dp)
+
                     ) {
                         Text(
                             text = "📊   Work Summary",
@@ -169,13 +161,6 @@ fun ContractorOverviewScreen(
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        /*
-                        Text(
-                            text = "Active Phases: ${uiState.projectPhases.count { it.Status.lowercase() == "in progress" }}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 6.dp)
-                        )*/
                         Text(
                             text = "Documents Uploaded: ${uiState.documents.size}",
                             style = MaterialTheme.typography.bodyLarge,
@@ -249,12 +234,23 @@ fun ContractorOverviewScreen(
                                     modifier = Modifier.padding(bottom = 12.dp)
                                 )
                                 uiState.documents.take(3).forEach { doc ->
+                                    val displayName = doc.fileName.substringAfter("_")
+                                    RecentItemRow(
+                                        title = displayName,
+                                        subtitle = "Uploaded ${formatDate(doc.uploadedAt)}",
+                                        status = doc.fileType
+                                    )
+                                }
+
+                                /* Old Code: Remove code
+                                uiState.documents.take(3).forEach { doc ->
                                     RecentItemRow(
                                         title = doc.fileName,
                                         subtitle = "Uploaded ${formatDate(doc.uploadedAt)}",//"Status: ${doc.Status}",
                                         status = doc.fileType
                                     )
                                 }
+                                */
                             }
                         }
                     }

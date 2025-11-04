@@ -1,0 +1,94 @@
+/* ===============================
+   PAYMENT OPTIONS PAGE STYLING
+   =============================== */
+
+/* Container */
+.pm-project-detail-container {
+    padding: 40px 20px;
+    color: var(--text-primary);
+}
+
+/* Breadcrumb */
+.breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin-bottom: 30px;
+}
+.breadcrumb-item a {
+    color: var(--accent-yellow);
+    text-decoration: none;
+}
+.breadcrumb-item a:hover {
+    text-decoration: underline;
+}
+
+/* Payment Cards Grid */
+.payment-card {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-primary);
+    border-radius: 14px;
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.payment-card:hover {
+    border-color: var(--accent-yellow);
+    box-shadow: 0 6px 20px rgba(247, 236, 89, 0.25);
+    transform: translateY(-6px);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Icon Animations */
+.payment-card .card-body i {
+    transition: all 0.3s ease;
+}
+.payment-card:hover .card-body i {
+    transform: scale(1.15);
+    color: var(--accent-yellow) !important;
+}
+
+/* Headings and Text */
+.payment-card h5 {
+    color: var(--text-primary);
+}
+.payment-card p {
+    color: var(--text-muted);
+}
+
+/* Payment Button */
+.payment-btn {
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    font-weight: 600;
+    border: 2px solid var(--accent-yellow);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    padding: 12px 0;
+}
+.payment-btn:hover {
+    background: transparent;
+    color: var(--accent-yellow);
+    border-color: var(--accent-yellow);
+    box-shadow: 0 0 12px rgba(247, 236, 89, 0.4);
+}
+
+/* Optional subtle pulse effect on hover */
+.payment-card:hover {
+    animation: cardPulse 0.4s ease;
+}
+@keyframes cardPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+    100% { transform: scale(1); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .payment-card {
+        margin-bottom: 20px;
+    }
+}

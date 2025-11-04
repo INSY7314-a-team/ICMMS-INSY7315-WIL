@@ -1486,6 +1486,127 @@ namespace ICCMS_Web.Controllers
                 return Json(new { success = false, error = ex.Message });
             }
         }
+
+
+
+
+        // ============================
+        // Payment Options Page
+        // ============================
+       [HttpGet("Clients/PaymentOptions")]
+        public IActionResult PaymentOptions(string projectId, string invoiceId, double amount)
+        {
+            if (string.IsNullOrEmpty(projectId))
+            {
+                TempData["ErrorMessage"] = "Invalid project ID.";
+                return RedirectToAction("Index");
+            }
+
+            var model = new PaymentViewModel
+            {
+                ProjectId = projectId,
+                InvoiceId = invoiceId,
+                AmountPayable = amount
+            };
+
+            return View(model);
+        }
+
+        /* Old code: Remove code:
+         [HttpGet("Clients/PaymentOptions/{projectId}")]
+         public IActionResult PaymentOptions(string projectId)
+         {
+             if (string.IsNullOrEmpty(projectId))
+             {
+                 TempData["ErrorMessage"] = "Invalid project ID.";
+                 return RedirectToAction("Index");
+             }
+
+             return View("PaymentOptions", projectId);
+         }
+         */
+
+
+
+        // PayFast Payment Gateway
+        [HttpGet("Clients/PayFastGateway")]
+        public IActionResult PayFastGateway(string projectId, string invoiceId, double amount)
+        {
+            if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(invoiceId))
+            {
+                TempData["ErrorMessage"] = "Invalid project or invoice ID.";
+                return RedirectToAction("Index");
+            }
+
+            var model = new PaymentViewModel
+            {
+                ProjectId = projectId,
+                InvoiceId = invoiceId,
+                AmountPayable = amount
+            };
+
+            return View(model);
+        }
+
+        // PayPal Payment Gateway
+        [HttpGet("Clients/PayPalGateway")]
+        public IActionResult PayPalGateway(string projectId, string invoiceId, double amount)
+        {
+            if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(invoiceId))
+            {
+                TempData["ErrorMessage"] = "Invalid project or invoice ID.";
+                return RedirectToAction("Index");
+            }
+
+            var model = new PaymentViewModel
+            {
+                ProjectId = projectId,
+                InvoiceId = invoiceId,
+                AmountPayable = amount
+            };
+
+            return View(model);
+        }
+
+        // EFT Payment Gateway
+        [HttpGet("Clients/EFTGateway")]
+        public IActionResult EFTGateway(string projectId, string invoiceId, double amount)
+        {
+            if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(invoiceId))
+            {
+                TempData["ErrorMessage"] = "Invalid project or invoice ID.";
+                return RedirectToAction("Index");
+            }
+
+            var model = new PaymentViewModel
+            {
+                ProjectId = projectId,
+                InvoiceId = invoiceId,
+                AmountPayable = amount
+            };
+
+            return View(model);
+        }
+
+
+
+       /* Old code: Remove code:
+       [HttpGet("Clients/PayFastGateway/{projectId}")]
+        public IActionResult PayFastGateway(string projectId)
+        {
+            if (string.IsNullOrEmpty(projectId))
+            {
+                TempData["ErrorMessage"] = "Invalid project ID.";
+                return RedirectToAction("Index");
+            }
+
+            return View("PayFastGateway", projectId);
+        }
+        */
+
+
+
+
     }
 
     public class ClientDashboardViewModel

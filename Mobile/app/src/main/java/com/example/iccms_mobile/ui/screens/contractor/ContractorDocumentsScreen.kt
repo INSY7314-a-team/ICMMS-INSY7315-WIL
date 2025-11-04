@@ -187,7 +187,7 @@ fun DocumentCard(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = document.fileName,
+                            text = document.fileName.substringAfter("_"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )

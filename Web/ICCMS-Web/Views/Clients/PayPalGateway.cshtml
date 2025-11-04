@@ -1,0 +1,169 @@
+@model PaymentViewModel
+
+@{
+    ViewData["Title"] = "PayPal Payment";
+    Layout = "_Layout";
+}
+
+<div class="container py-5">
+    <div class="card bg-dark text-light shadow-lg p-4 mx-auto" style="max-width: 600px; border-radius: 15px;">
+
+        <!-- PayPal Logo -->
+        <div class="text-center mb-4">
+            <img src="@Url.Content("~/images/paypal-logo.png")" alt="PayPal Logo" style="max-height: 60px;">
+        </div>
+
+        <h2 class="text-center mb-4">Pay with PayPal</h2>
+
+        <div class="text-center mb-4">
+            <p class="fs-5">Amount Owing:</p>
+            <h3 class="fw-bold text-success">R @Model.AmountPayable.ToString("N2")</h3>
+        </div>
+
+        <!-- Mock PayPal Form -->
+        <form id="paypalMockForm">
+            <div class="mb-3">
+                <label class="form-label">PayPal Email</label>
+                <input type="email"
+                       id="paypalEmail"
+                       class="form-control bg-dark text-light border-secondary"
+                       placeholder="email@example.com"
+                       required />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input type="password"
+                       id="paypalPassword"
+                       class="form-control bg-dark text-light border-secondary"
+                       placeholder="••••••••"
+                       required />
+            </div>
+
+            <div class="text-center mt-4">
+                <button type="submit"
+                        class="btn w-100 py-3"
+                        style="background-color: #0070ba; color: #fff; border: none; font-weight: bold;">
+                    <i class="fab fa-paypal me-2"></i>Pay with PayPal
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const projectId = "@Model.ProjectId";
+    const invoiceId = "@Model.InvoiceId";
+
+    // -------------------------------
+    // Define payInvoice function here
+    // -------------------------------
+    window.payInvoice = async function (invoiceId, callback) {
+        if (!invoiceId) {
+            console.error("❌ No invoice ID provided");
+            if(callback) callback(false);
+            return;
+        }
+
+        try {
+            const response = await fetch("/Clients/PayInvoice", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: JSON.stringify({
+                    InvoiceId: invoiceId,
+                    PaymentMethod: "Online",
+                    Notes: "Payment made via PayPal gateway"
+                })
+            });
+
+            const result = await response.json();
+            if(result.success){
+                if(callback) callback(true);
+            } else {
+                console.error("Payment failed:", result.error);
+                if(callback) callback(false);
+            }
+
+        } catch(err) {
+            console.error("Error processing payment:", err);
+            if(callback) callback(false);
+        }
+    };
+
+
+    // -------------------------------
+    // PayPal Form Handler
+    // -------------------------------
+    const paypalForm = document.getElementById("paypalMockForm");
+
+    paypalForm.addEventListener("submit", function(e) {
+        e.preventDefault();
+
+        const email = document.getElementById("paypalEmail").value.trim();
+        const password = document.getElementById("paypalPassword").value.trim();
+
+        // Validate email format
+        const emailRegex = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/;
+        if (!email || !emailRegex.test(email)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Email',
+                text: 'Please enter a valid PayPal email address.'
+            });
+            return;
+        }
+
+        // Validate password length (mock)
+        if (!password || password.length < 6) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Password',
+                text: 'Password must be at least 6 characters.'
+            });
+            return;
+        }
+
+        if(!confirm("Are you sure you want to make this invoice payment?")) return;
+
+        Swal.fire({
+            title: 'Processing Payment...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        setTimeout(() => {
+            Swal.close();
+            window.payInvoice(invoiceId, function(success){
+                if(success){
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Payment Successful',
+                        text: 'Your payment was processed successfully!',
+                        confirmButtonColor: '#0070ba',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        window.location.href = '/Clients/ProjectDetail/' + projectId;
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Payment Failed',
+                        text: 'Something went wrong. Please try again.'
+                    });
+                }
+            });
+        }, 1500);
+
+    });
+
+});
+</script>
+}
