@@ -119,6 +119,22 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        // Denzel Added:
+        [HttpGet("project/documents/all")]
+        public async Task<ActionResult<List<Document>>> GetAllProjectDocuments()
+        {
+            try
+            {
+                var documents = await _firebaseService.GetCollectionAsync<Document>("documents");
+                return Ok(documents);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+
         [HttpPost("upload/project/{projectId}/document")]
         public async Task<ActionResult<Document>> UploadDocument(
             string projectId,

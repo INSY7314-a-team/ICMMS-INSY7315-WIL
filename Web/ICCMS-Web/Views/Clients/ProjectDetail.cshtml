@@ -609,10 +609,25 @@
                 <h5 class="modal-title" id="invoiceDetailsModalLabel">
                     <i class="fa-solid fa-file-invoice-dollar me-2" style="color: #f7ec59;"></i>Invoice Details
                 </h5>
+                
                 <div id="invoiceActionButtons">
-                    <button type="button" class="user-btn user-btn-success me-2" id="payInvoiceBtn">
-                        <i class="fas fa-credit-card" style="padding-right: 10px;"></i>Pay Now
-                    </button>
+                    
+                  
+
+                      @if (Model.Invoices.Any())
+                        {
+                            var firstInvoice = Model.Invoices.First();
+                            <a href="@Url.Action("PaymentOptions", "Clients", new { 
+                                projectId = Model.Project.ProjectId, 
+                                invoiceId = firstInvoice.InvoiceId, 
+                                amount = firstInvoice.TotalAmount 
+                            })" class="btn btn-primary">
+                                Pay Invoice
+                            </a>
+                        }
+
+
+
                     <button type="button" class="user-btn user-btn-secondary" data-bs-dismiss="modal" style="margin-left: 10px;">
                         <i class="fas fa-times" style="padding-right: 10px;"></i>Close
                     </button>
