@@ -65,13 +65,13 @@ fun ContractorTasksScreen(
                     )
                     TaskStatCard(
                         title = "In Progress",
-                        value = uiState.projectTasks.count { it.Status.lowercase() == "in progress" }.toString(),
+                        value = uiState.projectTasks.count { it.status.lowercase() == "in progress" }.toString(),
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f)
                     )
                     TaskStatCard(
                         title = "Completed",
-                        value = uiState.projectTasks.count { it.Status.lowercase() == "completed" }.toString(),
+                        value = uiState.projectTasks.count { it.status.lowercase() == "completed" }.toString(),
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.weight(1f)
                     )
@@ -112,9 +112,9 @@ fun ContractorTasksScreen(
                 items(uiState.projectTasks) { task ->
                     TaskCard(
                         task = task,
-                        onClick = { onNavigateToTaskDetails(task.TaskId) },
+                        onClick = { onNavigateToTaskDetails(task.taskId) },
                         onUpdateProgress = { progress, status ->
-                            viewModel.updateTaskProgress(task.TaskId, progress, status)
+                            viewModel.updateTaskProgress(task.taskId, progress, status)
                         }
                     )
                 }
@@ -157,18 +157,18 @@ fun TaskCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = task.Name,
+                        text = task.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = task.Description,
+                        text = task.description,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
-                TaskPriorityChip(priority = task.Priority)
+                TaskPriorityChip(priority = task.priority)
             }
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -185,16 +185,16 @@ fun TaskCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "${task.Progress}%",
+                        text = "${task.progress}%",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 LinearProgressIndicator(
-                    progress = task.Progress / 100f,
+                    progress = task.progress / 100f,
                     modifier = Modifier.fillMaxWidth(),
-                    color = when (task.Status.lowercase()) {
+                    color = when (task.status.lowercase()) {
                         "completed" -> MaterialTheme.colorScheme.tertiary
                         "in progress" -> MaterialTheme.colorScheme.primary
                         else -> MaterialTheme.colorScheme.secondary
@@ -215,7 +215,7 @@ fun TaskCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    TaskStatusChip(status = task.Status)
+                    TaskStatusChip(status = task.status)
                 }
                 Column {
                     Text(
@@ -224,7 +224,7 @@ fun TaskCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = formatDate(task.DueDate),
+                        text = formatDate(task.dueDate),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -238,25 +238,25 @@ fun TaskCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Estimated: ${task.EstimatedHours}h",
+                    text = "Estimated: ${task.estimatedHours}h",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Actual: ${task.ActualHours}h",
+                    text = "Actual: ${task.actualHours}h",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             
             // Action Buttons
-            if (task.Status.lowercase() != "completed") {
+            if (task.status.lowercase() != "completed") {
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (task.Status.lowercase() == "pending") {
+                    if (task.status.lowercase() == "pending") {
                         Button(
                             onClick = { onUpdateProgress(0, "In Progress") },
                             modifier = Modifier.weight(1f),
@@ -266,7 +266,7 @@ fun TaskCard(
                         ) {
                             Text("Start Task")
                         }
-                    } else if (task.Status.lowercase() == "in progress") {
+                    } else if (task.status.lowercase() == "in progress") {
                         Button(
                             onClick = { onUpdateProgress(100, "Completed") },
                             modifier = Modifier.weight(1f),

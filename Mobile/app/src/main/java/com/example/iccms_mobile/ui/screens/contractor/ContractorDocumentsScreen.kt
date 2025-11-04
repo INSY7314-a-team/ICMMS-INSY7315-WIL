@@ -133,8 +133,8 @@ fun ContractorDocumentsScreen(
                 items(uiState.documents) { document ->
                     DocumentCard(
                         document = document,
-                        onClick = { onNavigateToDocumentDetails(document.DocumentId) },
-                        onDelete = { viewModel.deleteDocument(document.DocumentId) }
+                        onClick = { onNavigateToDocumentDetails(document.documentId) },
+                        onDelete = { viewModel.deleteDocument(document.documentId) }
                     )
                 }
             }
@@ -179,27 +179,27 @@ fun DocumentCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = getFileTypeIcon(document.FileType),
-                        contentDescription = document.FileType,
+                        imageVector = getFileTypeIcon(document.fileType),
+                        contentDescription = document.fileType,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = document.FileName,
+                            text = document.fileName,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = document.Description,
+                            text = document.description,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 2.dp)
                         )
                     }
                 }
-                DocumentStatusChip(status = document.FileType)
+                DocumentStatusChip(status = document.fileType)
             }
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -216,7 +216,7 @@ fun DocumentCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = formatFileSize(document.FileSize),
+                        text = formatFileSize(document.fileSize),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -228,7 +228,7 @@ fun DocumentCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = formatDate(document.UploadedAt),
+                        text = formatDate(document.uploadedAt),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

@@ -17,6 +17,26 @@ class FirebaseAuthService {
     
     // Sign in with email and password
     suspend fun signInWithEmailAndPassword(email: String, password: String): Result<FirebaseUser> {
+        println("DEBUG: [FirebaseAuthService] Attempting Firebase sign in for: $email")
+        println("DEBUG: [FirebaseAuthService] FirebaseApp name: ${auth.app.name}")
+        println("DEBUG: [FirebaseAuthService] FirebaseAuth currentUser before login: ${auth.currentUser?.email}")
+
+        return try {
+            val result = auth.signInWithEmailAndPassword(email, password).await()
+            println("DEBUG: [FirebaseAuthService] Firebase sign-in SUCCESS. UID: ${result.user?.uid}")
+            Result.success(result.user!!)
+        } catch (e: Exception) {
+            println("ERROR: [FirebaseAuthService] Firebase sign-in FAILED.")
+            println("ERROR: [FirebaseAuthService] Exception type: ${e::class.simpleName}")
+            println("ERROR: [FirebaseAuthService] Exception message: ${e.message}")
+            println("ERROR: [FirebaseAuthService] Exception cause: ${e.cause}")
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    /* Old code: Remove code:
+    suspend fun signInWithEmailAndPassword(email: String, password: String): Result<FirebaseUser> {
         return try {
             val result = auth.signInWithEmailAndPassword(email, password).await()
             Result.success(result.user!!)
@@ -24,7 +44,7 @@ class FirebaseAuthService {
             Result.failure(e)
         }
     }
-    
+    */
     // Sign out
     fun signOut() {
         auth.signOut()

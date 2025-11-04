@@ -3,33 +3,33 @@ package com.example.iccms_mobile.data.models
 import com.google.gson.annotations.SerializedName
 
 data class Phase(
-    @SerializedName("PhaseId")
-    val PhaseId: String = "",
-    
-    @SerializedName("ProjectId")
-    val ProjectId: String = "",
-    
-    @SerializedName("Name")
-    val Name: String = "",
-    
-    @SerializedName("Description")
-    val Description: String = "",
-    
-    @SerializedName("StartDate")
-    val StartDate: String = "",
-    
-    @SerializedName("EndDate")
-    val EndDate: String = "",
-    
-    @SerializedName("Status")
-    val Status: String = "",
-    
-    @SerializedName("Progress")
-    val Progress: Int = 0,
-    
-    @SerializedName("Budget")
-    val Budget: Double = 0.0,
-    
-    @SerializedName("AssignedTo")
-    val AssignedTo: String = ""
+    @SerializedName("phaseId")
+    val phaseId: String = "",
+
+    @SerializedName("projectId")
+    val projectId: String = "",
+
+    @SerializedName("name")
+    val name: String = "",
+
+    @SerializedName("description")
+    val description: String = "",
+
+    @SerializedName("startDate")
+    val startDate: String = "",
+
+    @SerializedName("endDate")
+    val endDate: String = "",
+
+    @SerializedName("status")
+    val status: String = "",
+
+    @SerializedName("progress")
+    val progress: Int = 0,
+
+    @SerializedName("budget")
+    val budget: Double = 0.0,
+
+    @SerializedName("assignedTo")
+    val assignedTo: String = ""
 )

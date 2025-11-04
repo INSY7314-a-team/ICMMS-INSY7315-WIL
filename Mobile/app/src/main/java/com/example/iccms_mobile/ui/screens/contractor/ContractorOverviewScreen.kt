@@ -96,7 +96,7 @@ fun ContractorOverviewScreen(
                     item {
                         StatCard(
                             title = "Active Tasks",
-                            value = uiState.projectTasks.count { it.Status.lowercase() == "in progress" }.toString(),
+                            value = uiState.projectTasks.count { it.status.lowercase() == "in progress" }.toString(),
                             color = MaterialTheme.colorScheme.primary,
                             icon = Icons.Default.List
                         )
@@ -104,24 +104,27 @@ fun ContractorOverviewScreen(
                     item {
                         StatCard(
                             title = "Completed",
-                            value = uiState.projectTasks.count { it.Status.lowercase() == "completed" }.toString(),
+                            value = uiState.projectTasks.count { it.status.lowercase() == "completed" }.toString(),
                             color = MaterialTheme.colorScheme.tertiary,
                             icon = Icons.Default.CheckCircle
                         )
                     }
+                    /* Old Code: Remove code
                     item {
                         StatCard(
                             title = "Active Phases",
-                            value = uiState.projectPhases.count { it.Status.lowercase() == "in progress" }.toString(),
+                            value = uiState.projectPhases.count { it.status.lowercase() == "in progress" }.toString(),
                             color = MaterialTheme.colorScheme.secondary,
                             icon = Icons.Default.Build
                         )
                     }
+                    */
+
                     item {
                         StatCard(
                             title = "Documents",
                             value = uiState.documents.size.toString(),
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.secondary, //MaterialTheme.colorScheme.primary,
                             icon = Icons.Default.Menu
                         )
                     }
@@ -214,9 +217,9 @@ fun ContractorOverviewScreen(
                                 )
                                 uiState.projectTasks.take(3).forEach { task ->
                                     RecentItemRow(
-                                        title = task.Name,
-                                        subtitle = "Progress: ${task.Progress}%",
-                                        status = task.Status
+                                        title = task.name,
+                                        subtitle = "Progress: ${task.progress}%",
+                                        status = task.status
                                     )
                                 }
                             }
@@ -247,9 +250,9 @@ fun ContractorOverviewScreen(
                                 )
                                 uiState.documents.take(3).forEach { doc ->
                                     RecentItemRow(
-                                        title = doc.FileName,
-                                        subtitle = "Uploaded ${formatDate(doc.UploadedAt)}",//"Status: ${doc.Status}",
-                                        status = doc.FileType
+                                        title = doc.fileName,
+                                        subtitle = "Uploaded ${formatDate(doc.uploadedAt)}",//"Status: ${doc.Status}",
+                                        status = doc.fileType
                                     )
                                 }
                             }

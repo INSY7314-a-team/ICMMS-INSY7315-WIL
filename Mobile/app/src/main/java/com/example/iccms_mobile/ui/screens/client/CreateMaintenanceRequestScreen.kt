@@ -32,6 +32,7 @@ import com.example.iccms_mobile.ui.viewmodel.ClientDashboardViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateMaintenanceRequestScreen(
@@ -89,7 +90,8 @@ fun CreateMaintenanceRequestScreen(
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(4.dp),
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFFFFFFF6)) //Color.White)
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
@@ -193,7 +195,8 @@ fun CreateMaintenanceRequestScreen(
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(4.dp),
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFFFFFFF6))
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
@@ -216,7 +219,8 @@ fun CreateMaintenanceRequestScreen(
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(4.dp),
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFFFFFFF6))
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
@@ -260,7 +264,8 @@ fun CreateMaintenanceRequestScreen(
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(4.dp),
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFFFFFFF6))
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
@@ -423,6 +428,292 @@ fun CreateMaintenanceRequestScreen(
         }
     }
 }
+
+
+/*
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreateMaintenanceRequestScreen(
+    viewModel: ClientDashboardViewModel,
+    onNavigateBack: () -> Unit,
+    onRequestCreated: () -> Unit
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    var selectedProject by remember { mutableStateOf<Project?>(null) }
+    var description by remember { mutableStateOf("") }
+    var priority by remember { mutableStateOf("Medium") }
+    var mediaUrl by remember { mutableStateOf("") }
+
+    val priorityOptions = listOf("Low", "Medium", "High")
+
+    LaunchedEffect(Unit) { viewModel.loadDashboardData() }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Create Maintenance Request", style = MaterialTheme.typography.headlineMedium) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            )
+        }
+    ) { paddingValues ->
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+
+            // ----- Project Selection -----
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(6.dp),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text(
+                        "Select Project",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (uiState.projects.isEmpty()) {
+                        Text(
+                            "No projects available",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        uiState.projects.filter { it.status.equals("completed", true) }.forEach { project ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp)
+                                    .border(
+                                        width = if (selectedProject?.projectId == project.projectId) 2.dp else 0.dp,
+                                        color = if (selectedProject?.projectId == project.projectId)
+                                            MaterialTheme.colorScheme.primary else Color.Transparent,
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .selectable(
+                                        selected = selectedProject?.projectId == project.projectId,
+                                        onClick = { selectedProject = project },
+                                        role = Role.RadioButton
+                                    ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(project.name, fontWeight = FontWeight.SemiBold)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(project.description, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text("Status: ${project.status}", color = Color(0xFF006400))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ----- Description -----
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(6.dp),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text("Description", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        placeholder = { Text("Describe the maintenance issue...") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 100.dp),
+                        shape = RoundedCornerShape(16.dp),
+                       /* colors = TextFieldDefaults.outlinedTextFieldColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )*/
+                    )
+                }
+            }
+
+            // ----- Priority Selection -----
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(6.dp),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text("Priority", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        priorityOptions.forEach { option ->
+                            val color = when(option) {
+                                "High" -> Color(0xFFFF4C4C)
+                                "Medium" -> Color(0xFFFFC107)
+                                else -> Color(0xFF4CAF50)
+                            }
+                            FilterChip(
+                                selected = priority == option,
+                                onClick = { priority = option },
+                                label = { Text(option) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = color.copy(alpha = 0.3f),
+                                    selectedLabelColor = color,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            // ----- Image Upload -----
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(6.dp),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Upload Image (Optional)", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    var imageUri by remember { mutableStateOf<Uri?>(null) }
+                    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
+                        imageUri = it
+                    }
+
+                    if (imageUri != null) {
+                        AsyncImage(
+                            model = imageUri,
+                            contentDescription = "Uploaded Image",
+                            modifier = Modifier
+                                .height(180.dp)
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextButton(onClick = { imageUri = null }) { Text("Remove Image") }
+                    } else {
+                        OutlinedButton(
+                            onClick = { launcher.launch("image/*") },
+                            modifier = Modifier
+                                .height(50.dp)
+                                .fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Choose Image")
+                        }
+                    }
+                }
+            }
+
+            // ----- Submit Button -----
+            Button(
+                onClick = {
+                    if (selectedProject != null && description.isNotBlank()) {
+                        val currentDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
+                        viewModel.createMaintenanceRequest(
+                            MaintenanceRequest(
+                                maintenanceRequestId = "",
+                                clientId = selectedProject!!.clientId,
+                                projectId = selectedProject!!.projectId,
+                                description = description,
+                                priority = priority,
+                                status = "Pending",
+                                mediaUrl = mediaUrl,
+                                requestedBy = "",
+                                assignedTo = "",
+                                createdAt = currentDate,
+                                resolvedAt = null
+                            )
+                        )
+                        onRequestCreated()
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(55.dp),
+                shape = RoundedCornerShape(16.dp),
+                enabled = selectedProject != null && description.isNotBlank() && !uiState.isLoading
+            ) {
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+                Text("Create Request", fontWeight = FontWeight.SemiBold)
+            }
+
+            // ----- Error/Success Messages -----
+            uiState.errorMessage?.let { errorMessage ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.padding(16.dp))
+                }
+            }
+
+            uiState.successMessage?.let { successMessage ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(successMessage, color = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(16.dp))
+                }
+            }
+        }
+    }
+}
+*/
+
+
+
+
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

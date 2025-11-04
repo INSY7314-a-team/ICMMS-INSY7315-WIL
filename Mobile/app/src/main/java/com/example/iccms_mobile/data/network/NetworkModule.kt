@@ -2,6 +2,7 @@ package com.example.iccms_mobile.data.network
 
 import com.example.iccms_mobile.data.api.AuthApiService
 import com.example.iccms_mobile.data.api.ClientsApiService
+import com.example.iccms_mobile.data.api.ContractorApiService
 import com.example.iccms_mobile.data.services.FirebaseAuthService
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
@@ -100,4 +101,6 @@ object NetworkModule {
     
     val authApiService: AuthApiService = retrofit.create(AuthApiService::class.java)
     val clientsApiService: ClientsApiService = retrofit.create(ClientsApiService::class.java)
+
+    val contractorApiService: ContractorApiService = retrofit.create(ContractorApiService::class.java)
 }

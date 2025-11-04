@@ -30,8 +30,8 @@ data class Project(
     @SerializedName("isDraft")
     val isDraft: Boolean = false,
 
-    @SerializedName("startDatePlanned")
-    val startDatePlanned: String = "",
+    @SerializedName("startDate")
+    val startDate: String = "",
 
     @SerializedName("endDatePlanned")
     val endDatePlanned: String = "",

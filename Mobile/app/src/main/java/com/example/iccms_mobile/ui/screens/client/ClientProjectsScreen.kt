@@ -311,7 +311,7 @@ fun ProjectCard(
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
                     Text(
-                        text = formatDateString(project.endDatePlanned),//project.startDatePlanned,//"$daysBetween days",
+                        text = formatDateString(project.startDate),//project.startDatePlanned,//"$daysBetween days",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Medium

@@ -64,13 +64,13 @@ fun ContractorPhasesScreen(
                     )
                     PhaseStatCard(
                         title = "In Progress",
-                        value = uiState.projectPhases.count { it.Status.lowercase() == "in progress" }.toString(),
+                        value = uiState.projectPhases.count { it.status.lowercase() == "in progress" }.toString(),
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f)
                     )
                     PhaseStatCard(
                         title = "Completed",
-                        value = uiState.projectPhases.count { it.Status.lowercase() == "completed" }.toString(),
+                        value = uiState.projectPhases.count { it.status.lowercase() == "completed" }.toString(),
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.weight(1f)
                     )
@@ -111,7 +111,7 @@ fun ContractorPhasesScreen(
                 items(uiState.projectPhases) { phase ->
                     PhaseCard(
                         phase = phase,
-                        onClick = { onNavigateToPhaseDetails(phase.PhaseId) }
+                        onClick = { onNavigateToPhaseDetails(phase.phaseId) }
                     )
                 }
             }
@@ -151,18 +151,18 @@ fun PhaseCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = phase.Name,
+                        text = phase.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = phase.Description,
+                        text = phase.description,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
-                PhaseStatusChip(status = phase.Status)
+                PhaseStatusChip(status = phase.status)
             }
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -179,16 +179,16 @@ fun PhaseCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "${phase.Progress}%",
+                        text = "${phase.progress}%",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 LinearProgressIndicator(
-                    progress = phase.Progress / 100f,
+                    progress = phase.progress / 100f,
                     modifier = Modifier.fillMaxWidth(),
-                    color = when (phase.Status.lowercase()) {
+                    color = when (phase.status.lowercase()) {
                         "completed" -> MaterialTheme.colorScheme.tertiary
                         "in progress" -> MaterialTheme.colorScheme.primary
                         else -> MaterialTheme.colorScheme.secondary
@@ -210,7 +210,7 @@ fun PhaseCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "R ${String.format("%.2f", phase.Budget)}",
+                        text = "R ${String.format("%.2f", phase.budget)}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -223,7 +223,7 @@ fun PhaseCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = formatDate(phase.EndDate),
+                        text = formatDate(phase.endDate),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -231,7 +231,7 @@ fun PhaseCard(
             }
             
             Text(
-                text = "Started: ${formatDate(phase.StartDate)}",
+                text = "Started: ${formatDate(phase.startDate)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp)
@@ -244,13 +244,13 @@ fun PhaseCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = when (phase.Status.lowercase()) {
+                    imageVector = when (phase.status.lowercase()) {
                         "completed" -> Icons.Default.CheckCircle
                         "in progress" -> Icons.Default.Build
                         else -> Icons.Default.DateRange
                     },
-                    contentDescription = phase.Status,
-                    tint = when (phase.Status.lowercase()) {
+                    contentDescription = phase.status,
+                    tint = when (phase.status.lowercase()) {
                         "completed" -> MaterialTheme.colorScheme.tertiary
                         "in progress" -> MaterialTheme.colorScheme.primary
                         else -> MaterialTheme.colorScheme.secondary
@@ -259,13 +259,13 @@ fun PhaseCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = when (phase.Status.lowercase()) {
+                    text = when (phase.status.lowercase()) {
                         "completed" -> "Phase completed successfully"
                         "in progress" -> "Phase in progress"
                         else -> "Phase pending start"
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = when (phase.Status.lowercase()) {
+                    color = when (phase.status.lowercase()) {
                         "completed" -> MaterialTheme.colorScheme.tertiary
                         "in progress" -> MaterialTheme.colorScheme.primary
                         else -> MaterialTheme.colorScheme.secondary

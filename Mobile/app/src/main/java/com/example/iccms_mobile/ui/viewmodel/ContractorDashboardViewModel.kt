@@ -3,6 +3,154 @@ package com.example.iccms_mobile.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.iccms_mobile.data.models.*
+import com.example.iccms_mobile.data.repository.ContractorRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
+
+data class ContractorDashboardUiState(
+    val isLoading: Boolean = false,
+    val projectTasks: List<ProjectTask> = emptyList(),
+    val projectPhases: List<Phase> = emptyList(),
+    val documents: List<Document> = emptyList(),
+    val errorMessage: String? = null,
+    val successMessage: String? = null
+)
+
+class ContractorDashboardViewModel : ViewModel() {
+
+    private val contractorRepository = ContractorRepository()
+
+    private val _uiState = MutableStateFlow(ContractorDashboardUiState())
+    val uiState: StateFlow<ContractorDashboardUiState> = _uiState.asStateFlow()
+
+    fun loadDashboardData() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+
+            try {
+                // Fetch real data from the repository
+                val tasksResult = contractorRepository.getProjectTasks()
+                val phasesResult = contractorRepository.getProjectPhases()
+                val documentsResult = contractorRepository.getAllProjectDocuments()
+
+                val tasks = tasksResult.getOrElse { emptyList() }
+                val phases = phasesResult.getOrElse { emptyList() }
+                val documents = documentsResult.getOrElse { emptyList() }
+
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    projectTasks = tasks,
+                    projectPhases = phases,
+                    documents = documents
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = e.message ?: "Failed to load dashboard data"
+                )
+            }
+        }
+    }
+
+    fun updateTaskProgress(taskId: String, progress: Int, status: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            try {
+                val updatedTasks = _uiState.value.projectTasks.map { task ->
+                    if (task.taskId == taskId) {
+                        task.copy(
+                            progress = progress,
+                            status = status,
+                            completedDate = if (status.lowercase() == "completed")
+                                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
+                            else null
+                        )
+                    } else task
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    projectTasks = updatedTasks,
+                    successMessage = "Task updated successfully"
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = e.message ?: "Failed to update task"
+                )
+            }
+        }
+    }
+
+    fun uploadDocument(document: Document) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            try {
+                val result = contractorRepository.uploadDocument(document.projectId ?: "", document)
+                result.onSuccess { uploadedDoc ->
+                    val updatedDocs = _uiState.value.documents + uploadedDoc
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        documents = updatedDocs,
+                        successMessage = "Document uploaded successfully"
+                    )
+                }.onFailure {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = it.message ?: "Failed to upload document"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = e.message ?: "Failed to upload document"
+                )
+            }
+        }
+    }
+
+    fun deleteDocument(documentId: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            try {
+                val result = contractorRepository.deleteDocument(documentId)
+                result.onSuccess {
+                    val updatedDocs = _uiState.value.documents.filter { it.documentId != documentId }
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        documents = updatedDocs,
+                        successMessage = "Document deleted successfully"
+                    )
+                }.onFailure {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = it.message ?: "Failed to delete document"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = e.message ?: "Failed to delete document"
+                )
+            }
+        }
+    }
+
+    fun clearMessages() {
+        _uiState.value = _uiState.value.copy(errorMessage = null, successMessage = null)
+    }
+}
+
+
+/*package com.example.iccms_mobile.ui.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.iccms_mobile.data.models.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -268,3 +416,4 @@ class ContractorDashboardViewModel : ViewModel() {
         )
     }
 }
+*/
