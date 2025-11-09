@@ -1,4 +1,5 @@
 using ICCMS_API.Models;
+using Microsoft.Extensions.Configuration;
 
 namespace ICCMS_API.Services
 {
@@ -6,14 +7,18 @@ namespace ICCMS_API.Services
     {
         private readonly IMaterialDatabaseService _materialDatabaseService;
         private readonly SupabaseBlueprintService _supabaseBlueprintService;
+        private readonly string _genKitMicroserviceBaseUrl;
 
         public AiProcessingService(
             IMaterialDatabaseService materialDatabaseService,
-            SupabaseBlueprintService supabaseBlueprintService
+            SupabaseBlueprintService supabaseBlueprintService,
+            IConfiguration configuration
         )
         {
             _materialDatabaseService = materialDatabaseService;
             _supabaseBlueprintService = supabaseBlueprintService;
+            _genKitMicroserviceBaseUrl =
+                configuration["GenKitMicroservice:BaseUrl"] ?? "http://localhost:3001";
         }
 
         public async Task<Estimate> ProcessBlueprintToEstimateAsync(
@@ -113,15 +118,13 @@ namespace ICCMS_API.Services
                     "application/json"
                 );
 
-                // Assuming GenKitMicroservice runs on localhost:3001
+                // Call GenKitMicroservice using configured base URL
+                var microserviceUrl = $"{_genKitMicroserviceBaseUrl}/api/ai/extract-line-items";
                 Console.WriteLine($"🚀 Making HTTP request to GenKitMicroservice...");
-                Console.WriteLine($"📡 URL: http://localhost:3001/api/ai/extract-line-items");
+                Console.WriteLine($"📡 URL: {microserviceUrl}");
                 Console.WriteLine($"📦 Request body size: {json.Length} characters");
 
-                var response = await httpClient.PostAsync(
-                    "http://localhost:3001/api/ai/extract-line-items",
-                    content
-                );
+                var response = await httpClient.PostAsync(microserviceUrl, content);
 
                 Console.WriteLine($"📡 HTTP Response Status: {response.StatusCode}");
                 Console.WriteLine(
