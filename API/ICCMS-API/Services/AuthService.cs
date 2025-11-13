@@ -8,13 +8,15 @@ namespace ICCMS_API.Services
         Task<FirebaseToken> VerifyTokenAsync(string idToken);
         Task<UserRecord> GetUserAsync(string uid);
         Task<string> CreateUserAsync(string email, string password, string displayName);
-        
+
         // WARNING: This method cannot verify passwords. Firebase Admin SDK does not support password verification.
         // Password verification must be done using Firebase Client SDK (JavaScript/web, Android, iOS).
         // This method will throw InvalidOperationException to prevent misuse.
-        [Obsolete("Cannot verify passwords with Firebase Admin SDK. Use Firebase Client SDK for authentication.")]
+        [Obsolete(
+            "Cannot verify passwords with Firebase Admin SDK. Use Firebase Client SDK for authentication."
+        )]
         Task<UserRecord> SignInWithEmailAndPasswordAsync(string email, string password);
-        
+
         Task<bool> DeleteUserAsync(string uid);
         Task<bool> UpdateUserAsync(string uid, string displayName, string email);
 
@@ -93,7 +95,9 @@ namespace ICCMS_API.Services
             // This method should not be used for password verification
             // Password verification must be done using Firebase Client SDK
             // This implementation is kept for backward compatibility but should not be relied upon
-            throw new InvalidOperationException("SignInWithEmailAndPasswordAsync cannot verify passwords. Use Firebase Client SDK for authentication.");
+            throw new InvalidOperationException(
+                "SignInWithEmailAndPasswordAsync cannot verify passwords. Use Firebase Client SDK for authentication."
+            );
         }
 
         public async Task<bool> DeleteUserAsync(string uid)
@@ -159,9 +163,9 @@ namespace ICCMS_API.Services
                 // Instead, we create a custom token that the client should exchange for an ID token
                 // However, for the Web app to use it, we need to provide the custom token
                 // which the Web app will exchange client-side
-                
+
                 var customToken = await FirebaseAuth.DefaultInstance.CreateCustomTokenAsync(uid);
-                
+
                 // Return the custom token - the client should exchange this for an ID token
                 // using the Firebase client SDK before sending it back to verify-token
                 return customToken;

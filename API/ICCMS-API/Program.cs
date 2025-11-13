@@ -19,11 +19,15 @@ try
         .Build();
 
     var projectId = configuration["Firebase:project_id"] ?? "icmms-ecba6";
-    var credentialsPath = configuration["Firebase:CredentialsPath"] ?? "firebase-credentials.json";
+    var credentialsPath = "firebase-credentials.json";
 
     if (File.Exists(credentialsPath))
     {
+        Console.WriteLine("Firebase credentials file found at: " + credentialsPath);
         var credential = GoogleCredential.FromFile(credentialsPath);
+        Console.WriteLine(
+            "Firebase Admin SDK initialized with service account " + credential.ToString()
+        );
         FirebaseApp.Create(new AppOptions { Credential = credential, ProjectId = projectId });
         Console.WriteLine("Firebase Admin SDK initialized successfully");
     }
