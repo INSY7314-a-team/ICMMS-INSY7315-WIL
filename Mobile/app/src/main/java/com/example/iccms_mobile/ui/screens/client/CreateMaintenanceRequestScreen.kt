@@ -342,7 +342,7 @@ fun CreateMaintenanceRequestScreen(
             }
             */
 
-            Spacer(modifier = Modifier.height(16.dp))
+            //Spacer(modifier = Modifier.height(8.dp))
 
             // Submit Button
             Button(
