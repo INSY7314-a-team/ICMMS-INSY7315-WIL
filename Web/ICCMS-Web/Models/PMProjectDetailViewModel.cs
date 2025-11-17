@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 
 namespace ICCMS_Web.Models
@@ -9,6 +11,16 @@ namespace ICCMS_Web.Models
     public class PMProjectDetailViewModel
     {
         // Core project information
+        private int? _totalTasks;
+        private int? _completedTasks;
+        private int? _inProgressTasks;
+        private int? _pendingTasks;
+        private int? _overdueTasks;
+        private int? _overallProgress;
+        private int? _totalPhases;
+        private int? _completedPhases;
+        private Dictionary<string, UserDto> _contractorMap = new(StringComparer.OrdinalIgnoreCase);
+
         [JsonPropertyName("project")]
         public ProjectDto Project { get; set; } = new();
 
@@ -30,36 +42,106 @@ namespace ICCMS_Web.Models
 
         // Contractor information for display names
         [JsonPropertyName("contractorMap")]
-        public Dictionary<string, UserDto> ContractorMap { get; set; } = new();
+        public Dictionary<string, UserDto> ContractorMap
+        {
+            get => _contractorMap;
+            set => _contractorMap = value ?? new(StringComparer.OrdinalIgnoreCase);
+        }
 
         // Client information
         [JsonPropertyName("client")]
         public UserDto? Client { get; set; }
 
-        // Summary statistics
-        [JsonPropertyName("totalTasks")]
-        public int TotalTasks { get; set; }
+        [JsonPropertyName("statistics")]
+        public ProjectStatisticsViewModel? Statistics { get; set; }
+
+        [JsonPropertyName("tasksByPhase")]
+        public Dictionary<string, List<ProjectTaskDto>> TasksByPhase { get; set; } =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        [JsonPropertyName("tasksByStatus")]
+        public Dictionary<string, List<ProjectTaskDto>> TasksByStatus { get; set; } =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        [JsonPropertyName("tasksByContractor")]
+        public Dictionary<string, List<ProjectTaskDto>> TasksByContractor { get; set; } =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        [JsonPropertyName("phaseSummaries")]
+        public Dictionary<string, PhaseSummaryViewModel> PhaseSummaries { get; set; } =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        [JsonPropertyName("progressReports")]
+        public List<ProgressReportDto> ProgressReports { get; set; } = new();
+
+        [JsonPropertyName("completionReports")]
+        public List<CompletionReportDto> CompletionReports { get; set; } = new();
 
         [JsonPropertyName("completedTasks")]
-        public int CompletedTasks { get; set; }
-
-        [JsonPropertyName("inProgressTasks")]
-        public int InProgressTasks { get; set; }
-
-        [JsonPropertyName("pendingTasks")]
-        public int PendingTasks { get; set; }
+        public List<ProjectTaskDto> CompletedTaskItems { get; set; } = new();
 
         [JsonPropertyName("overdueTasks")]
-        public int OverdueTasks { get; set; }
+        public List<ProjectTaskDto> OverdueTaskItems { get; set; } = new();
 
-        [JsonPropertyName("overallProgress")]
-        public int OverallProgress { get; set; }
+        [JsonPropertyName("pendingTasks")]
+        public List<ProjectTaskDto> PendingTaskItems { get; set; } = new();
 
-        [JsonPropertyName("totalPhases")]
-        public int TotalPhases { get; set; }
+        // Summary statistics
+        [JsonIgnore]
+        public int TotalTasks
+        {
+            get => _totalTasks ?? Statistics?.TotalTasks ?? Tasks.Count;
+            set => _totalTasks = value;
+        }
 
-        [JsonPropertyName("completedPhases")]
-        public int CompletedPhases { get; set; }
+        [JsonIgnore]
+        public int CompletedTasks
+        {
+            get => _completedTasks ?? Statistics?.CompletedTasks ?? CompletedTaskItems.Count;
+            set => _completedTasks = value;
+        }
+
+        [JsonIgnore]
+        public int InProgressTasks
+        {
+            get => _inProgressTasks ?? Statistics?.InProgressTasks ?? 0;
+            set => _inProgressTasks = value;
+        }
+
+        [JsonIgnore]
+        public int PendingTasks
+        {
+            get => _pendingTasks ?? Statistics?.PendingTasks ?? PendingTaskItems.Count;
+            set => _pendingTasks = value;
+        }
+
+        [JsonIgnore]
+        public int OverdueTasks
+        {
+            get => _overdueTasks ?? Statistics?.OverdueTasks ?? OverdueTaskItems.Count;
+            set => _overdueTasks = value;
+        }
+
+        [JsonIgnore]
+        public int OverallProgress
+        {
+            get => _overallProgress ?? Statistics?.OverallProgress ?? 0;
+            set => _overallProgress = value;
+        }
+
+        [JsonIgnore]
+        public int TotalPhases
+        {
+            get => _totalPhases ?? Statistics?.TotalPhases ?? Phases.Count;
+            set => _totalPhases = value;
+        }
+
+        [JsonIgnore]
+        public int CompletedPhases
+        {
+            get => _completedPhases ?? Statistics?.CompletedPhases ?? 0;
+            set => _completedPhases = value;
+        }
 
         // Project estimates
         [JsonPropertyName("estimates")]
@@ -119,19 +201,37 @@ namespace ICCMS_Web.Models
 
         public List<ProjectTaskDto> GetTasksForPhase(string phaseId)
         {
+            if (
+                !string.IsNullOrWhiteSpace(phaseId)
+                && TasksByPhase.TryGetValue(phaseId, out var cached)
+            )
+            {
+                return cached;
+            }
+
             return Tasks.Where(t => t.PhaseId == phaseId).ToList();
         }
 
         public int GetPhaseProgress(string phaseId)
         {
+            if (
+                PhaseSummaries.TryGetValue(phaseId, out var summary)
+                && summary != null
+                && summary.Progress >= 0
+            )
+            {
+                return summary.Progress;
+            }
+
             var phaseTasks = GetTasksForPhase(phaseId);
             if (!phaseTasks.Any())
                 return 0;
 
             // If all tasks are completed (status = "Completed"), phase is 100% complete
-            var allTasksCompleted = phaseTasks.All(t => 
-                t.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase));
-            
+            var allTasksCompleted = phaseTasks.All(t =>
+                t.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase)
+            );
+
             if (allTasksCompleted)
                 return 100;
 
@@ -142,9 +242,12 @@ namespace ICCMS_Web.Models
 
         public string GetContractorName(string contractorId)
         {
-            return ContractorMap.TryGetValue(contractorId, out var contractor)
-                ? contractor.FullName
-                : "Unknown";
+            if (ContractorMap.TryGetValue(contractorId, out var contractor))
+            {
+                return contractor.FullName ?? "Unknown";
+            }
+
+            return "Unknown";
         }
 
         public string GetMaintenanceRequestStatusBadgeClass(string status)

@@ -200,6 +200,7 @@ namespace ICCMS_Web.Models
         public string CurrentSearchTerm { get; set; } = "";
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
+        public MessageStatisticsViewModel? Statistics { get; set; }
 
         public bool HasPreviousPage => CurrentPage > 1;
         public bool HasNextPage => CurrentPage < TotalPages;
@@ -246,5 +247,43 @@ namespace ICCMS_Web.Models
             get => UserName;
             set => UserName = value;
         }
+    }
+
+    public class MessageStatisticsViewModel
+    {
+        public int TotalThreads { get; set; }
+        public int TotalMessages { get; set; }
+        public int UnreadMessages { get; set; }
+        public int ActiveThisWeek { get; set; }
+    }
+
+    public class UserMessagesDetailViewModel
+    {
+        public List<ThreadDto> WorkflowThreads { get; set; } = new();
+        public List<ThreadDto> DirectThreads { get; set; } = new();
+        public int UnreadCount { get; set; }
+        public MessageStatisticsViewModel? Statistics { get; set; }
+    }
+
+    public class MessageDashboardDataViewModel
+    {
+        public List<MessageThreadViewModel> Threads { get; set; } = new();
+        public MessageStatisticsViewModel Statistics { get; set; } = new();
+        public List<ProjectSummary> AvailableProjects { get; set; } = new();
+        public List<UserSummary> AvailableUsers { get; set; } = new();
+        public Dictionary<string, UserSummary> ParticipantMap { get; set; } =
+            new(StringComparer.OrdinalIgnoreCase);
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages { get; set; }
+        public int TotalCount { get; set; }
+    }
+
+    public class MessageThreadDetailViewModel
+    {
+        public MessageThreadViewModel Thread { get; set; } = new();
+        public List<MessageDto> Messages { get; set; } = new();
+        public Dictionary<string, UserDto> Participants { get; set; } =
+            new(StringComparer.OrdinalIgnoreCase);
     }
 }

@@ -229,189 +229,21 @@ namespace ICCMS_Web.Controllers
                     return RedirectToAction("Dashboard");
                 }
 
-                // Get project details
-                _logger.LogInformation("Fetching project details for {ProjectId}", projectId);
-
-                ProjectDto project;
-                try
-                {
-                    project = await _apiClient.GetAsync<ProjectDto>(
-                        $"/api/projectmanager/project/{projectId}",
-                        User
-                    );
-                }
-                catch (Exception apiEx)
-                {
-                    _logger.LogError(
-                        apiEx,
-                        "API error fetching project {ProjectId}: {ErrorMessage}",
-                        projectId,
-                        apiEx.Message
-                    );
-                    TempData["ErrorMessage"] = $"Failed to fetch project details: {apiEx.Message}";
-                    return RedirectToAction("Dashboard");
-                }
-
-                if (project == null)
-                {
-                    _logger.LogWarning(
-                        "Project {ProjectId} not found - API returned null",
-                        projectId
-                    );
-                    TempData["ErrorMessage"] =
-                        $"Project {projectId} not found. The project may have been deleted or you may not have permission to view it.";
-                    return RedirectToAction("Dashboard");
-                }
-
-                _logger.LogInformation(
-                    "Successfully retrieved project {ProjectId}: {ProjectName}",
-                    projectId,
-                    project.Name
-                );
-
-                // Get project phases
-                _logger.LogInformation("Fetching phases for project {ProjectId}", projectId);
-                var phases =
-                    await _apiClient.GetAsync<List<PhaseDto>>(
-                        $"/api/projectmanager/project/{projectId}/phases",
-                        User
-                    ) ?? new List<PhaseDto>();
-
-                // Get project tasks
-                _logger.LogInformation("Fetching tasks for project {ProjectId}", projectId);
-                var tasks =
-                    await _apiClient.GetAsync<List<ProjectTaskDto>>(
-                        $"/api/projectmanager/project/{projectId}/tasks",
-                        User
-                    ) ?? new List<ProjectTaskDto>();
-
-                // Get project estimates
-                _logger.LogInformation("Fetching estimates for project {ProjectId}", projectId);
-                var estimates =
-                    await _apiClient.GetAsync<List<EstimateDto>>(
-                        $"/api/estimates/project/{projectId}",
-                        User
-                    ) ?? new List<EstimateDto>();
-
-                // Get project invoices
-                _logger.LogInformation("Fetching invoices for project {ProjectId}", projectId);
-                var invoices =
-                    await _apiClient.GetAsync<List<InvoiceDto>>(
-                        $"/api/invoices/project/{projectId}",
-                        User
-                    ) ?? new List<InvoiceDto>();
-
-                // Get project maintenance requests
-                _logger.LogInformation(
-                    "Fetching maintenance requests for project {ProjectId}",
-                    projectId
-                );
-                var maintenanceRequests =
-                    await _apiClient.GetAsync<List<MaintenanceRequestDto>>(
-                        $"/api/projectmanager/project/{projectId}/maintenance-requests",
-                        User
-                    ) ?? new List<MaintenanceRequestDto>();
-
-                _logger.LogInformation(
-                    "Found {Count} maintenance requests for project {ProjectId}",
-                    maintenanceRequests.Count,
-                    projectId
-                );
-
-                // Get pending progress reports
-                _logger.LogInformation("Fetching pending progress reports");
-                var pendingReports =
-                    await _apiClient.GetAsync<List<ProgressReportDto>>(
-                        "/api/projectmanager/progress-reports/pending",
-                        User
-                    ) ?? new List<ProgressReportDto>();
-
-                // Filter progress reports for this project
-                var projectPendingReports = pendingReports
-                    .Where(pr => pr.ProjectId == projectId)
-                    .ToList();
-
-                // Get completion reports to check which tasks actually have completion requests
-                var completionReports =
-                    await _apiClient.GetAsync<List<CompletionReportDto>>(
-                        "/api/projectmanager/completion-reports",
-                        User
-                    ) ?? new List<CompletionReportDto>();
-
-                // Get tasks awaiting completion (tasks with status "Awaiting Approval" AND have completion reports)
-                var tasksWithCompletionReports = completionReports
-                    .Where(cr => cr.Status == "Submitted" && cr.ProjectId == projectId)
-                    .Select(cr => cr.TaskId)
-                    .ToHashSet();
-
-                var tasksAwaitingCompletion = tasks
-                    .Where(t =>
-                        t.Status == "Awaiting Approval"
-                        && tasksWithCompletionReports.Contains(t.TaskId)
-                    )
-                    .ToList();
-
-                _logger.LogInformation(
-                    "Found {CompletionReportCount} completion reports, {TasksWithReports} tasks with completion reports, {TasksAwaitingCompletion} tasks awaiting completion",
-                    completionReports.Count,
-                    tasksWithCompletionReports.Count,
-                    tasksAwaitingCompletion.Count
-                );
-
-                // Get contractors for display names
-                var contractors =
-                    await _apiClient.GetAsync<List<UserDto>>("/api/users/contractors", User)
-                    ?? new List<UserDto>();
-
-                var contractorMap = contractors.ToDictionary(c => c.UserId, c => c);
-
-                // Get client information
-                var client = await _apiClient.GetAsync<UserDto>(
-                    $"/api/users/{project.ClientId}",
+                var viewModel = await _apiClient.GetAsync<PMProjectDetailViewModel>(
+                    $"/api/projectmanager/project/{projectId}/detail-data",
                     User
                 );
 
-                // Calculate statistics
-                var totalTasks = tasks.Count;
-                var completedTasks = tasks.Count(t => t.Status == "Completed");
-                var inProgressTasks = tasks.Count(t => t.Status == "In Progress");
-                var pendingTasks = tasks.Count(t => t.Status == "Pending");
-                var overdueTasks = tasks.Count(t =>
-                    t.DueDate < DateTime.UtcNow && t.Status != "Completed"
-                );
-                var overallProgress = totalTasks > 0 ? (int)tasks.Average(t => t.Progress) : 0;
-
-                var totalPhases = phases.Count;
-                var completedPhases = phases.Count(p => p.Status == "Completed");
-
-                // Create view model
-                var viewModel = new PMProjectDetailViewModel
+                if (viewModel == null)
                 {
-                    Project = project,
-                    Phases = phases,
-                    Tasks = tasks,
-                    Estimates = estimates,
-                    Invoices = invoices,
-                    MaintenanceRequests = maintenanceRequests,
-                    PendingProgressReports = projectPendingReports,
-                    TasksAwaitingCompletion = tasksAwaitingCompletion,
-                    ContractorMap = contractorMap,
-                    Client = client,
-                    TotalTasks = totalTasks,
-                    CompletedTasks = completedTasks,
-                    InProgressTasks = inProgressTasks,
-                    PendingTasks = pendingTasks,
-                    OverdueTasks = overdueTasks,
-                    OverallProgress = overallProgress,
-                    TotalPhases = totalPhases,
-                    CompletedPhases = completedPhases,
-                };
+                    TempData["ErrorMessage"] =
+                        $"Project {projectId} not found or you may not have permission to view it.";
+                    return RedirectToAction("Dashboard");
+                }
 
                 _logger.LogInformation(
-                    "✅ Project detail loaded for {ProjectName} with {TaskCount} tasks, {PhaseCount} phases",
-                    project.Name,
-                    totalTasks,
-                    totalPhases
+                    "Project detail loaded for {ProjectId} via aggregated endpoint",
+                    projectId
                 );
 
                 return View(viewModel);
@@ -846,104 +678,46 @@ namespace ICCMS_Web.Controllers
                     return RedirectToAction("Dashboard");
                 }
 
-                // Get project
-                var project = await _apiClient.GetAsync<ProjectDto>(
-                    $"/api/projectmanager/project/{projectId}",
+                var projectDetail = await _apiClient.GetAsync<PMProjectDetailViewModel>(
+                    $"/api/projectmanager/project/{projectId}/detail-data",
                     User
                 );
 
-                if (project == null)
+                if (projectDetail == null)
                 {
-                    TempData["ErrorMessage"] = "Project not found.";
+                    TempData["ErrorMessage"] = $"Project {projectId} not found or inaccessible.";
                     return RedirectToAction("Dashboard");
                 }
 
-                // Get task
-                var tasks =
-                    await _apiClient.GetAsync<List<ProjectTaskDto>>(
-                        $"/api/projectmanager/project/{projectId}/tasks",
-                        User
-                    ) ?? new List<ProjectTaskDto>();
-
-                var task = tasks.FirstOrDefault(t => t.TaskId == taskId);
+                var task = projectDetail.Tasks.FirstOrDefault(t => t.TaskId == taskId);
                 if (task == null)
                 {
                     TempData["ErrorMessage"] = "Task not found.";
                     return RedirectToAction("ProjectDetail", new { projectId = projectId });
                 }
 
-                // Get phase if task has one
-                PhaseDto? phase = null;
-                if (!string.IsNullOrEmpty(task.PhaseId))
-                {
-                    var phases =
-                        await _apiClient.GetAsync<List<PhaseDto>>(
-                            $"/api/projectmanager/project/{projectId}/phases",
-                            User
-                        ) ?? new List<PhaseDto>();
+                var phase = projectDetail.Phases.FirstOrDefault(p => p.PhaseId == task.PhaseId);
+                projectDetail.ContractorMap.TryGetValue(task.AssignedTo, out var contractor);
 
-                    phase = phases.FirstOrDefault(p => p.PhaseId == task.PhaseId);
-                }
-
-                // Get contractor
-                UserDto? contractor = null;
-                if (!string.IsNullOrEmpty(task.AssignedTo))
-                {
-                    contractor = await _apiClient.GetAsync<UserDto>(
-                        $"/api/users/{task.AssignedTo}",
-                        User
-                    );
-                }
-
-                // Get progress reports for this task
-                // Since contractors endpoint requires assignment verification, we'll try to get
-                // progress reports via the project manager's access. For now, we'll use the
-                // GetProgressReport endpoint in a loop (not ideal, but works) or fetch all
-                // and filter. Actually, let's just get all progress reports for the project.
-                // We'll use an empty list for now and fetch individual reports if needed,
-                // or fetch all and filter. Let's get all from pending first and expand if needed.
-                var allPendingReports =
-                    await _apiClient.GetAsync<List<ProgressReportDto>>(
-                        $"/api/projectmanager/progress-reports/pending",
-                        User
-                    ) ?? new List<ProgressReportDto>();
-
-                // Get all progress reports (not just approved) - we'll filter by taskId
-                // Since the API only exposes pending, we'll work with what's available
-                // In a production system, you'd want: /api/projectmanager/project/{projectId}/progress-reports
-                var taskProgressReports = allPendingReports
-                    .Where(pr => pr.TaskId == taskId && pr.ProjectId == projectId)
+                var taskProgressReports = projectDetail
+                    .ProgressReports.Where(pr => pr.TaskId == taskId)
                     .OrderByDescending(pr => pr.SubmittedAt)
                     .ToList();
 
-                // Get completion reports for this task
-                var allCompletionReports =
-                    await _apiClient.GetAsync<List<CompletionReportDto>>(
-                        "/api/projectmanager/completion-reports",
-                        User
-                    ) ?? new List<CompletionReportDto>();
-
-                var taskCompletionReports = allCompletionReports
-                    .Where(cr => cr.TaskId == taskId && cr.ProjectId == projectId)
+                var taskCompletionReports = projectDetail
+                    .CompletionReports.Where(cr => cr.TaskId == taskId)
                     .OrderByDescending(cr => cr.SubmittedAt)
                     .ToList();
-
-                // Get contractors map for display names
-                var contractors =
-                    await _apiClient.GetAsync<List<UserDto>>("/api/users/contractors", User)
-                    ?? new List<UserDto>();
-
-                var contractorMap = contractors.ToDictionary(c => c.UserId, c => c);
 
                 var viewModel = new TaskDetailViewModel
                 {
                     Task = task,
-                    Project = project,
+                    Project = projectDetail.Project ?? new ProjectDto(),
                     Phase = phase,
                     Contractor = contractor,
                     ProgressReports = taskProgressReports,
                     CompletionReports = taskCompletionReports,
-                    ContractorMap = contractorMap,
+                    ContractorMap = projectDetail.ContractorMap,
                 };
 
                 return View(viewModel);

@@ -2,6 +2,7 @@ using System.Security.Claims;
 using ICCMS_API.Auth;
 using ICCMS_API.Helpers;
 using ICCMS_API.Models;
+using ICCMS_API.Models.Messages;
 using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,13 +19,15 @@ namespace ICCMS_API.Controllers
         private readonly ISupabaseService _supabaseService;
         private readonly IMessageValidationService _validationService;
         private readonly IWorkflowMessageService _workflowService;
+        private readonly IMessageDetailService _messageDetailService;
 
         public MessagesController(
             IFirebaseService firebaseService,
             INotificationService notificationService,
             ISupabaseService supabaseService,
             IMessageValidationService validationService,
-            IWorkflowMessageService workflowService
+            IWorkflowMessageService workflowService,
+            IMessageDetailService messageDetailService
         )
         {
             _firebaseService = firebaseService;
@@ -32,6 +35,7 @@ namespace ICCMS_API.Controllers
             _supabaseService = supabaseService;
             _validationService = validationService;
             _workflowService = workflowService;
+            _messageDetailService = messageDetailService;
         }
 
         [HttpGet]
@@ -161,6 +165,66 @@ namespace ICCMS_API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("admin/dashboard-data")]
+        [Authorize(Roles = "Admin,Tester")]
+        public async Task<ActionResult<MessageDashboardDataDto>> GetAdminDashboardData(
+            [FromQuery] MessageDashboardQuery query
+        )
+        {
+            try
+            {
+                var data = await _messageDetailService.BuildAdminDashboardAsync(query);
+                return Ok(data);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("user/{userId}/messages-data")]
+        public async Task<ActionResult<UserMessagesDetailDto>> GetUserMessagesData(
+            string userId,
+            [FromQuery] string? userRole = null
+        )
+        {
+            try
+            {
+                var currentUserId = User.UserId();
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Unauthorized(new { error = "User not authenticated" });
+                }
+
+                // Users can only access their own messages unless they're Admin/Tester
+                var isPrivileged = User.IsInRole("Admin") || User.IsInRole("Tester");
+                if (
+                    !isPrivileged
+                    && !string.Equals(currentUserId, userId, StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    return Forbid("You are not authorized to view this user's messages.");
+                }
+
+                // If role not provided, try to get it from user claims
+                if (string.IsNullOrEmpty(userRole))
+                {
+                    userRole =
+                        User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Unknown";
+                }
+
+                var data = await _messageDetailService.BuildUserMessagesDetailAsync(
+                    userId,
+                    userRole
+                );
+                return Ok(data);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
             }
         }
 
@@ -377,6 +441,50 @@ namespace ICCMS_API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("user/{userId}/detail-data")]
+        public async Task<ActionResult<UserMessagesDetailDto>> GetUserMessagesDetailData(
+            string userId,
+            [FromQuery] string messageType = "all"
+        )
+        {
+            try
+            {
+                var currentUserId = User.UserId() ?? string.Empty;
+                var isPrivileged = User.IsInRole("Admin") || User.IsInRole("Tester");
+                if (
+                    !isPrivileged
+                    && !string.Equals(currentUserId, userId, StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    return Forbid("You are not authorized to view these messages.");
+                }
+
+                var requestedUser = await _firebaseService.GetDocumentAsync<User>("users", userId);
+                var targetRole =
+                    requestedUser?.Role ?? User.FindFirst(ClaimTypes.Role)?.Value ?? "Unknown";
+
+                var detail = await _messageDetailService.BuildUserMessagesDetailAsync(
+                    userId,
+                    targetRole
+                );
+
+                if (string.Equals(messageType, "workflow", StringComparison.OrdinalIgnoreCase))
+                {
+                    detail.DirectThreads.Clear();
+                }
+                else if (string.Equals(messageType, "direct", StringComparison.OrdinalIgnoreCase))
+                {
+                    detail.WorkflowThreads.Clear();
+                }
+
+                return Ok(detail);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
             }
         }
 
@@ -872,6 +980,37 @@ namespace ICCMS_API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("thread/{threadId}/detail-data")]
+        public async Task<ActionResult<MessageThreadDetailDto>> GetThreadDetailData(string threadId)
+        {
+            try
+            {
+                var detail = await _messageDetailService.BuildThreadDetailAsync(threadId);
+                if (detail == null)
+                {
+                    return NotFound(new { error = "Thread not found" });
+                }
+
+                var currentUserId = User.UserId() ?? string.Empty;
+                var isPrivileged = User.IsInRole("Admin") || User.IsInRole("Tester");
+                if (
+                    !isPrivileged
+                    && !detail.Thread.Participants.Any(p =>
+                        string.Equals(p, currentUserId, StringComparison.OrdinalIgnoreCase)
+                    )
+                )
+                {
+                    return Forbid("You are not authorized to view this thread.");
+                }
+
+                return Ok(detail);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
             }
         }
 

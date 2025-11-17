@@ -2,6 +2,7 @@ using System.Linq;
 using System.Security.Claims;
 using ICCMS_API.Auth;
 using ICCMS_API.Models;
+using ICCMS_API.Models.ProjectDetail;
 using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,18 +18,21 @@ namespace ICCMS_API.Controllers
         private readonly IFirebaseService _firebaseService;
         private readonly IWorkflowMessageService _workflowMessageService;
         private readonly IAuditLogService _auditLogService;
+        private readonly IProjectDetailService _projectDetailService;
 
         public ProjectManagerController(
             IAuthService authService,
             IFirebaseService firebaseService,
             IWorkflowMessageService workflowMessageService,
-            IAuditLogService auditLogService
+            IAuditLogService auditLogService,
+            IProjectDetailService projectDetailService
         )
         {
             _authService = authService;
             _firebaseService = firebaseService;
             _workflowMessageService = workflowMessageService;
             _auditLogService = auditLogService;
+            _projectDetailService = projectDetailService;
         }
 
         [HttpGet("projects")]
@@ -671,6 +675,45 @@ namespace ICCMS_API.Controllers
             }
         }
 
+        [HttpGet("project/{id}/detail-data")]
+        public async Task<ActionResult<ProjectDetailDataDto>> GetProjectDetailData(string id)
+        {
+            try
+            {
+                var userId = User.UserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { error = "User not identified." });
+                }
+
+                var project = await _firebaseService.GetDocumentAsync<Project>("projects", id);
+                if (project == null)
+                {
+                    return NotFound(new { error = "Project not found" });
+                }
+
+                var isPrivileged = User.IsInRole("Admin") || User.IsInRole("Tester");
+                if (
+                    !isPrivileged
+                    && !string.Equals(
+                        project.ProjectManagerId,
+                        userId,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                {
+                    return Forbid("You are not authorized to view this project.");
+                }
+
+                var detail = await _projectDetailService.BuildManagerProjectDetailAsync(project);
+                return Ok(detail);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
         [HttpGet("project/{id}/phases")]
         public async Task<ActionResult<List<Phase>>> GetProjectPhases(string id)
         {
@@ -717,7 +760,9 @@ namespace ICCMS_API.Controllers
         }
 
         [HttpGet("project/{id}/maintenance-requests")]
-        public async Task<ActionResult<List<MaintenanceRequest>>> GetProjectMaintenanceRequests(string id)
+        public async Task<ActionResult<List<MaintenanceRequest>>> GetProjectMaintenanceRequests(
+            string id
+        )
         {
             try
             {
@@ -730,7 +775,9 @@ namespace ICCMS_API.Controllers
                 var currentPmId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (project.ProjectManagerId != currentPmId)
                 {
-                    return Unauthorized(new { error = "You are not authorized to access this project" });
+                    return Unauthorized(
+                        new { error = "You are not authorized to access this project" }
+                    );
                 }
 
                 var requests = await _firebaseService.GetCollectionAsync<MaintenanceRequest>(
@@ -756,10 +803,11 @@ namespace ICCMS_API.Controllers
                     return Unauthorized(new { error = "Project Manager ID not found" });
                 }
 
-                var maintenanceRequest = await _firebaseService.GetDocumentAsync<MaintenanceRequest>(
-                    "maintenanceRequests",
-                    id
-                );
+                var maintenanceRequest =
+                    await _firebaseService.GetDocumentAsync<MaintenanceRequest>(
+                        "maintenanceRequests",
+                        id
+                    );
                 if (maintenanceRequest == null)
                 {
                     return NotFound(new { error = "Maintenance request not found" });
@@ -805,10 +853,11 @@ namespace ICCMS_API.Controllers
                 }
 
                 // Get maintenance request
-                var maintenanceRequest = await _firebaseService.GetDocumentAsync<MaintenanceRequest>(
-                    "maintenanceRequests",
-                    id
-                );
+                var maintenanceRequest =
+                    await _firebaseService.GetDocumentAsync<MaintenanceRequest>(
+                        "maintenanceRequests",
+                        id
+                    );
                 if (maintenanceRequest == null)
                 {
                     return NotFound(new { error = "Maintenance request not found" });
@@ -885,10 +934,10 @@ namespace ICCMS_API.Controllers
                             ActualHours = task.ActualHours,
                             StartDate = NormalizeDateTime(task.StartDate, DateTime.UtcNow),
                             DueDate = NormalizeDateTime(task.DueDate, DateTime.UtcNow.AddDays(7)),
-                            CompletedDate = task.CompletedDate.HasValue
-                                    && task.CompletedDate.Value.Year > 1900
-                                ? NormalizeDateTime(task.CompletedDate.Value, null)
-                                : null,
+                            CompletedDate =
+                                task.CompletedDate.HasValue && task.CompletedDate.Value.Year > 1900
+                                    ? NormalizeDateTime(task.CompletedDate.Value, null)
+                                    : null,
                         };
 
                         await _firebaseService.AddDocumentWithIdAsync(
@@ -952,10 +1001,11 @@ namespace ICCMS_API.Controllers
                 }
 
                 // Get maintenance request
-                var maintenanceRequest = await _firebaseService.GetDocumentAsync<MaintenanceRequest>(
-                    "maintenanceRequests",
-                    id
-                );
+                var maintenanceRequest =
+                    await _firebaseService.GetDocumentAsync<MaintenanceRequest>(
+                        "maintenanceRequests",
+                        id
+                    );
                 if (maintenanceRequest == null)
                 {
                     return NotFound(new { error = "Maintenance request not found" });
@@ -1010,16 +1060,21 @@ namespace ICCMS_API.Controllers
                 // If so, move project back to "Completed"
                 if (project.Status == "Maintenance")
                 {
-                    var allMaintenanceRequests = await _firebaseService.GetCollectionAsync<MaintenanceRequest>(
-                        "maintenanceRequests"
-                    );
+                    var allMaintenanceRequests =
+                        await _firebaseService.GetCollectionAsync<MaintenanceRequest>(
+                            "maintenanceRequests"
+                        );
                     var projectMaintenanceRequests = allMaintenanceRequests
                         .Where(mr => mr.ProjectId == maintenanceRequest.ProjectId)
                         .ToList();
 
                     // Check if there are any open maintenance requests (not rejected, not completed)
                     var openRequests = projectMaintenanceRequests
-                        .Where(mr => mr.Status != "Rejected" && mr.Status != "Completed" && mr.Status != "Resolved")
+                        .Where(mr =>
+                            mr.Status != "Rejected"
+                            && mr.Status != "Completed"
+                            && mr.Status != "Resolved"
+                        )
                         .ToList();
 
                     // If no open requests, move project back to Completed
@@ -2251,7 +2306,7 @@ namespace ICCMS_API.Controllers
                 // Update task status to completed
                 task.Status = "Completed";
                 task.CompletedDate = DateTime.UtcNow;
-                
+
                 // Update task actual hours and spent amount from completion report
                 if (completionReport != null)
                 {
@@ -2270,7 +2325,7 @@ namespace ICCMS_API.Controllers
                 // Update task progress to 100% and phase progress
                 await UpdateTaskProgressToComplete(taskId);
                 await UpdatePhaseProgress(task.PhaseId);
-                
+
                 // Update phase and project spent amounts
                 await UpdatePhaseSpentAmount(task.PhaseId);
                 await UpdateProjectBudgetActual(task.ProjectId);
@@ -2796,7 +2851,9 @@ namespace ICCMS_API.Controllers
 
                 if (phaseTasks.Count == 0)
                 {
-                    Console.WriteLine($"[UpdatePhaseSpentAmount] No tasks found for phase {phaseId}");
+                    Console.WriteLine(
+                        $"[UpdatePhaseSpentAmount] No tasks found for phase {phaseId}"
+                    );
                     return;
                 }
 
@@ -2831,7 +2888,10 @@ namespace ICCMS_API.Controllers
         {
             try
             {
-                var project = await _firebaseService.GetDocumentAsync<Project>("projects", projectId);
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    projectId
+                );
                 if (project == null)
                 {
                     Console.WriteLine($"[UpdateProjectBudgetActual] Project {projectId} not found");
@@ -2870,7 +2930,10 @@ namespace ICCMS_API.Controllers
         {
             try
             {
-                var project = await _firebaseService.GetDocumentAsync<Project>("projects", projectId);
+                var project = await _firebaseService.GetDocumentAsync<Project>(
+                    "projects",
+                    projectId
+                );
                 if (project == null)
                 {
                     Console.WriteLine($"[CheckProjectCompletion] Project {projectId} not found");
@@ -2880,7 +2943,9 @@ namespace ICCMS_API.Controllers
                 // Skip if project is already completed or cancelled
                 if (project.Status == "Completed" || project.Status == "Cancelled")
                 {
-                    Console.WriteLine($"[CheckProjectCompletion] Project {projectId} already in final state: {project.Status}");
+                    Console.WriteLine(
+                        $"[CheckProjectCompletion] Project {projectId} already in final state: {project.Status}"
+                    );
                     return;
                 }
 
@@ -2894,7 +2959,9 @@ namespace ICCMS_API.Controllers
 
                 if (projectPhases.Count == 0)
                 {
-                    Console.WriteLine($"[CheckProjectCompletion] No phases found for project {projectId}");
+                    Console.WriteLine(
+                        $"[CheckProjectCompletion] No phases found for project {projectId}"
+                    );
                     return;
                 }
 
@@ -2914,7 +2981,9 @@ namespace ICCMS_API.Controllers
 
                 if (projectTasks.Count == 0)
                 {
-                    Console.WriteLine($"[CheckProjectCompletion] No tasks found for project {projectId}");
+                    Console.WriteLine(
+                        $"[CheckProjectCompletion] No tasks found for project {projectId}"
+                    );
                     return;
                 }
 

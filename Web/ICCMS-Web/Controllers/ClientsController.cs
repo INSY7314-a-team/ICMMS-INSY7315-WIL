@@ -157,134 +157,18 @@ namespace ICCMS_Web.Controllers
                     return RedirectToAction("Index");
                 }
 
-                var project = await _apiClient.GetAsync<ProjectDto>(
-                    $"/api/clients/project/{id}",
+                var detail = await _apiClient.GetAsync<ClientProjectDetailViewModel>(
+                    $"/api/clients/project/{id}/detail-data",
                     User
                 );
-                if (project == null)
+
+                if (detail == null)
                 {
-                    TempData["ErrorMessage"] = "Project not found.";
+                    TempData["ErrorMessage"] = "Failed to load project details.";
                     return RedirectToAction("Index");
                 }
 
-                var phases =
-                    await _apiClient.GetAsync<List<PhaseDto>>(
-                        $"/api/clients/project/{id}/phases",
-                        User
-                    ) ?? new List<PhaseDto>();
-                var tasks =
-                    await _apiClient.GetAsync<List<ProjectTaskDto>>(
-                        $"/api/clients/project/{id}/tasks",
-                        User
-                    ) ?? new List<ProjectTaskDto>();
-                var progressReports =
-                    await _apiClient.GetAsync<List<ProgressReportDto>>(
-                        $"/api/clients/project/{id}/progress-reports",
-                        User
-                    ) ?? new List<ProgressReportDto>();
-                var maintenanceRequests =
-                    await _apiClient.GetAsync<List<MaintenanceRequestDto>>(
-                        $"/api/clients/project/{id}/maintenance-requests",
-                        User
-                    ) ?? new List<MaintenanceRequestDto>();
-                var quotations =
-                    await _apiClient.GetAsync<List<QuotationDto>>(
-                        $"/api/clients/project/{id}/quotations",
-                        User
-                    ) ?? new List<QuotationDto>();
-                var invoices =
-                    await _apiClient.GetAsync<List<InvoiceDto>>(
-                        $"/api/clients/project/{id}/invoices",
-                        User
-                    ) ?? new List<InvoiceDto>();
-
-                // Load contractor information for task assignments
-                var contractors = new List<UserDto>();
-                var uniqueContractorIds = tasks
-                    .Where(t => !string.IsNullOrEmpty(t.AssignedTo))
-                    .Select(t => t.AssignedTo)
-                    .Distinct()
-                    .ToList();
-
-                foreach (var contractorId in uniqueContractorIds)
-                {
-                    try
-                    {
-                        var contractor = await _apiClient.GetAsync<UserDto>(
-                            $"/api/users/{contractorId}",
-                            User
-                        );
-                        if (contractor != null)
-                        {
-                            contractors.Add(contractor);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(
-                            ex,
-                            "Failed to load contractor {ContractorId}",
-                            contractorId
-                        );
-                        // Continue loading other contractors even if one fails
-                    }
-                }
-
-                // Calculate overall progress
-                int overallProgress = 0;
-                if (tasks.Any())
-                {
-                    overallProgress = (int)tasks.Average(t => t.Progress);
-                }
-
-                // Check which tasks have been rated by the current client
-                var clientId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var ratedTasks = new Dictionary<string, bool>();
-
-                if (!string.IsNullOrEmpty(clientId))
-                {
-                    var completedTasksWithContractors = tasks
-                        .Where(t => t.Status == "Completed" && !string.IsNullOrEmpty(t.AssignedTo))
-                        .ToList();
-
-                    foreach (var task in completedTasksWithContractors)
-                    {
-                        try
-                        {
-                            var hasRated = await _apiClient.GetAsync<bool>(
-                                $"/api/contractorrating/task/{task.TaskId}/contractor/{task.AssignedTo}",
-                                User
-                            );
-                            ratedTasks[task.TaskId] = hasRated;
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning(
-                                ex,
-                                "Failed to check rating status for task {TaskId}",
-                                task.TaskId
-                            );
-                            // Default to false if check fails
-                            ratedTasks[task.TaskId] = false;
-                        }
-                    }
-                }
-
-                var viewModel = new ClientProjectDetailViewModel
-                {
-                    Project = project,
-                    Phases = phases,
-                    Tasks = tasks,
-                    ProgressReports = progressReports,
-                    MaintenanceRequests = maintenanceRequests,
-                    Quotations = quotations,
-                    Invoices = invoices,
-                    Contractors = contractors,
-                    OverallProgress = overallProgress,
-                    RatedTasks = ratedTasks,
-                };
-
-                return View(viewModel);
+                return View(detail);
             }
             catch (Exception ex)
             {
@@ -523,21 +407,21 @@ namespace ICCMS_Web.Controllers
                 $"/api/clients/quotation/{id}",
                 User
             );
-            
+
             if (quotationResponse == null)
                 return NotFound("Quotation not found");
 
             // Parse the response to extract quotation and items
             QuotationDto quote;
             List<QuotationItemDto> quoteItems = new List<QuotationItemDto>();
-            
+
             // Configure JSON options to respect JsonPropertyName attributes
             var jsonOptions = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             };
-            
+
             try
             {
                 // Convert to JSON to parse
@@ -563,23 +447,27 @@ namespace ICCMS_Web.Controllers
                     return NotFound("Quotation not found");
 
                 // Extract items array
-                if (root.TryGetProperty("items", out var itemsElement) && itemsElement.ValueKind == JsonValueKind.Array)
+                if (
+                    root.TryGetProperty("items", out var itemsElement)
+                    && itemsElement.ValueKind == JsonValueKind.Array
+                )
                 {
-                    quoteItems = JsonSerializer.Deserialize<List<QuotationItemDto>>(
-                        itemsElement.GetRawText(),
-                        jsonOptions
-                    ) ?? new List<QuotationItemDto>();
+                    quoteItems =
+                        JsonSerializer.Deserialize<List<QuotationItemDto>>(
+                            itemsElement.GetRawText(),
+                            jsonOptions
+                        ) ?? new List<QuotationItemDto>();
                 }
-                
+
                 // If no items in response, try to use quotation.Items if available
                 if (!quoteItems.Any() && quote.Items != null && quote.Items.Any())
                 {
                     quoteItems = quote.Items;
                 }
-                
+
                 // Assign items back to quote object for PDF generation
                 quote.Items = quoteItems;
-                
+
                 // Recalculate totals if they're missing or zero (shouldn't happen, but safety check)
                 if (quote.GrandTotal == 0 && quoteItems.Any())
                 {
@@ -610,12 +498,14 @@ namespace ICCMS_Web.Controllers
             UserDto client;
             if (project != null && !string.IsNullOrEmpty(project.ClientId))
             {
-                client = await _apiClient.GetAsync<UserDto>($"/api/users/{project.ClientId}", User)
+                client =
+                    await _apiClient.GetAsync<UserDto>($"/api/users/{project.ClientId}", User)
                     ?? new UserDto { FullName = "Unknown Client" };
             }
             else if (!string.IsNullOrEmpty(quote.ClientId))
             {
-                client = await _apiClient.GetAsync<UserDto>($"/api/users/{quote.ClientId}", User)
+                client =
+                    await _apiClient.GetAsync<UserDto>($"/api/users/{quote.ClientId}", User)
                     ?? new UserDto { FullName = "Unknown Client" };
             }
             else
@@ -624,11 +514,15 @@ namespace ICCMS_Web.Controllers
             }
 
             // Use fallback values if project is not found
-            var projectName = project?.Name 
-                ?? (!string.IsNullOrEmpty(quote.ProjectId) 
-                    ? $"Project {quote.ProjectId.Substring(0, Math.Min(8, quote.ProjectId.Length))}" 
-                    : "Unknown Project");
-            var projectDescription = project?.Description ?? quote.Description ?? "Project information not available";
+            var projectName =
+                project?.Name
+                ?? (
+                    !string.IsNullOrEmpty(quote.ProjectId)
+                        ? $"Project {quote.ProjectId.Substring(0, Math.Min(8, quote.ProjectId.Length))}"
+                        : "Unknown Project"
+                );
+            var projectDescription =
+                project?.Description ?? quote.Description ?? "Project information not available";
             var projectBudget = project?.BudgetPlanned ?? 0;
 
             var fileBytes = Document
@@ -868,12 +762,9 @@ namespace ICCMS_Web.Controllers
                 "✅ [Client-DownloadQuotation] PDF generated for quotation {Id}",
                 id
             );
-            var fileName = $"Quotation_{projectName.Replace(" ", "_").Replace("/", "_")}_{quote.QuotationId.Substring(0, Math.Min(8, quote.QuotationId.Length))}.pdf";
-            return File(
-                fileBytes,
-                "application/pdf",
-                fileName
-            );
+            var fileName =
+                $"Quotation_{projectName.Replace(" ", "_").Replace("/", "_")}_{quote.QuotationId.Substring(0, Math.Min(8, quote.QuotationId.Length))}.pdf";
+            return File(fileBytes, "application/pdf", fileName);
         }
 
         // ============================================
@@ -1347,12 +1238,13 @@ namespace ICCMS_Web.Controllers
             _logger.LogInformation("📤 Forwarding document upload to {ApiUrl}", apiUrl);
 
             using var client = _httpClientFactory.CreateClient();
-            
+
             // Add authentication token
             var token = User.FindFirst("FirebaseToken")?.Value;
             if (!string.IsNullOrEmpty(token))
             {
-                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             }
             else
             {
@@ -1597,13 +1489,10 @@ namespace ICCMS_Web.Controllers
             }
         }
 
-
-
-
         // ============================
         // Payment Options Page
         // ============================
-       [HttpGet("Clients/PaymentOptions")]
+        [HttpGet("Clients/PaymentOptions")]
         public IActionResult PaymentOptions(string projectId, string invoiceId, double amount)
         {
             if (string.IsNullOrEmpty(projectId))
@@ -1616,7 +1505,7 @@ namespace ICCMS_Web.Controllers
             {
                 ProjectId = projectId,
                 InvoiceId = invoiceId,
-                AmountPayable = amount
+                AmountPayable = amount,
             };
 
             return View(model);
@@ -1636,8 +1525,6 @@ namespace ICCMS_Web.Controllers
          }
          */
 
-
-
         // PayFast Payment Gateway
         [HttpGet("Clients/PayFastGateway")]
         public IActionResult PayFastGateway(string projectId, string invoiceId, double amount)
@@ -1652,7 +1539,7 @@ namespace ICCMS_Web.Controllers
             {
                 ProjectId = projectId,
                 InvoiceId = invoiceId,
-                AmountPayable = amount
+                AmountPayable = amount,
             };
 
             return View(model);
@@ -1672,7 +1559,7 @@ namespace ICCMS_Web.Controllers
             {
                 ProjectId = projectId,
                 InvoiceId = invoiceId,
-                AmountPayable = amount
+                AmountPayable = amount,
             };
 
             return View(model);
@@ -1692,31 +1579,25 @@ namespace ICCMS_Web.Controllers
             {
                 ProjectId = projectId,
                 InvoiceId = invoiceId,
-                AmountPayable = amount
+                AmountPayable = amount,
             };
 
             return View(model);
         }
 
-
-
-       /* Old code: Remove code:
-       [HttpGet("Clients/PayFastGateway/{projectId}")]
-        public IActionResult PayFastGateway(string projectId)
-        {
-            if (string.IsNullOrEmpty(projectId))
-            {
-                TempData["ErrorMessage"] = "Invalid project ID.";
-                return RedirectToAction("Index");
-            }
-
-            return View("PayFastGateway", projectId);
-        }
-        */
-
-
-
-
+        /* Old code: Remove code:
+        [HttpGet("Clients/PayFastGateway/{projectId}")]
+         public IActionResult PayFastGateway(string projectId)
+         {
+             if (string.IsNullOrEmpty(projectId))
+             {
+                 TempData["ErrorMessage"] = "Invalid project ID.";
+                 return RedirectToAction("Index");
+             }
+ 
+             return View("PayFastGateway", projectId);
+         }
+         */
     }
 
     public class ClientDashboardViewModel

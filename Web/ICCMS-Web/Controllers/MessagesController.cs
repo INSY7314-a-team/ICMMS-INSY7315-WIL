@@ -43,20 +43,64 @@ namespace ICCMS_Web.Controllers
                     return View(new UserMessagesViewModel());
                 }
 
-                // Get workflow messages for the user
-                var workflowThreads = await GetWorkflowMessagesForUser(currentUserId);
+                // Use the new consolidated user messages endpoint
+                var messagesData = await _apiClient.GetAsync<UserMessagesDetailViewModel>(
+                    $"/api/messages/user/{currentUserId}/messages-data?userRole={Uri.EscapeDataString(userRole)}",
+                    User
+                );
 
-                // Get direct messages for the user
-                var directThreads = await GetDirectMessagesForUser(currentUserId);
+                if (messagesData == null)
+                {
+                    TempData["Error"] = "Failed to load messages. Please try again.";
+                    return View(new UserMessagesViewModel());
+                }
 
-                // Get unread count
-                var unreadCount = await _messagingService.GetUnreadCountAsync(currentUserId);
+                // Convert API DTOs to ViewModel DTOs
+                var workflowThreads = messagesData
+                    .WorkflowThreads.Select(t => new ThreadDto
+                    {
+                        ThreadId = t.ThreadId,
+                        Subject = t.Subject,
+                        ProjectId = t.ProjectId,
+                        ProjectName = t.ProjectName,
+                        MessageCount = t.MessageCount,
+                        LastMessageAt = t.LastMessageAt,
+                        CreatedAt = t.CreatedAt,
+                        LastMessageSenderName = t.ParticipantNames.FirstOrDefault() ?? "System",
+                        LastMessagePreview = "",
+                        Participants = t.Participants,
+                        ParticipantNames = t.ParticipantNames,
+                        ThreadType = t.ThreadType,
+                        HasUnreadMessages = t.HasUnreadMessages,
+                        UnreadCount = t.UnreadCount,
+                    })
+                    .ToList();
 
+                var directThreads = messagesData
+                    .DirectThreads.Select(t => new ThreadDto
+                    {
+                        ThreadId = t.ThreadId,
+                        Subject = t.Subject,
+                        ProjectId = t.ProjectId,
+                        ProjectName = t.ProjectName,
+                        MessageCount = t.MessageCount,
+                        LastMessageAt = t.LastMessageAt,
+                        CreatedAt = t.CreatedAt,
+                        LastMessageSenderName = t.ParticipantNames.FirstOrDefault() ?? "Unknown",
+                        LastMessagePreview = "",
+                        Participants = t.Participants,
+                        ParticipantNames = t.ParticipantNames,
+                        ThreadType = t.ThreadType,
+                        HasUnreadMessages = t.HasUnreadMessages,
+                        UnreadCount = t.UnreadCount,
+                    })
+                    .ToList();
+
+                // Get available users and projects (these are still needed for sending new messages)
                 // Reset circuit breakers for critical endpoints to ensure dropdowns populate
                 _apiClient.ResetCircuitBreaker("/api/admin/users");
                 _apiClient.ResetCircuitBreaker("/api/projectmanager/projects");
 
-                // Get available users and projects for sending messages based on role and project associations
                 var availableUsers = await GetAvailableUsersForMessaging(currentUserId, userRole);
                 var availableProjects = await GetAvailableProjectsForMessaging(
                     currentUserId,
@@ -116,7 +160,7 @@ namespace ICCMS_Web.Controllers
                     DirectThreads = directThreads,
                     AvailableUsers = availableUsers,
                     AvailableProjects = availableProjects,
-                    UnreadCount = unreadCount,
+                    UnreadCount = messagesData.UnreadCount,
                     UserRole = userRole,
                     CurrentView = "workflow", // Default to workflow messages
                 };
@@ -531,8 +575,10 @@ namespace ICCMS_Web.Controllers
                         User
                     );
 
-                    var workflowMessage = workflowMessages?.FirstOrDefault(wm => wm.WorkflowMessageId == threadId);
-                    
+                    var workflowMessage = workflowMessages?.FirstOrDefault(wm =>
+                        wm.WorkflowMessageId == threadId
+                    );
+
                     if (workflowMessage != null)
                     {
                         // This is a workflow message - convert it to MessageDto format
@@ -547,28 +593,83 @@ namespace ICCMS_Web.Controllers
                             IsRead = true, // Workflow messages are always considered read
                             SentAt = workflowMessage.CreatedAt,
                             ThreadId = workflowMessage.WorkflowMessageId,
-                            MessageType = "workflow"
+                            MessageType = "workflow",
                         };
-                        
+
                         _logger.LogInformation(
                             "Returning workflow message {WorkflowMessageId} with content length {ContentLength}",
                             workflowMessage.WorkflowMessageId,
                             workflowMessage.Content?.Length ?? 0
                         );
-                        
-                        return Json(new { success = true, messages = new List<MessageDto> { message } });
+
+                        return Json(
+                            new { success = true, messages = new List<MessageDto> { message } }
+                        );
                     }
                 }
                 catch (Exception workflowEx)
                 {
-                    _logger.LogWarning(workflowEx, "Could not fetch as workflow message, trying as regular thread");
+                    _logger.LogWarning(
+                        workflowEx,
+                        "Could not fetch as workflow message, trying as regular thread"
+                    );
                 }
 
-                // Not a workflow message, fetch as regular thread
-                var messages = await _messagingService.GetThreadMessagesAsync(
-                    threadId,
-                    currentUserId
+                // Not a workflow message, use the consolidated thread detail endpoint
+                var threadDetail = await _apiClient.GetAsync<MessageThreadDetailViewModel>(
+                    $"/api/messages/thread/{threadId}/detail-data",
+                    User
                 );
+
+                if (threadDetail == null)
+                {
+                    return Json(new { success = false, message = "Thread not found" });
+                }
+
+                // Convert to MessageDto format for the view
+                var messages = threadDetail
+                    .Messages.Select(m => new MessageDto
+                    {
+                        MessageId = m.MessageId,
+                        SenderId = m.SenderId,
+                        SenderName = m.SenderName,
+                        ReceiverId = m.ReceiverId,
+                        ProjectId = m.ProjectId,
+                        Subject = m.Subject,
+                        Content = m.Content,
+                        IsRead = m.IsRead,
+                        SentAt = m.SentAt,
+                        ReadAt = m.ReadAt,
+                        ThreadId = m.ThreadId,
+                        ParentMessageId = m.ParentMessageId,
+                        IsThreadStarter = m.IsThreadStarter,
+                        ThreadDepth = m.ThreadDepth,
+                        ReplyCount = m.ReplyCount,
+                        LastReplyAt = m.LastReplyAt,
+                        ThreadParticipants = m.ThreadParticipants,
+                        MessageType = m.MessageType,
+                        HasAttachments = m.HasAttachments,
+                        Attachments =
+                            m.Attachments?.Select(a => new MessageAttachmentDto
+                                {
+                                    AttachmentId = a.AttachmentId,
+                                    MessageId = a.MessageId,
+                                    FileName = a.FileName,
+                                    OriginalFileName = a.OriginalFileName,
+                                    FileType = a.FileType,
+                                    FileSize = a.FileSize,
+                                    FileUrl = a.FileUrl,
+                                    ThumbnailUrl = a.ThumbnailUrl,
+                                    UploadedAt = a.UploadedAt,
+                                    Description = a.Description,
+                                    IsImage = a.IsImage,
+                                    IsDocument = a.IsDocument,
+                                    Category = a.Category,
+                                })
+                                .ToList() ?? new List<MessageAttachmentDto>(),
+                    })
+                    .ToList();
+
                 return Json(new { success = true, messages });
             }
             catch (Exception ex)

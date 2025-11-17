@@ -72,6 +72,8 @@ builder.Services.AddScoped<IWorkflowMessageService, WorkflowMessageService>();
 // Add workflow services
 builder.Services.AddScoped<IQuoteWorkflowService, QuoteWorkflowService>();
 builder.Services.AddScoped<IInvoiceWorkflowService, InvoiceWorkflowService>();
+builder.Services.AddScoped<IProjectDetailService, ProjectDetailService>();
+builder.Services.AddScoped<IMessageDetailService, MessageDetailService>();
 
 // Add audit log service
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();

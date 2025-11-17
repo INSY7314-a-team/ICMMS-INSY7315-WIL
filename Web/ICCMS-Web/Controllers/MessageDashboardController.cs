@@ -68,11 +68,11 @@ namespace ICCMS_Web.Controllers
                 _httpClient.DefaultRequestHeaders.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", firebaseToken);
 
-                // Use the new efficient filtered threads endpoint
-                var threadsUrl = $"{_apiBaseUrl}/api/messages/admin/threads/filtered";
+                // Use the new consolidated dashboard data endpoint
+                var dashboardUrl = $"{_apiBaseUrl}/api/messages/admin/dashboard-data";
 
                 _logger.LogInformation("API Base URL: {ApiBaseUrl}", _apiBaseUrl);
-                _logger.LogInformation("Threads URL: {ThreadsUrl}", threadsUrl);
+                _logger.LogInformation("Dashboard URL: {DashboardUrl}", dashboardUrl);
 
                 // Build query parameters for all filters
                 var queryParams = new List<string> { $"page={page}", $"pageSize={pageSize}" };
@@ -112,43 +112,34 @@ namespace ICCMS_Web.Controllers
                     queryParams.Add($"endDate={endDate.Value:yyyy-MM-dd}");
                 }
 
-                threadsUrl += "?" + string.Join("&", queryParams);
+                dashboardUrl += "?" + string.Join("&", queryParams);
 
-                _logger.LogInformation($"Calling API: {threadsUrl}");
+                _logger.LogInformation("Making API call to: {Url}", dashboardUrl);
+                var response = await _httpClient.GetAsync(dashboardUrl);
 
-                _logger.LogInformation("Making API call to: {Url}", threadsUrl);
-                var threadsResponse = await _httpClient.GetAsync(threadsUrl);
+                _logger.LogInformation("API response status: {StatusCode}", response.StatusCode);
 
-                _logger.LogInformation(
-                    "API response status: {StatusCode}",
-                    threadsResponse.StatusCode
-                );
-
-                if (threadsResponse.IsSuccessStatusCode)
+                if (response.IsSuccessStatusCode)
                 {
-                    var threadsContent = await threadsResponse.Content.ReadAsStringAsync();
+                    var content = await response.Content.ReadAsStringAsync();
                     _logger.LogInformation(
-                        $"Threads API response: {threadsContent.Substring(0, Math.Min(500, threadsContent.Length))}..."
+                        $"Dashboard API response: {content.Substring(0, Math.Min(500, content.Length))}..."
                     );
 
-                    // Parse the new filtered response format
-                    var filteredResponse = JsonSerializer.Deserialize<FilteredThreadsResponse>(
-                        threadsContent,
+                    var dashboardData = JsonSerializer.Deserialize<MessageDashboardDataViewModel>(
+                        content,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                     );
 
-                    if (filteredResponse?.Threads != null)
+                    if (dashboardData != null)
                     {
                         _logger.LogInformation(
-                            $"Received {filteredResponse.Threads.Count} threads from API (page {filteredResponse.Page} of {filteredResponse.TotalPages})"
+                            $"Received {dashboardData.Threads.Count} threads from API (page {dashboardData.Page} of {dashboardData.TotalPages})"
                         );
 
                         // Convert API thread summaries to view models
-                        var allThreads = new List<MessageThreadViewModel>();
-
-                        foreach (var apiThread in filteredResponse.Threads)
-                        {
-                            var thread = new MessageThreadViewModel
+                        var threadViewModels = dashboardData
+                            .Threads.Select(apiThread => new MessageThreadViewModel
                             {
                                 ThreadId = apiThread.ThreadId,
                                 Subject = apiThread.Subject,
@@ -159,104 +150,25 @@ namespace ICCMS_Web.Controllers
                                 Participants = apiThread.Participants,
                                 ThreadType = apiThread.ThreadType,
                                 Messages = new List<MessageDto>(),
-                            };
-
-                            allThreads.Add(thread);
-                        }
-
-                        // All filtering and pagination is now handled by the API
-                        var pagedThreads = allThreads;
-                        var totalFilteredThreads = filteredResponse.TotalCount;
-                        var totalPages = filteredResponse.TotalPages;
-
-                        _logger.LogInformation(
-                            $"API returned {pagedThreads.Count} threads (page {filteredResponse.Page} of {totalPages}, total: {totalFilteredThreads})"
-                        );
-
-                        // Get available message types
-                        var availableMessageTypes = new List<string>
-                        {
-                            "direct",
-                            "thread",
-                            "broadcast",
-                            "general",
-                        };
-
-                        // Get available projects
-                        var availableProjects = new List<ProjectDto>();
-                        try
-                        {
-                            var projectsResponse = await _httpClient.GetAsync(
-                                $"{_apiBaseUrl}/api/projectmanager/projects"
-                            );
-                            if (projectsResponse.IsSuccessStatusCode)
-                            {
-                                var projectsContent =
-                                    await projectsResponse.Content.ReadAsStringAsync();
-                                var projects = JsonSerializer.Deserialize<List<ProjectDto>>(
-                                    projectsContent,
-                                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                                );
-                                if (projects != null)
-                                {
-                                    availableProjects = projects;
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning(
-                                $"Could not load projects for dropdown: {ex.Message}"
-                            );
-                        }
-
-                        // Get available users
-                        var availableUsers = new List<UserDto>();
-                        try
-                        {
-                            var usersResponse = await _httpClient.GetAsync(
-                                $"{_apiBaseUrl}/api/admin/users"
-                            );
-                            if (usersResponse.IsSuccessStatusCode)
-                            {
-                                var usersContent = await usersResponse.Content.ReadAsStringAsync();
-                                var users = JsonSerializer.Deserialize<List<UserDto>>(
-                                    usersContent,
-                                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                                );
-                                if (users != null)
-                                {
-                                    availableUsers = users;
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning($"Could not load users for dropdown: {ex.Message}");
-                        }
+                            })
+                            .ToList();
 
                         var viewModel = new MessageThreadsViewModel
                         {
-                            Threads = pagedThreads,
-                            AvailableMessageTypes = availableMessageTypes,
-                            AvailableProjects = availableProjects
-                                .Select(p => new ProjectSummary
-                                {
-                                    ProjectId = p.ProjectId,
-                                    ProjectName = p.Name,
-                                })
-                                .ToList(),
-                            AvailableUsers = availableUsers
-                                .Select(u => new UserSummary
-                                {
-                                    UserId = u.UserId,
-                                    UserName = u.FullName ?? u.Email,
-                                })
-                                .ToList(),
-                            CurrentPage = filteredResponse.Page,
-                            TotalPages = totalPages,
-                            PageSize = filteredResponse.PageSize,
-                            TotalThreads = totalFilteredThreads,
+                            Threads = threadViewModels,
+                            AvailableMessageTypes = new List<string>
+                            {
+                                "direct",
+                                "thread",
+                                "broadcast",
+                                "general",
+                            },
+                            AvailableProjects = dashboardData.AvailableProjects,
+                            AvailableUsers = dashboardData.AvailableUsers,
+                            CurrentPage = dashboardData.Page,
+                            TotalPages = dashboardData.TotalPages,
+                            PageSize = dashboardData.PageSize,
+                            TotalThreads = dashboardData.TotalCount,
                             CurrentFilter = filterType ?? "all",
                             ProjectFilter = projectFilter ?? "all",
                             UserFilter = userFilter ?? "all",
@@ -264,6 +176,7 @@ namespace ICCMS_Web.Controllers
                             CurrentSearchTerm = searchTerm ?? "",
                             StartDate = startDate,
                             EndDate = endDate,
+                            Statistics = dashboardData.Statistics,
                         };
 
                         var filterMessage =
@@ -272,12 +185,12 @@ namespace ICCMS_Web.Controllers
                             ? $" (Search: {searchTerm})"
                             : "";
                         TempData["Success"] =
-                            $"Showing {pagedThreads.Count} of {totalFilteredThreads} message threads (Page {filteredResponse.Page} of {totalPages}){filterMessage}{searchMessage}";
+                            $"Showing {threadViewModels.Count} of {dashboardData.TotalCount} message threads (Page {dashboardData.Page} of {dashboardData.TotalPages}){filterMessage}{searchMessage}";
                         return View(viewModel);
                     }
                     else
                     {
-                        _logger.LogWarning("API returned null or empty threads");
+                        _logger.LogWarning("API returned null dashboard data");
                         return View(
                             new MessageThreadsViewModel
                             {
@@ -306,7 +219,7 @@ namespace ICCMS_Web.Controllers
                         );
                     }
                 }
-                else if (threadsResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
                     TempData["Error"] =
                         "Authentication failed. Your session may have expired. Please log in again.";
@@ -314,9 +227,9 @@ namespace ICCMS_Web.Controllers
                 }
                 else
                 {
-                    var errorContent = await threadsResponse.Content.ReadAsStringAsync();
+                    var errorContent = await response.Content.ReadAsStringAsync();
                     TempData["Error"] =
-                        $"Failed to retrieve message threads. Status: {threadsResponse.StatusCode}. Error: {errorContent}";
+                        $"Failed to retrieve message threads. Status: {response.StatusCode}. Error: {errorContent}";
                     return View(new MessageThreadsViewModel());
                 }
             }

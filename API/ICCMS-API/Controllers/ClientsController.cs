@@ -2,6 +2,7 @@ using System.Linq;
 using System.Security.Claims;
 using ICCMS_API.Auth;
 using ICCMS_API.Models;
+using ICCMS_API.Models.ProjectDetail;
 using ICCMS_API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,13 +19,15 @@ namespace ICCMS_API.Controllers
         private readonly IQuoteWorkflowService _quoteWorkflow;
         private readonly IAuditLogService _auditLogService;
         private readonly IWorkflowMessageService _workflowMessageService;
+        private readonly IProjectDetailService _projectDetailService;
 
         public ClientsController(
             IFirebaseService firebaseService,
             ISupabaseService supabaseService,
             IQuoteWorkflowService quoteWorkflow,
             IAuditLogService auditLogService,
-            IWorkflowMessageService workflowMessageService
+            IWorkflowMessageService workflowMessageService,
+            IProjectDetailService projectDetailService
         )
         {
             _firebaseService = firebaseService;
@@ -32,6 +35,7 @@ namespace ICCMS_API.Controllers
             _quoteWorkflow = quoteWorkflow;
             _auditLogService = auditLogService;
             _workflowMessageService = workflowMessageService;
+            _projectDetailService = projectDetailService;
         }
 
         [HttpGet("projects")]
@@ -202,6 +206,40 @@ namespace ICCMS_API.Controllers
                     );
                 }
                 return Ok(project);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("project/{id}/detail-data")]
+        public async Task<ActionResult<ProjectDetailDataDto>> GetProjectDetailData(string id)
+        {
+            try
+            {
+                var clientId = User.UserId();
+                if (string.IsNullOrEmpty(clientId))
+                {
+                    return Unauthorized(new { error = "Client ID not found" });
+                }
+
+                var project = await _firebaseService.GetDocumentAsync<Project>("projects", id);
+                if (project == null)
+                {
+                    return NotFound(new { error = "Project not found" });
+                }
+
+                if (!string.Equals(project.ClientId, clientId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return Forbid("You are not authorized to view this project.");
+                }
+
+                var detail = await _projectDetailService.BuildClientProjectDetailAsync(
+                    project,
+                    clientId
+                );
+                return Ok(detail);
             }
             catch (Exception ex)
             {
