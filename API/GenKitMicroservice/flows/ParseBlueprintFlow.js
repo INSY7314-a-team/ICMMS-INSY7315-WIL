@@ -2,11 +2,24 @@
 const mammoth = require("mammoth");
 const { googleAI } = require("@genkit-ai/googleai");
 const { genkit } = require("genkit");
+const { fromBuffer: pdfToPicFromBuffer } = require("pdf2pic");
+const Tesseract = require("tesseract.js");
 
 const ai = genkit({
   plugins: [googleAI()],
   systemMessage: "You are a construction analysis AI specialized in South African building practices, standards, and market conditions. Always provide analysis that is relevant to South African construction context."
 });
+
+// Numeric sanitizer used across phases
+function toNumberSafe(val) {
+  if (val === null || val === undefined) return NaN;
+  if (typeof val === "number") return Number.isFinite(val) ? val : NaN;
+  if (typeof val === "string") {
+    const m = val.replace(/,/g, "").match(/-?\d+(\.\d+)?/);
+    return m ? Number(m[1] ? m[0] : m[0]) : NaN;
+  }
+  return NaN;
+}
 
 // Retry configuration
 const RETRY_CONFIG = {
@@ -69,12 +82,9 @@ async function generateWithFallback(prompt, options = {}) {
           prompt: prompt,
         };
         
-        // Add media if provided
-        if (media) {
-          requestOptions.media = media;
-        } else if (image) {
-          requestOptions.image = image;
-        }
+        // Attach both media and image if provided (no mutual exclusion)
+        if (media) requestOptions.media = media;
+        if (image) requestOptions.image = image;
         
         return await ai.generate(requestOptions);
       }, `AI generation with ${modelName}`);
@@ -97,6 +107,23 @@ const ParseBlueprintFlow = ai.defineFlow(
     const { fileData, fileType, projectContext = {} } = input;
 
     try {
+      // Phase 0: Strict property blueprint verification
+      const verdict = await verifyIsPropertyBlueprint(fileData, fileType);
+      // Reject ONLY when we are very confident it's NOT a property blueprint
+      if ((verdict?.isBlueprint === false || verdict?.isProperty === false) && Number(verdict?.confidence || 0) >= 0.95) {
+        console.log("❌ [PHASE 0] Rejected as non-property blueprint", verdict);
+        return {
+          success: false,
+          errorCode: "NotBlueprint",
+          message: "File is not a property/building blueprint or confidence is too low",
+          metadata: {
+            confidence: verdict?.confidence ?? 0,
+            reason: verdict?.reason || "Unspecified",
+            projectContext
+          }
+        };
+      }
+
       console.log(
         `Processing blueprint: Type=${fileType}, Project=${
           projectContext.projectId || "Unknown"
@@ -126,7 +153,9 @@ const ParseBlueprintFlow = ai.defineFlow(
       const quantifiedLineItems = await calculateMaterialQuantities(
         lineItems,
         analysis,
-        projectContext
+        projectContext,
+        fileData,
+        fileType
       );
 
       // Phase 5: Holistic Coverage Enhancement
@@ -200,6 +229,27 @@ const ParseBlueprintFlow = ai.defineFlow(
     } catch (error) {
       console.error("Blueprint processing error:", error);
 
+      // Short-circuit for strict dimension failure
+      if (typeof error?.message === "string" && error.message.startsWith("DimensionsUnavailable")) {
+        return {
+          success: false,
+          lineItems: [],
+          errorCode: "DimensionsUnavailable",
+          message: "Real dimensions could not be determined from the blueprint. Processing stopped.",
+          metadata: {
+            processingTime: Date.now(),
+            projectContext: projectContext,
+            reason: error.message
+          },
+          summary: {
+            totalItems: 0,
+            totalValue: 0,
+            categories: [],
+            requiresPMReview: true
+          }
+        };
+      }
+
       // Fallback to basic extraction
       return await fallbackProcessing(
         fileData,
@@ -210,6 +260,104 @@ const ParseBlueprintFlow = ai.defineFlow(
     }
   }
 );
+
+// Phase 0: Property/Building Blueprint Verifier
+async function verifyIsPropertyBlueprint(fileData, fileType) {
+  const prompt = `You are a strict classifier. Determine if the uploaded file is a property/building architectural blueprint (floor plans, elevations, sections, site plans).
+Return ONLY valid JSON with these fields and values (no comments, no types, no backticks, no extra text):
+{"isBlueprint": true|false, "isProperty": true|false, "confidence": 0.0-1.0, "reason": "short reason"}`;
+
+  let options;
+  if (String(fileType).toLowerCase() === "pdf") {
+    // Strip data URL prefix if present
+    const base64 = typeof fileData === "string" && fileData.startsWith("data:")
+      ? fileData.substring(fileData.indexOf(",") + 1)
+      : fileData;
+    const pdfBuffer = Buffer.from(base64, "base64");
+    options = { media: { content: pdfBuffer, mimeType: "application/pdf" } };
+  } else {
+    options = { image: fileData };
+  }
+
+  const response = await generateWithFallback(prompt, { ...options, modelOverride: "gemini-2.0-flash" });
+  let text;
+  if (typeof response === "string") {
+    text = response;
+  } else if (response?.message?.content?.[0]?.text) {
+    text = response.message.content[0].text;
+  } else if (typeof response?.text === "function") {
+    text = response.text();
+  } else {
+    text = response?.text || response?.output || "";
+  }
+
+  if (!text || typeof text !== "string") {
+    return { isBlueprint: false, isProperty: false, confidence: 0, reason: "Empty response" };
+  }
+
+  // Extract JSON from code fences if present
+  const match = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+  if (match) {
+    text = match[1];
+  }
+
+  try {
+    const parsed = JSON.parse(text);
+    return {
+      isBlueprint: Boolean(parsed.isBlueprint),
+      isProperty: Boolean(parsed.isProperty),
+      confidence: Number(parsed.confidence || 0),
+      reason: String(parsed.reason || "")
+    };
+  } catch (e) {
+    console.warn("Verifier JSON parse failed:", e.message);
+
+    // Attempt regex-based extraction as a fallback (handles loose key:value answers)
+    try {
+      const ib = /isBlueprint["']?\s*:\s*(true|false)/i.exec(text);
+      const ip = /isProperty["']?\s*:\s*(true|false)/i.exec(text);
+      const conf = /confidence["']?\s*:\s*([0-9]*\.?[0-9]+)/i.exec(text);
+      const reas = /reason["']?\s*:\s*["']([^"']+)["']/i.exec(text);
+
+      if (ib || ip || conf || reas) {
+        return {
+          isBlueprint: ib ? ib[1].toLowerCase() === "true" : false,
+          isProperty: ip ? ip[1].toLowerCase() === "true" : false,
+          confidence: conf ? Number(conf[1]) : 0,
+          reason: reas ? reas[1] : "Parsed from non-JSON response"
+        };
+      }
+    } catch (rex) {
+      console.warn("Regex fallback parse failed:", rex.message);
+    }
+
+    // Second attempt: re-query with an even stricter prompt and explicit example
+    const strictPrompt = `Return ONLY this exact JSON shape (no extra text, no backticks):
+{"isBlueprint": true|false, "isProperty": true|false, "confidence": 0.0-1.0, "reason": "short reason"}`;
+    try {
+      const second = await generateWithFallback(strictPrompt, { ...options, modelOverride: "gemini-1.5-pro" });
+      let secondText;
+      if (typeof second === "string") secondText = second;
+      else if (second?.message?.content?.[0]?.text) secondText = second.message.content[0].text;
+      else if (typeof second?.text === "function") secondText = second.text();
+      else secondText = second?.text || second?.output || "";
+
+      const m2 = secondText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+      if (m2) secondText = m2[1];
+
+      const parsed2 = JSON.parse(secondText);
+      return {
+        isBlueprint: Boolean(parsed2.isBlueprint),
+        isProperty: Boolean(parsed2.isProperty),
+        confidence: Number(parsed2.confidence || 0),
+        reason: String(parsed2.reason || "")
+      };
+    } catch (e2) {
+      console.warn("Second-attempt verifier parse failed:", e2.message);
+      return { isBlueprint: false, isProperty: false, confidence: 0, reason: "Unparsable verifier response" };
+    }
+  }
+}
 
 // Phase 1: Enhanced Text Extraction Agent
 async function extractTextContent(fileData, fileType) {
@@ -399,12 +547,13 @@ async function analyzeBlueprint(extractedContent, projectContext) {
       analysis = { rawAnalysis: analysisResponse.text };
     }
 
+    // Do not propagate rawContent to avoid noisy template text
+    const { rawAnalysis, rawContent, ...cleanAnalysis } = analysis || {};
     return {
-      ...analysis,
+      ...cleanAnalysis,
       metadata: extractedContent.metadata,
       blueprintTypes:
-        analysis.blueprintTypes || detectBlueprintTypes(extractedContent.text),
-      rawContent: extractedContent.text,
+        (cleanAnalysis && cleanAnalysis.blueprintTypes) ? cleanAnalysis.blueprintTypes : detectBlueprintTypes(extractedContent.text),
     };
   } catch (error) {
     console.error("Blueprint analysis error:", error);
@@ -550,13 +699,23 @@ async function extractLineItems(analysis, projectContext) {
 }
 
 // Phase 4: Material Quantity Calculation Agent
-async function calculateMaterialQuantities(lineItems, analysis, projectContext) {
+async function calculateMaterialQuantities(lineItems, analysis, projectContext, fileData, fileType) {
   try {
     console.log("🔍 [PHASE 4] Analyzing blueprint for dimensions and scale");
     
     // Extract dimensions and scale from blueprint analysis
-    const dimensions = await extractBlueprintDimensions(analysis, projectContext);
+    const dimensions = await extractBlueprintDimensions(analysis, projectContext, fileData, fileType);
     console.log("📐 [PHASE 4] Extracted dimensions:", dimensions);
+
+    // Proceed if we have a numeric totalArea, even if walls are missing.
+    // Only fail when both totalArea is not numeric AND no walls are available.
+    if (
+      !dimensions ||
+      ((dimensions.totalArea === undefined || isNaN(Number(dimensions.totalArea))) &&
+       (!Array.isArray(dimensions.walls) || dimensions.walls.length === 0))
+    ) {
+      throw new Error("DimensionsUnavailable: Missing critical dimensions");
+    }
     
     // Calculate quantities for each material item
     const quantifiedItems = lineItems.map(item => {
@@ -578,18 +737,19 @@ async function calculateMaterialQuantities(lineItems, analysis, projectContext) 
     
   } catch (error) {
     console.error("❌ [PHASE 4] Material quantity calculation error:", error);
-    return lineItems; // Return original items if calculation fails
+    throw error;
   }
 }
 
 // Extract dimensions and scale from blueprint analysis
-async function extractBlueprintDimensions(analysis, projectContext) {
+async function extractBlueprintDimensions(analysis, projectContext, fileData, fileType) {
   try {
-    console.log("🔍 [PHASE 4] Full blueprint analysis:", JSON.stringify(analysis, null, 2));
+    const { rawContent: _rawContent, rawAnalysis: _rawAnalysis, ...analysisClean } = analysis || {};
+    console.log("🔍 [PHASE 4] Full blueprint analysis (sanitized):", JSON.stringify(analysisClean, null, 2));
     
-    const dimensionPrompt = `You are a construction estimator analyzing a blueprint. Extract the actual building dimensions from this blueprint analysis.
+    const dimensionPrompt = `You are a construction estimator analyzing a blueprint. Extract the actual building dimensions from this blueprint drawing and the analysis context.
 
-    Blueprint Analysis: ${JSON.stringify(analysis).substring(0, 1000)}...
+    Blueprint Analysis: ${JSON.stringify(analysisClean).substring(0, 1000)}...
     
     IMPORTANT: Look at the actual blueprint content and extract REAL dimensions, not estimates. Look for:
     - Scale indicators (1:50, 1:100, etc.) - use the actual scale from the blueprint
@@ -600,53 +760,84 @@ async function extractBlueprintDimensions(analysis, projectContext) {
     
     CRITICAL: Assume ALL external walls are built with BRICK unless specifically noted otherwise in the blueprint.
     
-    If you cannot find specific dimensions, estimate based on the blueprint content, not generic values.
+    If you cannot find specific dimensions, do not estimate. Return an error by refusing to fabricate any values.
     
     Return ONLY this JSON object (no other text):
     {
-      "scale": "actual scale from blueprint or 1:100 if not found",
+      "scale": "actual scale from blueprint",
       "totalArea": "actual calculated area in square meters",
       "walls": [
-        {"name": "External Wall 1", "length": "actual length in meters", "height": "2.4", "thickness": "22", "material": "brick"},
-        {"name": "External Wall 2", "length": "actual length in meters", "height": "2.4", "thickness": "22", "material": "brick"},
-        {"name": "External Wall 3", "length": "actual length in meters", "height": "2.4", "thickness": "22", "material": "brick"},
-        {"name": "External Wall 4", "length": "actual length in meters", "height": "2.4", "thickness": "22", "material": "brick"}
+        {"name": "External Wall 1", "length": "actual length in meters", "height": "actual height in meters", "thickness": "actual thickness in cm", "material": "brick"},
+        {"name": "External Wall 2", "length": "actual length in meters", "height": "actual height in meters", "thickness": "actual thickness in cm", "material": "brick"},
+        {"name": "External Wall 3", "length": "actual length in meters", "height": "actual height in meters", "thickness": "actual thickness in cm", "material": "brick"},
+        {"name": "External Wall 4", "length": "actual length in meters", "height": "actual height in meters", "thickness": "actual thickness in cm", "material": "brick"}
       ],
       "floors": [
-        {"name": "Ground Floor", "area": "actual area in square meters", "thickness": "15"}
+        {"name": "Ground Floor", "area": "actual area in square meters", "thickness": "actual thickness in mm"}
       ],
       "roof": {
-        "area": "actual roof area in square meters", 
-        "pitch": "30",
-        "material": "tiles"
+        "area": "actual roof area in square meters",
+        "pitch": "actual pitch in degrees",
+        "material": "actual material"
       },
       "openings": [
-        {"type": "window", "width": "120", "height": "120", "quantity": "actual count"},
-        {"type": "door", "width": "90", "height": "210", "quantity": "actual count"}
+        {"type": "window", "width": "actual width in cm", "height": "actual height in cm", "quantity": "actual count"},
+        {"type": "door", "width": "actual width in cm", "height": "actual height in cm", "quantity": "actual count"}
       ],
-      "foundation": {
+      "\n      foundation": {
         "area": "actual foundation area in square meters",
-        "thickness": "0.15",
+        "thickness": "actual thickness in meters",
         "perimeter": "actual perimeter in meters"
       }
     }`;
 
-    const dimensionResponse = await generateWithFallback(dimensionPrompt);
-    
+    // Attach the original file so the model can read scales and dimensions
+    let options = {};
+    if (String(fileType).toLowerCase() === "pdf") {
+      const base64 = typeof fileData === "string" && fileData.startsWith("data:")
+        ? fileData.substring(fileData.indexOf(",") + 1)
+        : fileData;
+      const pdfBuffer = Buffer.from(base64, "base64");
+      options = { media: { content: pdfBuffer, mimeType: "application/pdf" } };
+      console.log("📎 [PHASE 4] Attached PDF bytes:", pdfBuffer.length);
+      try {
+        const converter = pdf2pic || pdfToPicFromFile; // placeholder to keep linter calm
+      } catch (_) {}
+      try {
+        const converter = pdfToPicFromBuffer(pdfBuffer, {
+          density: 300,
+          format: "png",
+          saveFilename: "bp_tmp_img",
+          savePath: "/tmp",
+          width: 2480,
+          height: 3508,
+        });
+        const page1 = await converter(1, { responseType: "base64" });
+        if (page1 && page1.base64) {
+          options.image = `data:image/png;base64,${page1.base64}`;
+          console.log("🖼️ [PHASE 4] Added rasterized PNG of page 1 for vision, length:", page1.base64.length);
+        }
+      } catch (rErr) {
+        console.log("⚠️ [PHASE 4] Rasterization failed:", rErr.message);
+      }
+    } else {
+      options = { image: fileData };
+    }
+
+    const dimensionResponse = await generateWithFallback(dimensionPrompt, { ...options, modelOverride: "gemini-2.0-flash" });
+
     // Extract JSON from response
     let dimensions;
     try {
-      // Handle different response types
       let responseStr;
-      if (typeof dimensionResponse === 'string') {
+      if (typeof dimensionResponse === "string") {
         responseStr = dimensionResponse;
-      } else if (dimensionResponse && typeof dimensionResponse === 'object') {
-        // Extract text content from GenKit response object
-        if (dimensionResponse.message && dimensionResponse.message.content && dimensionResponse.message.content[0] && dimensionResponse.message.content[0].text) {
-          responseStr = dimensionResponse.message.content[0].text;
+      } else if (dimensionResponse && typeof dimensionResponse === "object") {
+        if (dimensionResponse.message && dimensionResponse.message.content && dimensionResponse.message.content[0] && (typeof dimensionResponse.message.content[0].text === "string")) {
+          responseStr = (dimensionResponse.message.content[0].text);
           console.log("🔍 [PHASE 4] Extracted text from GenKit response object");
-        } else if (dimensionResponse.text && typeof dimensionResponse.text === 'function') {
-          responseStr = dimensionResponse.text();
+        } else if (typeof (dimensionResponse.text) === "function") {
+          responseStr = (dimensionResponse.text)();
           console.log("🔍 [PHASE 4] Extracted text using text() function");
         } else {
           console.log("🔍 [PHASE 4] Response object structure:", JSON.stringify(dimensionResponse, null, 2));
@@ -655,29 +846,234 @@ async function extractBlueprintDimensions(analysis, projectContext) {
       } else {
         responseStr = String(dimensionResponse);
       }
-      
-      // Extract JSON from the text response
       const jsonMatch = responseStr.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
-      if (jsonMatch) {
-        dimensions = JSON.parse(jsonMatch[1]);
-        console.log("✅ [PHASE 4] Successfully parsed dimensions from markdown");
-      } else {
-        dimensions = JSON.parse(responseStr);
-        console.log("✅ [PHASE 4] Successfully parsed dimensions from direct response");
-      }
+      const toParse = jsonMatch ? jsonMatch[1] : responseStr;
+      dimensions = JSON.parse(toParse);
+      console.log("✅ [PHASE 4] Successfully parsed dimensions");
     } catch (parseError) {
       console.log("❌ [PHASE 4] Failed to parse dimensions JSON:", parseError.message);
-      console.log("🔍 [PHASE 4] Response type:", typeof dimensionResponse);
-      console.log("🔍 [PHASE 4] Raw response:", JSON.stringify(dimensionResponse, null, 2));
-      console.log("🔍 [PHASE 4] Using fallback dimensions");
-      dimensions = getDefaultDimensions(analysis, projectContext);
+      throw new Error("DimensionsUnavailable: Failed to parse dimensions JSON");
     }
-    
+
+    // Normalize numeric fields (strip units like 'm²', 'm', 'cm')
+    const toNumber = (val) => {
+      if (val === null || val === undefined) return NaN;
+      if (typeof val === "number") return val;
+      if (typeof val === "string") {
+        const cleaned = val.replace(/,/g, "").match(/-?\d+(\.\d+)?/);
+        return cleaned ? Number(cleaned[0]) : NaN;
+      }
+      return NaN;
+    };
+
+    if (dimensions) {
+      const isPlaceholder = (s) => typeof s === "string" && /to be determined|cannot determine|error:/i.test(s);
+      if (dimensions.totalArea !== undefined) {
+        const n = isPlaceholder(dimensions.totalArea) ? NaN : toNumber(dimensions.totalArea);
+        if (!Number.isNaN(n)) dimensions.totalArea = n;
+      }
+      if (dimensions.foundation && dimensions.foundation.area !== undefined) {
+        const n = isPlaceholder(dimensions.foundation.area) ? NaN : toNumber(dimensions.foundation.area);
+        if (!Number.isNaN(n)) dimensions.foundation.area = n;
+      }
+      if (dimensions.foundation && dimensions.foundation.thickness !== undefined) {
+        const n = isPlaceholder(dimensions.foundation.thickness) ? NaN : toNumber(dimensions.foundation.thickness);
+        if (!Number.isNaN(n)) dimensions.foundation.thickness = n;
+      }
+      if (Array.isArray(dimensions.walls)) {
+        dimensions.walls = dimensions.walls.map(w => {
+          const ww = { ...w };
+          if (ww.length !== undefined) {
+            const n = isPlaceholder(ww.length) ? NaN : toNumber(ww.length);
+            if (!Number.isNaN(n)) ww.length = n;
+          }
+          if (ww.height !== undefined) {
+            const n = isPlaceholder(ww.height) ? NaN : toNumber(ww.height);
+            if (!Number.isNaN(n)) ww.height = n; else ww.height = 2.5;
+          }
+          if (ww.thickness !== undefined) {
+            const n = isPlaceholder(ww.thickness) ? NaN : toNumber(ww.thickness);
+            if (!Number.isNaN(n)) ww.thickness = n; else ww.thickness = 22;
+          }
+          return ww;
+        });
+        dimensions.walls = dimensions.walls.filter(w => Number.isFinite(Number(w.length)) && Number.isFinite(Number(w.height)));
+      }
+    }
+
+    // Derive floor area from walls if missing
+    if ((dimensions?.totalArea === undefined || Number.isNaN(Number(dimensions.totalArea))) && Array.isArray(dimensions.walls) && dimensions.walls.length >= 2) {
+      const lens = dimensions.walls
+        .map(w => toNumber(w.length))
+        .filter(n => Number.isFinite(n) && n > 0)
+        .sort((a,b) => b - a);
+      if (lens.length >= 2) {
+        const approx = Number((lens[0] * lens[1]).toFixed(2));
+        if (Number.isFinite(approx)) {
+          dimensions.totalArea = approx;
+          console.log("📐 [PHASE 4] Derived totalArea from wall lengths:", approx);
+        }
+      }
+    }
+
+    // If totalArea still missing, try to derive from raw analysis content
+    if ((dimensions?.totalArea === undefined || Number.isNaN(Number(dimensions.totalArea))) && typeof analysis?.rawContent === "string") {
+      const areaMatch = analysis.rawContent.match(/total\s+area[^0-9]*([0-9]+(?:\.[0-9]+)?)\s*(m2|m²|sqm|square\s*meters?)/i);
+      if (areaMatch) {
+        dimensions.totalArea = Number(areaMatch[1]);
+        console.log("📐 [PHASE 4] Derived totalArea from text:", dimensions.totalArea);
+      }
+    }
+
+    // OCR fallback on rasterized image if area/scale are still missing
+    if ((dimensions?.totalArea === undefined || isNaN(Number(dimensions.totalArea))) ||
+        (dimensions?.scale === undefined || /error/i.test(String(dimensions.scale || "")))) {
+      try {
+        let imageForOcr = options.image;
+        if (!imageForOcr && options.media?.mimeType === "application/pdf") {
+          const converter = pdfToPicFromBuffer(options.media.content, { density: 300, format: "png", savePath: "/tmp" });
+          const page1 = await converter(1, { responseType: "base64" });
+          if (page1?.base64) imageForOcr = `data:image/png;base64,${page1.base64}`;
+        }
+        if (imageForOcr && typeof imageForOcr === "string" && imageForOcr.startsWith("data:image")) {
+          const b64 = imageForOcr.substring(imageForOcr.indexOf(",") + 1);
+          const buf = Buffer.from(b64, "base64");
+          const { data: { text: ocrText } } = await Tesseract.recognize(buf, "eng");
+          if (ocrText) {
+            const areaMatchImg = ocrText.match(/total\s+area[^0-9]*([0-9]+(?:\.[0-9]+)?)\s*(m2|m²|sqm|square\s*meters?)/i);
+            if (areaMatchImg) {
+              dimensions.totalArea = Number(areaMatchImg[1]);
+              console.log("📐 [PHASE 4] OCR derived totalArea:", dimensions.totalArea);
+            }
+            const scaleMatch = ocrText.match(/scale[^0-9]*([1lI]\s*:\s*\d{1,4})/i);
+            if (scaleMatch) {
+              dimensions.scale = scaleMatch[1].replace(/\s+/g, "");
+              console.log("📏 [PHASE 4] OCR derived scale:", dimensions.scale);
+            }
+          }
+        }
+      } catch (ocrErr) {
+        console.log("⚠️ [PHASE 4] OCR fallback failed:", ocrErr.message);
+      }
+    }
+
+    // If still missing scale, try focused read for scale + area from media
+    if ((dimensions?.scale === undefined || /error/i.test(String(dimensions.scale || ""))) ||
+        (dimensions?.totalArea === undefined || Number.isNaN(Number(dimensions.totalArea)))) {
+      try {
+        const scalePrompt = `Read the blueprint. Return ONLY this JSON (no backticks):
+{"scale": "e.g. 1:100", "totalArea": number}`;
+        const scaleResp = await generateWithFallback(scalePrompt, { ...options, modelOverride: "gemini-2.0-flash" });
+        let st;
+        if (typeof scaleResp === "string") st = scaleResp;
+        else if (scaleResp?.message?.content?.[0]?.text) st = scaleResp.message.content[0].text;
+        else if (typeof scaleResp?.text === "function") st = scaleResp.text();
+        else st = scaleResp?.text || scaleResp?.output || "";
+        const m = st.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+        if (m) st = m[1];
+        const parsed = JSON.parse(st);
+        if (parsed?.scale && typeof parsed.scale === "string") {
+          dimensions.scale = parsed.scale;
+        }
+        const n = Number(parsed?.totalArea);
+        if (!Number.isNaN(n) && n > 0) dimensions.totalArea = n;
+      } catch (es) {
+        console.log("❌ [PHASE 4] Focused scale+area extraction failed:", es.message);
+      }
+    }
+
+    // If totalArea still missing, try a focused second attempt to read only total area from the PDF/image
+    if ((dimensions?.totalArea === undefined || isNaN(Number(dimensions.totalArea)))) {
+      try {
+        const areaOnlyPrompt = `Read the blueprint and return ONLY this JSON with the building total floor area in square meters (no text, no backticks):
+{"totalArea": number}`;
+        const areaResp = await generateWithFallback(areaOnlyPrompt, { ...options, modelOverride: "gemini-2.0-flash" });
+        let areaText;
+        if (typeof areaResp === "string") areaText = areaResp;
+        else if (areaResp?.message?.content?.[0]?.text) areaText = areaResp.message.content[0].text;
+        else if (typeof areaResp?.text === "function") areaText = areaResp.text();
+        else areaText = areaResp?.text || areaResp?.output || "";
+        const m = areaText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+        if (m) areaText = m[1];
+        const parsedArea = JSON.parse(areaText);
+        const n = Number(parsedArea?.totalArea);
+        if (!Number.isNaN(n) && n > 0) {
+          dimensions = { ...(dimensions || {}), totalArea: n };
+          console.log("📐 [PHASE 4] Acquired totalArea via focused prompt:", n);
+        }
+      } catch (ea) {
+        console.log("❌ [PHASE 4] Focused area extraction failed:", ea.message);
+      }
+    }
+
+    // If walls are missing, try a focused walls-only pass and OCR derivation
+    if (!Array.isArray(dimensions.walls) || dimensions.walls.length === 0) {
+      try {
+        const wallsPrompt = `Read the blueprint and return ONLY JSON exactly like this (no backticks):
+{"walls":[{"name":"External Wall 1","length":number,"height":2.5,"thickness":22,"material":"brick"},
+{"name":"External Wall 2","length":number,"height":2.5,"thickness":22,"material":"brick"},
+{"name":"External Wall 3","length":number,"height":2.5,"thickness":22,"material":"brick"},
+{"name":"External Wall 4","length":number,"height":2.5,"thickness":22,"material":"brick"}]}`;
+        const wallsResp = await generateWithFallback(wallsPrompt, { ...options, modelOverride: "gemini-2.0-flash" });
+        let wt = typeof wallsResp === "string" ? wallsResp
+          : (wallsResp?.message?.content?.[0]?.text || (typeof wallsResp?.text === "function" ? wallsResp.text() : (wallsResp?.text || wallsResp?.output || "")));
+        const mw = wt.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+        if (mw) wt = mw[1];
+        const parsedWalls = JSON.parse(wt);
+        if (Array.isArray(parsedWalls?.walls) && parsedWalls.walls.length > 0) {
+          dimensions.walls = parsedWalls.walls.map(w => ({
+            name: String(w.name || "External Wall"),
+            length: Number(w.length),
+            height: Number(w.height || 2.5),
+            thickness: Number(w.thickness || 22),
+            material: String(w.material || "brick")
+          })).filter(w => !Number.isNaN(w.length) && w.length > 0);
+        }
+      } catch (wErr) {
+        console.log("⚠️ [PHASE 4] Focused walls extraction failed:", wErr.message);
+      }
+
+      // OCR-based derivation for perimeter if still empty
+      if ((!dimensions.walls || dimensions.walls.length === 0) && options.image) {
+        try {
+          const b64 = options.image.substring(options.image.indexOf(",") + 1);
+          const buf = Buffer.from(b64, "base64");
+          const { data: { text: ocrText2 } } = await Tesseract.recognize(buf, "eng");
+          const mmNums = [...ocrText2.matchAll(/(\d{3,5})\s*(mm|m)\b/gi)].map(m => (m[2].toLowerCase()==="mm"? Number(m[1])/1000 : Number(m[1])));
+          // Heuristic: pick two largest distinct lengths as width/length
+          const sorted = mmNums.filter(n => n>0.5 && n<200).sort((a,b)=>b-a);
+          const unique = Array.from(new Set(sorted.map(n=>n.toFixed(2)))).map(s=>Number(s));
+          if (unique.length >= 2) {
+            const a = unique[0], b = unique[1];
+            dimensions.walls = [
+              { name: "External Wall 1", length: a, height: 2.5, thickness: 22, material: "brick" },
+              { name: "External Wall 2", length: a, height: 2.5, thickness: 22, material: "brick" },
+              { name: "External Wall 3", length: b, height: 2.5, thickness: 22, material: "brick" },
+              { name: "External Wall 4", length: b, height: 2.5, thickness: 22, material: "brick" }
+            ];
+            console.log("📐 [PHASE 4] Derived walls from OCR edge dimensions:", dimensions.walls);
+          }
+        } catch (perr) {
+          console.log("⚠️ [PHASE 4] OCR perimeter derivation failed:", perr.message);
+        }
+      }
+    }
+
+    // Validate critical fields are present and appear numeric/arrays as required.
+    // We allow proceeding if totalArea is numeric even when walls are unavailable.
+    if (
+      !dimensions ||
+      ((dimensions.totalArea === undefined || isNaN(Number(dimensions.totalArea))) &&
+       (!Array.isArray(dimensions.walls) || dimensions.walls.length === 0))
+    ) {
+      throw new Error("DimensionsUnavailable: Missing critical dimensions");
+    }
+
     return dimensions;
     
   } catch (error) {
     console.error("❌ [PHASE 4] Dimension extraction error:", error);
-    return getDefaultDimensions(analysis, projectContext);
+    throw new Error("DimensionsUnavailable: Dimension extraction failed");
   }
 }
 
@@ -931,43 +1327,48 @@ function calculateMaterialQuantity(materialItem, dimensions, analysis) {
     }
   }
   
-          // Ensure minimum quantity of 1 (only if we have a valid spec)
-          if (quantity > 0) {
-            quantity = Math.max(quantity, 1);
+          // Determine unit of quantity based on material type
+          // Before determining unit, normalize quantity to avoid NaN/negatives
+          if (!Number.isFinite(quantity)) {
+            calculationDetails.push("Insufficient dimensional data to compute quantity; defaulting to 0");
+            quantity = 0;
           }
-  
-  // Determine unit of quantity based on material type
-  let unitOfQuantity = "units";
-  if (spec.volume) {
-    unitOfQuantity = "m³";
-  } else if (spec.area) {
-    unitOfQuantity = "m²";
-  } else if (spec.length) {
-    unitOfQuantity = "m";
-  } else if (spec.count) {
-    unitOfQuantity = "ea";
-  } else if (spec.coverage) {
-    unitOfQuantity = "liters";
-  } else if (materialName.includes("brick") || materialName.includes("block")) {
-    unitOfQuantity = "bricks";
-  } else if (materialName.includes("tile") || materialName.includes("shingle")) {
-    unitOfQuantity = "tiles";
-  } else if (materialName.includes("sheet") || materialName.includes("plywood")) {
-    unitOfQuantity = "sheets";
-  } else if (materialName.includes("stud") || materialName.includes("2x4")) {
-    unitOfQuantity = "studs";
-  } else if (materialName.includes("paint")) {
-    unitOfQuantity = "liters";
-  } else if (materialName.includes("concrete") || materialName.includes("cement")) {
-    unitOfQuantity = "m³";
-  } else if (materialName.includes("steel") || materialName.includes("rebar")) {
-    unitOfQuantity = "m";
-  }
-  
-  console.log(`📊 [PHASE 4] ${materialName} calculation details:`, calculationDetails);
-  console.log(`✅ [PHASE 4] ${materialName} final quantity: ${quantity} ${unitOfQuantity}`);
-  
-  return { quantity, unitOfQuantity };
+          if (quantity < 0) quantity = 0;
+          if (quantity > 0) {
+            quantity = Math.ceil(quantity);
+          }
+
+          let unitOfQuantity = "units";
+          if (spec.volume) {
+            unitOfQuantity = "m³";
+          } else if (spec.area) {
+            unitOfQuantity = "m²";
+          } else if (spec.length) {
+            unitOfQuantity = "m";
+          } else if (spec.count) {
+            unitOfQuantity = "ea";
+          } else if (spec.coverage) {
+            unitOfQuantity = "liters";
+          } else if (materialName.includes("brick") || materialName.includes("block")) {
+            unitOfQuantity = "bricks";
+          } else if (materialName.includes("tile") || materialName.includes("shingle")) {
+            unitOfQuantity = "tiles";
+          } else if (materialName.includes("sheet") || materialName.includes("plywood")) {
+            unitOfQuantity = "sheets";
+          } else if (materialName.includes("stud") || materialName.includes("2x4")) {
+            unitOfQuantity = "studs";
+          } else if (materialName.includes("paint")) {
+            unitOfQuantity = "liters";
+          } else if (materialName.includes("concrete") || materialName.includes("cement")) {
+            unitOfQuantity = "m³";
+          } else if (materialName.includes("steel") || materialName.includes("rebar")) {
+            unitOfQuantity = " m";
+          }
+          
+          console.log(`📊 [PHASE 4] ${materialName} calculation details:`, calculationDetails);
+          console.log(`✅ [PHASE 4] ${materialName} final quantity: ${quantity} ${unitOfQuantity}`);
+          
+          return { quantity, unitOfQuantity };
 }
 
 // Get default dimensions if extraction fails
@@ -1248,197 +1649,8 @@ async function parseLineItemsFromText(textResponse) {
     }
   }
   
-  // Fallback to line-by-line parsing
-  const lines = textResponse.split("\n");
-  const items = [];
-
-  for (const line of lines) {
-    if (
-      line.includes("-") &&
-      (line.includes("ea") || line.includes("sq ft") || line.includes("ln ft"))
-    ) {
-      // Try to extract structured data from text line
-      const parts = line.split("-");
-      if (parts.length >= 2) {
-        items.push({
-          name: parts[0].trim(),
-          description: parts[1].trim(),
-          quantity: 1,
-          unit: "ea",
-          category: "General",
-          itemType: "General",
-          unitPrice: 500, // Default price in ZAR
-          aiConfidence: 0.6,
-        });
-      }
-    }
-  }
-
-  // Add default required general items if parsing fails
-  if (items.length === 0) {
-    console.log("🔍 [FALLBACK] Using default items - no items parsed from text");
-    return [
-      {
-        name: "Site Preparation and Earthwork",
-        description: "Excavation, grading, and site preparation",
-          quantity: 1,
-        unit: "ls",
-        category: "Site Preparation",
-        itemType: "General",
-        unitPrice: 25000, // Base price in ZAR - adjust based on project analysis
-        lineTotal: 25000,
-          aiConfidence: 0.3,
-        notes: "Fallback item - pricing needs project-specific adjustment (ZAR)"
-      },
-      {
-        name: "Temporary Utilities and Facilities",
-        description: "Temporary power, water, and sanitation facilities",
-        quantity: 1,
-        unit: "ls",
-        category: "Site Preparation",
-        itemType: "General",
-        unitPrice: 12000, // Base price in ZAR - adjust based on project analysis
-        lineTotal: 12000,
-        aiConfidence: 0.3,
-        notes: "Fallback item - pricing needs project-specific adjustment (ZAR)"
-      },
-      {
-        name: "Project Management and Supervision",
-        description: "Project management, supervision, and coordination",
-        quantity: 1,
-        unit: "mo",
-        category: "Project Overhead",
-        itemType: "General",
-        unitPrice: 25000, // Base price in ZAR - adjust based on project analysis
-        lineTotal: 25000,
-        aiConfidence: 0.3,
-        notes: "Fallback item - pricing needs project-specific adjustment (ZAR)"
-      },
-      {
-        name: "Permits and Inspections",
-        description: "Building permits, inspections, and regulatory compliance",
-        quantity: 1,
-        unit: "ls",
-        category: "Project Overhead",
-        itemType: "General",
-        unitPrice: 8000, // Base price in ZAR - adjust based on project analysis
-        lineTotal: 8000,
-        aiConfidence: 0.3,
-        notes: "Fallback item - pricing needs project-specific adjustment (ZAR)"
-      },
-      {
-        name: "Temporary Equipment",
-        description: "Jobsite trailer, equipment rental, and temporary facilities",
-        quantity: 1,
-        unit: "mo",
-        category: "Project Overhead",
-        itemType: "General",
-        unitPrice: 15000, // Base price in ZAR - adjust based on project analysis
-        lineTotal: 15000,
-        aiConfidence: 0.3,
-        notes: "Fallback item - pricing needs project-specific adjustment (ZAR)"
-      },
-      {
-        name: "Safety and Security",
-        description: "Jobsite safety equipment, security, and compliance",
-        quantity: 1,
-        unit: "mo",
-        category: "Project Overhead",
-        itemType: "General",
-        unitPrice: 6000, // Base price in ZAR - adjust based on project analysis
-        lineTotal: 6000,
-        aiConfidence: 0.3,
-        notes: "Fallback item - pricing needs project-specific adjustment (ZAR)"
-      },
-      // Add some default material items
-      {
-        name: "Concrete",
-        description: "Ready-mix concrete for foundation",
-        quantity: 0,
-        unit: "N/A",
-        unitOfQuantity: "m³",
-        category: "Foundation",
-        itemType: "Material",
-        unitPrice: 0,
-        lineTotal: 0,
-        aiConfidence: 0.6,
-      },
-      {
-        name: "Steel Rebar",
-        description: "Reinforcement steel bars",
-        quantity: 0,
-        unit: "N/A",
-        unitOfQuantity: "m",
-        category: "Foundation",
-        itemType: "Material",
-        unitPrice: 0,
-        lineTotal: 0,
-        aiConfidence: 0.6,
-      },
-      {
-        name: "Brick",
-        description: "Clay brick for exterior walls",
-        quantity: 0,
-        unit: "N/A",
-        unitOfQuantity: "bricks",
-        category: "Exterior",
-        itemType: "Material",
-        unitPrice: 0,
-        lineTotal: 0,
-        aiConfidence: 0.6,
-      },
-      {
-        name: "Masonry",
-        description: "Brick masonry for external walls",
-        quantity: 0,
-        unit: "N/A",
-        unitOfQuantity: "bricks",
-        category: "Exterior",
-        itemType: "Material",
-        unitPrice: 0,
-        lineTotal: 0,
-        aiConfidence: 0.6,
-      },
-      {
-        name: "External Wall Brick",
-        description: "Brick construction for external walls",
-        quantity: 0,
-        unit: "N/A",
-        unitOfQuantity: "bricks",
-        category: "Exterior",
-        itemType: "Material",
-        unitPrice: 0,
-        lineTotal: 0,
-        aiConfidence: 0.6,
-      },
-      {
-        name: "Window Frames",
-        description: "Aluminum window frames",
-        quantity: 0,
-        unit: "N/A",
-        unitOfQuantity: "ea",
-        category: "Exterior",
-        itemType: "Material",
-        unitPrice: 0,
-        lineTotal: 0,
-        aiConfidence: 0.6,
-      },
-      {
-        name: "Paint",
-        description: "Interior and exterior paint",
-        quantity: 0,
-        unit: "N/A",
-        unitOfQuantity: "liters",
-        category: "Finishes",
-        itemType: "Material",
-        unitPrice: 0,
-        lineTotal: 0,
-        aiConfidence: 0.6,
-      },
-    ];
-  }
-
-  return items;
+  // Strict mode: do not fabricate defaults; return empty to force earlier validation to stop
+  return [];
 }
 
 async function generateDemolitionItems(analysis, projectContext) {
@@ -1613,43 +1825,21 @@ async function fallbackProcessing(
   console.log("Using fallback processing due to error:", originalError.message);
 
   try {
-    // Basic text extraction as fallback
-    const basicContent = await extractTextContent(fileData, fileType);
-
-    // Generate minimal line items
-    const fallbackItems = [
-      {
-        itemId: `FB_${Date.now()}`,
-        name: "Blueprint Analysis - Manual Review Required",
-        description: `Automated processing failed: ${originalError.message}. Manual review and estimation required.`,
-        quantity: 0,
-        unit: "N/A",
-        unitOfQuantity: "N/A",
-        category: "General",
-        itemType: "Material",
-        unitPrice: 0,
-        lineTotal: 0,
-        isAiGenerated: true,
-        aiConfidence: 0.2,
-        notes: `Fallback processing used. Original error: ${originalError.message}`,
-      },
-    ];
-
     return {
       success: false,
-      lineItems: fallbackItems,
+      lineItems: [],
       metadata: {
         blueprintTypes: ["unknown"],
-        confidence: 0.2,
-        coverage: 10,
+        confidence: 0,
+        coverage: 0,
         processingTime: Date.now(),
         fallbackUsed: true,
         error: originalError.message,
       },
       summary: {
-        totalItems: 1,
+        totalItems: 0,
         totalValue: 0,
-        categories: ["General"],
+        categories: [],
         requiresPMReview: true,
         manualReviewRequired: true,
       },

@@ -133,6 +133,15 @@ router.post("/process-blueprint", validateRequest, async (req, res) => {
       projectContext,
     });
 
+    if (!result?.success) {
+      const status =
+        result?.errorCode === "NotBlueprint" ||
+        result?.errorCode === "DimensionsUnavailable"
+          ? 422
+          : 500;
+      return res.status(status).json({ success: false, ...result });
+    }
+
     res.json({
       success: true,
       data: {
@@ -170,6 +179,15 @@ router.post("/extract-line-items", validateRequest, async (req, res) => {
       fileType,
       projectContext,
     });
+
+    if (!result?.success) {
+      const status =
+        result?.errorCode === "NotBlueprint" ||
+        result?.errorCode === "DimensionsUnavailable"
+          ? 422
+          : 500;
+      return res.status(status).json({ success: false, ...result });
+    }
 
     // Convert to .NET API format
     const lineItems = result.lineItems.map(item => ({
