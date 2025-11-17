@@ -1,0 +1,11 @@
+{
+    "documentAIConfig": [
+    {
+        "FIELDS": {
+            "projectId": "icmms-474603",
+            "location": "eu",
+            "processorId": "d80a71033aa0c335"
+        }
+    }
+    ]
+}
